@@ -80,6 +80,20 @@ def discover_movies(genre_id=None, year=None, min_rating=None, sort_by="populari
     except requests.exceptions.RequestException as e:
         print(f"Error discovering movies: {e}")
         return None
+    
+
+def get_movie_director(movie_details):
+    """Extract director from movie credits"""
+    if 'credits' in movie_details and 'crew' in movie_details['credits']:
+        for crew_member in movie_details['credits']['crew']:
+            if crew_member['job'] == 'Director':
+                return crew_member['name']
+    return "Unknown"
+
+def get_movie_genres(movie_details):
+    """Extract genre names from movie details"""
+    genres = movie_details.get('genres', [])
+    return [genre['name'] for genre in genres]
 
 def get_streaming_providers(movie_id):
     """Get streaming availability (Netflix, Hulu, etc.) for a movie"""
@@ -113,6 +127,7 @@ def get_genres():
     except requests.exceptions.RequestException as e:
         print(f"Error getting genres: {e}")
         return None
+
 
 def get_trending_movies(time_window="week"):
     """Get trending movies (day or week)"""

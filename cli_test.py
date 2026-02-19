@@ -1,6 +1,6 @@
 # cli_test.py
 from firebase_helper import create_user, verify_user, update_streaming_services, get_user_streaming_services
-from tmdb_api import discover_movies, get_streaming_providers, get_poster_url
+from tmdb_api import discover_movies, get_streaming_providers, get_poster_url, get_movie_director, get_movie_details, get_movie_genres
 import getpass
 
 print("=" * 60)
@@ -266,13 +266,19 @@ for movie in movies_data['results'][:50]:  # Check first 50 to find matches
                     }
                     matching_services.append(friendly_names.get(service_name, service_name))
             
+            movie_details = get_movie_details(movie_id)
+            director = get_movie_director(movie_details) if movie_details else "Unknown"
+            genres = get_movie_genres(movie_details) if movie_details else []
+
             matched_movies.append({
                 'title': movie['title'],
                 'year': movie.get('release_date', 'N/A')[:4],
                 'rating': movie.get('vote_average', 0),
                 'overview': movie.get('overview', ''),
                 'poster': get_poster_url(movie.get('poster_path')),
-                'services': matching_services
+                'services': matching_services,
+                'director': director,
+                'genres': genres
             })
 
 print("=" * 60)
@@ -281,6 +287,8 @@ print("=" * 60)
 
 for i, movie in enumerate(matched_movies, 1):
     print(f"\n{i}. {movie['title']} ({movie['year']})")
+    print(f"   🎬 Director: {movie['director']}")
+    print(f"   🎭 Genres: {', '.join(movie['genres']) if movie['genres'] else 'N/A'}")
     print(f"   ⭐ Rating: {movie['rating']}/10")
     print(f"   📺 Available on: {', '.join(movie['services'])}")
     print(f"   📝 {movie['overview'][:100]}...")
