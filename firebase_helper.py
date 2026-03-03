@@ -1,7 +1,8 @@
 # firebase_helper.py
 import firebase_admin
+import requests
 from firebase_admin import credentials, firestore, auth
-from config import FIREBASE_CREDENTIALS_PATH
+from config import FIREBASE_CREDENTIALS_PATH, FIREBASE_WEB_API_KEY
 from datetime import datetime
 
 # Initialize Firebase Admin
@@ -16,28 +17,6 @@ if not firebase_admin._apps:
 
 # Get Firestore client
 db = firestore.client()
-
-def verify_user(email, password):
-    #verifying our users credentials. Firebase Admin SDK doesn't support client-side authentication, so we will just check if the email exists.
-    try:
-        user = auth.get_user_by_email(email)
-        return {
-            'success': True,
-            'user_id': user.uid,
-            'email': user.email,
-            'username': user.display_name
-        }
-    except auth.UserNotFoundError:
-        return {
-            'success': False,
-            'message': 'User not found'
-        }
-    except Exception as e:
-        return {
-            'success': False,
-            'message': str(e)
-        }
-
 
 def create_user(email, password, username):
     #Create a new user with Firebase Authentication and Firestore
@@ -93,20 +72,33 @@ def create_user(email, password, username):
             'message': str(e)
         }
 
-def verify_user(email, password):
-    #verifying our users credentials. Firebase Admin SDK doesn't support client-side authentication, so we will just check if the email exists.
+def check_email_exists(email):
     try:
+        auth.get_user_by_email(email)
+        return {'success': True}
+    except auth.UserNotFoundError:
+        return {'success': False, 'message': 'User not found'}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+def verify_user(email, password):
+    try:
+        url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={FIREBASE_WEB_API_KEY}"
+        response = requests.post(url, json={"email": email, "password": password, "returnSecureToken": True})
+        data = response.json()
+
+        if "error" in data:
+            error_msg = data["error"]["message"]
+            if error_msg in ("EMAIL_NOT_FOUND", "INVALID_EMAIL"):
+                return {'success': False, 'message': 'User not found'}
+            return {'success': False, 'message': 'Invalid email or password'}
+
         user = auth.get_user_by_email(email)
         return {
             'success': True,
-            'user_id': user.uid,
-            'email': user.email,
+            'user_id': data['localId'],
+            'email': data['email'],
             'username': user.display_name
-        }
-    except auth.UserNotFoundError:
-        return {
-            'success': False,
-            'message': 'User not found'
         }
     except Exception as e:
         return {

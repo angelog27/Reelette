@@ -1,5 +1,5 @@
 # cli_test.py
-from firebase_helper import create_user, verify_user, update_streaming_services, get_user_streaming_services
+from firebase_helper import create_user, verify_user, check_email_exists, update_streaming_services, get_user_streaming_services
 from tmdb_api import discover_movies, get_streaming_providers, get_poster_url, get_movie_director, get_movie_details, get_movie_genres
 import getpass
 
@@ -12,7 +12,11 @@ print("\n📝 STEP 1: Login or Register")
 print("-" * 60)
 
 choice = input("Do you want to (1) Login or (2) Register? Enter 1 or 2: ")
-
+while True:
+    if choice in ["1", "2"]:
+        break
+    else:
+        choice = input("Invalid choice. Please enter 1 for Login or 2 for Register: ")
 user_id = None
 username = None
 
@@ -20,10 +24,21 @@ if choice == "1":
     # LOGIN
     print("\n🔐 LOGIN")
     print("-" * 60)
-    
+     
     email = input("Enter email: ")
-    password = getpass.getpass("Enter password: ")
-    
+    verify_email = check_email_exists(email)
+    while not verify_email['success']:
+        print(f"❌ Error: {verify_email['message']}")
+        email = input("Please enter a valid email: ")
+        verify_email = check_email_exists(email)
+    while True:
+        password = input("Enter password:")
+        if verify_user(email, password)['success']:
+            print("✅ Login successful!")
+            break
+        else:
+            print("❌ Incorrect password, try again.")    
+
     print("\n⏳ Logging in...")
     result = verify_user(email, password)
     
