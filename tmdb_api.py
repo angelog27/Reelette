@@ -55,7 +55,27 @@ def get_popular_movies(page=1):
         print(f"Error getting popular movies: {e}")
         return None
 
-def discover_movies(genre_id=None, year=None, min_rating=None, min_vote_count=None, sort_by="popularity.desc", page=1):
+def search_person(name):
+    """Search for a person (actor or director) by name, returns list of results"""
+    url = f"{TMDB_BASE_URL}/search/person"
+    params = {
+        "api_key": TMDB_API_KEY,
+        "query": name,
+        "language": "en-US"
+    }
+    try:
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        print(f"Error searching person: {e}")
+        return None
+
+
+def discover_movies(genre_id=None, year=None, year_from=None, year_to=None,
+                    min_rating=None, min_vote_count=None,
+                    with_cast=None, with_crew=None,
+                    sort_by="popularity.desc", page=1):
     """Discover movies with filters"""
     url = f"{TMDB_BASE_URL}/discover/movie"
     params = {
@@ -69,11 +89,19 @@ def discover_movies(genre_id=None, year=None, min_rating=None, min_vote_count=No
     if genre_id:
         params["with_genres"] = genre_id
     if year:
-        params["year"] = year
+        params["primary_release_year"] = year
+    if year_from:
+        params["primary_release_date.gte"] = f"{year_from}-01-01"
+    if year_to:
+        params["primary_release_date.lte"] = f"{year_to}-12-31"
     if min_rating:
         params["vote_average.gte"] = min_rating
     if min_vote_count:
         params["vote_count.gte"] = min_vote_count
+    if with_cast:
+        params["with_cast"] = with_cast
+    if with_crew:
+        params["with_crew"] = with_crew
     
     try:
         response = requests.get(url, params=params)
@@ -165,3 +193,8 @@ def get_backdrop_url(backdrop_path, size="w1280"):
     if backdrop_path:
         return f"{TMDB_IMAGE_BASE}/{size}{backdrop_path}"
     return None
+
+def user_rate_movies(user_id, movie_id, rating, review):
+    """Allow a user to rate a movie"""
+    # Implementation for user rating functionality
+    pass

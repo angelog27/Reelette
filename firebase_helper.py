@@ -168,10 +168,66 @@ def get_watchlist(user_id):
     try:
         watchlist_ref = db.collection('users').document(user_id).collection('lists').document('watchlist')
         watchlist_doc = watchlist_ref.get()
-        
+
         if watchlist_doc.exists:
             return watchlist_doc.to_dict().get('movies', [])
         return []
     except Exception as e:
         print(f"Error getting watchlist: {e}")
         return []
+
+def add_watched_movie(user_id, movie, user_rating):
+    """Save a watched movie with the user's rating to Firestore."""
+    try:
+        movie_doc = {
+            'movie_id': movie['movie_id'],
+            'title': movie['title'],
+            'year': movie['year'],
+            'tmdb_rating': movie['rating'],
+            'overview': movie['overview'],
+            'poster': movie.get('poster'),
+            'director': movie['director'],
+            'actors': movie.get('Popular Actors', []),
+            'genres': movie.get('genres', []),
+            'services': movie.get('services', []),
+            'user_rating': user_rating,
+            'watched_at': datetime.now()
+        }
+        (db.collection('users').document(user_id)
+           .collection('watched_movies').document(str(movie['movie_id']))
+           .set(movie_doc))
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+def get_watched_movies(user_id):
+    """Return all watched movies for a user, newest first."""
+    try:
+        docs = (db.collection('users').document(user_id)
+                  .collection('watched_movies')
+                  .order_by('watched_at', direction=firestore.Query.DESCENDING)
+                  .stream())
+        return [doc.to_dict() for doc in docs]
+    except Exception as e:
+        print(f"Error getting watched movies: {e}")
+        return []
+
+def is_movie_watched(user_id, movie_id):
+    """Return True if the user has already marked this movie as watched."""
+    try:
+        doc = (db.collection('users').document(user_id)
+                 .collection('watched_movies').document(str(movie_id))
+                 .get())
+        return doc.exists
+    except Exception:
+        return False
+
+def update_watched_rating(user_id, movie_id, new_rating):
+    """Update the user's rating for an already-watched movie."""
+    try:
+        (db.collection('users').document(user_id)
+           .collection('watched_movies').document(str(movie_id))
+           .update({'user_rating': new_rating}))
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
