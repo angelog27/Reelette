@@ -55,7 +55,7 @@ def get_popular_movies(page=1):
         print(f"Error getting popular movies: {e}")
         return None
 
-def discover_movies(genre_id=None, year=None, min_rating=None, sort_by="popularity.desc", page=1):
+def discover_movies(genre_id=None, year=None, min_rating=None, min_vote_count=None, sort_by="popularity.desc", page=1):
     """Discover movies with filters"""
     url = f"{TMDB_BASE_URL}/discover/movie"
     params = {
@@ -65,13 +65,15 @@ def discover_movies(genre_id=None, year=None, min_rating=None, sort_by="populari
         "include_adult": False,
         "page": page
     }
-    
+
     if genre_id:
         params["with_genres"] = genre_id
     if year:
         params["year"] = year
     if min_rating:
         params["vote_average.gte"] = min_rating
+    if min_vote_count:
+        params["vote_count.gte"] = min_vote_count
     
     try:
         response = requests.get(url, params=params)
@@ -149,6 +151,14 @@ def get_poster_url(poster_path, size="w500"):
     if poster_path:
         return f"{TMDB_IMAGE_BASE}/{size}{poster_path}"
     return None
+
+def get_movie_actors(movie_details, max_actors=5):
+    """Extract main actors from movie credits"""
+    actors = []
+    if 'credits' in movie_details and 'cast' in movie_details['credits']:
+        for cast_member in movie_details['credits']['cast'][:max_actors]:
+            actors.append(cast_member['name'])
+    return actors
 
 def get_backdrop_url(backdrop_path, size="w1280"):
     """Build full URL for movie backdrop"""

@@ -1,6 +1,6 @@
 # cli_test.py
 from firebase_helper import create_user, verify_user, check_email_exists, update_streaming_services, get_user_streaming_services
-from tmdb_api import discover_movies, get_streaming_providers, get_poster_url, get_movie_director, get_movie_details, get_movie_genres
+from tmdb_api import discover_movies, get_streaming_providers, get_poster_url, get_movie_director, get_movie_details, get_movie_genres, get_movie_actors
 import getpass
 
 print("=" * 60)
@@ -217,12 +217,30 @@ else:
         print(f"❌ Error: {update_result['message']}")
         exit()
 
-# Step 3: Discover Movies
+# Step 3: Movie Type Preference
 print("\n" + "=" * 60)
-print("🎬 STEP 3: Discovering Movies for You...")
+print("🎬 STEP 3: Movie Preferences")
 print("-" * 60)
+print("\nWhat type of movies would you like to see?")
+print("1. Currently Popular  (trending right now)")
+print("2. All Time Best      (highest rated classics)")
 
-# Get provider IDs
+movie_type_choice = input("\nEnter 1 or 2: ").strip()
+while movie_type_choice not in ["1", "2"]:
+    movie_type_choice = input("Invalid choice. Enter 1 or 2: ").strip()
+
+if movie_type_choice == "1":
+    sort_by = "popularity.desc"
+    movie_type_label = "Currently Popular"
+    min_vote_count = None
+    min_rating = None
+else:
+    sort_by = "vote_average.desc"
+    movie_type_label = "All Time Best"
+    min_vote_count = 1000   # Exclude obscure movies with few votes
+    min_rating = 7.0
+
+# Step 4: Discover Movies (looping)
 STREAMING_PROVIDER_IDS = {
     'netflix': 8,
     'amazonPrime': 9,
@@ -234,6 +252,17 @@ STREAMING_PROVIDER_IDS = {
     'peacock': 387
 }
 
+FRIENDLY_NAMES = {
+    'netflix': 'Netflix',
+    'hulu': 'Hulu',
+    'disneyPlus': 'Disney+',
+    'hboMax': 'HBO Max',
+    'amazonPrime': 'Prime Video',
+    'appleTV': 'Apple TV+',
+    'paramount': 'Paramount+',
+    'peacock': 'Peacock'
+}
+
 user_services = get_user_streaming_services(user_id)
 enabled_services = [service for service, enabled in user_services.items() if enabled]
 provider_ids = [STREAMING_PROVIDER_IDS[service] for service in enabled_services if service in STREAMING_PROVIDER_IDS]
@@ -242,74 +271,89 @@ if not provider_ids:
     print("❌ No streaming services selected. Please update your preferences.")
     exit()
 
-# Discover popular movies
-movies_data = discover_movies(sort_by="popularity.desc")
+batch = 1  # Tracks which pair of TMDB pages we're on
 
-if not movies_data or 'results' not in movies_data:
-    print("❌ Could not fetch movies")
-    exit()
+while True:
+    print("\n" + "=" * 60)
+    print(f"🎬 {movie_type_label} Movies — Batch {batch}")
+    print("-" * 60)
 
-print(f"⏳ Checking {len(movies_data['results'])} popular movies...")
-print()
+    # Fetch 2 TMDB pages per batch (~40 movies total)
+    all_movies = []
+    for page_num in [batch * 2 - 1, batch * 2]:
+        movies_data = discover_movies(
+            sort_by=sort_by,
+            page=page_num,
+            min_rating=min_rating,
+            min_vote_count=min_vote_count
+        )
+        if movies_data and 'results' in movies_data:
+            all_movies.extend(movies_data['results'])
 
-matched_movies = []
-
-for movie in movies_data['results'][:50]:  # Check first 50 to find matches
-    if len(matched_movies) >= 10:
+    if not all_movies:
+        print("❌ Could not fetch movies. Please try again later.")
         break
-    
-    movie_id = movie['id']
-    streaming_info = get_streaming_providers(movie_id)
-    
-    if streaming_info and 'flatrate' in streaming_info:
-        available_providers = {provider['provider_id'] for provider in streaming_info['flatrate']}
-        
-        if any(provider_id in available_providers for provider_id in provider_ids):
-            matching_services = []
-            for service_name, provider_id in STREAMING_PROVIDER_IDS.items():
-                if provider_id in available_providers and service_name in enabled_services:
-                    # Friendly names
-                    friendly_names = {
-                        'netflix': 'Netflix',
-                        'hulu': 'Hulu',
-                        'disneyPlus': 'Disney+',
-                        'hboMax': 'HBO Max',
-                        'amazonPrime': 'Prime Video',
-                        'appleTV': 'Apple TV+',
-                        'paramount': 'Paramount+',
-                        'peacock': 'Peacock'
-                    }
-                    matching_services.append(friendly_names.get(service_name, service_name))
-            
-            movie_details = get_movie_details(movie_id)
-            director = get_movie_director(movie_details) if movie_details else "Unknown"
-            genres = get_movie_genres(movie_details) if movie_details else []
 
-            matched_movies.append({
-                'title': movie['title'],
-                'year': movie.get('release_date', 'N/A')[:4],
-                'rating': movie.get('vote_average', 0),
-                'overview': movie.get('overview', ''),
-                'poster': get_poster_url(movie.get('poster_path')),
-                'services': matching_services,
-                'director': director,
-                'genres': genres
-            })
+    print(f"⏳ Checking {len(all_movies)} movies against your streaming services...")
 
-print("=" * 60)
-print(f"✅ Found {len(matched_movies)} movies on your streaming services!")
-print("=" * 60)
+    matched_movies = []
 
-for i, movie in enumerate(matched_movies, 1):
-    print(f"\n{i}. {movie['title']} ({movie['year']})")
-    print(f"   🎬 Director: {movie['director']}")
-    print(f"   🎭 Genres: {', '.join(movie['genres']) if movie['genres'] else 'N/A'}")
-    print(f"   ⭐ Rating: {movie['rating']}/10")
-    print(f"   📺 Available on: {', '.join(movie['services'])}")
-    print(f"   📝 {movie['overview'][:100]}...")
-    if movie['poster']:
-        print(f"   🖼️  Poster: {movie['poster']}")
+    for movie in all_movies:
+        movie_id = movie['id']
+        streaming_info = get_streaming_providers(movie_id)
+
+        if streaming_info and 'flatrate' in streaming_info:
+            available_providers = {p['provider_id'] for p in streaming_info['flatrate']}
+
+            if any(pid in available_providers for pid in provider_ids):
+                matching_services = [
+                    FRIENDLY_NAMES.get(svc, svc)
+                    for svc, pid in STREAMING_PROVIDER_IDS.items()
+                    if pid in available_providers and svc in enabled_services
+                ]
+
+                movie_details = get_movie_details(movie_id)
+                director = get_movie_director(movie_details) if movie_details else "Unknown"
+                actors = get_movie_actors(movie_details) if movie_details else []
+                genres = get_movie_genres(movie_details) if movie_details else []
+
+                matched_movies.append({
+                    'title': movie['title'],
+                    'year': movie.get('release_date', 'N/A')[:4],
+                    'rating': movie.get('vote_average', 0),
+                    'overview': movie.get('overview', ''),
+                    'poster': get_poster_url(movie.get('poster_path')),
+                    'services': matching_services,
+                    'director': director,
+                    'Popular Actors': actors,
+                    'genres': genres
+                })
+
+    print("\n" + "=" * 60)
+    if matched_movies:
+        print(f"✅ Found {len(matched_movies)} movies on your streaming services!")
+    else:
+        print("😕 No matches found for this batch. Try refreshing!")
+    print("=" * 60)
+
+    for i, movie in enumerate(matched_movies, 1):
+        print(f"\n{i}. {movie['title']} ({movie['year']})")
+        print(f"   🎬 Director: {movie['director']}")
+        print(f"   🎭 Main Actors: {', '.join(movie['Popular Actors']) if movie['Popular Actors'] else 'N/A'}")
+        print(f"   🎭 Genres: {', '.join(movie['genres']) if movie['genres'] else 'N/A'}")
+        print(f"   ⭐ Rating: {movie['rating']}/10")
+        print(f"   📺 Available on: {', '.join(movie['services'])}")
+        print(f"   📝 {movie['overview'][:120]}...")
+        if movie['poster']:
+            print(f"   🖼️  Poster: {movie['poster']}")
+
+    print("\n" + "=" * 60)
+    action = input("Press Enter to refresh for more movies, or type 'quit' to exit: ").strip().lower()
+    if action == 'quit':
+        break
+
+    batch += 1
 
 print("\n" + "=" * 60)
-print(f"🎉 Welcome to Reelette, {username}! Enjoy discovering movies!")
+print(f"🎉 Thanks for using Reelette, {username}! Enjoy your movies!")
 print("=" * 60)
