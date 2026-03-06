@@ -1,4 +1,4 @@
-# Reelette
+# Reelette backend dev
 CSC4330 Rellette group repo. This is our movie website idea. 
 
 
