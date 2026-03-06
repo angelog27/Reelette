@@ -12,8 +12,8 @@ print("=" * 60)
 print("🎬 REELETTE - User Registration & Movie Discovery")
 print("=" * 60)
 
-# Step 1: Login or Register
-print("\n📝 STEP 1: Login or Register")
+# ask if user wants to log in or make a new account
+print("\nSTEP 1: Login or Register")
 print("-" * 60)
 
 choice = input("Do you want to (1) Login or (2) Register? Enter 1 or 2: ")
@@ -31,6 +31,7 @@ if choice == "1":
     print("-" * 60)
      
     email = input("Enter email: ")
+    # keep asking until we find a valid email in the database
     verify_email = check_email_exists(email)
     while not verify_email['success']:
         print(f"❌ Error: {verify_email['message']}")
@@ -44,7 +45,7 @@ if choice == "1":
         else:
             print("❌ Incorrect password, try again.")    
 
-    print("\n⏳ Logging in...")
+    print("\n Logging in...")
     result = verify_user(email, password)
     
     if result['success']:
@@ -57,7 +58,7 @@ if choice == "1":
 
 elif choice == "2":
     # REGISTER
-    print("\n📝 REGISTER")
+    print("\n REGISTER")
     print("-" * 60)
     
     username = input("Enter username: ")
@@ -78,13 +79,13 @@ elif choice == "2":
     
     print(f"✅ Account created successfully!")
     user_id = result['user_id']
-    print(f"🆔 User ID: {user_id}")
+    print(f" User ID: {user_id}")
 
 else:
     print("❌ Invalid choice. Please enter 1 or 2.")
     exit()
 
-# Step 2: Check if user already has streaming services set
+# check if the user has already set up their streaming services before
 print("\n" + "=" * 60)
 print("📺 STEP 2: Streaming Services")
 print("-" * 60)
@@ -111,9 +112,8 @@ if enabled_services:
     
     if update_choice.lower() != 'y':
         print("✅ Keeping existing streaming services")
-        # Skip to movie discovery
+        # skip straight to movie discovery
     else:
-        # Allow update
         print("\n📺 Update Your Streaming Services")
         print("-" * 60)
         
@@ -141,6 +141,7 @@ if enabled_services:
             8: 'peacock'
         }
         
+        # start everything off, then flip the ones the user picked
         streaming_services = {
             'netflix': False,
             'hulu': False,
@@ -168,7 +169,7 @@ if enabled_services:
             exit()
 
 else:
-    # New user - prompt for services
+    # first time setup — prompt the user to pick their services
     print("\n📺 Select Your Streaming Services")
     print("-" * 60)
     
@@ -196,6 +197,7 @@ else:
         8: 'peacock'
     }
     
+    # start everything off as false, then flip the ones the user picked
     streaming_services = {
         'netflix': False,
         'hulu': False,
@@ -222,7 +224,7 @@ else:
         print(f"❌ Error: {update_result['message']}")
         exit()
 
-# ── Shared constants ─────────────────────────────────────────
+# provider IDs come from TMDB's API, these map our service keys to their IDs
 STREAMING_PROVIDER_IDS = {
     'netflix': 8, 'amazonPrime': 9, 'disneyPlus': 337,
     'hboMax': 384, 'hulu': 15, 'appleTV': 2,
@@ -242,7 +244,7 @@ if not provider_ids:
     print("❌ No streaming services selected. Please update your preferences.")
     exit()
 
-# ── Helper: display a list of matched movies ──────────────────
+# prints a numbered list of movies with their key details
 def display_movies(matched_movies, streaming_filtered=True):
     print("\n" + "=" * 60)
     if matched_movies:
@@ -251,7 +253,7 @@ def display_movies(matched_movies, streaming_filtered=True):
         else:
             print(f"✅ Found {len(matched_movies)} movies matching your search!")
     else:
-        print("😕 No matches found. Try refreshing or adjusting your filters.")
+        print(" No matches found. Try refreshing or adjusting your filters.")
     print("=" * 60)
     for i, movie in enumerate(matched_movies, 1):
         print(f"\n{i}. {movie['title']} ({movie['year']})")
@@ -265,7 +267,7 @@ def display_movies(matched_movies, streaming_filtered=True):
         if movie['poster']:
             print(f"   🖼️  Poster: {movie['poster']}")
 
-# ── Helper: filter movies to only those on user's streaming services ─
+# checks each movie against the user's streaming services and only keeps matches
 def filter_by_streaming(raw_movies):
     matched = []
     for movie in raw_movies:
@@ -295,13 +297,18 @@ def filter_by_streaming(raw_movies):
                 })
     return matched
 
-# ── Helper: enrich movies without filtering by streaming ──────
+# same as filter_by_streaming but skips the service check — used when user wants all results
 def enrich_movies(raw_movies):
     results = []
     for movie in raw_movies:
         movie_id = movie['id']
         details = get_movie_details(movie_id)
         release_date = movie.get('release_date') or ''
+        streaming_info = get_streaming_providers(movie_id)
+        if streaming_info and 'flatrate' in streaming_info:
+            services = [p['provider_name'] for p in streaming_info['flatrate']]
+        else:
+            services = ['N/A']
         results.append({
             'movie_id': movie_id,
             'title': movie['title'],
@@ -309,14 +316,15 @@ def enrich_movies(raw_movies):
             'rating': movie.get('vote_average', 0),
             'overview': movie.get('overview', ''),
             'poster': get_poster_url(movie.get('poster_path')),
-            'services': ['N/A'],
+            'services': services,
             'director': get_movie_director(details) if details else "Unknown",
             'Popular Actors': get_movie_actors(details) if details else [],
             'genres': get_movie_genres(details) if details else []
         })
     return results
 
-# ── Helper: resolve a person name → (id, name) or (None, None) ─
+
+# searches TMDB for a person by name and lets the user pick the right one
 def resolve_person(prompt_label):
     name = input(f"   {prompt_label} name (or Enter to skip): ").strip()
     if not name:
@@ -341,7 +349,7 @@ def resolve_person(prompt_label):
             return chosen['id'], chosen['name']
         print(f"   Invalid choice. Enter a number 1-{len(people)} or press Enter to skip.")
 
-# ── Helper: select a movie, rate it, save to Firebase ────────
+# shows full movie details and lets the user rate or update their rating
 def handle_movie_selection(movie, user_id):
     print("\n" + "=" * 60)
     print(f"🎬 {movie['title']} ({movie['year']})")
@@ -389,7 +397,7 @@ def handle_movie_selection(movie, user_id):
         else:
             print(f"❌ Error: {result['message']}")
 
-# ── Step 3: Main menu ─────────────────────────────────────────
+# main loop — keeps running until the user quits
 while True:
     print("\n" + "=" * 60)
     print("🎬 STEP 3: What would you like to do?")
@@ -406,7 +414,7 @@ while True:
     if main_choice == "4":
         break
 
-    # ── BROWSE MODE ───────────────────────────────────────────
+    # BROWSE MODE
     if main_choice == "1":
         print("\nWhat type of movies would you like to see?")
         print("1. Currently Popular  (trending right now)")
@@ -423,6 +431,7 @@ while True:
         if browse_choice.lower() == 'menu':
             continue
 
+        # set sort params based on browse type
         if browse_choice == "1":
             sort_by = "popularity.desc"
             movie_type_label = "Currently Popular"
@@ -432,6 +441,7 @@ while True:
             movie_type_label = "All Time Best"
             b_min_rating, b_min_votes = 7.0, 1000
 
+        # fetch two TMDB pages per batch so we have enough results after streaming filter
         batch = 1
         while True:
             print("\n" + "=" * 60)
@@ -465,22 +475,21 @@ while True:
                 if action.isdigit() and 1 <= int(action) <= len(matched):
                     handle_movie_selection(matched[int(action) - 1], user_id)
                     continue
-                break  # next batch
+                break  # load next batch
 
             if go_menu:
                 break
             batch += 1
 
-    # ── SEARCH & FILTER MODE ──────────────────────────────────
+    # SEARCH & FILTER MODE
     elif main_choice == "2":
         print("\n" + "=" * 60)
         print("🔍 SEARCH & FILTER MOVIES")
         print("-" * 60)
 
-        # Step 1: title/keyword
         title = input("Movie title or keyword (or Enter to browse with filters only): ").strip()
 
-        # Step 2: filters
+        # reset all filter values before collecting input
         actor_id = director_id = None
         actor_name = director_name = None
         year_from = year_to = exact_year = None
@@ -547,10 +556,9 @@ while True:
                 elif sort_input == "3":
                     search_sort = "primary_release_date.desc"
 
-        # Step 3: streaming filter preference
         use_streaming = input("\nFilter results to your streaming services only? (y/n): ").strip().lower() == 'y'
 
-        # Show active filter summary
+        # show a summary of everything the user picked before running the search
         print("\n── Active filters ──────────────────────────────────")
         if title:
             print(f"  Title:     {title}")
@@ -569,13 +577,13 @@ while True:
         print(f"  Streaming: {'Your services only' if use_streaming else 'All results'}")
         print("────────────────────────────────────────────────────")
 
-        # Step 4: run the search loop
         s_batch = 1
         while True:
             print("\n" + "=" * 60)
             print(f"🔍 Search Results — Page {s_batch}")
             print("-" * 60)
 
+            # title search uses a different endpoint than discover
             if title:
                 data = search_movies(title, page=s_batch)
                 raw = data['results'] if data and 'results' in data else []
@@ -621,13 +629,13 @@ while True:
                 if action.isdigit() and 1 <= int(action) <= len(matched):
                     handle_movie_selection(matched[int(action) - 1], user_id)
                     continue
-                break  # next page
+                break  # load next page
 
             if go_menu:
                 break
             s_batch += 1
 
-    # ── WATCHED MOVIES TAB ────────────────────────────────────
+    # WATCHED MOVIES — shows what the user has rated and lets them view details or update a rating
     elif main_choice == "3":
         while True:
             print("\n" + "=" * 60)
@@ -659,6 +667,7 @@ while True:
                 print(f"   🎬 Director:     {m.get('director', 'Unknown')}")
                 print(f"   🎭 Actors:       {', '.join(m.get('actors', [])) or 'N/A'}")
                 print(f"   🎭 Genres:       {', '.join(m.get('genres', [])) or 'N/A'}")
+                print(f"   📺 Streaming:    {', '.join(m.get('services', [])) or 'N/A'}")
                 print(f"   ⭐ TMDB Rating:  {m.get('tmdb_rating', 'N/A')}/10")
                 print(f"   ⭐ Your Rating:  {m['user_rating']}/10")
                 print(f"   📝 {m.get('overview', 'No overview available.')}")

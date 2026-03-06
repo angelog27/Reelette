@@ -72,6 +72,7 @@ def create_user(email, password, username):
             'message': str(e)
         }
 
+# Check if an email is already registered in Firebase Authentication
 def check_email_exists(email):
     try:
         auth.get_user_by_email(email)
@@ -81,6 +82,7 @@ def check_email_exists(email):
     except Exception as e:
         return {'success': False, 'message': str(e)}
 
+# Verify user credentials with Firebase Authentication and return user data if valid
 def verify_user(email, password):
     try:
         url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={FIREBASE_WEB_API_KEY}"
@@ -176,8 +178,8 @@ def get_watchlist(user_id):
         print(f"Error getting watchlist: {e}")
         return []
 
+#Add a movie to the user's watched list with all relevant details and the user's rating. This will be stored in a subcollection under the user document for easy retrieval and management of watched movies.
 def add_watched_movie(user_id, movie, user_rating):
-    """Save a watched movie with the user's rating to Firestore."""
     try:
         movie_doc = {
             'movie_id': movie['movie_id'],
@@ -200,8 +202,9 @@ def add_watched_movie(user_id, movie, user_rating):
     except Exception as e:
         return {'success': False, 'message': str(e)}
 
+
+#Returns a users watched movies.
 def get_watched_movies(user_id):
-    """Return all watched movies for a user, newest first."""
     try:
         docs = (db.collection('users').document(user_id)
                   .collection('watched_movies')
@@ -212,8 +215,9 @@ def get_watched_movies(user_id):
         print(f"Error getting watched movies: {e}")
         return []
 
+
+#Checks if a movie is in the users watch list, and returns true or false. This is used to prevent duplicates in the watchlist and to check if a movie has already been watched.
 def is_movie_watched(user_id, movie_id):
-    """Return True if the user has already marked this movie as watched."""
     try:
         doc = (db.collection('users').document(user_id)
                  .collection('watched_movies').document(str(movie_id))
@@ -222,8 +226,8 @@ def is_movie_watched(user_id, movie_id):
     except Exception:
         return False
 
+#Updates a users rating for a movie in their watched list. This allows users to change their rating after watching a movie, and keeps the data up to date in Firestore.
 def update_watched_rating(user_id, movie_id, new_rating):
-    """Update the user's rating for an already-watched movie."""
     try:
         (db.collection('users').document(user_id)
            .collection('watched_movies').document(str(movie_id))

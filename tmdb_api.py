@@ -2,8 +2,9 @@
 import requests
 from config import TMDB_API_KEY, TMDB_BASE_URL, TMDB_IMAGE_BASE
 
+
+#Query TMDB API for movies, genres, actors, etc. and return results as JSON
 def search_movies(query, page=1):
-    """Search for movies by title"""
     url = f"{TMDB_BASE_URL}/search/movie"
     params = {
         "api_key": TMDB_API_KEY,
@@ -21,8 +22,9 @@ def search_movies(query, page=1):
         print(f"Error searching movies: {e}")
         return None
 
+
+#Get detailed information about a specific movie, including credits, videos, streaming providers, similar movies, and keywords
 def get_movie_details(movie_id):
-    """Get detailed information about a specific movie"""
     url = f"{TMDB_BASE_URL}/movie/{movie_id}"
     params = {
         "api_key": TMDB_API_KEY,
@@ -38,8 +40,9 @@ def get_movie_details(movie_id):
         print(f"Error getting movie details: {e}")
         return None
 
+
+#Get currently popular movies from the API, with pagination support. This can be used to show trending movies on the home page or in a "Popular Movies" section.
 def get_popular_movies(page=1):
-    """Get currently popular movies"""
     url = f"{TMDB_BASE_URL}/movie/popular"
     params = {
         "api_key": TMDB_API_KEY,
@@ -55,8 +58,9 @@ def get_popular_movies(page=1):
         print(f"Error getting popular movies: {e}")
         return None
 
+
+#Searches for a person (actor or director) by name, returns list of results. This can be used to allow users to search for movies by actor or director.
 def search_person(name):
-    """Search for a person (actor or director) by name, returns list of results"""
     url = f"{TMDB_BASE_URL}/search/person"
     params = {
         "api_key": TMDB_API_KEY,
@@ -72,11 +76,11 @@ def search_person(name):
         return None
 
 
+#Discover movies from the API using various filters of the users choice, like genre, actor, and more...
 def discover_movies(genre_id=None, year=None, year_from=None, year_to=None,
                     min_rating=None, min_vote_count=None,
                     with_cast=None, with_crew=None,
                     sort_by="popularity.desc", page=1):
-    """Discover movies with filters"""
     url = f"{TMDB_BASE_URL}/discover/movie"
     params = {
         "api_key": TMDB_API_KEY,
@@ -111,22 +115,22 @@ def discover_movies(genre_id=None, year=None, year_from=None, year_to=None,
         print(f"Error discovering movies: {e}")
         return None
     
-
+#Extract director from movie credits
 def get_movie_director(movie_details):
-    """Extract director from movie credits"""
     if 'credits' in movie_details and 'crew' in movie_details['credits']:
         for crew_member in movie_details['credits']['crew']:
             if crew_member['job'] == 'Director':
                 return crew_member['name']
     return "Unknown"
 
+
+#Get the actual movie genres from the movie details, which are returned as a list of genre objects with id and name. This can be used to display the genres of a movie on the movie details page.
 def get_movie_genres(movie_details):
-    """Extract genre names from movie details"""
     genres = movie_details.get('genres', [])
     return [genre['name'] for genre in genres]
 
+#Get the actual streaming providers for a movie, which are returned as a list of provider objects with id, name, and logo. This can be used to show users where they can watch a movie online.
 def get_streaming_providers(movie_id):
-    """Get streaming availability (Netflix, Hulu, etc.) for a movie"""
     url = f"{TMDB_BASE_URL}/movie/{movie_id}/watch/providers"
     params = {
         "api_key": TMDB_API_KEY
@@ -142,8 +146,8 @@ def get_streaming_providers(movie_id):
         print(f"Error getting streaming providers: {e}")
         return None
 
+#Get the actual movie genres 
 def get_genres():
-    """Get list of all movie genres"""
     url = f"{TMDB_BASE_URL}/genre/movie/list"
     params = {
         "api_key": TMDB_API_KEY,
@@ -158,9 +162,8 @@ def get_genres():
         print(f"Error getting genres: {e}")
         return None
 
-
+#Get trending movies (day or week) from the API, which can be used to show users what movies are currently popular and trending.
 def get_trending_movies(time_window="week"):
-    """Get trending movies (day or week)"""
     url = f"{TMDB_BASE_URL}/trending/movie/{time_window}"
     params = {
         "api_key": TMDB_API_KEY
@@ -174,27 +177,28 @@ def get_trending_movies(time_window="week"):
         print(f"Error getting trending movies: {e}")
         return None
 
+#Get the full URL for a movie poster...
 def get_poster_url(poster_path, size="w500"):
     """Build full URL for movie poster"""
     if poster_path:
         return f"{TMDB_IMAGE_BASE}/{size}{poster_path}"
     return None
 
+#Returns the 5 most prominent actors in a movie, can be adjusted for more than 5
 def get_movie_actors(movie_details, max_actors=5):
-    """Extract main actors from movie credits"""
     actors = []
     if 'credits' in movie_details and 'cast' in movie_details['credits']:
         for cast_member in movie_details['credits']['cast'][:max_actors]:
             actors.append(cast_member['name'])
     return actors
 
+#Get the full URL for a movie backdrop, which can be used to display a large background image on the movie details page or in a carousel of movies.
 def get_backdrop_url(backdrop_path, size="w1280"):
-    """Build full URL for movie backdrop"""
     if backdrop_path:
         return f"{TMDB_IMAGE_BASE}/{size}{backdrop_path}"
     return None
 
+#Allow's a user to rate a movie, which is stored in firebase.
 def user_rate_movies(user_id, movie_id, rating, review):
-    """Allow a user to rate a movie"""
     # Implementation for user rating functionality
     pass
