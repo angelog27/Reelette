@@ -235,3 +235,109 @@ def update_watched_rating(user_id, movie_id, new_rating):
         return {'success': True}
     except Exception as e:
         return {'success': False, 'message': str(e)}
+
+
+# ── Social Feed ───────────────────────────────────────────────
+
+# creates a new post in the global feed with the movie info and user's message
+def create_post(user_id, username, message, movie_title, movie_id, rating):
+    try:
+        post_ref = db.collection('posts').document()
+        post_ref.set({
+            'post_id': post_ref.id,
+            'user_id': user_id,
+            'username': username,
+            'message': message,
+            'movie_title': movie_title,
+            'movie_id': str(movie_id),
+            'rating': rating,
+            'likes': 0,
+            'liked_by': [],
+            'created_at': datetime.now()
+        })
+        return {'success': True, 'post_id': post_ref.id}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+# pulls the most recent posts from the feed, newest first
+def get_feed(limit=20):
+    try:
+        docs = (db.collection('posts')
+                  .order_by('created_at', direction=firestore.Query.DESCENDING)
+                  .limit(limit)
+                  .stream())
+        return [doc.to_dict() for doc in docs]
+    except Exception as e:
+        print(f"Error getting feed: {e}")
+        return []
+
+# toggle like on a post — likes if not already liked, unlikes if already liked
+def like_post(post_id, user_id):
+    try:
+        post_ref = db.collection('posts').document(post_id)
+        post_doc = post_ref.get()
+
+        if not post_doc.exists:
+            return {'success': False, 'message': 'Post not found'}
+
+        liked_by = post_doc.to_dict().get('liked_by', [])
+
+        if user_id in liked_by:
+            # already liked, so remove the like
+            post_ref.update({
+                'likes': firestore.Increment(-1),
+                'liked_by': firestore.ArrayRemove([user_id])
+            })
+            return {'success': True, 'action': 'unliked'}
+        else:
+            post_ref.update({
+                'likes': firestore.Increment(1),
+                'liked_by': firestore.ArrayUnion([user_id])
+            })
+            return {'success': True, 'action': 'liked'}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+# adds a reply to a post's replies subcollection
+def add_reply(post_id, user_id, username, message):
+    try:
+        reply_ref = db.collection('posts').document(post_id).collection('replies').document()
+        reply_ref.set({
+            'reply_id': reply_ref.id,
+            'user_id': user_id,
+            'username': username,
+            'message': message,
+            'created_at': datetime.now()
+        })
+        return {'success': True, 'reply_id': reply_ref.id}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+# fetches all replies for a given post, oldest first
+def get_replies(post_id):
+    try:
+        docs = (db.collection('posts').document(post_id)
+                  .collection('replies')
+                  .order_by('created_at', direction=firestore.Query.ASCENDING)
+                  .stream())
+        return [doc.to_dict() for doc in docs]
+    except Exception as e:
+        print(f"Error getting replies: {e}")
+        return []
+
+# deletes a post — only works if the requesting user owns it
+def delete_post(post_id, user_id):
+    try:
+        post_ref = db.collection('posts').document(post_id)
+        post_doc = post_ref.get()
+
+        if not post_doc.exists:
+            return {'success': False, 'message': 'Post not found'}
+
+        if post_doc.to_dict().get('user_id') != user_id:
+            return {'success': False, 'message': 'You can only delete your own posts'}
+
+        post_ref.delete()
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}

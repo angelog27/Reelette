@@ -2,18 +2,21 @@
 from firebase_helper import (create_user, verify_user, check_email_exists,
                              update_streaming_services, get_user_streaming_services,
                              add_watched_movie, get_watched_movies,
-                             is_movie_watched, update_watched_rating)
+                             is_movie_watched, update_watched_rating,
+                             create_post, get_feed, like_post, add_reply, get_replies, delete_post)
 from tmdb_api import (discover_movies, search_movies, search_person, get_genres,
                        get_streaming_providers, get_poster_url,
                        get_movie_director, get_movie_details, get_movie_genres, get_movie_actors)
 import getpass
 
 print("=" * 60)
-print("🎬 REELETTE - User Registration & Movie Discovery")
+print("REELETTE - Login & Movie Discovery")
 print("=" * 60)
 
 # ask if user wants to log in or make a new account
 print("\nSTEP 1: Login or Register")
+print("If you have aleady made an account, Welcome Back! Please log in to continue.")
+print("If you're new around here, Start registering to create your account and set up your streaming preferences.")
 print("-" * 60)
 
 choice = input("Do you want to (1) Login or (2) Register? Enter 1 or 2: ")
@@ -27,38 +30,39 @@ username = None
 
 if choice == "1":
     # LOGIN
-    print("\n🔐 LOGIN")
+    print("\nLOGIN")
     print("-" * 60)
      
     email = input("Enter email: ")
     # keep asking until we find a valid email in the database
     verify_email = check_email_exists(email)
     while not verify_email['success']:
-        print(f"❌ Error: {verify_email['message']}")
+        print(f"⚠️ Error: {verify_email['message']}")
         email = input("Please enter a valid email: ")
         verify_email = check_email_exists(email)
     while True:
         password = input("Enter password:")
         if verify_user(email, password)['success']:
-            print("✅ Login successful!")
+            print("Login successful!")
             break
         else:
-            print("❌ Incorrect password, try again.")    
+            print("⚠️Incorrect password, try again.")    
 
     print("\n Logging in...")
     result = verify_user(email, password)
     
     if result['success']:
-        print(f"✅ Welcome back, {result['username']}!")
+        print(f"Welcome back, {result['username']}!")
         user_id = result['user_id']
         username = result['username']
     else:
-        print(f"❌ Login failed: {result['message']}")
+        print(f"⚠️Login failed: {result['message']}")
         exit()
 
 elif choice == "2":
     # REGISTER
     print("\n REGISTER")
+    print("\nLet's create your account! You'll need a valid email and a secure password.")
     print("-" * 60)
     
     username = input("Enter username: ")
@@ -67,34 +71,34 @@ elif choice == "2":
     confirm_password = getpass.getpass("Confirm password: ")
     
     if password != confirm_password:
-        print("❌ Passwords don't match!")
+        print("⚠️ Passwords don't match!")
         exit()
     
     print("\n⏳ Creating account...")
     result = create_user(email, password, username)
     
     if not result['success']:
-        print(f"❌ Error: {result['message']}")
+        print(f"⚠️ Error: {result['message']}")
         exit()
     
-    print(f"✅ Account created successfully!")
+    print(f"Account created successfully!")
     user_id = result['user_id']
     print(f" User ID: {user_id}")
 
 else:
-    print("❌ Invalid choice. Please enter 1 or 2.")
+    print("⚠️ Invalid choice. Please enter 1 or 2.")
     exit()
 
 # check if the user has already set up their streaming services before
 print("\n" + "=" * 60)
-print("📺 STEP 2: Streaming Services")
+print("STEP 2: Streaming Services")
 print("-" * 60)
 
 existing_services = get_user_streaming_services(user_id)
 enabled_services = [k for k, v in existing_services.items() if v]
 
 if enabled_services:
-    print(f"\n✅ You already have streaming services configured:")
+    print(f"\n You already have streaming services configured:")
     friendly_names = {
         'netflix': 'Netflix',
         'hulu': 'Hulu',
@@ -108,13 +112,14 @@ if enabled_services:
     for service in enabled_services:
         print(f"   • {friendly_names.get(service, service)}")
     
-    update_choice = input("\nDo you want to update your services? (y/n): ")
+    print("Have you updated your streaming services?")
+    update_choice = input("\n If so select y, if not select n (y/n): ")
     
     if update_choice.lower() != 'y':
-        print("✅ Keeping existing streaming services")
+        print("Keeping existing streaming services")
         # skip straight to movie discovery
     else:
-        print("\n📺 Update Your Streaming Services")
+        print("\nUpdate Your Streaming Services")
         print("-" * 60)
         
         print("\nAvailable streaming services:")
@@ -157,20 +162,20 @@ if enabled_services:
             if num in services_map:
                 streaming_services[services_map[num]] = True
         
-        print("\n⏳ Updating preferences...")
+        print("\nUpdating preferences...")
         update_result = update_streaming_services(user_id, streaming_services)
         
         if update_result['success']:
-            print("✅ Streaming services updated!")
+            print("Streaming services updated!")
             enabled = [k for k, v in streaming_services.items() if v]
             print(f"📺 You selected: {', '.join(enabled)}")
         else:
-            print(f"❌ Error: {update_result['message']}")
+            print(f"Error: {update_result['message']}")
             exit()
 
 else:
     # first time setup — prompt the user to pick their services
-    print("\n📺 Select Your Streaming Services")
+    print("\nSelect Your Streaming Services")
     print("-" * 60)
     
     print("\nAvailable streaming services:")
@@ -213,15 +218,15 @@ else:
         if num in services_map:
             streaming_services[services_map[num]] = True
     
-    print("\n⏳ Saving preferences...")
+    print("\nSaving preferences...")
     update_result = update_streaming_services(user_id, streaming_services)
     
     if update_result['success']:
-        print("✅ Streaming services saved!")
+        print("Streaming services saved!")
         enabled = [k for k, v in streaming_services.items() if v]
         print(f"📺 You selected: {', '.join(enabled)}")
     else:
-        print(f"❌ Error: {update_result['message']}")
+        print(f" ⚠️ Error: {update_result['message']}")
         exit()
 
 # provider IDs come from TMDB's API, these map our service keys to their IDs
@@ -241,7 +246,7 @@ enabled_services = [svc for svc, on in user_services.items() if on]
 provider_ids = [STREAMING_PROVIDER_IDS[s] for s in enabled_services if s in STREAMING_PROVIDER_IDS]
 
 if not provider_ids:
-    print("❌ No streaming services selected. Please update your preferences.")
+    print("⚠️ No streaming services selected. Please update your preferences.")
     exit()
 
 # prints a numbered list of movies with their key details
@@ -249,9 +254,9 @@ def display_movies(matched_movies, streaming_filtered=True):
     print("\n" + "=" * 60)
     if matched_movies:
         if streaming_filtered:
-            print(f"✅ Found {len(matched_movies)} movies on your streaming services!")
+            print(f"Found {len(matched_movies)} movies on your streaming services!")
         else:
-            print(f"✅ Found {len(matched_movies)} movies matching your search!")
+            print(f"Found {len(matched_movies)} movies matching your search!")
     else:
         print(" No matches found. Try refreshing or adjusting your filters.")
     print("=" * 60)
@@ -345,7 +350,7 @@ def resolve_person(prompt_label):
             return None, None
         if pick.isdigit() and 1 <= int(pick) <= len(people):
             chosen = people[int(pick) - 1]
-            print(f"   ✅ {prompt_label} filter set: {chosen['name']}")
+            print(f"   {prompt_label} filter set: {chosen['name']}")
             return chosen['id'], chosen['name']
         print(f"   Invalid choice. Enter a number 1-{len(people)} or press Enter to skip.")
 
@@ -397,21 +402,57 @@ def handle_movie_selection(movie, user_id):
         else:
             print(f"❌ Error: {result['message']}")
 
+# prints a single post with its likes and timestamp
+def display_post(i, post):
+    created = post.get('created_at')
+    date_str = created.strftime('%b %d, %Y %I:%M %p') if hasattr(created, 'strftime') else str(created)
+    print(f"\n{i}. {post['username']}")
+    print(f"   {post['message']}")
+    print(f"   {post['movie_title']}  ⭐ {post['rating']}/10")
+    print(f"    {post['likes']} likes  •  🕐 {date_str}")
+
+# handles viewing replies and writing one for a given post
+def handle_post_replies(post, user_id, username):
+    post_id = post['post_id']
+    replies = get_replies(post_id)
+
+    print(f"\n── Replies ({len(replies)}) ─────────────────────────────────")
+    if not replies:
+        print("   No replies yet.")
+    for r in replies:
+        print(f"   {r['username']}: {r['message']}")
+
+    print("\n1. Write a reply")
+    print("2. Back")
+    choice = input("\nEnter 1 or 2: ").strip()
+    if choice != "1":
+        return
+
+    msg = input("Your reply: ").strip()
+    if not msg:
+        return
+    result = add_reply(post_id, user_id, username, msg)
+    if result['success']:
+        print("Reply posted!")
+    else:
+        print(f"⚠️ Error: {result['message']}")
+
 # main loop — keeps running until the user quits
 while True:
     print("\n" + "=" * 60)
-    print("🎬 STEP 3: What would you like to do?")
+    print("STEP 3: Welcome to Reelette! What would you like to do?")
     print("-" * 60)
     print("1. Browse Movies    (Popular now or All Time Best)")
     print("2. Search & Filter  (by title, actor, director, year, rating, genre)")
     print("3. Watched Movies   (view your rated movies)")
-    print("4. Quit")
+    print("4. Social Feed      (see what others are watching)")
+    print("5. Quit")
 
-    main_choice = input("\nEnter 1, 2, 3, or 4: ").strip()
-    while main_choice not in ["1", "2", "3", "4"]:
-        main_choice = input("Invalid choice. Enter 1, 2, 3, or 4: ").strip()
+    main_choice = input("\nEnter 1, 2, 3, 4, or 5: ").strip()
+    while main_choice not in ["1", "2", "3", "4", "5"]:
+        main_choice = input("Invalid choice. Enter 1, 2, 3, 4, or 5: ").strip()
 
-    if main_choice == "4":
+    if main_choice == "5":
         break
 
     # BROWSE MODE
@@ -441,11 +482,19 @@ while True:
             movie_type_label = "All Time Best"
             b_min_rating, b_min_votes = 7.0, 1000
 
+        # ask whether to filter by streaming services for this browse session
+        print("\nWould you like to filter results to only movies on your streaming services?")
+        print("(Say 'no' to see all movies, e.g. to browse what's popular right now)")
+        use_streaming_filter = input("Apply your streaming services? (yes/no): ").strip().lower()
+        while use_streaming_filter not in ["yes", "no", "y", "n"]:
+            use_streaming_filter = input("Please enter 'yes' or 'no': ").strip().lower()
+        use_streaming_filter = use_streaming_filter in ["yes", "y"]
+
         # fetch two TMDB pages per batch so we have enough results after streaming filter
         batch = 1
         while True:
             print("\n" + "=" * 60)
-            print(f"🎬 {movie_type_label} — Batch {batch}")
+            print(f"{movie_type_label} — Batch {batch}")
             print("-" * 60)
 
             raw = []
@@ -456,12 +505,16 @@ while True:
                     raw.extend(data['results'])
 
             if not raw:
-                print("❌ Could not fetch movies.")
+                print("⚠️Could not fetch movies.")
                 break
 
-            print(f"⏳ Checking {len(raw)} movies against your streaming services...")
-            matched = filter_by_streaming(raw)
-            display_movies(matched)
+            if use_streaming_filter:
+                print(f"⏳ Checking {len(raw)} movies against your streaming services...")
+                matched = filter_by_streaming(raw)
+            else:
+                print(f"⏳ Loading {len(raw)} movies...")
+                matched = enrich_movies(raw)
+            display_movies(matched, streaming_filtered=use_streaming_filter)
 
             go_menu = False
             while True:
@@ -484,7 +537,7 @@ while True:
     # SEARCH & FILTER MODE
     elif main_choice == "2":
         print("\n" + "=" * 60)
-        print("🔍 SEARCH & FILTER MOVIES")
+        print("SEARCH & FILTER MOVIES")
         print("-" * 60)
 
         title = input("Movie title or keyword (or Enter to browse with filters only): ").strip()
@@ -580,7 +633,7 @@ while True:
         s_batch = 1
         while True:
             print("\n" + "=" * 60)
-            print(f"🔍 Search Results — Page {s_batch}")
+            print(f"Search Results — Page {s_batch}")
             print("-" * 60)
 
             # title search uses a different endpoint than discover
@@ -605,15 +658,15 @@ while True:
                         raw.extend(data['results'])
 
             if not raw:
-                print("❌ No results found.")
+                print("⚠️ No results found.")
                 break
 
             if use_streaming:
-                print(f"⏳ Checking {len(raw)} movies against your streaming services...")
+                print(f"Checking {len(raw)} movies against your streaming services...")
                 matched = filter_by_streaming(raw)
                 display_movies(matched)
             else:
-                print(f"⏳ Fetching details for {len(raw)} movies...")
+                print(f"Fetching details for {len(raw)} movies...")
                 matched = enrich_movies(raw)
                 display_movies(matched, streaming_filtered=False)
 
@@ -639,18 +692,18 @@ while True:
     elif main_choice == "3":
         while True:
             print("\n" + "=" * 60)
-            print("📋 YOUR WATCHED MOVIES")
+            print("YOUR WATCHED MOVIES")
             print("-" * 60)
 
             watched = get_watched_movies(user_id)
 
             if not watched:
-                print("😕 You haven't watched any movies yet.")
+                print("You haven't watched any movies yet.")
                 print("   Browse or search for movies and rate them to build your list!")
                 input("\nPress Enter to return to the menu.")
                 break
 
-            print(f"✅ You've watched {len(watched)} movie(s)!\n")
+            print(f"You've watched {len(watched)} movie(s)!\n")
             for i, m in enumerate(watched, 1):
                 print(f"  {i:2}. {m['title']} ({m['year']})  —  ⭐ Your rating: {m['user_rating']}/10")
 
@@ -680,6 +733,125 @@ while True:
                 input("\nPress Enter to go back.")
             else:
                 print("Invalid choice.")
+
+    # SOCIAL FEED — browse posts, like them, reply, create your own, or delete yours
+    elif main_choice == "4":
+        while True:
+            print("\n" + "=" * 60)
+            print("🗣️  SOCIAL FEED")
+            print("-" * 60)
+            print("1. Browse feed")
+            print("2. Create a post")
+            print("3. Back to menu")
+
+            feed_choice = input("\nEnter 1, 2, or 3: ").strip()
+            while feed_choice not in ["1", "2", "3"]:
+                feed_choice = input("Invalid choice. Enter 1, 2, or 3: ").strip()
+
+            if feed_choice == "3":
+                break
+
+            # CREATE A POST
+            if feed_choice == "2":
+                print("\n── New Post ─────────────────────────────────────────")
+                movie_title = input("Movie title: ").strip()
+                if not movie_title:
+                    print("⚠️ Movie title is required.")
+                    continue
+
+                # search TMDB so we can attach the real movie ID to the post
+                print(f" Searching for '{movie_title}'...")
+                search_result = search_movies(movie_title, page=1)
+                raw_results = search_result['results'][:5] if search_result and 'results' in search_result else []
+
+                if not raw_results:
+                    print("⚠️ No movies found with that title.")
+                    continue
+
+                print("\nPick the right movie:")
+                for i, m in enumerate(raw_results, 1):
+                    year = m.get('release_date', '')[:4] or 'N/A'
+                    print(f"  {i}. {m['title']} ({year})")
+
+                pick = input(f"\nEnter 1-{len(raw_results)}: ").strip()
+                if not pick.isdigit() or not (1 <= int(pick) <= len(raw_results)):
+                    print("⚠️ Invalid choice.")
+                    continue
+
+                chosen_movie = raw_results[int(pick) - 1]
+
+                while True:
+                    rating_input = input("Your rating (0-10): ").strip()
+                    if rating_input.replace('.', '', 1).isdigit():
+                        post_rating = float(rating_input)
+                        if 0 <= post_rating <= 10:
+                            break
+                    print("Please enter a number between 0 and 10.")
+
+                message = input("What did you think? ").strip()
+                if not message:
+                    print("⚠️ Message can't be empty.")
+                    continue
+
+                result = create_post(user_id, username, message, chosen_movie['title'], chosen_movie['id'], post_rating)
+                if result['success']:
+                    print(f" Post created!")
+                else:
+                    print(f"⚠️ Error: {result['message']}")
+
+            # BROWSE FEED
+            elif feed_choice == "1":
+                while True:
+                    print("\n⏳ Loading feed...")
+                    posts = get_feed()
+
+                    if not posts:
+                        print(" No posts yet. Be the first to post!")
+                        input("\nPress Enter to go back.")
+                        break
+
+                    print("\n" + "=" * 60)
+                    for i, post in enumerate(posts, 1):
+                        display_post(i, post)
+
+                    print("\n" + "=" * 60)
+                    action = input("Enter a post number to interact, 'refresh', or 'menu': ").strip().lower()
+
+                    if action == 'menu':
+                        break
+
+                    if action == 'refresh':
+                        continue
+
+                    if action.isdigit() and 1 <= int(action) <= len(posts):
+                        post = posts[int(action) - 1]
+                        print("\n" + "=" * 60)
+                        display_post(int(action), post)
+                        print("\n1. Like / Unlike")
+                        print("2. View replies & comment")
+                        print("3. Delete post (yours only)")
+                        print("4. Back")
+
+                        interact = input("\nEnter 1, 2, 3, or 4: ").strip()
+
+                        if interact == "1":
+                            result = like_post(post['post_id'], user_id)
+                            if result['success']:
+                                label = "❤️  Liked!" if result['action'] == 'liked' else "💔 Unliked."
+                                print(label)
+                            else:
+                                print(f"⚠️ Error: {result['message']}")
+
+                        elif interact == "2":
+                            handle_post_replies(post, user_id, username)
+
+                        elif interact == "3":
+                            result = delete_post(post['post_id'], user_id)
+                            if result['success']:
+                                print("✅ Post deleted.")
+                                break  # refresh the feed
+                            else:
+                                print(f"⚠️ {result['message']}")
 
 print("\n" + "=" * 60)
 print(f"🎉 Thanks for using Reelette, {username}! Enjoy your movies!")
