@@ -51,7 +51,7 @@ git clone https://github.com/angelog27/reelette.git .
 
 > **Already have the project?** Just open your existing `Reelette` folder in VS Code, open the terminal, and pull the latest changes:
 > ```bash
-> git pull origin main
+> git pull origin FrontEnd-v1
 > ```
 
 ### 2. Set up Firebase credentials
