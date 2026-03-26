@@ -88,6 +88,9 @@ Now open `config.py` and fill in these values (leave everything else as-is):
   4. Fill out the form (for "Application URL" you can just put `http://localhost`, and for the description just say it's a school project)
   5. Copy the **API Key (v3 auth)** and paste it into your `config.py`
 - `FIREBASE_CREDENTIALS_PATH` — leave this as `"firebase-credentials.json"` (no changes needed if you renamed the file in Step 2)
+- for the firebase_credentials you need to put your full pathway, like 
+   FIREBASE_CREDENTIALS_PATH = r"C:\Users\Owner\OneDrive\Documents\4330\Reelette\firebase-credentials.json"
+
 - `FIREBASE_WEB_API_KEY` — paste the key Angelo emailed you
 - `SECRET_KEY` — change this to any random string, doesn't matter what
 
