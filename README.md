@@ -147,8 +147,3 @@ After a few seconds, Vite will print a URL in the terminal that looks something 
 - Streaming service preferences per user
 - Watchlist and watched movie tracking with ratings
 - Social feed — create posts, like, and reply
-
-## Contributors
-
-- Angelo
-- Jordan
