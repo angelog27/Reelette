@@ -10,5 +10,5 @@ export const router = createBrowserRouter([
   {
     path: '/home',
     Component: HomePage,
-  },
+  }
 ]);
