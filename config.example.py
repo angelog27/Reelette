@@ -13,6 +13,8 @@ TMDB_BACKDROP_SIZE = "w1280"
 # Firebase Configuration
 # Download your Firebase credentials JSON file and save as firebase-credentials.json
 FIREBASE_CREDENTIALS_PATH = "firebase-credentials.json"
+FIREBASE_WEB_API_KEY = "your_firebase_web_api_key"  # Firebase Console > Project Settings > General
+
 
 # Flask Configuration
 SECRET_KEY = "change-this-to-a-random-string"

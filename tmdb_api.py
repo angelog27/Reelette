@@ -41,6 +41,23 @@ def get_movie_details(movie_id):
         return None
 
 
+#Get top-rated movies of all time from the API. This can be used to show an "All Time Greats" section.
+def get_top_rated_movies(page=1):
+    url = f"{TMDB_BASE_URL}/movie/top_rated"
+    params = {
+        "api_key": TMDB_API_KEY,
+        "language": "en-US",
+        "page": page
+    }
+    try:
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        print(f"Error getting top rated movies: {e}")
+        return None
+
+
 #Get currently popular movies from the API, with pagination support. This can be used to show trending movies on the home page or in a "Popular Movies" section.
 def get_popular_movies(page=1):
     url = f"{TMDB_BASE_URL}/movie/popular"
@@ -80,6 +97,7 @@ def search_person(name):
 def discover_movies(genre_id=None, year=None, year_from=None, year_to=None,
                     min_rating=None, min_vote_count=None,
                     with_cast=None, with_crew=None,
+                    with_watch_providers=None, watch_region="US",
                     sort_by="popularity.desc", page=1):
     url = f"{TMDB_BASE_URL}/discover/movie"
     params = {
@@ -106,7 +124,10 @@ def discover_movies(genre_id=None, year=None, year_from=None, year_to=None,
         params["with_cast"] = with_cast
     if with_crew:
         params["with_crew"] = with_crew
-    
+    if with_watch_providers:
+        params["with_watch_providers"] = with_watch_providers
+        params["watch_region"] = watch_region
+
     try:
         response = requests.get(url, params=params)
         response.raise_for_status()
