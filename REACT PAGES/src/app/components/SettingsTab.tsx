@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useNavigate } from "react-router";
+import { clearUser, clearServices } from '../services/api';
 import {
   Bell,
   Film,
@@ -13,7 +15,9 @@ import {
   Trash2
 } from 'lucide-react';
 
+
 // ─── SettingItem ─────────────────────────────────────────────
+
 
 interface SettingItemProps {
   icon: React.ReactNode;
@@ -24,10 +28,12 @@ interface SettingItemProps {
   onClick?: () => void;
 }
 
+
 function SettingItem({ icon, label, type = 'toggle', enabled = false, onToggle, onClick }: SettingItemProps) {
   const isDanger = type === 'danger';
   const isAction = type === 'action';
   const isToggle = type === 'toggle';
+
 
   return (
     <div
@@ -64,12 +70,15 @@ function SettingItem({ icon, label, type = 'toggle', enabled = false, onToggle, 
   );
 }
 
+
 // ─── SettingsSection ─────────────────────────────────────────
+
 
 interface SettingsSectionProps {
   title: string;
   children: React.ReactNode;
 }
+
 
 function SettingsSection({ title, children }: SettingsSectionProps) {
   return (
@@ -85,9 +94,12 @@ function SettingsSection({ title, children }: SettingsSectionProps) {
   );
 }
 
+
 // ─── SettingsTab (Main Component) ────────────────────────────
 
+
 export function SettingsTab() {
+ 
   const [settings, setSettings] = useState({
     newMovieAlerts: true,
     friendActivity: false,
@@ -95,9 +107,21 @@ export function SettingsTab() {
     groupChat: true,
   });
 
+
+  const navigate = useNavigate();
+
+
+  const handleLogout = () => {
+    clearUser();
+    clearServices();
+    navigate('/');
+  };
+
+
   const toggleSetting = (key: keyof typeof settings) => {
     setSettings(prev => ({ ...prev, [key]: !prev[key] }));
   };
+
 
   return (
     <div className="min-h-screen bg-black relative overflow-hidden">
@@ -108,8 +132,10 @@ export function SettingsTab() {
         <div className="absolute bottom-32 left-1/4 w-40 h-40 border-2 border-zinc-700 rounded-full"></div>
       </div>
 
+
       {/* Subtle red glow vignette */}
       <div className="absolute inset-0 bg-gradient-to-br from-red-950/10 via-transparent to-transparent pointer-events-none"></div>
+
 
       <div className="relative z-10 max-w-5xl mx-auto px-8 py-16">
         {/* Header */}
@@ -122,6 +148,7 @@ export function SettingsTab() {
             Manage your account preferences and privacy settings
           </p>
         </div>
+
 
         {/* Settings Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -153,6 +180,7 @@ export function SettingsTab() {
             />
           </SettingsSection>
 
+
           {/* Security & Privacy Section */}
           <SettingsSection title="Security & Privacy">
             <SettingItem
@@ -183,7 +211,7 @@ export function SettingsTab() {
               icon={<LogOut size={20} />}
               label="Log Out"
               type="action"
-              onClick={() => alert('Logging out...')}
+              onClick={handleLogout}
             />
             <SettingItem
               icon={<Trash2 size={20} />}
@@ -193,6 +221,7 @@ export function SettingsTab() {
             />
           </SettingsSection>
         </div>
+
 
         {/* Footer decoration */}
         <div className="mt-16 flex items-center justify-center gap-2 opacity-20">
@@ -204,3 +233,4 @@ export function SettingsTab() {
     </div>
   );
 }
+

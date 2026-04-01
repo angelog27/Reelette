@@ -1,6 +1,7 @@
 # firebase_helper.py
 import firebase_admin
 import requests
+import os
 from firebase_admin import credentials, firestore, auth
 from config import FIREBASE_CREDENTIALS_PATH, FIREBASE_WEB_API_KEY
 from datetime import datetime
@@ -106,6 +107,34 @@ def verify_user(email, password):
         return {
             'success': False,
             'message': str(e)
+        }
+
+def send_password_reset_email(email):
+    try:
+        url = f"https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key={FIREBASE_WEB_API_KEY}"
+
+        response = requests.post(url, json={
+            "requestType": "PASSWORD_RESET",
+            "email": email
+        })
+
+        data = response.json()
+
+        if response.status_code != 200 or "error" in data:
+            return {
+                "success": False,
+                "message": data.get("error", {}).get("message", "Failed to send reset email")
+            }
+
+        return {
+            "success": True,
+            "message": "Password reset email sent"
+        }
+
+    except Exception as e:
+        return {
+            "success": False,
+            "message": str(e)
         }
 
 def update_streaming_services(user_id, services):
