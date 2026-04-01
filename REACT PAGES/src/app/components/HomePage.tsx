@@ -5,9 +5,11 @@ import { DiscoverTab } from './DiscoverTab';
 import { SearchTab } from './SearchTab';
 import { SocialTab } from './SocialTab';
 import { RouletteTab } from './RouletteTab';
+import { SettingsTab} from './SettingsTab';
+import { ProfileTab } from './ProfileTab';
 
-type Tab = 'discover' | 'search' | 'roulette' | 'social';
 
+type Tab = 'discover' | 'search' | 'roulette' | 'social' | 'profile' | 'settings';
 export function HomePage() {
   const [activeTab, setActiveTab] = useState<Tab>('discover');
 
@@ -16,6 +18,8 @@ export function HomePage() {
     { id: 'search' as Tab, label: 'Search' },
     { id: 'roulette' as Tab, label: 'Roulette' },
     { id: 'social' as Tab, label: 'Social' },
+    { id: 'profile' as Tab, label: 'Profile' },
+    { id: 'settings' as Tab, label: 'Settings' }
   ];
 
   return (
@@ -61,6 +65,8 @@ export function HomePage() {
         {activeTab === 'search' && <SearchTab />}
         {activeTab === 'roulette' && <RouletteTab />}
         {activeTab === 'social' && <SocialTab />}
+        {activeTab === 'profile' && <ProfileTab />}
+        {activeTab === 'settings' && <SettingsTab />}
       </main>
     </div>
   );
