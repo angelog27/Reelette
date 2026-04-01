@@ -11,6 +11,7 @@ import {
   getUserStreaming,
   saveServices,
   hasServicesConfigured,
+  forgotPassword,
 } from '../services/api';
 
 // Real TMDB movie poster images
@@ -29,7 +30,7 @@ const moviePosters = [
   'https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg', // The Dark Knight          Y
 ];
 
-type View = 'login' | 'register' | 'ask-streaming' | 'setup-streaming';
+type View = 'login' | 'register' | 'forgot-password' | 'ask-streaming' | 'setup-streaming';
 
 interface ScrollingRowProps {
   images: string[];
@@ -75,6 +76,12 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
+
+  // Forgot password form
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotMessage, setForgotMessage] = useState('');
+  const [forgotError, setForgotError] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
 
   // Register form
   const [regEmail, setRegEmail] = useState('');
@@ -153,6 +160,29 @@ export function LoginPage() {
       setRegError('Could not connect to server. Make sure the backend is running.');
     } finally {
       setRegLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e: React.SyntheticEvent) => {
+    e.preventDefault();
+
+    setForgotError('');
+    setForgotMessage('');
+    setForgotLoading(true);
+
+    try {
+      const result = await forgotPassword(forgotEmail);
+
+      if (!result.success) {
+        setForgotError(result.message || 'Failed to send reset email');
+        return;
+      }
+
+      setForgotMessage('Reset email sent. Check your inbox.');
+    } catch {
+      setForgotError('Could not connect to server. Make sure the backend is running.');
+    } finally {
+      setForgotLoading(false);
     }
   };
 
@@ -241,6 +271,21 @@ export function LoginPage() {
                         Sign up
                       </button>
                     </p>
+
+                    <div className="mt-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setForgotEmail(email);
+                          setForgotError('');
+                          setForgotMessage('');
+                          setView('forgot-password');
+                        }}
+                        className="text-sm text-red-500 hover:text-red-400 transition-colors"
+                      >
+                        Forgot your password?
+                      </button>
+                    </div>
                   </div>
                 </form>
               </div>
@@ -298,6 +343,57 @@ export function LoginPage() {
                       <button
                         type="button"
                         onClick={() => setView('login')}
+                        className="text-red-500 hover:text-red-400 transition-colors"
+                      >
+                        Log in
+                      </button>
+                    </p>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {view === 'forgot-password' && (
+              <div className="w-full bg-black/50 backdrop-blur-sm border border-gray-800 rounded-2xl p-8 shadow-2xl">
+                <h2 className="text-white text-xl font-semibold mb-6 text-center">Reset Password</h2>
+                <form onSubmit={handleForgotPassword} className="space-y-5">
+                  <div className="space-y-2">
+                    <label className="text-sm text-gray-400">Email</label>
+                    <Input
+                      type="email"
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      placeholder="Enter your email"
+                      className="w-full bg-gray-900/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-red-500 rounded-lg h-12"
+                      required
+                    />
+                  </div>
+
+                  <p className="text-sm text-gray-400 text-center">
+                    Enter your email and we’ll send you a reset link. Make sure to check spam folder.
+                  </p>
+
+                  {forgotError && <p className="text-red-400 text-sm text-center">{forgotError}</p>}
+                  {forgotMessage && <p className="text-green-400 text-sm text-center">{forgotMessage}</p>}
+
+                  <Button
+                    type="submit"
+                    disabled={forgotLoading}
+                    className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white h-12 rounded-lg disabled:opacity-50"
+                  >
+                    {forgotLoading ? 'Sending...' : 'Send Reset Email'}
+                  </Button>
+
+                  <div className="text-center pt-4 border-t border-gray-800">
+                    <p className="text-sm text-gray-400">
+                      Remember your password?{' '}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setForgotError('');
+                          setForgotMessage('');
+                          setView('login');
+                        }}
                         className="text-red-500 hover:text-red-400 transition-colors"
                       >
                         Log in

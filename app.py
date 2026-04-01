@@ -7,7 +7,7 @@ from firebase_helper import (
     update_streaming_services, get_user_streaming_services,
     add_to_watchlist, get_watchlist,
     add_watched_movie, get_watched_movies, update_watched_rating,
-    create_post, get_feed, like_post, add_reply, get_replies, delete_post
+    create_post, get_feed, like_post, add_reply, get_replies, delete_post, send_password_reset_email
 )
 from tmdb_api import (
     search_movies, discover_movies, get_popular_movies, get_movie_details,
@@ -138,6 +138,21 @@ def register():
         return jsonify({'success': False, 'message': 'Email, password, and username are required'}), 400
     result = create_user(email, password, username)
     return jsonify(result)
+
+@app.route('/api/auth/forgot-password', methods=['POST'])
+def forgot_password():
+    data = request.get_json() or {}
+    email = data.get('email', '').strip()
+
+    if not email:
+        return jsonify({
+            'success': False,
+            'message': 'Email is required'
+        }), 400
+
+    result = send_password_reset_email(email)
+    status_code = 200 if result.get('success') else 400
+    return jsonify(result), status_code
 
 # ── Movie Routes ─────────────────────────────────────────────────
 
