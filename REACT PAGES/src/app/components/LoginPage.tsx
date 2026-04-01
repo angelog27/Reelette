@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate } from 'react-router-dom';
 import logoImage from '../../assets/305e4436a31f76065263b76232b095b9e319fc67.png';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
@@ -186,7 +186,7 @@ export function LoginPage() {
     }
   };
 
-  const goHome = () => navigate('/home');
+  const goHome = () => navigate('/home/discover');
 
   const scrollingSection = (
     <div className="hidden lg:flex lg:w-1/2 flex-col justify-center p-8 relative overflow-hidden">
