@@ -55,6 +55,7 @@ export function DiscoverTab() {
 
   return (
     <div className="space-y-6">
+      <div className="text-2xl font-bold text-white">Discover Movies</div>
       {/* Toggle Buttons */}
       <div className="flex gap-3">
         <button

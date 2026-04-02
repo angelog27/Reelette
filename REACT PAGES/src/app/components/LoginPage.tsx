@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import logoImage from '../../assets/305e4436a31f76065263b76232b095b9e319fc67.png';
+import logoImage from '../../assets/Full_Reelette_upscaled.png';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { StreamingSetup } from './StreamingSetup';
@@ -216,8 +216,8 @@ export function LoginPage() {
 
         <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
           <div className="w-full max-w-md flex flex-col items-center">
-            <div className="mb-8">
-              <img src={logoImage} alt="Reelette" className="h-56 w-auto" />
+            <div className="mb-6">
+                <img src={logoImage} alt="Reelette" className="h-56 w-auto scale-[2] origin-top" />
             </div>
             <p className="text-center mb-10 px-4 text-lg">
               <span className="bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent">
