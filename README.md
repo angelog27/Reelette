@@ -107,6 +107,7 @@ In the same terminal, type:
 ```bash
 cd "REACT PAGES"
 npm install
+npm install react-router-dom
 cd ..
 ```
 
