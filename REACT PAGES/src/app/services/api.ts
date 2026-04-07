@@ -202,6 +202,69 @@ export async function getMovieDetails(movie_id: string) {
 }
 
 
+// ── Watched Movies ───────────────────────────────────────────────
+
+
+export interface WatchedMovie {
+  movie_id: string;
+  title: string;
+  year: number;
+  tmdb_rating: number;
+  overview: string;
+  poster: string;
+  director: string;
+  actors: string[];
+  genres: string[];
+  services: string[];
+  user_rating: number;
+  comment: string;
+  watched_at: string;
+}
+
+
+export async function getWatchedMovies(user_id: string): Promise<WatchedMovie[]> {
+  const res = await fetch(`${BASE_URL}/watched/${user_id}`);
+  const data = await res.json();
+  return data.movies ?? [];
+}
+
+
+export async function getWatchedMovie(user_id: string, movie_id: string): Promise<(WatchedMovie & { watched: boolean }) | null> {
+  const res = await fetch(`${BASE_URL}/watched/${user_id}/${movie_id}`);
+  const data = await res.json();
+  return data.watched ? data : null;
+}
+
+
+export async function addWatchedMovie(
+  user_id: string,
+  movie: {
+    movie_id: string; title: string; year: number; rating: number;
+    overview: string; poster: string; director: string;
+    actors: string[]; genres: string[]; services: string[];
+  },
+  user_rating: number,
+  comment: string
+) {
+  const res = await fetch(`${BASE_URL}/watched/${user_id}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ movie, user_rating, comment }),
+  });
+  return res.json();
+}
+
+
+export async function updateWatchedMovie(user_id: string, movie_id: string, rating: number, comment: string) {
+  const res = await fetch(`${BASE_URL}/watched/${user_id}/${movie_id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rating, comment }),
+  });
+  return res.json();
+}
+
+
 // ── Social Feed ──────────────────────────────────────────────────
 
 

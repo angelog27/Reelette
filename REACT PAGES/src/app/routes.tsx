@@ -2,11 +2,11 @@ import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { HomePage } from './components/HomePage';
 import { LoginPage } from './components/LoginPage';
 import { DiscoverTab } from './components/DiscoverTab';
-import { SearchTab } from './components/SearchTab';
 import { RouletteTab } from './components/RouletteTab';
 import { SocialTab } from './components/SocialTab';
 import { ProfileTab } from './components/ProfileTab';
 import { SettingsTab } from './components/SettingsTab';
+import { MyStuffTab } from './components/MyStuffTab';
 
 export const router = createBrowserRouter([
   {
@@ -26,10 +26,6 @@ export const router = createBrowserRouter([
         Component: DiscoverTab,
       },
       {
-        path: 'search',
-        Component: SearchTab,
-      },
-      {
         path: 'roulette',
         Component: RouletteTab,
       },
@@ -44,6 +40,10 @@ export const router = createBrowserRouter([
       {
         path: 'settings',
         Component: SettingsTab,
+      },
+      {
+        path: 'mystuff',
+        Component: MyStuffTab,
       },
     ],
   },
