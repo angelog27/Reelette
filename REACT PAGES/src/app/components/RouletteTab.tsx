@@ -1,42 +1,46 @@
-import { useState } from 'react';
-import { Shuffle, ChevronDown, ChevronUp } from 'lucide-react';
-import { MovieDetailModal } from './MovieDetailModal';
-import { Switch } from './ui/switch';
-import { Slider } from './ui/slider';
-import { Input } from './ui/input';
-import { discoverMovies, getServices, hasServicesConfigured } from '../services/api';
+import { useState } from "react";
+import { Shuffle, ChevronDown, ChevronUp } from "lucide-react";
+import { MovieDetailModal } from "./MovieDetailModal";
+import { Switch } from "./ui/switch";
+import { Slider } from "./ui/slider";
+import { Input } from "./ui/input";
+import {
+  discoverMovies,
+  getServices,
+  hasServicesConfigured,
+} from "../services/api";
 
 const GENRES = [
-  { label: 'Action',          value: '28' },
-  { label: 'Adventure',       value: '12' },
-  { label: 'Animation',       value: '16' },
-  { label: 'Comedy',          value: '35' },
-  { label: 'Crime',           value: '80' },
-  { label: 'Documentary',     value: '99' },
-  { label: 'Drama',           value: '18' },
-  { label: 'Family',          value: '10751' },
-  { label: 'Fantasy',         value: '14' },
-  { label: 'History',         value: '36' },
-  { label: 'Horror',          value: '27' },
-  { label: 'Music',           value: '10402' },
-  { label: 'Mystery',         value: '9648' },
-  { label: 'Romance',         value: '10749' },
-  { label: 'Science Fiction', value: '878' },
-  { label: 'Thriller',        value: '53' },
-  { label: 'War',             value: '10752' },
-  { label: 'Western',         value: '37' },
+  { label: "Action", value: "28" },
+  { label: "Adventure", value: "12" },
+  { label: "Animation", value: "16" },
+  { label: "Comedy", value: "35" },
+  { label: "Crime", value: "80" },
+  { label: "Documentary", value: "99" },
+  { label: "Drama", value: "18" },
+  { label: "Family", value: "10751" },
+  { label: "Fantasy", value: "14" },
+  { label: "History", value: "36" },
+  { label: "Horror", value: "27" },
+  { label: "Music", value: "10402" },
+  { label: "Mystery", value: "9648" },
+  { label: "Romance", value: "10749" },
+  { label: "Science Fiction", value: "878" },
+  { label: "Thriller", value: "53" },
+  { label: "War", value: "10752" },
+  { label: "Western", value: "37" },
 ];
 
 export function RouletteTab() {
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   const [filterStreaming, setFilterStreaming] = useState(false);
-  const [genre, setGenre] = useState('');
-  const [yearFrom, setYearFrom] = useState('');
-  const [yearTo, setYearTo] = useState('');
+  const [genre, setGenre] = useState("");
+  const [yearFrom, setYearFrom] = useState("");
+  const [yearTo, setYearTo] = useState("");
   const [minRating, setMinRating] = useState([0]);
   const [spinning, setSpinning] = useState(false);
   const [selectedMovieId, setSelectedMovieId] = useState<string | null>(null);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const userServices = getServices();
   const hasServices = hasServicesConfigured(userServices);
@@ -44,7 +48,7 @@ export function RouletteTab() {
   const spin = async () => {
     setSpinning(true);
     setSelectedMovieId(null);
-    setError('');
+    setError("");
 
     const randomPage = Math.floor(Math.random() * 5) + 1;
 
@@ -53,7 +57,8 @@ export function RouletteTab() {
       year_from: yearFrom || undefined,
       year_to: yearTo || undefined,
       min_rating: minRating[0] > 0 ? minRating[0] : undefined,
-      services_filter: filterStreaming && hasServices ? userServices : undefined,
+      services_filter:
+        filterStreaming && hasServices ? userServices : undefined,
     };
 
     try {
@@ -64,13 +69,15 @@ export function RouletteTab() {
       }
 
       if (movies.length === 0) {
-        setError('No movies found with these filters. Try adjusting your criteria.');
+        setError(
+          "No movies found with these filters. Try adjusting your criteria.",
+        );
       } else {
         const pick = movies[Math.floor(Math.random() * movies.length)];
         setSelectedMovieId(pick.id);
       }
     } catch {
-      setError('Something went wrong. Please try again.');
+      setError("Something went wrong. Please try again.");
     } finally {
       setSpinning(false);
     }
@@ -81,7 +88,9 @@ export function RouletteTab() {
       {/* Header */}
       <div className="text-center space-y-2">
         <h1 className="text-3xl font-bold text-white">Movie Roulette</h1>
-        <p className="text-gray-400">Can't decide what to watch? Let fate decide.</p>
+        <p className="text-gray-400">
+          Can't decide what to watch? Let fate decide.
+        </p>
       </div>
 
       {/* Streaming toggle */}
@@ -97,7 +106,9 @@ export function RouletteTab() {
         >
           Only show movies I can watch
           {filterStreaming && !hasServices && (
-            <span className="text-yellow-500 ml-2 text-xs">(no services set)</span>
+            <span className="text-yellow-500 ml-2 text-xs">
+              (no services set)
+            </span>
           )}
         </label>
       </div>
@@ -109,9 +120,11 @@ export function RouletteTab() {
           className="w-full px-6 py-4 flex items-center justify-between hover:bg-[#252525] transition-colors"
         >
           <span className="text-white font-medium">Filters (optional)</span>
-          {filtersExpanded
-            ? <ChevronUp className="w-5 h-5 text-gray-500" />
-            : <ChevronDown className="w-5 h-5 text-gray-500" />}
+          {filtersExpanded ? (
+            <ChevronUp className="w-5 h-5 text-gray-500" />
+          ) : (
+            <ChevronDown className="w-5 h-5 text-gray-500" />
+          )}
         </button>
 
         {filtersExpanded && (
@@ -125,7 +138,9 @@ export function RouletteTab() {
               >
                 <option value="">Any Genre</option>
                 {GENRES.map((g) => (
-                  <option key={g.value} value={g.value}>{g.label}</option>
+                  <option key={g.value} value={g.value}>
+                    {g.label}
+                  </option>
                 ))}
               </select>
             </div>
@@ -175,19 +190,20 @@ export function RouletteTab() {
           disabled={spinning}
           className="flex items-center gap-3 bg-[#C0392B] hover:bg-[#A93226] disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold text-lg px-10 py-4 rounded-full transition-colors shadow-lg shadow-[#C0392B]/30"
         >
-          <Shuffle className={`w-6 h-6 ${spinning ? 'animate-spin' : ''}`} />
-          {spinning ? 'Finding your movie...' : 'Spin the Roulette'}
+          <Shuffle className={`w-6 h-6 ${spinning ? "animate-spin" : ""}`} />
+          {spinning ? "Finding your movie..." : "Spin the Roulette"}
         </button>
       </div>
 
       {/* Error */}
-      {error && (
-        <p className="text-center text-yellow-500 text-sm">{error}</p>
-      )}
+      {error && <p className="text-center text-yellow-500 text-sm">{error}</p>}
 
       {/* Movie Detail Modal */}
       {selectedMovieId && (
-        <MovieDetailModal movieId={selectedMovieId} onClose={() => setSelectedMovieId(null)} />
+        <MovieDetailModal
+          movieId={selectedMovieId}
+          onClose={() => setSelectedMovieId(null)}
+        />
       )}
     </div>
   );

@@ -208,7 +208,7 @@ def get_watchlist(user_id):
         return []
 
 #Add a movie to the user's watched list with all relevant details and the user's rating. This will be stored in a subcollection under the user document for easy retrieval and management of watched movies.
-def add_watched_movie(user_id, movie, user_rating):
+def add_watched_movie(user_id, movie, user_rating, comment=''):
     try:
         movie_doc = {
             'movie_id': movie['movie_id'],
@@ -218,10 +218,11 @@ def add_watched_movie(user_id, movie, user_rating):
             'overview': movie['overview'],
             'poster': movie.get('poster'),
             'director': movie['director'],
-            'actors': movie.get('Popular Actors', []),
+            'actors': movie.get('Popular Actors', movie.get('actors', [])),
             'genres': movie.get('genres', []),
             'services': movie.get('services', []),
             'user_rating': user_rating,
+            'comment': comment,
             'watched_at': datetime.now()
         }
         (db.collection('users').document(user_id)
@@ -255,12 +256,25 @@ def is_movie_watched(user_id, movie_id):
     except Exception:
         return False
 
-#Updates a users rating for a movie in their watched list. This allows users to change their rating after watching a movie, and keeps the data up to date in Firestore.
-def update_watched_rating(user_id, movie_id, new_rating):
+#Returns a single watched movie document for the user, or None if not found.
+def get_watched_movie(user_id, movie_id):
     try:
+        doc = (db.collection('users').document(user_id)
+                 .collection('watched_movies').document(str(movie_id))
+                 .get())
+        return doc.to_dict() if doc.exists else None
+    except Exception:
+        return None
+
+#Updates a users rating for a movie in their watched list. This allows users to change their rating after watching a movie, and keeps the data up to date in Firestore.
+def update_watched_rating(user_id, movie_id, new_rating, comment=None):
+    try:
+        update_data = {'user_rating': new_rating}
+        if comment is not None:
+            update_data['comment'] = comment
         (db.collection('users').document(user_id)
            .collection('watched_movies').document(str(movie_id))
-           .update({'user_rating': new_rating}))
+           .update(update_data))
         return {'success': True}
     except Exception as e:
         return {'success': False, 'message': str(e)}

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Star, Clock, Tv } from 'lucide-react';
-import { getMovieDetails } from '../services/api';
+import { getMovieDetails, getWatchedMovie, addWatchedMovie, updateWatchedMovie, getUser } from '../services/api';
+import type { WatchedMovie } from '../services/api';
 
 interface Props {
   movieId: string;
@@ -10,19 +11,81 @@ interface Props {
 export function MovieDetailModal({ movieId, onClose }: Props) {
   const [movie, setMovie] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [watchEntry, setWatchEntry] = useState<WatchedMovie | null>(null);
+  const [showWatchForm, setShowWatchForm] = useState(false);
+  const [ratingInput, setRatingInput] = useState('');
+  const [commentInput, setCommentInput] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  const user = getUser();
 
   useEffect(() => {
     setLoading(true);
+    setWatchEntry(null);
+    setShowWatchForm(false);
+    setSaveSuccess(false);
     getMovieDetails(movieId).then((data) => {
       setMovie(data);
       setLoading(false);
     });
+    if (user) {
+      getWatchedMovie(user.user_id, movieId).then((entry) => {
+        if (entry) {
+          setWatchEntry(entry);
+          setRatingInput(String(entry.user_rating));
+          setCommentInput(entry.comment ?? '');
+        }
+      });
+    }
   }, [movieId]);
 
   // Close on backdrop click
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) onClose();
   };
+
+  async function handleSaveWatch(movieData: any, posterUrl: string | null) {
+    if (!user) return;
+    const rating = parseFloat(ratingInput);
+    if (isNaN(rating) || rating < 0 || rating > 10) return;
+
+    const director = movieData.credits?.crew?.find((c: any) => c.job === 'Director');
+    const actors = (movieData.credits?.cast ?? []).slice(0, 6).map((c: any) => c.name);
+    const genres: { id: number; name: string }[] = movieData.genres ?? [];
+    const providers: any[] = movieData['watch/providers']?.results?.US?.flatrate ?? [];
+    const year = movieData.release_date ? parseInt(movieData.release_date.slice(0, 4)) : 0;
+
+    setSaving(true);
+    let result;
+    if (watchEntry) {
+      result = await updateWatchedMovie(user.user_id, movieId, rating, commentInput);
+    } else {
+      result = await addWatchedMovie(
+        user.user_id,
+        {
+          movie_id: String(movieData.id),
+          title: movieData.title,
+          year,
+          rating: movieData.vote_average ?? 0,
+          overview: movieData.overview ?? '',
+          poster: posterUrl ?? '',
+          director: director?.name ?? '',
+          actors,
+          genres: genres.map((g) => g.name),
+          services: providers.map((p: any) => p.provider_name),
+        },
+        rating,
+        commentInput
+      );
+    }
+    setSaving(false);
+    if (result?.success) {
+      setWatchEntry({ ...watchEntry, user_rating: rating, comment: commentInput } as WatchedMovie);
+      setShowWatchForm(false);
+      setSaveSuccess(true);
+    }
+  }
 
   if (loading) {
     return (
@@ -192,6 +255,89 @@ export function MovieDetailModal({ movieId, onClose }: Props) {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Watch / Rate / Comment section */}
+          {user && (
+            <div className="mt-5 border-t border-[#2A2A2A] pt-5">
+              {saveSuccess && !showWatchForm && (
+                <p className="text-green-400 text-sm mb-3">
+                  {watchEntry ? 'Rating updated!' : 'Added to your stuff!'}
+                </p>
+              )}
+
+              {watchEntry && !showWatchForm ? (
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-gray-500 text-xs uppercase tracking-widest mb-1">Your Rating</p>
+                    <div className="flex items-center gap-1.5">
+                      <Star className="w-4 h-4 fill-[#C0392B] text-[#C0392B]" />
+                      <span className="text-white font-semibold">{watchEntry.user_rating}/10</span>
+                    </div>
+                    {watchEntry.comment && (
+                      <p className="text-gray-400 text-sm mt-1 italic">"{watchEntry.comment}"</p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => setShowWatchForm(true)}
+                    className="text-sm text-[#C0392B] hover:text-[#E74C3C] transition-colors flex-shrink-0"
+                  >
+                    Update
+                  </button>
+                </div>
+              ) : !showWatchForm ? (
+                <button
+                  onClick={() => setShowWatchForm(true)}
+                  className="w-full py-2.5 rounded-full bg-[#C0392B] hover:bg-[#E74C3C] text-white font-medium transition-colors text-sm"
+                >
+                  Mark as Watched
+                </button>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-gray-400 text-sm font-medium">
+                    {watchEntry ? 'Update your rating' : 'Rate this movie'}
+                  </p>
+                  <div>
+                    <label className="text-gray-500 text-xs uppercase tracking-widest block mb-1">Rating (0–10)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="10"
+                      step="0.5"
+                      value={ratingInput}
+                      onChange={(e) => setRatingInput(e.target.value)}
+                      placeholder="e.g. 8.5"
+                      className="w-full bg-[#1C1C1C] border border-[#2A2A2A] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#C0392B]"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-gray-500 text-xs uppercase tracking-widest block mb-1">Comment (optional)</label>
+                    <textarea
+                      value={commentInput}
+                      onChange={(e) => setCommentInput(e.target.value)}
+                      placeholder="What did you think?"
+                      rows={2}
+                      className="w-full bg-[#1C1C1C] border border-[#2A2A2A] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#C0392B] resize-none"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleSaveWatch(movie, posterUrl)}
+                      disabled={saving || ratingInput === ''}
+                      className="flex-1 py-2 rounded-full bg-[#C0392B] hover:bg-[#E74C3C] disabled:opacity-50 text-white font-medium transition-colors text-sm"
+                    >
+                      {saving ? 'Saving...' : watchEntry ? 'Update' : 'Save'}
+                    </button>
+                    <button
+                      onClick={() => setShowWatchForm(false)}
+                      className="px-5 py-2 rounded-full bg-[#2A2A2A] hover:bg-[#333] text-white text-sm transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

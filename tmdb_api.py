@@ -200,7 +200,6 @@ def get_trending_movies(time_window="week"):
 
 #Get the full URL for a movie poster...
 def get_poster_url(poster_path, size="w500"):
-    """Build full URL for movie poster"""
     if poster_path:
         return f"{TMDB_IMAGE_BASE}/{size}{poster_path}"
     return None

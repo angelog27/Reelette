@@ -24,7 +24,9 @@ import {
   Settings,
   Globe,
   Languages,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Apple,
+  Chrome
 } from 'lucide-react';
 
 // ─── ProfileHeader ───────────────────────────────────────────
@@ -34,7 +36,7 @@ function ProfileHeader() {
     <div className="relative">
       {/* Page Title */}
       <div className="px-8 pt-12 pb-8">
-        <h1 className="text-4xl md:text-5xl tracking-tight text-white relative inline-block">
+        <h1 className="text-2xl md:text-2xl tracking-tight text-white relative inline-block">
           Profile
           <div className="absolute -bottom-2 left-0 right-0 h-[2px] bg-gradient-to-r from-red-600 via-red-500 to-transparent shadow-[0_0_15px_rgba(220,38,38,0.4)]"></div>
         </h1>
@@ -48,7 +50,7 @@ function ProfileHeader() {
 
       {/* Profile Content */}
       <div className="px-8 pb-6">
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between -mt-16 gap-6">
+        <div className="flex flex-col md:flex-row md:items-end md:justify-between -mt-10 gap-6">
           {/* Avatar Section */}
           <div className="flex flex-col md:flex-row items-start md:items-end gap-6">
             <div className="relative group">
@@ -150,7 +152,7 @@ function ProfileInfoSection() {
       </div>
 
       <div className="mt-6 flex justify-end">
-        <button className="px-5 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg transition-all border border-zinc-700 flex items-center gap-2">
+        <button className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all border border-red-600 flex items-center gap-2 shadow-lg shadow-red-600/20 hover:shadow-red-600/40">
           <Edit3 size={16} />
           Save Changes
         </button>
@@ -168,13 +170,31 @@ function MoviePersonalizationSection() {
   ];
 
   const platforms = [
-    { name: 'Netflix', icon: 'N' },
-    { name: 'HBO Max', icon: 'H' },
-    { name: 'Disney+', icon: 'D+' },
-    { name: 'Amazon Prime', icon: 'P' },
-    { name: 'Apple TV+', icon: 'A' },
-    { name: 'Hulu', icon: 'H' }
-  ];
+  {
+    name: 'Netflix',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg'
+  },
+  {
+    name: 'HBO Max',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/1/17/HBO_Max_Logo.svg'
+  },
+  {
+    name: 'Disney+',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/3/3e/Disney%2B_logo.svg'
+  },
+  {
+    name: 'Amazon Prime',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/f/f1/Prime_Video.png'
+  },
+  {
+    name: 'Apple TV+',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg'
+  },
+  {
+    name: 'Hulu',
+    logo: 'https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/hulu.svg'  
+  }
+];
 
   return (
     <div className="bg-zinc-900/50 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-zinc-800/50">
@@ -232,10 +252,14 @@ function MoviePersonalizationSection() {
                 key={platform.name}
                 className="aspect-square bg-zinc-950/50 hover:bg-red-600 border border-zinc-800 hover:border-red-600 rounded-xl flex flex-col items-center justify-center gap-2 transition-all group"
               >
-                <div className="w-8 h-8 bg-zinc-800 group-hover:bg-red-700 rounded-lg flex items-center justify-center text-zinc-400 group-hover:text-white transition-all">
-                  <Tv size={16} />
+               <div className="w-16 h-16 flex items-center justify-center bg-white rounded-md p-1">
+                <img
+                    src={platform.logo}
+                    alt={platform.name}
+                    className="w-14 h-14 object-contain brightness-75 group-hover:brightness-100 transition-all"
+                  />
                 </div>
-                <span className="text-xs text-zinc-500 group-hover:text-white transition-all">{platform.name}</span>
+                <span className="text-lg text-zinc-400 group-hover:text-white transition-all">{platform.name}</span>
               </button>
             ))}
           </div>
@@ -268,34 +292,6 @@ function MoviePersonalizationSection() {
             </label>
           </div>
         </div>
-
-        {/* Recommendation Style */}
-        <div>
-          <label className="block text-zinc-400 mb-3">Recommendation Style</label>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <button className="p-4 bg-red-600 border-2 border-red-600 rounded-xl text-left transition-all group">
-              <div className="flex items-center gap-3 mb-2">
-                <Sparkles size={20} className="text-white" />
-                <span className="text-white">Surprise Me</span>
-              </div>
-              <p className="text-sm text-red-100">Random picks outside your usual taste</p>
-            </button>
-            <button className="p-4 bg-zinc-950/50 hover:bg-zinc-900 border-2 border-zinc-800 hover:border-red-600 rounded-xl text-left transition-all group">
-              <div className="flex items-center gap-3 mb-2">
-                <Heart size={20} className="text-zinc-400 group-hover:text-red-400" />
-                <span className="text-zinc-300 group-hover:text-white">Mood-Based</span>
-              </div>
-              <p className="text-sm text-zinc-500 group-hover:text-zinc-400">Curated by your current mood</p>
-            </button>
-            <button className="p-4 bg-zinc-950/50 hover:bg-zinc-900 border-2 border-zinc-800 hover:border-red-600 rounded-xl text-left transition-all group">
-              <div className="flex items-center gap-3 mb-2">
-                <Star size={20} className="text-zinc-400 group-hover:text-red-400" />
-                <span className="text-zinc-300 group-hover:text-white">Past Ratings</span>
-              </div>
-              <p className="text-sm text-zinc-500 group-hover:text-zinc-400">Based on what you've loved</p>
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   );
@@ -314,26 +310,34 @@ function AppearanceSection() {
         <Palette size={20} className="text-zinc-600" />
       </div>
 
-      <div className="space-y-4">
-        <label className="block text-zinc-400 mb-3">Theme Mode</label>
-        <div className="grid grid-cols-3 gap-3">
-          <button className="p-4 bg-zinc-950/50 hover:bg-zinc-900 border-2 border-zinc-800 hover:border-red-600 rounded-xl flex flex-col items-center gap-3 transition-all group">
-            <Sun size={24} className="text-zinc-400 group-hover:text-red-400" />
-            <span className="text-zinc-300 group-hover:text-white">Light</span>
-          </button>
-          <button className="p-4 bg-red-600 border-2 border-red-600 rounded-xl flex flex-col items-center gap-3 transition-all">
-            <Moon size={24} className="text-white" />
-            <span className="text-white">Dark</span>
-          </button>
-          <button className="p-4 bg-zinc-950/50 hover:bg-zinc-900 border-2 border-zinc-800 hover:border-red-600 rounded-xl flex flex-col items-center gap-3 transition-all group">
-            <Monitor size={24} className="text-zinc-400 group-hover:text-red-400" />
-            <span className="text-zinc-300 group-hover:text-white">Auto</span>
-          </button>
-        </div>
+      <label className="block text-zinc-400 mb-3">Theme Styles</label>
+
+      <div className="space-y-3">
+        {/* Modern */}
+        <button className="w-full p-14 bg-red-600 border-2 border-red-600 rounded-xl flex flex-col items-center text-center gap-1 transition-all">
+          <div className="flex items-center gap-3">
+            <Monitor size={22} className="text-white" />
+            <span className="text-white font-semibold text-3xl">Modern</span>
+          </div>
+          <p className="text-sm text-red-100">Dark, cinematic, and premium. Deep blacks, glowing reds, smooth gradients, and
+            a sleek movie theater vibe.</p>
+        </button>
+
+        {/* Retro */}
+        <button className="w-full p-14 bg-zinc-950/50 hover:bg-zinc-900 border-2 border-zinc-800 hover:border-red-600 rounded-xl flex flex-col items-center text-center gap-1 transition-all group">
+          <div className="flex items-center gap-3">
+            <Sun size={22} className="text-zinc-400 group-hover:text-red-400" />
+            <span className="text-zinc-300 group-hover:text-white font-semibold text-3xl">Retro</span>
+          </div>
+          <p className="text-sm text-zinc-500 group-hover:text-zinc-400">Throw it back with a nostalgic film‑lover aesthetic. 
+            Warm tones, vintage charm, and a classic old‑school movie vibe.
+          </p>
+        </button>
       </div>
     </div>
   );
 }
+
 
 // ─── SocialSection ───────────────────────────────────────────
 
@@ -500,8 +504,8 @@ function AccountDetailsSection() {
           <div className="space-y-3">
             <div className="flex items-center justify-between p-3 bg-zinc-950/50 rounded-lg border border-zinc-800">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
-                  <span className="text-xs">G</span>
+                <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center">
+                  <Chrome size={20} className="text-red-600"/>
                 </div>
                 <div>
                   <p className="text-zinc-300">Google</p>
@@ -516,25 +520,10 @@ function AccountDetailsSection() {
             <div className="flex items-center justify-between p-3 bg-zinc-950/50 rounded-lg border border-zinc-800">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center">
-                  <span className="text-xs text-white"></span>
+                  <Apple size={20} className="text-red-600" />                
                 </div>
                 <div>
                   <p className="text-zinc-300">Apple</p>
-                  <p className="text-xs text-zinc-600">Not connected</p>
-                </div>
-              </div>
-              <button className="px-4 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white border border-zinc-700 rounded-lg transition-all">
-                Connect
-              </button>
-            </div>
-
-            <div className="flex items-center justify-between p-3 bg-zinc-950/50 rounded-lg border border-zinc-800">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                  <span className="text-xs text-white">f</span>
-                </div>
-                <div>
-                  <p className="text-zinc-300">Facebook</p>
                   <p className="text-xs text-zinc-600">Not connected</p>
                 </div>
               </div>
@@ -554,11 +543,11 @@ function AccountDetailsSection() {
 export function ProfileTab() {
   return (
     <div className="min-h-screen bg-black">
-      {/* Cinematic Background */}
-      <div className="fixed inset-0 bg-gradient-to-br from-black via-zinc-950 to-zinc-900 -z-10"></div>
-      <div className="fixed inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-red-950/10 via-transparent to-transparent -z-10"></div>
-      <div className="fixed inset-0 opacity-[0.02] bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZmlsdGVyIGlkPSJub2lzZSI+PGZlVHVyYnVsZW5jZSB0eXBlPSJmcmFjdGFsTm9pc2UiIGJhc2VGcmVxdWVuY3k9IjAuOSIgbnVtT2N0YXZlcz0iNCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNub2lzZSkiIG9wYWNpdHk9IjEiLz48L3N2Zz4=')] -z-10"></div>
-
+      {/* Cinematic Background - changed fixed to absolute */} 
+      <div className="absolute inset-0 bg-gradient-to-br from-black via-zinc-950 to-zinc-900 -z-10"></div> 
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-red-950/10 via-transparent to-transparent -z-10"></div> 
+      <div className="absolute inset-0 opacity-[0.02] bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZmlsdGVyIGlkPSJub2lzZSI+PGZlVHVyYnVsZW5jZSB0eXBlPSJmcmFjdGFsTm9pc2UiIGJhc2VGcmVxdWVuY3k9IjAuOSIgbnVtT2N0YXZlcz0iNCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNub2lzZSkiIG9wYWNpdHk9IjEiLz48L3N2Zz4=')] -z-10"></div>
+     
       {/* Main Container */}
       <div className="max-w-6xl mx-auto">
         <ProfileHeader />
