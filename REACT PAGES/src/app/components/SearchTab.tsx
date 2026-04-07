@@ -127,6 +127,7 @@ export function SearchTab() {
 
   return (
     <div className="space-y-6">
+      <div className="text-2xl font-bold text-white">Search Movies</div>
       {/* Search Bar */}
       <div className="relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 w-5 h-5" />
