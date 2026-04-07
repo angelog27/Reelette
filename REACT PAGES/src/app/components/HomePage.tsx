@@ -12,7 +12,7 @@ type TabLink = {
 export function HomePage() {
   const tabs: TabLink[] = [
     { id: 'discover', label: 'Discover', path: '/home/discover' },
-    { id: 'search', label: 'Search', path: '/home/search' },
+    { id: 'mystuff', label: 'My Stuff', path: '/home/mystuff' },
     { id: 'roulette', label: 'Reelette', path: '/home/roulette', imageLogo: reeletteLogo },
     { id: 'social', label: 'Social', path: '/home/social' },
     { id: 'profile', label: 'Profile', path: '/home/profile' },
