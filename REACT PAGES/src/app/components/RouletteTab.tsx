@@ -87,7 +87,10 @@ export function RouletteTab() {
     <div className="max-w-2xl mx-auto space-y-8 py-8">
       {/* Header */}
       <div className="text-center space-y-2">
-        <h1 className="text-3xl font-bold text-white">Movie Roulette</h1>
+        <h1 className="text-3xl font-bold text-white relative inline-block">
+          Movie Roulette
+          <div className="absolute -bottom-2 left-0 right-0 h-[2px] bg-gradient-to-r from-red-600 via-red-500 to-transparent"></div>
+        </h1>
         <p className="text-gray-400">
           Can't decide what to watch? Let fate decide.
         </p>

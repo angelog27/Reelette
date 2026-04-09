@@ -37,7 +37,10 @@ export function MyStuffTab() {
 
   return (
     <div className="space-y-6">
-      <div className="text-2xl font-bold text-white">My Stuff</div>
+      <div className="text-2xl font-bold text-white mb-6 relative inline-block">
+        My Stuff
+        <div className="absolute -bottom-2 left-0 right-0 h-[2px] bg-gradient-to-r from-red-600 via-red-500 to-transparent"></div>
+      </div>
 
       {loading ? (
         <div className="text-gray-500 text-center py-16">Loading your movies...</div>

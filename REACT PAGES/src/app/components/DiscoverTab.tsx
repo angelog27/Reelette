@@ -112,8 +112,10 @@ export function DiscoverTab() {
 
   return (
     <div className="space-y-5">
-      <div className="text-2xl font-bold text-white">Discover</div>
-
+      <h1 className="text-2xl font-bold text-white relative inline-block">
+        Discover
+        <div className="absolute -bottom-2 left-0 right-0 h-[2px] bg-gradient-to-r from-red-600 via-red-500 to-transparent"></div>
+      </h1>
       {/* ── Search bar + filter circle ── */}
       <div className="flex gap-3 items-center">
         <div className="relative flex-1">

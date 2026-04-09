@@ -16,7 +16,6 @@ export function HomePage() {
     { id: 'roulette', label: 'Reelette', path: '/home/roulette', imageLogo: reeletteLogo },
     { id: 'social', label: 'Social', path: '/home/social' },
     { id: 'profile', label: 'Profile', path: '/home/profile' },
-    { id: 'settings', label: 'Settings', path: '/home/settings' },
   ];
 
   return (

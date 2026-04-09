@@ -1,4 +1,5 @@
 import React from 'react';
+import peacockLogo from '../../assets/Peacock.png';
 import {
   Camera,
   Edit2,
@@ -35,10 +36,10 @@ function ProfileHeader() {
   return (
     <div className="relative">
       {/* Page Title */}
-      <div className="px-8 pt-12 pb-8">
-        <h1 className="text-2xl md:text-2xl tracking-tight text-white relative inline-block">
+      <div className="px-0 pt-0 pb-4">
+        <h1 className="text-2xl font-bold text-white relative inline-block">
           Profile
-          <div className="absolute -bottom-2 left-0 right-0 h-[2px] bg-gradient-to-r from-red-600 via-red-500 to-transparent shadow-[0_0_15px_rgba(220,38,38,0.4)]"></div>
+        <div className="absolute -bottom-2 left-0 right-0 h-[2px] bg-gradient-to-r from-red-600 via-red-500 to-transparent"></div>
         </h1>
       </div>
 
@@ -172,28 +173,44 @@ function MoviePersonalizationSection() {
   const platforms = [
   {
     name: 'Netflix',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg'
-  },
-  {
-    name: 'HBO Max',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/1/17/HBO_Max_Logo.svg'
-  },
-  {
-    name: 'Disney+',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/3/3e/Disney%2B_logo.svg'
-  },
-  {
-    name: 'Amazon Prime',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/f/f1/Prime_Video.png'
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg',
+    color: 'red'
   },
   {
     name: 'Apple TV+',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg'
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg',
+    color: 'dimgray'
+  },
+  {
+    name: 'HBO Max',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/1/17/HBO_Max_Logo.svg',
+    color: '#5B31B9'
+  },
+  {
+    name: 'Disney+',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/3/3e/Disney%2B_logo.svg',
+    color: '#00A2FF'
   },
   {
     name: 'Hulu',
-    logo: 'https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/hulu.svg'  
-  }
+    logo: 'https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/hulu.svg',
+    color: '#1CE783'
+  },
+  {
+    name: 'Amazon Prime',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/f/f1/Prime_Video.png',
+    color: '#00A8E1'
+  },
+  {
+    name: 'Paramount+',
+    logo: 'https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/paramountplus.svg',
+    color: 'blue'  
+  },
+  {
+    name: 'Peacock',
+    logo: peacockLogo,
+    color: 'multicolor'
+  },
 ];
 
   return (
@@ -246,20 +263,43 @@ function MoviePersonalizationSection() {
         {/* Streaming Platforms */}
         <div>
           <label className="block text-zinc-400 mb-3">Preferred Streaming Platforms</label>
-          <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+          <div className="grid grid-cols-4 md:grid-cols-8 gap-3">
             {platforms.map((platform) => (
               <button
                 key={platform.name}
-                className="aspect-square bg-zinc-950/50 hover:bg-red-600 border border-zinc-800 hover:border-red-600 rounded-xl flex flex-col items-center justify-center gap-2 transition-all group"
+                className="aspect-square border rounded-xl flex flex-col items-center justify-center gap-2 transition-all group"
+                style={{
+                  backgroundColor: 'black',
+                  borderColor: 'dimgray',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background =
+                    platform.color === 'multicolor'
+                      ? 'linear-gradient(90deg, yellow, red, green, blue, purple)'
+                      : platform.color;
+
+                  e.currentTarget.style.borderColor =
+                    platform.color === 'multicolor'
+                      ? 'white'
+                      : platform.color;
+                  e.currentTarget.style.borderColor = 'white';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'black';
+                  e.currentTarget.style.borderColor = 'dimgray';
+                }}
               >
-               <div className="w-16 h-16 flex items-center justify-center bg-white rounded-md p-1">
-                <img
+                <div className="w-14 h-14 flex items-center justify-center bg-white rounded-md p-1">
+                  <img
                     src={platform.logo}
                     alt={platform.name}
-                    className="w-14 h-14 object-contain brightness-75 group-hover:brightness-100 transition-all"
+                    className="w-12 h-12 object-contain brightness-75 group-hover:brightness-100 transition-all"
                   />
                 </div>
-                <span className="text-lg text-zinc-400 group-hover:text-white transition-all">{platform.name}</span>
+
+                <span className="text-lg text-zinc-400 group-hover:text-white transition-all">
+                  {platform.name}
+                </span>
               </button>
             ))}
           </div>
@@ -542,14 +582,9 @@ function AccountDetailsSection() {
 
 export function ProfileTab() {
   return (
-    <div className="min-h-screen bg-black">
-      {/* Cinematic Background - changed fixed to absolute */} 
-      <div className="absolute inset-0 bg-gradient-to-br from-black via-zinc-950 to-zinc-900 -z-10"></div> 
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-red-950/10 via-transparent to-transparent -z-10"></div> 
-      <div className="absolute inset-0 opacity-[0.02] bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZmlsdGVyIGlkPSJub2lzZSI+PGZlVHVyYnVsZW5jZSB0eXBlPSJmcmFjdGFsTm9pc2UiIGJhc2VGcmVxdWVuY3k9IjAuOSIgbnVtT2N0YXZlcz0iNCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNub2lzZSkiIG9wYWNpdHk9IjEiLz48L3N2Zz4=')] -z-10"></div>
-     
+    <div>
       {/* Main Container */}
-      <div className="max-w-6xl mx-auto">
+      <div className="">
         <ProfileHeader />
 
         <div className="px-8 pb-16 space-y-6">

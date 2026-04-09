@@ -124,7 +124,7 @@ export function SettingsTab() {
 
 
   return (
-    <div className="min-h-screen bg-black relative overflow-hidden">
+    <div className="relative">
       {/* Cinematic background elements */}
       <div className="absolute inset-0 opacity-[0.03]">
         <div className="absolute top-20 left-10 w-32 h-32 border-2 border-zinc-700 rounded-full"></div>
@@ -137,12 +137,12 @@ export function SettingsTab() {
       <div className="absolute inset-0 bg-gradient-to-br from-red-950/10 via-transparent to-transparent pointer-events-none"></div>
 
 
-      <div className="relative z-10 max-w-5xl mx-auto px-8 py-16">
+      <div className="relative z-10 w-full px-0 py-0">
         {/* Header */}
         <div className="mb-12">
-          <h1 className="text-white tracking-tight relative inline-block">
+          <h1 className="text-2xl font-bold text-white relative inline-block">
             Settings
-            <div className="absolute -bottom-2 left-0 right-0 h-0.5 bg-gradient-to-r from-red-600 via-red-600/50 to-transparent"></div>
+          <div className="absolute -bottom-2 left-0 right-0 h-[2px] bg-gradient-to-r from-red-600 via-red-500 to-transparent"></div>
           </h1>
           <p className="text-zinc-500 mt-4 tracking-wide">
             Manage your account preferences and privacy settings
