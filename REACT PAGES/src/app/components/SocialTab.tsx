@@ -164,8 +164,12 @@ export function SocialTab() {
 
   return (
     <div className = "min-h-screen bg-[#0A0A0A] text-white">
-       <div className="text-2xl font-bold text-white mb-6">Social Feed</div>     
-     
+      <div className="text-2xl font-bold text-white mb-6 relative inline-block">
+        Social Feed
+        <div className="absolute -bottom-2 left-0 right-0 h-[2px] bg-gradient-to-r from-red-600 via-red-500 to-transparent"></div>
+      </div>
+
+
     <div className="max-w-3xl mx-auto space-y-6 relative pb-20">
       {loading ? (
         <div className="text-gray-500 text-center py-16">Loading feed...</div>

@@ -2,4 +2,7 @@
 @import './tailwind.css';
 @import './theme.css';
 
-
+html, body {
+    overscroll-behavior-x: none;
+    overscroll-behavior-y: none;
+}
