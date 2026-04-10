@@ -27,7 +27,16 @@ from tmdb_api import (
 )
 
 app = Flask(__name__)
-CORS(app, origins=CORS_ORIGINS)
+
+import re
+# Convert string patterns starting with "regex:" into compiled regex objects
+_cors_origins = [
+    re.compile(o[6:]) if o.startswith("regex:") else o
+    for o in CORS_ORIGINS
+]
+CORS(app, origins=_cors_origins)
+
+
 app.secret_key = SECRET_KEY
 
 # ── Genre cache ──────────────────────────────────────────────────
