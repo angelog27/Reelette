@@ -2,14 +2,31 @@
 import firebase_admin
 import requests
 import os
+import tempfile
+import json
 from firebase_admin import credentials, firestore, auth
-from config import FIREBASE_CREDENTIALS_PATH, FIREBASE_WEB_API_KEY
 from datetime import datetime
+
+try:
+    from config import FIREBASE_CREDENTIALS_PATH, FIREBASE_WEB_API_KEY
+except ImportError:
+    FIREBASE_CREDENTIALS_PATH = os.environ.get("FIREBASE_CREDENTIALS_PATH", "firebase-credentials.json")
+    FIREBASE_WEB_API_KEY = os.environ.get("FIREBASE_WEB_API_KEY", "")
 
 # Initialize Firebase Admin
 if not firebase_admin._apps:
     try:
-        cred = credentials.Certificate(FIREBASE_CREDENTIALS_PATH)
+        firebase_credentials_json = os.environ.get("FIREBASE_CREDENTIALS_JSON")
+        if firebase_credentials_json:
+            # On Render: credentials are stored as an env var (JSON string)
+            cred_dict = json.loads(firebase_credentials_json)
+            tmp = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+            json.dump(cred_dict, tmp)
+            tmp.close()
+            cred = credentials.Certificate(tmp.name)
+        else:
+            # Local dev: read from file path
+            cred = credentials.Certificate(FIREBASE_CREDENTIALS_PATH)
         firebase_admin.initialize_app(cred)
         print(" Firebase initialized successfully")
     except Exception as e:

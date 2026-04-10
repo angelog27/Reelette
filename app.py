@@ -1,8 +1,18 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from config import SECRET_KEY
+import os
 import time
+
+try:
+    from config import SECRET_KEY
+except ImportError:
+    SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret")
+
+try:
+    from config import CORS_ORIGINS
+except ImportError:
+    CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000").split(",")
 from firebase_helper import (
     create_user, verify_user, get_user_data,
     update_streaming_services, get_user_streaming_services,
@@ -17,7 +27,7 @@ from tmdb_api import (
 )
 
 app = Flask(__name__)
-CORS(app, origins=["http://localhost:5173", "http://localhost:3000"])
+CORS(app, origins=CORS_ORIGINS)
 app.secret_key = SECRET_KEY
 
 # ── Genre cache ──────────────────────────────────────────────────
@@ -448,4 +458,5 @@ def delete_feed_post(post_id):
     return jsonify(delete_post(post_id, user_id))
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)

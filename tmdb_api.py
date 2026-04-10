@@ -1,6 +1,13 @@
 # tmdb_api.py
 import requests
-from config import TMDB_API_KEY, TMDB_BASE_URL, TMDB_IMAGE_BASE
+import os
+
+try:
+    from config import TMDB_API_KEY, TMDB_BASE_URL, TMDB_IMAGE_BASE
+except ImportError:
+    TMDB_API_KEY = os.environ.get("TMDB_API_KEY", "")
+    TMDB_BASE_URL = os.environ.get("TMDB_BASE_URL", "https://api.themoviedb.org/3")
+    TMDB_IMAGE_BASE = os.environ.get("TMDB_IMAGE_BASE", "https://image.tmdb.org/t/p")
 
 
 #Query TMDB API for movies, genres, actors, etc. and return results as JSON
