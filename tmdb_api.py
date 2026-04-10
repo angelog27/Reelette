@@ -229,3 +229,9 @@ def get_backdrop_url(backdrop_path, size="w1280"):
 def user_rate_movies(user_id, movie_id, rating, review):
     # Implementation for user rating functionality
     pass
+
+
+def watch_later(user_id, movie_id):
+    # Implementation for watch later functionality
+    pass
+

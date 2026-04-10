@@ -264,6 +264,28 @@ export async function updateWatchedMovie(user_id: string, movie_id: string, rati
   return res.json();
 }
 
+export async function getWatchLater(user_id: string): Promise<string[]> {
+  const res = await fetch(`${BASE_URL}/watchlist/${user_id}`);
+  const data = await res.json();
+  return data.movies ?? [];
+}
+
+export async function watchMovieLater(user_id: string, movie_id: string) {
+  const res = await fetch(`${BASE_URL}/watchlist/${user_id}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ movie_id }),
+  });
+  return res.json();
+}
+
+export async function removeFromWatchLater(user_id: string, movie_id: string) {
+  const res = await fetch(`${BASE_URL}/watchlist/${user_id}/${movie_id}`, {
+    method: 'DELETE',
+  });
+  return res.json();
+}
+
 
 // ── Social Feed ──────────────────────────────────────────────────
 

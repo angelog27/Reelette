@@ -224,6 +224,16 @@ def get_watchlist(user_id):
         print(f"Error getting watchlist: {e}")
         return []
 
+def remove_from_watchlist(user_id, movie_id):
+    try:
+        watchlist_ref = db.collection('users').document(user_id).collection('lists').document('watchlist')
+        watchlist_ref.update({
+            'movies': firestore.ArrayRemove([str(movie_id)])
+        })
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
 #Add a movie to the user's watched list with all relevant details and the user's rating. This will be stored in a subcollection under the user document for easy retrieval and management of watched movies.
 def add_watched_movie(user_id, movie, user_rating, comment=''):
     try:

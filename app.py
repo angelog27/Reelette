@@ -16,7 +16,7 @@ except ImportError:
 from firebase_helper import (
     create_user, verify_user, get_user_data,
     update_streaming_services, get_user_streaming_services,
-    add_to_watchlist, get_watchlist,
+    add_to_watchlist, get_watchlist, remove_from_watchlist,
     add_watched_movie, get_watched_movies, get_watched_movie, update_watched_rating,
     create_post, get_feed, like_post, add_reply, get_replies, delete_post, send_password_reset_email
 )
@@ -383,6 +383,10 @@ def add_to_user_watchlist(user_id):
         return jsonify({'success': False, 'message': 'movie_id required'}), 400
     return jsonify(add_to_watchlist(user_id, movie_id))
 
+@app.route('/api/watchlist/<user_id>/<movie_id>', methods=['DELETE'])
+def remove_from_user_watchlist(user_id, movie_id):
+    return jsonify(remove_from_watchlist(user_id, movie_id))
+
 # ── Watched Movies Routes ────────────────────────────────────────
 
 @app.route('/api/watched/<user_id>', methods=['GET'])
@@ -396,6 +400,7 @@ def get_user_watched_movie(user_id, movie_id):
         return jsonify({'watched': False})
     return jsonify({'watched': True, **serialize_timestamps(entry)})
 
+# This endpoint is used both for initially marking a movie as watched and for adding a user rating + comment. If the movie is already marked as watched, it will update the existing entry with the new rating/comment.
 @app.route('/api/watched/<user_id>', methods=['POST'])
 def add_user_watched(user_id):
     data = request.get_json() or {}
