@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(grep -E \"\\\\.\\(tsx|ts\\)$\")",
-      "Bash(grep -E \"\\\\\\\\.env|requirements|gitignore|config\")"
-    ]
-  }
-}
