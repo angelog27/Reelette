@@ -685,3 +685,101 @@ def spin_group_reelette(group_id):
         return {'success': True, 'movie': chosen}
     except Exception as e:
         return {'success': False, 'message': str(e)}
+
+
+# ── Avatar & Presence ─────────────────────────────────────────────
+
+def update_user_avatar(user_id, avatar_url):
+    """Store a custom avatar (data URI or external URL) on the user document"""
+    try:
+        db.collection('users').document(user_id).update({'avatarUrl': avatar_url})
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+
+def update_user_last_seen(user_id):
+    """Stamp the user's lastSeen timestamp — called as a heartbeat from the client"""
+    try:
+        db.collection('users').document(user_id).update({'lastSeen': datetime.now()})
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+
+# ── Public Profile ────────────────────────────────────────────────
+
+def get_user_public_profile(user_id):
+    """Return a user's public profile including computed stats"""
+    try:
+        doc = db.collection('users').document(user_id).get()
+        if not doc.exists:
+            return None
+        d = doc.to_dict()
+        # Compute stats in parallel (lightweight Firestore aggregations)
+        watched_docs  = db.collection('users').document(user_id).collection('watched_movies').stream()
+        watchlist_doc = db.collection('users').document(user_id).collection('lists').document('watchlist').get()
+        friends_docs  = db.collection('users').document(user_id).collection('friends').stream()
+        return {
+            'user_id':        user_id,
+            'username':       d.get('username', ''),
+            'displayName':    d.get('displayName', d.get('username', '')),
+            'bio':            d.get('bio', ''),
+            'avatarUrl':      d.get('avatarUrl'),
+            'createdAt':      d.get('createdAt'),
+            'watchedCount':   sum(1 for _ in watched_docs),
+            'watchlistCount': len(watchlist_doc.to_dict().get('movies', [])) if watchlist_doc.exists else 0,
+            'friendsCount':   sum(1 for _ in friends_docs),
+        }
+    except Exception as e:
+        print(f"Error getting public profile: {e}")
+        return None
+
+
+# ── Group Member Helpers ──────────────────────────────────────────
+
+def get_group_member_profiles(group_id):
+    """Return lightweight profile data (including lastSeen) for every group member"""
+    try:
+        group_doc = db.collection('groups').document(group_id).get()
+        if not group_doc.exists:
+            return []
+        member_ids = group_doc.to_dict().get('members', [])
+        profiles = []
+        for uid in member_ids:
+            u = db.collection('users').document(uid).get()
+            if u.exists:
+                d = u.to_dict()
+                profiles.append({
+                    'user_id':     uid,
+                    'username':    d.get('username', ''),
+                    'displayName': d.get('displayName', d.get('username', '')),
+                    'avatarUrl':   d.get('avatarUrl'),
+                    'lastSeen':    d.get('lastSeen'),
+                })
+        return profiles
+    except Exception as e:
+        print(f"Error getting member profiles: {e}")
+        return []
+
+
+def get_members_streaming_services(group_id):
+    """Return streaming service prefs for every member of a group"""
+    try:
+        group_doc = db.collection('groups').document(group_id).get()
+        if not group_doc.exists:
+            return {}
+        member_ids = group_doc.to_dict().get('members', [])
+        result = {}
+        for uid in member_ids:
+            u = db.collection('users').document(uid).get()
+            if u.exists:
+                d = u.to_dict()
+                result[uid] = {
+                    'username': d.get('username', ''),
+                    'services': d.get('streamingServices', {})
+                }
+        return result
+    except Exception as e:
+        print(f"Error getting member services: {e}")
+        return {}

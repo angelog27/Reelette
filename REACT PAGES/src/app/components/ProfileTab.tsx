@@ -1,16 +1,44 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import peacockLogo from '../../assets/Peacock.png';
 import {
-  Camera, Edit2, Edit3, User, Mail, Film, Palette,
+  Edit2, Edit3, User, Mail, Film, Palette,
   Users, Shield, Share2, Eye, EyeOff, Lock, Settings,
-  Globe, Languages, Apple, Loader2, Check,
+  Globe, Languages, Apple, Loader2, Check, Upload,
 } from 'lucide-react';
 import {
-  getUser, saveUser, getUserProfile, updateUserProfile,
+  getUser, saveUser, getUserProfile, updateUserProfile, updateUserAvatar,
   getUserStreaming, updateUserStreaming,
   getWatchedMovies, getWatchLater, getFriends,
   type UserProfile,
 } from '../services/api';
+
+// ─── Resize image to max 256×256 JPEG via canvas ─────────────
+async function resizeImageToDataUrl(file: File, maxPx = 256): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = evt => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > height) {
+          if (width > maxPx) { height = Math.round(height * maxPx / width); width = maxPx; }
+        } else {
+          if (height > maxPx) { width = Math.round(width * maxPx / height); height = maxPx; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = reject;
+      img.src = evt.target!.result as string;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
 // ─── Streaming platform config ────────────────────────────────
 const PLATFORMS = [
@@ -86,6 +114,11 @@ export function ProfileTab() {
   // Copy profile link
   const [copied, setCopied] = useState(false);
 
+  // Avatar upload
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [customAvatar, setCustomAvatar] = useState<string | undefined>(undefined);
+
   // Load everything on mount
   useEffect(() => {
     if (!userId) return;
@@ -101,6 +134,7 @@ export function ProfileTab() {
         setDisplayName(prof.displayName || '');
         setUsername(prof.username || '');
         setBio(prof.bio || '');
+        setCustomAvatar((prof as any).avatarUrl || undefined);
       }
       setServices(svc || {});
       setWatchedCount(watched.length);
@@ -109,6 +143,26 @@ export function ProfileTab() {
       setLoadingProfile(false);
     });
   }, [userId]);
+
+  const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingAvatar(true);
+    try {
+      const dataUrl = await resizeImageToDataUrl(file, 256);
+      const r = await updateUserAvatar(userId, dataUrl);
+      if (r.success) {
+        setCustomAvatar(dataUrl);
+        // Persist in localStorage so other parts of the app pick it up immediately
+        const s = getUser();
+        if (s) saveUser({ ...s, avatarUrl: dataUrl });
+      }
+    } catch {
+      // silently ignore resize errors
+    }
+    setUploadingAvatar(false);
+    e.target.value = '';
+  };
 
   const handleSaveInfo = async () => {
     setSavingInfo(true);
@@ -145,10 +199,20 @@ export function ProfileTab() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(username || userId)}`;
+  const dicebearUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(username || userId)}`;
+  const displayAvatar = customAvatar || dicebearUrl;
 
   return (
     <div>
+      {/* Hidden file input for avatar upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleAvatarFileChange}
+      />
+
       {/* Page Title */}
       <div className="px-0 pt-0 pb-4">
         <h1 className="text-2xl font-bold text-white relative inline-block">
@@ -175,11 +239,19 @@ export function ProfileTab() {
                     <Loader2 size={32} className="animate-spin" />
                   </div>
                 ) : (
-                  <img src={avatarUrl} alt={displayName || username} className="w-full h-full object-cover" />
+                  <img src={displayAvatar} alt={displayName || username} className="w-full h-full object-cover" />
                 )}
               </div>
-              <button className="absolute bottom-0 right-0 w-10 h-10 bg-red-600 hover:bg-red-700 rounded-full flex items-center justify-center shadow-lg transition-all group-hover:scale-110">
-                <Camera size={18} className="text-white" />
+              {/* Camera button triggers file picker */}
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingAvatar}
+                title="Change profile photo"
+                className="absolute bottom-0 right-0 w-10 h-10 bg-red-600 hover:bg-red-700 disabled:bg-red-800 rounded-full flex items-center justify-center shadow-lg transition-all group-hover:scale-110"
+              >
+                {uploadingAvatar
+                  ? <Loader2 size={18} className="text-white animate-spin" />
+                  : <Upload size={18} className="text-white" />}
               </button>
             </div>
 

@@ -33,6 +33,7 @@ export interface CurrentUser {
   user_id: string;
   username: string;
   email: string;
+  avatarUrl?: string;
 }
 
 
@@ -350,6 +351,63 @@ export async function getUserProfile(user_id: string): Promise<UserProfile | nul
   const res = await fetch(`${BASE_URL}/user/${user_id}`);
   if (!res.ok) return null;
   return res.json();
+}
+
+export async function updateUserAvatar(user_id: string, avatar_url: string) {
+  const res = await fetch(`${BASE_URL}/user/${user_id}/avatar`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ avatar_url }),
+  });
+  return res.json();
+}
+
+export async function updateLastSeen(user_id: string) {
+  // Fire-and-forget heartbeat — no need to await the result
+  fetch(`${BASE_URL}/user/${user_id}/lastseen`, { method: 'PUT' }).catch(() => {});
+}
+
+export interface UserPublicProfile {
+  user_id: string;
+  username: string;
+  displayName: string;
+  bio?: string;
+  avatarUrl?: string;
+  createdAt?: string;
+  watchedCount: number;
+  watchlistCount: number;
+  friendsCount: number;
+}
+
+export async function getUserPublicProfile(user_id: string): Promise<UserPublicProfile | null> {
+  const res = await fetch(`${BASE_URL}/user/${user_id}/public`);
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export interface MemberProfile {
+  user_id: string;
+  username: string;
+  displayName: string;
+  avatarUrl?: string;
+  lastSeen?: string;
+}
+
+export async function getGroupMemberProfiles(group_id: string): Promise<MemberProfile[]> {
+  const res = await fetch(`${BASE_URL}/groups/${group_id}/members/profiles`);
+  const data = await res.json();
+  return data.profiles ?? [];
+}
+
+export interface MemberServiceEntry {
+  username: string;
+  services: Record<string, boolean>;
+}
+
+export async function getGroupMemberServices(group_id: string): Promise<Record<string, MemberServiceEntry>> {
+  const res = await fetch(`${BASE_URL}/groups/${group_id}/members/services`);
+  const data = await res.json();
+  return data.services ?? {};
 }
 
 export async function updateUserProfile(user_id: string, data: Partial<Pick<UserProfile, 'displayName' | 'bio' | 'username'>>) {

@@ -23,7 +23,9 @@ from firebase_helper import (
     send_friend_request, get_friend_requests, accept_friend_request, reject_friend_request,
     remove_friend, get_friends,
     create_group, get_group, get_user_groups, add_group_member, remove_group_member, delete_group,
-    add_to_group_watchlist, remove_from_group_watchlist, spin_group_reelette
+    add_to_group_watchlist, remove_from_group_watchlist, spin_group_reelette,
+    update_user_avatar, update_user_last_seen,
+    get_user_public_profile, get_group_member_profiles, get_members_streaming_services
 )
 from tmdb_api import (
     search_movies, discover_movies, get_popular_movies, get_movie_details,
@@ -476,13 +478,32 @@ def delete_feed_post(post_id):
         return jsonify({'success': False, 'message': 'user_id required'}), 400
     return jsonify(delete_post(post_id, user_id))
 
-# ── User Profile Update ──────────────────────────────────────────
+# ── User Profile Update / Avatar / Presence ──────────────────────
 
 @app.route('/api/user/<user_id>/profile', methods=['PUT'])
 def update_profile(user_id):
     data = request.get_json() or {}
     result = update_user_profile(user_id, data)
     return jsonify(result)
+
+@app.route('/api/user/<user_id>/avatar', methods=['PUT'])
+def update_avatar_route(user_id):
+    data = request.get_json() or {}
+    avatar_url = data.get('avatar_url', '').strip()
+    if not avatar_url:
+        return jsonify({'success': False, 'message': 'avatar_url required'}), 400
+    return jsonify(update_user_avatar(user_id, avatar_url))
+
+@app.route('/api/user/<user_id>/lastseen', methods=['PUT'])
+def update_lastseen_route(user_id):
+    return jsonify(update_user_last_seen(user_id))
+
+@app.route('/api/user/<user_id>/public', methods=['GET'])
+def get_public_profile(user_id):
+    profile = get_user_public_profile(user_id)
+    if not profile:
+        return jsonify({'error': 'User not found'}), 404
+    return jsonify(serialize_timestamps(profile))
 
 # ── User Search ──────────────────────────────────────────────────
 
@@ -595,6 +616,16 @@ def remove_from_group_watchlist_route(group_id, movie_id):
 @app.route('/api/groups/<group_id>/spin', methods=['POST'])
 def spin_reelette(group_id):
     return jsonify(spin_group_reelette(group_id))
+
+@app.route('/api/groups/<group_id>/members/profiles', methods=['GET'])
+def group_member_profiles(group_id):
+    profiles = get_group_member_profiles(group_id)
+    return jsonify({'profiles': serialize_timestamps(profiles)})
+
+@app.route('/api/groups/<group_id>/members/services', methods=['GET'])
+def group_member_services(group_id):
+    services = get_members_streaming_services(group_id)
+    return jsonify({'services': services})
 
 
 if __name__ == '__main__':
