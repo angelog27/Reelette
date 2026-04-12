@@ -334,6 +334,194 @@ export async function deletePost(post_id: string, user_id: string) {
 }
 
 
+// ── User Profile ─────────────────────────────────────────────────
+
+export interface UserProfile {
+  user_id?: string;
+  username: string;
+  displayName: string;
+  email: string;
+  bio?: string;
+  createdAt?: string;
+  streamingServices?: Record<string, boolean>;
+}
+
+export async function getUserProfile(user_id: string): Promise<UserProfile | null> {
+  const res = await fetch(`${BASE_URL}/user/${user_id}`);
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export async function updateUserProfile(user_id: string, data: Partial<Pick<UserProfile, 'displayName' | 'bio' | 'username'>>) {
+  const res = await fetch(`${BASE_URL}/user/${user_id}/profile`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return res.json();
+}
+
+export async function searchUsers(query: string, excludeUserId?: string): Promise<{ user_id: string; username: string; displayName: string }[]> {
+  const params = new URLSearchParams({ q: query });
+  if (excludeUserId) params.set('exclude', excludeUserId);
+  const res = await fetch(`${BASE_URL}/users/search?${params}`);
+  const data = await res.json();
+  return data.users ?? [];
+}
+
+// ── Friends ──────────────────────────────────────────────────────
+
+export interface Friend {
+  friend_id: string;
+  friend_username: string;
+  since: string;
+}
+
+export interface FriendRequest {
+  from_user_id: string;
+  from_username: string;
+  status: string;
+  created_at: string;
+}
+
+export async function getFriends(user_id: string): Promise<Friend[]> {
+  const res = await fetch(`${BASE_URL}/friends/${user_id}`);
+  const data = await res.json();
+  return data.friends ?? [];
+}
+
+export async function getFriendRequests(user_id: string): Promise<FriendRequest[]> {
+  const res = await fetch(`${BASE_URL}/friends/${user_id}/requests`);
+  const data = await res.json();
+  return data.requests ?? [];
+}
+
+export async function sendFriendRequest(to_user_id: string, from_user_id: string, from_username: string) {
+  const res = await fetch(`${BASE_URL}/friends/${to_user_id}/request`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from_user_id, from_username }),
+  });
+  return res.json();
+}
+
+export async function acceptFriendRequest(user_id: string, user_username: string, from_id: string, from_username: string) {
+  const res = await fetch(`${BASE_URL}/friends/${user_id}/request/${from_id}/accept`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_username, from_username }),
+  });
+  return res.json();
+}
+
+export async function rejectFriendRequest(user_id: string, from_id: string) {
+  const res = await fetch(`${BASE_URL}/friends/${user_id}/request/${from_id}/reject`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  return res.json();
+}
+
+export async function removeFriend(user_id: string, friend_id: string) {
+  const res = await fetch(`${BASE_URL}/friends/${user_id}/${friend_id}`, {
+    method: 'DELETE',
+  });
+  return res.json();
+}
+
+// ── Groups ───────────────────────────────────────────────────────
+
+export interface GroupMovie {
+  movie_id: string;
+  movie_title: string;
+  added_by: string;
+  added_by_username: string;
+  added_at: string;
+}
+
+export interface MovieGroup {
+  group_id: string;
+  name: string;
+  description: string;
+  created_by: string;
+  created_by_username: string;
+  members: string[];
+  member_usernames: Record<string, string>;
+  watchlist: GroupMovie[];
+  created_at: string;
+}
+
+export async function createGroup(name: string, description: string, creator_id: string, creator_username: string) {
+  const res = await fetch(`${BASE_URL}/groups`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, description, creator_id, creator_username }),
+  });
+  return res.json();
+}
+
+export async function getGroup(group_id: string): Promise<MovieGroup | null> {
+  const res = await fetch(`${BASE_URL}/groups/${group_id}`);
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export async function getUserGroups(user_id: string): Promise<MovieGroup[]> {
+  const res = await fetch(`${BASE_URL}/user/${user_id}/groups`);
+  const data = await res.json();
+  return data.groups ?? [];
+}
+
+export async function addGroupMember(group_id: string, user_id: string, username: string) {
+  const res = await fetch(`${BASE_URL}/groups/${group_id}/members`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_id, username }),
+  });
+  return res.json();
+}
+
+export async function removeGroupMember(group_id: string, member_id: string) {
+  const res = await fetch(`${BASE_URL}/groups/${group_id}/members/${member_id}`, {
+    method: 'DELETE',
+  });
+  return res.json();
+}
+
+export async function addToGroupWatchlist(group_id: string, movie_id: string, movie_title: string, user_id: string, username: string) {
+  const res = await fetch(`${BASE_URL}/groups/${group_id}/watchlist`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ movie_id, movie_title, user_id, username }),
+  });
+  return res.json();
+}
+
+export async function removeFromGroupWatchlist(group_id: string, movie_id: string) {
+  const res = await fetch(`${BASE_URL}/groups/${group_id}/watchlist/${movie_id}`, {
+    method: 'DELETE',
+  });
+  return res.json();
+}
+
+export async function spinGroupReelette(group_id: string): Promise<{ success: boolean; movie?: GroupMovie; message?: string }> {
+  const res = await fetch(`${BASE_URL}/groups/${group_id}/spin`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  return res.json();
+}
+
+export async function deleteGroup(group_id: string, user_id: string) {
+  const res = await fetch(`${BASE_URL}/groups/${group_id}`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_id }),
+  });
+  return res.json();
+}
+
+
 // ── Helpers ──────────────────────────────────────────────────────
 
 

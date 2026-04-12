@@ -411,3 +411,277 @@ def delete_post(post_id, user_id):
         return {'success': True}
     except Exception as e:
         return {'success': False, 'message': str(e)}
+
+
+# ── User Profile ──────────────────────────────────────────────────
+
+def update_user_profile(user_id, data):
+    """Update editable profile fields: displayName, bio, username"""
+    try:
+        allowed = {'displayName', 'bio', 'username'}
+        update_data = {k: v for k, v in data.items() if k in allowed}
+        if not update_data:
+            return {'success': False, 'message': 'No valid fields to update'}
+        db.collection('users').document(user_id).update(update_data)
+        if 'displayName' in update_data:
+            auth.update_user(user_id, display_name=update_data['displayName'])
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+
+def search_users(query, exclude_user_id=None, limit=10):
+    """Prefix search on username field — Firestore range query"""
+    try:
+        query_lower = query.lower()
+        docs = (db.collection('users')
+                  .where('username', '>=', query_lower)
+                  .where('username', '<=', query_lower + '\uf8ff')
+                  .limit(limit)
+                  .stream())
+        users = []
+        for doc in docs:
+            if doc.id == exclude_user_id:
+                continue
+            d = doc.to_dict()
+            users.append({
+                'user_id': doc.id,
+                'username': d.get('username', ''),
+                'displayName': d.get('displayName', d.get('username', ''))
+            })
+        return users
+    except Exception as e:
+        print(f"Error searching users: {e}")
+        return []
+
+
+# ── Friends ───────────────────────────────────────────────────────
+
+def send_friend_request(from_user_id, from_username, to_user_id):
+    """Send a friend request from one user to another"""
+    try:
+        # Already friends?
+        if db.collection('users').document(to_user_id).collection('friends').document(from_user_id).get().exists:
+            return {'success': False, 'message': 'Already friends'}
+        # Request already pending?
+        if db.collection('users').document(to_user_id).collection('friend_requests').document(from_user_id).get().exists:
+            return {'success': False, 'message': 'Friend request already sent'}
+        db.collection('users').document(to_user_id).collection('friend_requests').document(from_user_id).set({
+            'from_user_id': from_user_id,
+            'from_username': from_username,
+            'status': 'pending',
+            'created_at': datetime.now()
+        })
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+
+def get_friend_requests(user_id):
+    """Get pending incoming friend requests for a user"""
+    try:
+        docs = (db.collection('users').document(user_id)
+                  .collection('friend_requests')
+                  .where('status', '==', 'pending')
+                  .stream())
+        return [doc.to_dict() for doc in docs]
+    except Exception as e:
+        print(f"Error getting friend requests: {e}")
+        return []
+
+
+def accept_friend_request(user_id, user_username, from_user_id, from_username):
+    """Accept a friend request — adds both users to each other's friends sub-collection"""
+    try:
+        req_ref = db.collection('users').document(user_id).collection('friend_requests').document(from_user_id)
+        if not req_ref.get().exists:
+            return {'success': False, 'message': 'Friend request not found'}
+        now = datetime.now()
+        db.collection('users').document(user_id).collection('friends').document(from_user_id).set({
+            'friend_id': from_user_id,
+            'friend_username': from_username,
+            'since': now
+        })
+        db.collection('users').document(from_user_id).collection('friends').document(user_id).set({
+            'friend_id': user_id,
+            'friend_username': user_username,
+            'since': now
+        })
+        req_ref.delete()
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+
+def reject_friend_request(user_id, from_user_id):
+    """Decline/delete a pending friend request"""
+    try:
+        db.collection('users').document(user_id).collection('friend_requests').document(from_user_id).delete()
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+
+def remove_friend(user_id, friend_id):
+    """Remove a friend — deletes both sides of the friendship"""
+    try:
+        db.collection('users').document(user_id).collection('friends').document(friend_id).delete()
+        db.collection('users').document(friend_id).collection('friends').document(user_id).delete()
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+
+def get_friends(user_id):
+    """Return the list of accepted friends for a user"""
+    try:
+        docs = db.collection('users').document(user_id).collection('friends').stream()
+        return [doc.to_dict() for doc in docs]
+    except Exception as e:
+        print(f"Error getting friends: {e}")
+        return []
+
+
+# ── Groups ────────────────────────────────────────────────────────
+
+def create_group(name, description, creator_id, creator_username):
+    """Create a new movie group; creator is automatically a member"""
+    try:
+        group_ref = db.collection('groups').document()
+        group_ref.set({
+            'group_id': group_ref.id,
+            'name': name,
+            'description': description,
+            'created_by': creator_id,
+            'created_by_username': creator_username,
+            'members': [creator_id],
+            'member_usernames': {creator_id: creator_username},
+            'watchlist': [],
+            'created_at': datetime.now()
+        })
+        return {'success': True, 'group_id': group_ref.id}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+
+def get_group(group_id):
+    """Fetch a single group document by ID"""
+    try:
+        doc = db.collection('groups').document(group_id).get()
+        return doc.to_dict() if doc.exists else None
+    except Exception as e:
+        print(f"Error getting group: {e}")
+        return None
+
+
+def get_user_groups(user_id):
+    """Return all groups the user belongs to"""
+    try:
+        docs = (db.collection('groups')
+                  .where('members', 'array_contains', user_id)
+                  .stream())
+        return [doc.to_dict() for doc in docs]
+    except Exception as e:
+        print(f"Error getting user groups: {e}")
+        return []
+
+
+def add_group_member(group_id, new_member_id, new_member_username):
+    """Add a new member to an existing group"""
+    try:
+        group_ref = db.collection('groups').document(group_id)
+        if not group_ref.get().exists:
+            return {'success': False, 'message': 'Group not found'}
+        group_ref.update({
+            'members': firestore.ArrayUnion([new_member_id]),
+            f'member_usernames.{new_member_id}': new_member_username
+        })
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+
+def remove_group_member(group_id, user_id):
+    """Remove a member from a group (creator cannot be removed)"""
+    try:
+        group_ref = db.collection('groups').document(group_id)
+        group_doc = group_ref.get()
+        if not group_doc.exists:
+            return {'success': False, 'message': 'Group not found'}
+        if group_doc.to_dict().get('created_by') == user_id:
+            return {'success': False, 'message': 'Group creator cannot be removed; delete the group instead'}
+        group_ref.update({
+            'members': firestore.ArrayRemove([user_id]),
+            f'member_usernames.{user_id}': firestore.DELETE_FIELD
+        })
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+
+def delete_group(group_id, user_id):
+    """Delete a group — only the creator can do this"""
+    try:
+        group_ref = db.collection('groups').document(group_id)
+        group_doc = group_ref.get()
+        if not group_doc.exists:
+            return {'success': False, 'message': 'Group not found'}
+        if group_doc.to_dict().get('created_by') != user_id:
+            return {'success': False, 'message': 'Only the group creator can delete the group'}
+        group_ref.delete()
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+
+def add_to_group_watchlist(group_id, movie_id, movie_title, user_id, username):
+    """Add a movie to the group's shared watchlist"""
+    try:
+        group_ref = db.collection('groups').document(group_id)
+        group_doc = group_ref.get()
+        if not group_doc.exists:
+            return {'success': False, 'message': 'Group not found'}
+        watchlist = group_doc.to_dict().get('watchlist', [])
+        if any(m['movie_id'] == str(movie_id) for m in watchlist):
+            return {'success': False, 'message': 'Movie already in group watchlist'}
+        new_entry = {
+            'movie_id': str(movie_id),
+            'movie_title': movie_title,
+            'added_by': user_id,
+            'added_by_username': username,
+            'added_at': datetime.now().isoformat()
+        }
+        group_ref.update({'watchlist': firestore.ArrayUnion([new_entry])})
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+
+def remove_from_group_watchlist(group_id, movie_id):
+    """Remove a movie from the group watchlist by movie_id"""
+    try:
+        group_ref = db.collection('groups').document(group_id)
+        group_doc = group_ref.get()
+        if not group_doc.exists:
+            return {'success': False, 'message': 'Group not found'}
+        updated = [m for m in group_doc.to_dict().get('watchlist', []) if m['movie_id'] != str(movie_id)]
+        group_ref.update({'watchlist': updated})
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+
+def spin_group_reelette(group_id):
+    """Pick a random movie from the group's watchlist"""
+    import random
+    try:
+        group_doc = db.collection('groups').document(group_id).get()
+        if not group_doc.exists:
+            return {'success': False, 'message': 'Group not found'}
+        watchlist = group_doc.to_dict().get('watchlist', [])
+        if not watchlist:
+            return {'success': False, 'message': 'Group watchlist is empty — add some movies first!'}
+        chosen = random.choice(watchlist)
+        return {'success': True, 'movie': chosen}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}

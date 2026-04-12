@@ -18,7 +18,12 @@ from firebase_helper import (
     update_streaming_services, get_user_streaming_services,
     add_to_watchlist, get_watchlist, remove_from_watchlist,
     add_watched_movie, get_watched_movies, get_watched_movie, update_watched_rating,
-    create_post, get_feed, like_post, add_reply, get_replies, delete_post, send_password_reset_email
+    create_post, get_feed, like_post, add_reply, get_replies, delete_post, send_password_reset_email,
+    update_user_profile, search_users,
+    send_friend_request, get_friend_requests, accept_friend_request, reject_friend_request,
+    remove_friend, get_friends,
+    create_group, get_group, get_user_groups, add_group_member, remove_group_member, delete_group,
+    add_to_group_watchlist, remove_from_group_watchlist, spin_group_reelette
 )
 from tmdb_api import (
     search_movies, discover_movies, get_popular_movies, get_movie_details,
@@ -470,6 +475,127 @@ def delete_feed_post(post_id):
     if not user_id:
         return jsonify({'success': False, 'message': 'user_id required'}), 400
     return jsonify(delete_post(post_id, user_id))
+
+# ── User Profile Update ──────────────────────────────────────────
+
+@app.route('/api/user/<user_id>/profile', methods=['PUT'])
+def update_profile(user_id):
+    data = request.get_json() or {}
+    result = update_user_profile(user_id, data)
+    return jsonify(result)
+
+# ── User Search ──────────────────────────────────────────────────
+
+@app.route('/api/users/search', methods=['GET'])
+def search_users_route():
+    query = request.args.get('q', '').strip()
+    exclude = request.args.get('exclude', '').strip()
+    if not query:
+        return jsonify({'users': []})
+    users = search_users(query, exclude_user_id=exclude or None)
+    return jsonify({'users': users})
+
+# ── Friends ──────────────────────────────────────────────────────
+
+@app.route('/api/friends/<user_id>', methods=['GET'])
+def get_user_friends(user_id):
+    friends = get_friends(user_id)
+    return jsonify({'friends': serialize_timestamps(friends)})
+
+@app.route('/api/friends/<user_id>/requests', methods=['GET'])
+def get_user_friend_requests(user_id):
+    reqs = get_friend_requests(user_id)
+    return jsonify({'requests': serialize_timestamps(reqs)})
+
+@app.route('/api/friends/<user_id>/request', methods=['POST'])
+def send_request(user_id):
+    data = request.get_json() or {}
+    from_user_id = data.get('from_user_id', '').strip()
+    from_username = data.get('from_username', '').strip()
+    if not from_user_id or not from_username:
+        return jsonify({'success': False, 'message': 'from_user_id and from_username required'}), 400
+    return jsonify(send_friend_request(from_user_id, from_username, user_id))
+
+@app.route('/api/friends/<user_id>/request/<from_id>/accept', methods=['POST'])
+def accept_request(user_id, from_id):
+    data = request.get_json() or {}
+    user_username = data.get('user_username', '').strip()
+    from_username = data.get('from_username', '').strip()
+    return jsonify(accept_friend_request(user_id, user_username, from_id, from_username))
+
+@app.route('/api/friends/<user_id>/request/<from_id>/reject', methods=['POST'])
+def reject_request(user_id, from_id):
+    return jsonify(reject_friend_request(user_id, from_id))
+
+@app.route('/api/friends/<user_id>/<friend_id>', methods=['DELETE'])
+def delete_friend(user_id, friend_id):
+    return jsonify(remove_friend(user_id, friend_id))
+
+# ── Groups ───────────────────────────────────────────────────────
+
+@app.route('/api/groups', methods=['POST'])
+def create_new_group():
+    data = request.get_json() or {}
+    name = data.get('name', '').strip()
+    description = data.get('description', '').strip()
+    creator_id = data.get('creator_id', '').strip()
+    creator_username = data.get('creator_username', '').strip()
+    if not all([name, creator_id, creator_username]):
+        return jsonify({'success': False, 'message': 'name, creator_id, and creator_username are required'}), 400
+    return jsonify(create_group(name, description, creator_id, creator_username))
+
+@app.route('/api/groups/<group_id>', methods=['GET'])
+def get_group_route(group_id):
+    group = get_group(group_id)
+    if not group:
+        return jsonify({'error': 'Group not found'}), 404
+    return jsonify(serialize_timestamps(group))
+
+@app.route('/api/groups/<group_id>', methods=['DELETE'])
+def delete_group_route(group_id):
+    data = request.get_json() or {}
+    user_id = data.get('user_id', '').strip()
+    if not user_id:
+        return jsonify({'success': False, 'message': 'user_id required'}), 400
+    return jsonify(delete_group(group_id, user_id))
+
+@app.route('/api/user/<user_id>/groups', methods=['GET'])
+def get_user_groups_route(user_id):
+    groups = get_user_groups(user_id)
+    return jsonify({'groups': serialize_timestamps(groups)})
+
+@app.route('/api/groups/<group_id>/members', methods=['POST'])
+def add_member(group_id):
+    data = request.get_json() or {}
+    new_member_id = data.get('user_id', '').strip()
+    new_member_username = data.get('username', '').strip()
+    if not new_member_id or not new_member_username:
+        return jsonify({'success': False, 'message': 'user_id and username are required'}), 400
+    return jsonify(add_group_member(group_id, new_member_id, new_member_username))
+
+@app.route('/api/groups/<group_id>/members/<member_id>', methods=['DELETE'])
+def remove_member(group_id, member_id):
+    return jsonify(remove_group_member(group_id, member_id))
+
+@app.route('/api/groups/<group_id>/watchlist', methods=['POST'])
+def add_to_group_watchlist_route(group_id):
+    data = request.get_json() or {}
+    movie_id = str(data.get('movie_id', '')).strip()
+    movie_title = data.get('movie_title', '').strip()
+    user_id = data.get('user_id', '').strip()
+    username = data.get('username', '').strip()
+    if not all([movie_id, movie_title, user_id, username]):
+        return jsonify({'success': False, 'message': 'movie_id, movie_title, user_id, and username are required'}), 400
+    return jsonify(add_to_group_watchlist(group_id, movie_id, movie_title, user_id, username))
+
+@app.route('/api/groups/<group_id>/watchlist/<movie_id>', methods=['DELETE'])
+def remove_from_group_watchlist_route(group_id, movie_id):
+    return jsonify(remove_from_group_watchlist(group_id, movie_id))
+
+@app.route('/api/groups/<group_id>/spin', methods=['POST'])
+def spin_reelette(group_id):
+    return jsonify(spin_group_reelette(group_id))
+
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))

@@ -1,603 +1,463 @@
-import React from 'react';
+import { useState, useEffect } from 'react';
 import peacockLogo from '../../assets/Peacock.png';
 import {
-  Camera,
-  Edit2,
-  Edit3,
-  User,
-  Mail,
-  Phone,
-  Film,
-  Star,
-  Tv,
-  Heart,
-  Sparkles,
-  Moon,
-  Sun,
-  Monitor,
-  Palette,
-  Users,
-  Shield,
-  Share2,
-  Eye,
-  EyeOff,
-  Lock,
-  Settings,
-  Globe,
-  Languages,
-  Link as LinkIcon,
-  Apple,
-  Chrome
+  Camera, Edit2, Edit3, User, Mail, Film, Palette,
+  Users, Shield, Share2, Eye, EyeOff, Lock, Settings,
+  Globe, Languages, Apple, Loader2, Check,
 } from 'lucide-react';
+import {
+  getUser, saveUser, getUserProfile, updateUserProfile,
+  getUserStreaming, updateUserStreaming,
+  getWatchedMovies, getWatchLater, getFriends,
+  type UserProfile,
+} from '../services/api';
 
-// ─── ProfileHeader ───────────────────────────────────────────
+// ─── Streaming platform config ────────────────────────────────
+const PLATFORMS = [
+  { key: 'netflix',     name: 'Netflix',      logo: 'https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg',    color: 'red' },
+  { key: 'appleTV',     name: 'Apple TV+',    logo: 'https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg',      color: 'dimgray' },
+  { key: 'hboMax',      name: 'HBO Max',      logo: 'https://upload.wikimedia.org/wikipedia/commons/1/17/HBO_Max_Logo.svg',           color: '#5B31B9' },
+  { key: 'disneyPlus',  name: 'Disney+',      logo: 'https://upload.wikimedia.org/wikipedia/commons/3/3e/Disney%2B_logo.svg',        color: '#00A2FF' },
+  { key: 'hulu',        name: 'Hulu',         logo: 'https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/hulu.svg',          color: '#1CE783' },
+  { key: 'amazonPrime', name: 'Amazon Prime', logo: 'https://upload.wikimedia.org/wikipedia/commons/f/f1/Prime_Video.png',           color: '#00A8E1' },
+  { key: 'paramount',   name: 'Paramount+',   logo: 'https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/paramountplus.svg', color: 'blue' },
+  { key: 'peacock',     name: 'Peacock',      logo: peacockLogo,                                                                     color: 'multicolor' },
+];
 
-function ProfileHeader() {
+const GENRES = ['Action','Drama','Sci-Fi','Horror','Comedy','Thriller','Romance','Documentary','Animation','Fantasy'];
+
+// ─── Section wrapper ──────────────────────────────────────────
+function Section({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="relative">
+    <div className="bg-zinc-900/50 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-zinc-800/50">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-1 h-6 bg-red-600 rounded-full" />
+          <h2 className="text-white uppercase tracking-wider">{title}</h2>
+        </div>
+        <span className="text-zinc-600">{icon}</span>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+// ─── SaveButton ───────────────────────────────────────────────
+function SaveButton({ saving, saved, onClick }: { saving: boolean; saved: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={saving}
+      className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all border border-red-600 flex items-center gap-2 shadow-lg shadow-red-600/20 hover:shadow-red-600/40 disabled:opacity-60"
+    >
+      {saving ? <Loader2 size={16} className="animate-spin" /> : saved ? <Check size={16} /> : <Edit3 size={16} />}
+      {saving ? 'Saving…' : saved ? 'Saved!' : 'Save Changes'}
+    </button>
+  );
+}
+
+// ─── Main ProfileTab ──────────────────────────────────────────
+export function ProfileTab() {
+  const sessionUser = getUser();
+  const userId = sessionUser?.user_id ?? '';
+
+  // Profile data
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+
+  // Editable form fields
+  const [displayName, setDisplayName] = useState('');
+  const [username, setUsername] = useState('');
+  const [bio, setBio] = useState('');
+  const [savingInfo, setSavingInfo] = useState(false);
+  const [savedInfo, setSavedInfo] = useState(false);
+  const [infoError, setInfoError] = useState('');
+
+  // Streaming services
+  const [services, setServices] = useState<Record<string, boolean>>({});
+  const [savingServices, setSavingServices] = useState(false);
+  const [savedServices, setSavedServices] = useState(false);
+
+  // Stats
+  const [watchedCount, setWatchedCount] = useState<number | null>(null);
+  const [watchlistCount, setWatchlistCount] = useState<number | null>(null);
+  const [friendsCount, setFriendsCount] = useState<number | null>(null);
+
+  // Copy profile link
+  const [copied, setCopied] = useState(false);
+
+  // Load everything on mount
+  useEffect(() => {
+    if (!userId) return;
+    Promise.all([
+      getUserProfile(userId),
+      getUserStreaming(userId),
+      getWatchedMovies(userId),
+      getWatchLater(userId),
+      getFriends(userId),
+    ]).then(([prof, svc, watched, watchlist, friends]) => {
+      if (prof) {
+        setProfile(prof);
+        setDisplayName(prof.displayName || '');
+        setUsername(prof.username || '');
+        setBio(prof.bio || '');
+      }
+      setServices(svc || {});
+      setWatchedCount(watched.length);
+      setWatchlistCount(watchlist.length);
+      setFriendsCount(friends.length);
+      setLoadingProfile(false);
+    });
+  }, [userId]);
+
+  const handleSaveInfo = async () => {
+    setSavingInfo(true);
+    setInfoError('');
+    const r = await updateUserProfile(userId, { displayName, bio });
+    if (r.success) {
+      // Keep localStorage username in sync
+      const s = getUser();
+      if (s) saveUser({ ...s, username: s.username });
+      setSavedInfo(true);
+      setTimeout(() => setSavedInfo(false), 2500);
+    } else {
+      setInfoError(r.message || 'Failed to save');
+    }
+    setSavingInfo(false);
+  };
+
+  const handleSaveServices = async () => {
+    setSavingServices(true);
+    await updateUserStreaming(userId, services);
+    setSavedServices(true);
+    setTimeout(() => setSavedServices(false), 2500);
+    setSavingServices(false);
+  };
+
+  const toggleService = (key: string) => {
+    setServices(prev => ({ ...prev, [key]: !prev[key] }));
+    setSavedServices(false);
+  };
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(`${window.location.origin}/home/profile?user=${userId}`);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(username || userId)}`;
+
+  return (
+    <div>
       {/* Page Title */}
       <div className="px-0 pt-0 pb-4">
         <h1 className="text-2xl font-bold text-white relative inline-block">
           Profile
-        <div className="absolute -bottom-2 left-0 right-0 h-[2px] bg-gradient-to-r from-red-600 via-red-500 to-transparent"></div>
+          <div className="absolute -bottom-2 left-0 right-0 h-[2px] bg-gradient-to-r from-red-600 via-red-500 to-transparent" />
         </h1>
       </div>
 
-      {/* Banner Background with Cinematic Blur */}
-      <div className="h-48 bg-gradient-to-br from-zinc-900 via-zinc-950 to-black relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-red-950/20 to-transparent"></div>
-        <div className="absolute inset-0 opacity-10 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')]"></div>
+      {/* Banner */}
+      <div className="h-48 bg-gradient-to-br from-zinc-900 via-zinc-950 to-black relative overflow-hidden mb-0">
+        <div className="absolute inset-0 bg-gradient-to-r from-red-950/20 to-transparent" />
+        <div className="absolute inset-0 opacity-10 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')]" />
       </div>
 
-      {/* Profile Content */}
+      {/* Profile Header Row */}
       <div className="px-8 pb-6">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between -mt-10 gap-6">
-          {/* Avatar Section */}
+          {/* Avatar */}
           <div className="flex flex-col md:flex-row items-start md:items-end gap-6">
             <div className="relative group">
               <div className="w-32 h-32 rounded-full bg-gradient-to-br from-zinc-800 to-zinc-900 border-4 border-zinc-950 overflow-hidden shadow-2xl">
-                <div className="w-full h-full flex items-center justify-center text-zinc-600">
-                  <Camera size={40} />
-                </div>
+                {loadingProfile ? (
+                  <div className="w-full h-full flex items-center justify-center text-zinc-600">
+                    <Loader2 size={32} className="animate-spin" />
+                  </div>
+                ) : (
+                  <img src={avatarUrl} alt={displayName || username} className="w-full h-full object-cover" />
+                )}
               </div>
               <button className="absolute bottom-0 right-0 w-10 h-10 bg-red-600 hover:bg-red-700 rounded-full flex items-center justify-center shadow-lg transition-all group-hover:scale-110">
                 <Camera size={18} className="text-white" />
               </button>
             </div>
 
-            {/* User Info */}
             <div className="space-y-1">
-              <h1 className="text-white tracking-tight">Alex Martinez</h1>
-              <p className="text-zinc-400">@alexmartinez</p>
-              <p className="text-zinc-500 max-w-md">Film enthusiast | Collector of stories | Always searching for the next great watch</p>
+              {loadingProfile ? (
+                <div className="space-y-2">
+                  <div className="h-6 w-36 bg-zinc-800 rounded animate-pulse" />
+                  <div className="h-4 w-24 bg-zinc-800 rounded animate-pulse" />
+                </div>
+              ) : (
+                <>
+                  <h1 className="text-white text-2xl font-bold tracking-tight">{displayName || username}</h1>
+                  <p className="text-zinc-400">@{username}</p>
+                  {bio && <p className="text-zinc-500 max-w-md text-sm">{bio}</p>}
+                  {/* Stats */}
+                  <div className="flex items-center gap-6 pt-2">
+                    <div className="text-center">
+                      <p className="text-white font-bold">{watchedCount ?? '—'}</p>
+                      <p className="text-zinc-500 text-xs">Watched</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-white font-bold">{watchlistCount ?? '—'}</p>
+                      <p className="text-zinc-500 text-xs">Watchlist</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-white font-bold">{friendsCount ?? '—'}</p>
+                      <p className="text-zinc-500 text-xs">Friends</p>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
-          {/* Edit Profile Button */}
-          <button className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg flex items-center gap-2 transition-all shadow-lg shadow-red-600/20 hover:shadow-red-600/30">
+          <button className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg flex items-center gap-2 transition-all shadow-lg shadow-red-600/20 self-start md:self-auto">
             <Edit2 size={16} />
             Edit Profile
           </button>
         </div>
       </div>
-    </div>
-  );
-}
 
-// ─── ProfileInfoSection ──────────────────────────────────────
+      <div className="px-8 pb-16 space-y-6">
 
-function ProfileInfoSection() {
-  return (
-    <div className="bg-zinc-900/50 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-zinc-800/50">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-1 h-6 bg-red-600 rounded-full"></div>
-          <h2 className="text-white uppercase tracking-wider">Basic Information</h2>
-        </div>
-        <User size={20} className="text-zinc-600" />
-      </div>
-
-      <div className="space-y-4">
-        <div>
-          <label className="block text-zinc-400 mb-2">Display Name</label>
-          <input
-            type="text"
-            defaultValue="Alex Martinez"
-            className="w-full bg-zinc-950/50 border border-zinc-800 rounded-lg px-4 py-2.5 text-white placeholder-zinc-600 focus:border-red-600 focus:ring-2 focus:ring-red-600/20 focus:outline-none transition-all"
-          />
-        </div>
-
-        <div>
-          <label className="block text-zinc-400 mb-2">Username</label>
-          <input
-            type="text"
-            defaultValue="alexmartinez"
-            className="w-full bg-zinc-950/50 border border-zinc-800 rounded-lg px-4 py-2.5 text-white placeholder-zinc-600 focus:border-red-600 focus:ring-2 focus:ring-red-600/20 focus:outline-none transition-all"
-          />
-        </div>
-
-        <div>
-          <label className="block text-zinc-400 mb-2">Bio</label>
-          <textarea
-            rows={3}
-            defaultValue="Film enthusiast | Collector of stories | Always searching for the next great watch"
-            className="w-full bg-zinc-950/50 border border-zinc-800 rounded-lg px-4 py-2.5 text-white placeholder-zinc-600 focus:border-red-600 focus:ring-2 focus:ring-red-600/20 focus:outline-none transition-all resize-none"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-zinc-400 mb-2">Email Address</label>
-            <div className="relative">
-              <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
+        {/* ── Basic Information ─────────────────────────────── */}
+        <Section title="Basic Information" icon={<User size={20} />}>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-zinc-400 mb-2">Display Name</label>
               <input
-                type="email"
-                defaultValue="alex.martinez@email.com"
-                className="w-full bg-zinc-950/50 border border-zinc-800 rounded-lg pl-10 pr-4 py-2.5 text-white placeholder-zinc-600 focus:border-red-600 focus:ring-2 focus:ring-red-600/20 focus:outline-none transition-all"
+                type="text"
+                value={displayName}
+                onChange={e => { setDisplayName(e.target.value); setSavedInfo(false); }}
+                className="w-full bg-zinc-950/50 border border-zinc-800 rounded-lg px-4 py-2.5 text-white placeholder-zinc-600 focus:border-red-600 focus:ring-2 focus:ring-red-600/20 focus:outline-none transition-all"
               />
             </div>
-          </div>
-
-          <div>
-            <label className="block text-zinc-400 mb-2">Phone Number</label>
-            <div className="relative">
-              <Phone size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
+            <div>
+              <label className="block text-zinc-400 mb-2">Username</label>
               <input
-                type="tel"
-                defaultValue="+1 (555) 123-4567"
-                className="w-full bg-zinc-950/50 border border-zinc-800 rounded-lg pl-10 pr-4 py-2.5 text-white placeholder-zinc-600 focus:border-red-600 focus:ring-2 focus:ring-red-600/20 focus:outline-none transition-all"
+                type="text"
+                value={username}
+                disabled
+                className="w-full bg-zinc-950/30 border border-zinc-800 rounded-lg px-4 py-2.5 text-zinc-500 cursor-not-allowed"
+              />
+              <p className="text-zinc-600 text-xs mt-1">Username cannot be changed after registration.</p>
+            </div>
+            <div>
+              <label className="block text-zinc-400 mb-2">Bio</label>
+              <textarea
+                rows={3}
+                value={bio}
+                onChange={e => { setBio(e.target.value); setSavedInfo(false); }}
+                placeholder="Tell the world about your movie taste…"
+                className="w-full bg-zinc-950/50 border border-zinc-800 rounded-lg px-4 py-2.5 text-white placeholder-zinc-600 focus:border-red-600 focus:ring-2 focus:ring-red-600/20 focus:outline-none transition-all resize-none"
               />
             </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-6 flex justify-end">
-        <button className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all border border-red-600 flex items-center gap-2 shadow-lg shadow-red-600/20 hover:shadow-red-600/40">
-          <Edit3 size={16} />
-          Save Changes
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ─── MoviePersonalizationSection ─────────────────────────────
-
-function MoviePersonalizationSection() {
-  const genres = [
-    'Action', 'Drama', 'Sci-Fi', 'Horror', 'Comedy', 'Thriller',
-    'Romance', 'Documentary', 'Animation', 'Fantasy'
-  ];
-
-  const platforms = [
-  {
-    name: 'Netflix',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg',
-    color: 'red'
-  },
-  {
-    name: 'Apple TV+',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg',
-    color: 'dimgray'
-  },
-  {
-    name: 'HBO Max',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/1/17/HBO_Max_Logo.svg',
-    color: '#5B31B9'
-  },
-  {
-    name: 'Disney+',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/3/3e/Disney%2B_logo.svg',
-    color: '#00A2FF'
-  },
-  {
-    name: 'Hulu',
-    logo: 'https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/hulu.svg',
-    color: '#1CE783'
-  },
-  {
-    name: 'Amazon Prime',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/f/f1/Prime_Video.png',
-    color: '#00A8E1'
-  },
-  {
-    name: 'Paramount+',
-    logo: 'https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/paramountplus.svg',
-    color: 'blue'  
-  },
-  {
-    name: 'Peacock',
-    logo: peacockLogo,
-    color: 'multicolor'
-  },
-];
-
-  return (
-    <div className="bg-zinc-900/50 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-zinc-800/50">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-1 h-6 bg-red-600 rounded-full"></div>
-          <h2 className="text-white uppercase tracking-wider">Movie Preferences</h2>
-        </div>
-        <Film size={20} className="text-zinc-600" />
-      </div>
-
-      <div className="space-y-6">
-        {/* Favorite Genres */}
-        <div>
-          <label className="block text-zinc-400 mb-3">Favorite Genres</label>
-          <div className="flex flex-wrap gap-2">
-            {genres.map((genre) => (
-              <button
-                key={genre}
-                className="px-4 py-2 bg-zinc-950/50 hover:bg-red-600 border border-zinc-800 hover:border-red-600 text-zinc-400 hover:text-white rounded-lg transition-all"
-              >
-                {genre}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Favorite Actors/Directors */}
-        <div>
-          <label className="block text-zinc-400 mb-3">Favorite Actors & Directors</label>
-          <div className="flex flex-wrap gap-2 mb-3">
-            {['Christopher Nolan', 'Meryl Streep', 'Quentin Tarantino', 'Viola Davis'].map((name) => (
-              <span
-                key={name}
-                className="px-3 py-1.5 bg-red-600/20 border border-red-600/50 text-red-400 rounded-full text-sm flex items-center gap-2"
-              >
-                <Star size={14} />
-                {name}
-              </span>
-            ))}
-          </div>
-          <input
-            type="text"
-            placeholder="Search and add favorites..."
-            className="w-full bg-zinc-950/50 border border-zinc-800 rounded-lg px-4 py-2.5 text-white placeholder-zinc-600 focus:border-red-600 focus:ring-2 focus:ring-red-600/20 focus:outline-none transition-all"
-          />
-        </div>
-
-        {/* Streaming Platforms */}
-        <div>
-          <label className="block text-zinc-400 mb-3">Preferred Streaming Platforms</label>
-          <div className="grid grid-cols-4 md:grid-cols-8 gap-3">
-            {platforms.map((platform) => (
-              <button
-                key={platform.name}
-                className="aspect-square border rounded-xl flex flex-col items-center justify-center gap-2 transition-all group"
-                style={{
-                  backgroundColor: 'black',
-                  borderColor: 'dimgray',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background =
-                    platform.color === 'multicolor'
-                      ? 'linear-gradient(90deg, yellow, red, green, blue, purple)'
-                      : platform.color;
-
-                  e.currentTarget.style.borderColor =
-                    platform.color === 'multicolor'
-                      ? 'white'
-                      : platform.color;
-                  e.currentTarget.style.borderColor = 'white';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'black';
-                  e.currentTarget.style.borderColor = 'dimgray';
-                }}
-              >
-                <div className="w-14 h-14 flex items-center justify-center bg-white rounded-md p-1">
-                  <img
-                    src={platform.logo}
-                    alt={platform.name}
-                    className="w-12 h-12 object-contain brightness-75 group-hover:brightness-100 transition-all"
-                  />
-                </div>
-
-                <span className="text-lg text-zinc-400 group-hover:text-white transition-all">
-                  {platform.name}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Content Rating */}
-        <div>
-          <label className="block text-zinc-400 mb-3">Content Rating Preferences</label>
-          <select className="w-full bg-zinc-950/50 border border-zinc-800 rounded-lg px-4 py-2.5 text-white focus:border-red-600 focus:ring-2 focus:ring-red-600/20 focus:outline-none transition-all">
-            <option>All Ratings</option>
-            <option>G - General Audiences</option>
-            <option>PG - Parental Guidance</option>
-            <option>PG-13 - Parents Strongly Cautioned</option>
-            <option>R - Restricted</option>
-            <option>NC-17 - Adults Only</option>
-          </select>
-        </div>
-
-        {/* Watchlist Preferences */}
-        <div>
-          <label className="block text-zinc-400 mb-3">Watchlist Settings</label>
-          <div className="space-y-3">
-            <label className="flex items-center justify-between p-3 bg-zinc-950/30 rounded-lg border border-zinc-800/50 hover:border-zinc-700 transition-all cursor-pointer">
-              <span className="text-zinc-300">Auto-sort by release date</span>
-              <input type="checkbox" className="w-5 h-5 rounded bg-zinc-800 border-zinc-700 text-red-600 focus:ring-red-600 focus:ring-offset-0" />
-            </label>
-            <label className="flex items-center justify-between p-3 bg-zinc-950/30 rounded-lg border border-zinc-800/50 hover:border-zinc-700 transition-all cursor-pointer">
-              <span className="text-zinc-300">Hide watched content</span>
-              <input type="checkbox" className="w-5 h-5 rounded bg-zinc-800 border-zinc-700 text-red-600 focus:ring-red-600 focus:ring-offset-0" defaultChecked />
-            </label>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── AppearanceSection ───────────────────────────────────────
-
-function AppearanceSection() {
-  return (
-    <div className="bg-zinc-900/50 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-zinc-800/50">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-1 h-6 bg-red-600 rounded-full"></div>
-          <h2 className="text-white uppercase tracking-wider">Appearance</h2>
-        </div>
-        <Palette size={20} className="text-zinc-600" />
-      </div>
-
-      <label className="block text-zinc-400 mb-3">Theme Styles</label>
-
-      <div className="space-y-3">
-        {/* Modern */}
-        <button className="w-full p-14 bg-red-600 border-2 border-red-600 rounded-xl flex flex-col items-center text-center gap-1 transition-all">
-          <div className="flex items-center gap-3">
-            <Monitor size={22} className="text-white" />
-            <span className="text-white font-semibold text-3xl">Modern</span>
-          </div>
-          <p className="text-sm text-red-100">Dark, cinematic, and premium. Deep blacks, glowing reds, smooth gradients, and
-            a sleek movie theater vibe.</p>
-        </button>
-
-        {/* Retro */}
-        <button className="w-full p-14 bg-zinc-950/50 hover:bg-zinc-900 border-2 border-zinc-800 hover:border-red-600 rounded-xl flex flex-col items-center text-center gap-1 transition-all group">
-          <div className="flex items-center gap-3">
-            <Sun size={22} className="text-zinc-400 group-hover:text-red-400" />
-            <span className="text-zinc-300 group-hover:text-white font-semibold text-3xl">Retro</span>
-          </div>
-          <p className="text-sm text-zinc-500 group-hover:text-zinc-400">Throw it back with a nostalgic film‑lover aesthetic. 
-            Warm tones, vintage charm, and a classic old‑school movie vibe.
-          </p>
-        </button>
-      </div>
-    </div>
-  );
-}
-
-
-// ─── SocialSection ───────────────────────────────────────────
-
-function SocialSection() {
-  const friends = [
-    { initial: 'JD', name: 'John Doe', color: 'bg-blue-600' },
-    { initial: 'SM', name: 'Sarah Miller', color: 'bg-purple-600' },
-    { initial: 'RJ', name: 'Robert Johnson', color: 'bg-green-600' },
-    { initial: 'EW', name: 'Emily White', color: 'bg-pink-600' },
-    { initial: 'MB', name: 'Michael Brown', color: 'bg-orange-600' },
-  ];
-
-  return (
-    <div className="bg-zinc-900/50 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-zinc-800/50">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-1 h-6 bg-red-600 rounded-full"></div>
-          <h2 className="text-white uppercase tracking-wider">Social & Privacy</h2>
-        </div>
-        <Users size={20} className="text-zinc-600" />
-      </div>
-
-      <div className="space-y-6">
-        {/* Friends List */}
-        <div>
-          <label className="block text-zinc-400 mb-3">Friends List (127)</label>
-          <div className="flex items-center gap-3 mb-3">
-            {friends.map((friend) => (
-              <div
-                key={friend.name}
-                className="w-12 h-12 rounded-full flex items-center justify-center text-white cursor-pointer hover:scale-110 transition-transform shadow-lg"
-                style={{ backgroundColor: friend.color.replace('bg-', '#') }}
-                title={friend.name}
-              >
-                {friend.initial}
+            <div>
+              <label className="block text-zinc-400 mb-2">Email Address</label>
+              <div className="relative">
+                <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
+                <input
+                  type="email"
+                  value={profile?.email ?? sessionUser?.email ?? ''}
+                  disabled
+                  className="w-full bg-zinc-950/30 border border-zinc-800 rounded-lg pl-10 pr-4 py-2.5 text-zinc-500 cursor-not-allowed"
+                />
               </div>
-            ))}
-            <button className="w-12 h-12 rounded-full bg-zinc-800 hover:bg-zinc-700 border-2 border-dashed border-zinc-700 flex items-center justify-center text-zinc-500 hover:text-zinc-300 transition-all">
-              +54
-            </button>
+            </div>
           </div>
-          <button className="text-red-400 hover:text-red-300 transition-all flex items-center gap-2">
-            <Users size={16} />
-            View All Friends
-          </button>
-        </div>
+          {infoError && <p className="text-red-400 text-sm mt-3">{infoError}</p>}
+          <div className="mt-6 flex justify-end">
+            <SaveButton saving={savingInfo} saved={savedInfo} onClick={handleSaveInfo} />
+          </div>
+        </Section>
 
-        {/* Block/Mute */}
-        <div>
-          <label className="block text-zinc-400 mb-3">Manage Blocked Users</label>
-          <button className="w-full p-3 bg-zinc-950/50 hover:bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-lg text-zinc-300 hover:text-white transition-all flex items-center justify-between">
+        {/* ── Movie Preferences ─────────────────────────────── */}
+        <div className="bg-zinc-900/50 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-zinc-800/50">
+          <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <Shield size={18} className="text-zinc-500" />
-              <span>Block & Mute Settings</span>
+              <div className="w-1 h-6 bg-red-600 rounded-full" />
+              <h2 className="text-white uppercase tracking-wider">Movie Preferences</h2>
             </div>
-            <span className="text-zinc-600">→</span>
-          </button>
-        </div>
-
-        {/* Share Profile */}
-        <div>
-          <label className="block text-zinc-400 mb-3">Share Profile</label>
-          <button className="w-full p-3 bg-zinc-950/50 hover:bg-red-600 border border-zinc-800 hover:border-red-600 rounded-lg text-zinc-300 hover:text-white transition-all flex items-center justify-center gap-2">
-            <Share2 size={18} />
-            Copy Profile Link
-          </button>
-        </div>
-
-        {/* Privacy Settings */}
-        <div>
-          <label className="block text-zinc-400 mb-3">Privacy Settings</label>
-          <div className="space-y-3">
-            <label className="flex items-center justify-between p-3 bg-zinc-950/30 rounded-lg border border-zinc-800/50 hover:border-zinc-700 transition-all cursor-pointer group">
-              <div className="flex items-center gap-3">
-                <Eye size={18} className="text-zinc-500 group-hover:text-red-400" />
-                <span className="text-zinc-300">Show Activity Status</span>
-              </div>
-              <input
-                type="checkbox"
-                className="w-5 h-5 rounded bg-zinc-800 border-zinc-700 text-red-600 focus:ring-red-600 focus:ring-offset-0"
-                defaultChecked
-              />
-            </label>
-            <label className="flex items-center justify-between p-3 bg-zinc-950/30 rounded-lg border border-zinc-800/50 hover:border-zinc-700 transition-all cursor-pointer group">
-              <div className="flex items-center gap-3">
-                <Lock size={18} className="text-zinc-500 group-hover:text-red-400" />
-                <span className="text-zinc-300">Show Watchlist Publicly</span>
-              </div>
-              <input
-                type="checkbox"
-                className="w-5 h-5 rounded bg-zinc-800 border-zinc-700 text-red-600 focus:ring-red-600 focus:ring-offset-0"
-              />
-            </label>
-            <label className="flex items-center justify-between p-3 bg-zinc-950/30 rounded-lg border border-zinc-800/50 hover:border-zinc-700 transition-all cursor-pointer group">
-              <div className="flex items-center gap-3">
-                <EyeOff size={18} className="text-zinc-500 group-hover:text-red-400" />
-                <span className="text-zinc-300">Hide Ratings & Reviews</span>
-              </div>
-              <input
-                type="checkbox"
-                className="w-5 h-5 rounded bg-zinc-800 border-zinc-700 text-red-600 focus:ring-red-600 focus:ring-offset-0"
-              />
-            </label>
+            <Film size={20} className="text-zinc-600" />
           </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+          <div className="space-y-6">
+            {/* Favorite Genres */}
+            <div>
+              <label className="block text-zinc-400 mb-3">Favorite Genres</label>
+              <div className="flex flex-wrap gap-2">
+                {GENRES.map(genre => (
+                  <button key={genre} className="px-4 py-2 bg-zinc-950/50 hover:bg-red-600 border border-zinc-800 hover:border-red-600 text-zinc-400 hover:text-white rounded-lg transition-all">
+                    {genre}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-// ─── AccountDetailsSection ───────────────────────────────────
-
-function AccountDetailsSection() {
-  return (
-    <div className="bg-zinc-900/50 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-zinc-800/50">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-1 h-6 bg-red-600 rounded-full"></div>
-          <h2 className="text-white uppercase tracking-wider">Account Details</h2>
-        </div>
-        <Settings size={20} className="text-zinc-600" />
-      </div>
-
-      <div className="space-y-6">
-        {/* Region */}
-        <div>
-          <label className="block text-zinc-400 mb-3">Region / Location</label>
-          <div className="relative">
-            <Globe size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
-            <select className="w-full bg-zinc-950/50 border border-zinc-800 rounded-lg pl-10 pr-4 py-2.5 text-white focus:border-red-600 focus:ring-2 focus:ring-red-600/20 focus:outline-none transition-all appearance-none">
-              <option>United States</option>
-              <option>Canada</option>
-              <option>United Kingdom</option>
-              <option>Australia</option>
-              <option>Germany</option>
-              <option>France</option>
-              <option>Japan</option>
-              <option>India</option>
-            </select>
+            {/* Streaming Platforms */}
+            <div>
+              <label className="block text-zinc-400 mb-3">Streaming Platforms</label>
+              <div className="grid grid-cols-4 md:grid-cols-8 gap-3">
+                {PLATFORMS.map(p => {
+                  const active = !!services[p.key];
+                  return (
+                    <button
+                      key={p.key}
+                      onClick={() => toggleService(p.key)}
+                      title={p.name}
+                      className="aspect-square border rounded-xl flex flex-col items-center justify-center gap-2 transition-all group"
+                      style={{
+                        backgroundColor: active ? (p.color === 'multicolor' ? 'transparent' : p.color) : 'black',
+                        background: active && p.color === 'multicolor' ? 'linear-gradient(90deg, yellow, red, green, blue, purple)' : undefined,
+                        borderColor: active ? 'white' : 'dimgray',
+                        outline: active ? '2px solid rgba(255,255,255,0.3)' : 'none',
+                      }}
+                    >
+                      <div className="w-14 h-14 flex items-center justify-center bg-white rounded-md p-1">
+                        <img src={p.logo} alt={p.name} className="w-12 h-12 object-contain" />
+                      </div>
+                      <span className={`text-xs ${active ? 'text-white font-semibold' : 'text-zinc-400'} transition-all`}>{p.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="mt-4 flex justify-end">
+                <SaveButton saving={savingServices} saved={savedServices} onClick={handleSaveServices} />
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Language */}
-        <div>
-          <label className="block text-zinc-400 mb-3">Preferred Language</label>
-          <div className="relative">
-            <Languages size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
-            <select className="w-full bg-zinc-950/50 border border-zinc-800 rounded-lg pl-10 pr-4 py-2.5 text-white focus:border-red-600 focus:ring-2 focus:ring-red-600/20 focus:outline-none transition-all appearance-none">
-              <option>English</option>
-              <option>Spanish</option>
-              <option>French</option>
-              <option>German</option>
-              <option>Japanese</option>
-              <option>Mandarin</option>
-              <option>Portuguese</option>
-              <option>Italian</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Connected Accounts */}
-        <div>
-          <label className="block text-zinc-400 mb-3">Connected Accounts</label>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between p-3 bg-zinc-950/50 rounded-lg border border-zinc-800">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center">
-                  <Chrome size={20} className="text-red-600"/>
-                </div>
-                <div>
-                  <p className="text-zinc-300">Google</p>
-                  <p className="text-xs text-zinc-600">alex.martinez@gmail.com</p>
-                </div>
-              </div>
-              <button className="px-4 py-1.5 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-600/50 hover:border-red-600 rounded-lg transition-all">
-                Disconnect
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* ── Appearance ──────────────────────────────────── */}
+          <Section title="Appearance" icon={<Palette size={20} />}>
+            <label className="block text-zinc-400 mb-3">Theme Style</label>
+            <div className="space-y-3">
+              <button className="w-full p-10 bg-red-600 border-2 border-red-600 rounded-xl flex flex-col items-center text-center gap-1 transition-all">
+                <span className="text-white font-semibold text-2xl">Modern</span>
+                <p className="text-sm text-red-100">Dark, cinematic, and premium.</p>
+              </button>
+              <button className="w-full p-10 bg-zinc-950/50 hover:bg-zinc-900 border-2 border-zinc-800 hover:border-red-600 rounded-xl flex flex-col items-center text-center gap-1 transition-all group">
+                <span className="text-zinc-300 group-hover:text-white font-semibold text-2xl">Retro</span>
+                <p className="text-sm text-zinc-500 group-hover:text-zinc-400">Warm tones, vintage charm.</p>
               </button>
             </div>
+          </Section>
 
-            <div className="flex items-center justify-between p-3 bg-zinc-950/50 rounded-lg border border-zinc-800">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center">
-                  <Apple size={20} className="text-red-600" />                
-                </div>
-                <div>
-                  <p className="text-zinc-300">Apple</p>
-                  <p className="text-xs text-zinc-600">Not connected</p>
+          {/* ── Social & Privacy ─────────────────────────────── */}
+          <Section title="Social & Privacy" icon={<Users size={20} />}>
+            <div className="space-y-5">
+              <div>
+                <label className="block text-zinc-400 mb-3">
+                  Friends <span className="text-zinc-600">({friendsCount ?? '…'})</span>
+                </label>
+                <p className="text-zinc-500 text-sm">Manage your friends in the Social tab.</p>
+              </div>
+
+              <div>
+                <label className="block text-zinc-400 mb-3">Privacy Settings</label>
+                <div className="space-y-3">
+                  {[
+                    { icon: <Eye size={18} />, label: 'Show Activity Status', def: true },
+                    { icon: <Lock size={18} />, label: 'Show Watchlist Publicly', def: false },
+                    { icon: <EyeOff size={18} />, label: 'Hide Ratings & Reviews', def: false },
+                  ].map(item => (
+                    <label key={item.label} className="flex items-center justify-between p-3 bg-zinc-950/30 rounded-lg border border-zinc-800/50 hover:border-zinc-700 transition-all cursor-pointer group">
+                      <div className="flex items-center gap-3">
+                        <span className="text-zinc-500 group-hover:text-red-400">{item.icon}</span>
+                        <span className="text-zinc-300">{item.label}</span>
+                      </div>
+                      <input type="checkbox" defaultChecked={item.def} className="w-5 h-5 rounded bg-zinc-800 border-zinc-700 text-red-600 focus:ring-red-600 focus:ring-offset-0" />
+                    </label>
+                  ))}
                 </div>
               </div>
-              <button className="px-4 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white border border-zinc-700 rounded-lg transition-all">
-                Connect
+
+              <div>
+                <label className="block text-zinc-400 mb-3">Share Profile</label>
+                <button
+                  onClick={handleCopyLink}
+                  className="w-full p-3 bg-zinc-950/50 hover:bg-red-600 border border-zinc-800 hover:border-red-600 rounded-lg text-zinc-300 hover:text-white transition-all flex items-center justify-center gap-2"
+                >
+                  {copied ? <Check size={18} /> : <Share2 size={18} />}
+                  {copied ? 'Copied!' : 'Copy Profile Link'}
+                </button>
+              </div>
+            </div>
+          </Section>
+        </div>
+
+        {/* ── Account Details ──────────────────────────────── */}
+        <Section title="Account Details" icon={<Settings size={20} />}>
+          <div className="space-y-6">
+            <div>
+              <label className="block text-zinc-400 mb-3">Region / Location</label>
+              <div className="relative">
+                <Globe size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
+                <select className="w-full bg-zinc-950/50 border border-zinc-800 rounded-lg pl-10 pr-4 py-2.5 text-white focus:border-red-600 focus:outline-none appearance-none">
+                  <option>United States</option><option>Canada</option><option>United Kingdom</option>
+                  <option>Australia</option><option>Germany</option><option>France</option>
+                  <option>Japan</option><option>India</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="block text-zinc-400 mb-3">Preferred Language</label>
+              <div className="relative">
+                <Languages size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
+                <select className="w-full bg-zinc-950/50 border border-zinc-800 rounded-lg pl-10 pr-4 py-2.5 text-white focus:border-red-600 focus:outline-none appearance-none">
+                  <option>English</option><option>Spanish</option><option>French</option>
+                  <option>German</option><option>Japanese</option><option>Portuguese</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="block text-zinc-400 mb-3">Connected Accounts</label>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 bg-zinc-950/50 rounded-lg border border-zinc-800">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center">
+                      <Globe size={20} className="text-red-600" />
+                    </div>
+                    <div>
+                      <p className="text-zinc-300">Google</p>
+                      <p className="text-xs text-zinc-600">{profile?.email ?? '—'}</p>
+                    </div>
+                  </div>
+                  <button className="px-4 py-1.5 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-600/50 hover:border-red-600 rounded-lg transition-all">
+                    Disconnect
+                  </button>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-zinc-950/50 rounded-lg border border-zinc-800">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center">
+                      <Apple size={20} className="text-red-600" />
+                    </div>
+                    <div>
+                      <p className="text-zinc-300">Apple</p>
+                      <p className="text-xs text-zinc-600">Not connected</p>
+                    </div>
+                  </div>
+                  <button className="px-4 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white border border-zinc-700 rounded-lg transition-all">
+                    Connect
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div>
+              <label className="block text-zinc-400 mb-3">Danger Zone</label>
+              <button className="w-full p-3 bg-red-950/30 hover:bg-red-900/50 border border-red-900/50 hover:border-red-700 rounded-lg text-red-400 hover:text-red-300 transition-all flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Shield size={18} className="text-red-600" />
+                  <span>Delete Account</span>
+                </div>
+                <span className="text-red-700">→</span>
               </button>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── ProfileTab (Main Component) ─────────────────────────────
-
-export function ProfileTab() {
-  return (
-    <div>
-      {/* Main Container */}
-      <div className="">
-        <ProfileHeader />
-
-        <div className="px-8 pb-16 space-y-6">
-          <ProfileInfoSection />
-          <MoviePersonalizationSection />
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <AppearanceSection />
-            <SocialSection />
-          </div>
-
-          <AccountDetailsSection />
-        </div>
+        </Section>
       </div>
     </div>
   );
