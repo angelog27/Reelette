@@ -36,6 +36,8 @@ def create_user(email, password, username):
             'username': username,
             'email': email,
             'displayName': username,
+            'bio': '',
+            'phone': '',
             'createdAt': datetime.now(),
             'streamingServices': {
                 'netflix': False,

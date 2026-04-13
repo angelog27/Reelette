@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import peacockLogo from '../../assets/Peacock.png';
 import {
   Camera,
@@ -180,9 +180,8 @@ function ProfileInfoSection({
                 type="email"
                 name="email"
                 value={data.email}
-                onChange={onChange}
-                disabled={!isEditing}
-                className="w-full bg-zinc-950/50 border border-zinc-800 rounded-lg pl-10 pr-4 py-2.5 text-white placeholder-zinc-600 focus:border-red-600 focus:ring-2 focus:ring-red-600/20 focus:outline-none transition-all disabled:opacity-80"
+                disabled
+                className="w-full bg-zinc-950/50 border border-zinc-800 rounded-lg pl-10 pr-4 py-2.5 text-zinc-400 placeholder-zinc-600 focus:outline-none cursor-not-allowed disabled:opacity-80"
               />
             </div>
           </div>
@@ -216,10 +215,15 @@ function ProfileInfoSection({
 
         <button
           onClick={onSave}
-          className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all border border-red-600 flex items-center gap-2 shadow-lg shadow-red-600/20 hover:shadow-red-600/40"
+          disabled={!isEditing}
+          className={`px-5 py-2 rounded-lg transition-all border flex items-center gap-2
+    ${isEditing
+              ? 'bg-red-600 hover:bg-red-700 text-white border-red-600 shadow-lg shadow-red-600/20 hover:shadow-red-600/40'
+              : 'bg-zinc-800 text-zinc-500 border-zinc-700 cursor-not-allowed'
+            }`}
         >
           <Edit3 size={16} />
-          {isEditing ? 'Save Changes' : 'Edit Info'}
+          Save Changes
         </button>
       </div>
     </div>
@@ -235,47 +239,47 @@ function MoviePersonalizationSection() {
   ];
 
   const platforms = [
-  {
-    name: 'Netflix',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg',
-    color: 'red'
-  },
-  {
-    name: 'Apple TV+',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg',
-    color: 'dimgray'
-  },
-  {
-    name: 'HBO Max',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/1/17/HBO_Max_Logo.svg',
-    color: '#5B31B9'
-  },
-  {
-    name: 'Disney+',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/3/3e/Disney%2B_logo.svg',
-    color: '#00A2FF'
-  },
-  {
-    name: 'Hulu',
-    logo: 'https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/hulu.svg',
-    color: '#1CE783'
-  },
-  {
-    name: 'Amazon Prime',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/f/f1/Prime_Video.png',
-    color: '#00A8E1'
-  },
-  {
-    name: 'Paramount+',
-    logo: 'https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/paramountplus.svg',
-    color: 'blue'  
-  },
-  {
-    name: 'Peacock',
-    logo: peacockLogo,
-    color: 'multicolor'
-  },
-];
+    {
+      name: 'Netflix',
+      logo: 'https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg',
+      color: 'red'
+    },
+    {
+      name: 'Apple TV+',
+      logo: 'https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg',
+      color: 'dimgray'
+    },
+    {
+      name: 'HBO Max',
+      logo: 'https://upload.wikimedia.org/wikipedia/commons/1/17/HBO_Max_Logo.svg',
+      color: '#5B31B9'
+    },
+    {
+      name: 'Disney+',
+      logo: 'https://upload.wikimedia.org/wikipedia/commons/3/3e/Disney%2B_logo.svg',
+      color: '#00A2FF'
+    },
+    {
+      name: 'Hulu',
+      logo: 'https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/hulu.svg',
+      color: '#1CE783'
+    },
+    {
+      name: 'Amazon Prime',
+      logo: 'https://upload.wikimedia.org/wikipedia/commons/f/f1/Prime_Video.png',
+      color: '#00A8E1'
+    },
+    {
+      name: 'Paramount+',
+      logo: 'https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/paramountplus.svg',
+      color: 'blue'
+    },
+    {
+      name: 'Peacock',
+      logo: peacockLogo,
+      color: 'multicolor'
+    },
+  ];
 
   return (
     <div className="bg-zinc-900/50 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-zinc-800/50">
@@ -433,7 +437,7 @@ function AppearanceSection() {
             <Sun size={22} className="text-zinc-400 group-hover:text-red-400" />
             <span className="text-zinc-300 group-hover:text-white font-semibold text-3xl">Retro</span>
           </div>
-          <p className="text-sm text-zinc-500 group-hover:text-zinc-400">Throw it back with a nostalgic film‑lover aesthetic. 
+          <p className="text-sm text-zinc-500 group-hover:text-zinc-400">Throw it back with a nostalgic film‑lover aesthetic.
             Warm tones, vintage charm, and a classic old‑school movie vibe.
           </p>
         </button>
@@ -609,7 +613,7 @@ function AccountDetailsSection() {
             <div className="flex items-center justify-between p-3 bg-zinc-950/50 rounded-lg border border-zinc-800">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center">
-                  <Chrome size={20} className="text-red-600"/>
+                  <Chrome size={20} className="text-red-600" />
                 </div>
                 <div>
                   <p className="text-zinc-300">Google</p>
@@ -624,7 +628,7 @@ function AccountDetailsSection() {
             <div className="flex items-center justify-between p-3 bg-zinc-950/50 rounded-lg border border-zinc-800">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center">
-                  <Apple size={20} className="text-red-600" />                
+                  <Apple size={20} className="text-red-600" />
                 </div>
                 <div>
                   <p className="text-zinc-300">Apple</p>
@@ -646,15 +650,61 @@ function AccountDetailsSection() {
 
 export function ProfileTab() {
   const [profile, setProfile] = useState({
-    displayName: 'Alex Martinez',
-    username: 'alexmartinez',
-    bio: 'Film enthusiast | Collector of stories | Always searching for the next great watch',
-    email: 'alex.martinez@email.com',
-    phone: '+1 (555) 123-4567',
+    displayName: '',
+    username: '',
+    bio: '',
+    email: '',
+    phone: '',
   });
 
-  const [draftProfile, setDraftProfile] = useState(profile);
+  const [draftProfile, setDraftProfile] = useState({
+    displayName: '',
+    username: '',
+    bio: '',
+    email: '',
+    phone: '',
+  });
+
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+
+  useEffect(() => {
+    async function loadProfile() {
+      try {
+        const userId = localStorage.getItem('user_id');
+        console.log('userId from localStorage:', userId);
+
+        if (!userId) {
+          setIsLoadingProfile(false);
+          return;
+        }
+
+        const response = await fetch(`http://localhost:5000/api/user/${userId}`);
+        const data = await response.json();
+
+        console.log('profile API response:', data);
+
+        const loadedProfile = {
+          displayName: data.displayName || '',
+          username: data.username || '',
+          bio: data.bio || '',
+          email: data.email || '',
+          phone: data.phone || '',
+        };
+
+        console.log('loadedProfile:', loadedProfile);
+
+        setProfile(loadedProfile);
+        setDraftProfile(loadedProfile);
+      } catch (error) {
+        console.error('Failed to load profile:', error);
+      } finally {
+        setIsLoadingProfile(false);
+      }
+    }
+
+    loadProfile();
+  }, []);
 
   function handleStartEditing() {
     setDraftProfile(profile);
@@ -671,23 +721,54 @@ export function ProfileTab() {
     }));
   }
 
-  function handleSaveProfile() {
-    if (!isEditingProfile) {
-      setDraftProfile(profile);
-      setIsEditingProfile(true);
-      return;
+  async function handleSaveProfile() {
+    try {
+      const userId = localStorage.getItem('user_id');
+      if (!userId) {
+        console.error('No user_id found');
+        return;
+      }
+
+      const response = await fetch(`http://localhost:5000/api/user/${userId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          displayName: draftProfile.displayName,
+          username: draftProfile.username,
+          bio: draftProfile.bio,
+          phone: draftProfile.phone,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || 'Failed to save profile');
+      }
+
+      setProfile((prev) => ({
+        ...prev,
+        ...draftProfile,
+      }));
+      setIsEditingProfile(false);
+    } catch (error) {
+      console.error('Failed to save profile:', error);
     }
-
-    setProfile(draftProfile);
-    setIsEditingProfile(false);
-
-    // later:
-    // await saveProfileToBackend(draftProfile)
   }
 
   function handleCancelProfileEdit() {
     setDraftProfile(profile);
     setIsEditingProfile(false);
+  }
+
+  if (isLoadingProfile) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center text-zinc-400">
+        Loading profile...
+      </div>
+    );
   }
 
   return (

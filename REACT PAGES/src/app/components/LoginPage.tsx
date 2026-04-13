@@ -106,7 +106,13 @@ export function LoginPage() {
         return;
       }
 
-      saveUser({ user_id: result.user_id, username: result.username, email: result.email });
+     // Save user info locally for app usage
+    localStorage.setItem('user_id', result.user_id);
+    localStorage.setItem('email', result.email);
+    localStorage.setItem('username', result.username);
+
+
+    saveUser({ user_id: result.user_id, username: result.username, email: result.email });
 
       // Fetch + cache their streaming services
       const services = await getUserStreaming(result.user_id);
@@ -148,6 +154,10 @@ export function LoginPage() {
         setView('login');
         return;
       }
+
+      localStorage.setItem('user_id', loginResult.user_id);
+      localStorage.setItem('email', loginResult.email);
+      localStorage.setItem('username', loginResult.username);
 
       saveUser({ user_id: loginResult.user_id, username: loginResult.username, email: loginResult.email });
       saveServices({});
