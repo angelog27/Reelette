@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Mail, Facebook, Apple } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import logoImage from '../../assets/Full_Reelette_upscaled.png';
 import { Input } from './ui/input';
@@ -295,6 +296,7 @@ export function LoginPage() {
             {view === 'register' && (
               <div className="w-full bg-black/50 backdrop-blur-sm border border-gray-800 rounded-2xl p-8 shadow-2xl">
                 <h2 className="text-white text-xl font-semibold mb-6 text-center">Create Account</h2>
+
                 <form onSubmit={handleRegister} className="space-y-5">
                   <div className="space-y-2">
                     <label className="text-sm text-gray-400">Username</label>
@@ -307,6 +309,7 @@ export function LoginPage() {
                       required
                     />
                   </div>
+
                   <div className="space-y-2">
                     <label className="text-sm text-gray-400">Email</label>
                     <Input
@@ -318,6 +321,7 @@ export function LoginPage() {
                       required
                     />
                   </div>
+
                   <div className="space-y-2">
                     <label className="text-sm text-gray-400">Password</label>
                     <Input
@@ -329,7 +333,9 @@ export function LoginPage() {
                       required
                     />
                   </div>
+
                   {regError && <p className="text-red-400 text-sm text-center">{regError}</p>}
+
                   <Button
                     type="submit"
                     disabled={regLoading}
@@ -337,7 +343,48 @@ export function LoginPage() {
                   >
                     {regLoading ? 'Creating account...' : 'Sign Up'}
                   </Button>
-                  <div className="text-center pt-4 border-t border-gray-800">
+
+                  <div className="pt-1">
+                    <div className="border-t border-gray-800" />
+                  </div>
+
+                  <div className="flex justify-center items-center gap-4 py-2">
+                    {/* Google */}
+                    <button
+                      type="button"
+                      className="w-10 h-10 rounded-full border border-gray-700 bg-gray-900/60 hover:border-red-500 hover:bg-gray-900 text-gray-300 flex items-center justify-center transition-all duration-200"
+                      aria-label="Continue with Google"
+                      title="Continue with Google"
+                    >
+                      <Mail size={18} />
+                    </button>
+
+                    {/* Apple */}
+                    <button
+                      type="button"
+                      className="w-10 h-10 rounded-full border border-gray-700 bg-gray-900/60 hover:border-red-500 hover:bg-gray-900 text-gray-300 flex items-center justify-center transition-all duration-200"
+                      aria-label="Continue with Apple"
+                      title="Continue with Apple"
+                    >
+                      <Apple size={18} />
+                    </button>
+
+                    {/* Facebook */}
+                    <button
+                      type="button"
+                      className="w-10 h-10 rounded-full border border-gray-700 bg-gray-900/60 hover:border-red-500 hover:bg-gray-900 text-gray-300 flex items-center justify-center transition-all duration-200"
+                      aria-label="Continue with Facebook"
+                      title="Continue with Facebook"
+                    >
+                      <Facebook size={18} />
+                    </button>
+                  </div>
+
+                  <div className="pt-1">
+                    <div className="border-t border-gray-800" />
+                  </div>
+
+                  <div className="text-center pt-1">
                     <p className="text-sm text-gray-400">
                       Already have an account?{' '}
                       <button
