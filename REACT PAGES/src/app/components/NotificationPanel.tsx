@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Bell, Heart, MessageCircle, Film, Check, MessagesSquare } from 'lucide-react';
+import { Bell, Heart, MessageCircle, Film, Check, MessageSquare } from 'lucide-react';
 import {
   getNotifications,
   markAllNotificationsRead,
@@ -85,7 +85,7 @@ export function NotificationPanel() {
 
   function notificationIcon(type: Notification['type']) {
     if (type === 'like') return <Heart size={13} className="text-red-500 flex-shrink-0" />;
-    if (type === 'message') return <MessagesSquare size={13} className="text-emerald-400 flex-shrink-0" />;
+    if (type === 'message') return <MessageSquare size={13} className="text-emerald-400 flex-shrink-0" />;
     return <MessageCircle size={13} className="text-blue-400 flex-shrink-0" />;
   }
 
