@@ -182,6 +182,29 @@ def get_user_data(user_id):
     except Exception as e:
         print(f"Error getting user data: {e}")
         return None
+    
+def update_user_profile(user_id, profile_data):
+    try:
+        user_ref = db.collection('users').document(user_id)
+
+        update_data = {
+            'displayName': profile_data.get('displayName', '').strip(),
+            'username': profile_data.get('username', '').strip(),
+            'bio': profile_data.get('bio', '').strip(),
+            'phone': profile_data.get('phone', '').strip(),
+        }
+
+        user_ref.update(update_data)
+
+        return {
+            'success': True,
+            'message': 'Profile updated successfully'
+        }
+    except Exception as e:
+        return {
+            'success': False,
+            'message': str(e)
+        }    
 
 def add_to_watchlist(user_id, movie_id):
     #add movies to watchlist.

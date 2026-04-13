@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import peacockLogo from '../../assets/Peacock.png';
 import {
   Camera,
@@ -32,27 +32,33 @@ import {
 
 // ─── ProfileHeader ───────────────────────────────────────────
 
-function ProfileHeader() {
+function ProfileHeader({
+  profile,
+  onEdit,
+}: {
+  profile: {
+    displayName: string;
+    username: string;
+    bio: string;
+  };
+  onEdit: () => void;
+}) {
   return (
     <div className="relative">
-      {/* Page Title */}
-      <div className="px-0 pt-0 pb-4">
-        <h1 className="text-2xl font-bold text-white relative inline-block">
+      <div className="px-8 pt-12 pb-8">
+        <h1 className="text-2xl md:text-2xl tracking-tight text-white relative inline-block">
           Profile
-        <div className="absolute -bottom-2 left-0 right-0 h-[2px] bg-gradient-to-r from-red-600 via-red-500 to-transparent"></div>
+          <div className="absolute -bottom-2 left-0 right-0 h-[2px] bg-gradient-to-r from-red-600 via-red-500 to-transparent shadow-[0_0_15px_rgba(220,38,38,0.4)]"></div>
         </h1>
       </div>
 
-      {/* Banner Background with Cinematic Blur */}
       <div className="h-48 bg-gradient-to-br from-zinc-900 via-zinc-950 to-black relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-red-950/20 to-transparent"></div>
         <div className="absolute inset-0 opacity-10 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')]"></div>
       </div>
 
-      {/* Profile Content */}
       <div className="px-8 pb-6">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between -mt-10 gap-6">
-          {/* Avatar Section */}
           <div className="flex flex-col md:flex-row items-start md:items-end gap-6">
             <div className="relative group">
               <div className="w-32 h-32 rounded-full bg-gradient-to-br from-zinc-800 to-zinc-900 border-4 border-zinc-950 overflow-hidden shadow-2xl">
@@ -65,16 +71,17 @@ function ProfileHeader() {
               </button>
             </div>
 
-            {/* User Info */}
             <div className="space-y-1">
-              <h1 className="text-white tracking-tight">Alex Martinez</h1>
-              <p className="text-zinc-400">@alexmartinez</p>
-              <p className="text-zinc-500 max-w-md">Film enthusiast | Collector of stories | Always searching for the next great watch</p>
+              <h1 className="text-white tracking-tight">{profile.displayName}</h1>
+              <p className="text-zinc-400">@{profile.username}</p>
+              <p className="text-zinc-500 max-w-md">{profile.bio}</p>
             </div>
           </div>
 
-          {/* Edit Profile Button */}
-          <button className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg flex items-center gap-2 transition-all shadow-lg shadow-red-600/20 hover:shadow-red-600/30">
+          <button
+            onClick={onEdit}
+            className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg flex items-center gap-2 transition-all shadow-lg shadow-red-600/20 hover:shadow-red-600/30"
+          >
             <Edit2 size={16} />
             Edit Profile
           </button>
@@ -86,7 +93,37 @@ function ProfileHeader() {
 
 // ─── ProfileInfoSection ──────────────────────────────────────
 
-function ProfileInfoSection() {
+function ProfileInfoSection({
+  profile,
+  draftProfile,
+  isEditing,
+  onChange,
+  onSave,
+  onCancel,
+}: {
+  profile: {
+    displayName: string;
+    username: string;
+    bio: string;
+    email: string;
+    phone: string;
+  };
+  draftProfile: {
+    displayName: string;
+    username: string;
+    bio: string;
+    email: string;
+    phone: string;
+  };
+  isEditing: boolean;
+  onChange: (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => void;
+  onSave: () => void;
+  onCancel: () => void;
+}) {
+  const data = isEditing ? draftProfile : profile;
+
   return (
     <div className="bg-zinc-900/50 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-zinc-800/50">
       <div className="flex items-center justify-between mb-6">
@@ -102,8 +139,11 @@ function ProfileInfoSection() {
           <label className="block text-zinc-400 mb-2">Display Name</label>
           <input
             type="text"
-            defaultValue="Alex Martinez"
-            className="w-full bg-zinc-950/50 border border-zinc-800 rounded-lg px-4 py-2.5 text-white placeholder-zinc-600 focus:border-red-600 focus:ring-2 focus:ring-red-600/20 focus:outline-none transition-all"
+            name="displayName"
+            value={data.displayName}
+            onChange={onChange}
+            disabled={!isEditing}
+            className="w-full bg-zinc-950/50 border border-zinc-800 rounded-lg px-4 py-2.5 text-white placeholder-zinc-600 focus:border-red-600 focus:ring-2 focus:ring-red-600/20 focus:outline-none transition-all disabled:opacity-80"
           />
         </div>
 
@@ -111,8 +151,11 @@ function ProfileInfoSection() {
           <label className="block text-zinc-400 mb-2">Username</label>
           <input
             type="text"
-            defaultValue="alexmartinez"
-            className="w-full bg-zinc-950/50 border border-zinc-800 rounded-lg px-4 py-2.5 text-white placeholder-zinc-600 focus:border-red-600 focus:ring-2 focus:ring-red-600/20 focus:outline-none transition-all"
+            name="username"
+            value={data.username}
+            onChange={onChange}
+            disabled={!isEditing}
+            className="w-full bg-zinc-950/50 border border-zinc-800 rounded-lg px-4 py-2.5 text-white placeholder-zinc-600 focus:border-red-600 focus:ring-2 focus:ring-red-600/20 focus:outline-none transition-all disabled:opacity-80"
           />
         </div>
 
@@ -120,8 +163,11 @@ function ProfileInfoSection() {
           <label className="block text-zinc-400 mb-2">Bio</label>
           <textarea
             rows={3}
-            defaultValue="Film enthusiast | Collector of stories | Always searching for the next great watch"
-            className="w-full bg-zinc-950/50 border border-zinc-800 rounded-lg px-4 py-2.5 text-white placeholder-zinc-600 focus:border-red-600 focus:ring-2 focus:ring-red-600/20 focus:outline-none transition-all resize-none"
+            name="bio"
+            value={data.bio}
+            onChange={onChange}
+            disabled={!isEditing}
+            className="w-full bg-zinc-950/50 border border-zinc-800 rounded-lg px-4 py-2.5 text-white placeholder-zinc-600 focus:border-red-600 focus:ring-2 focus:ring-red-600/20 focus:outline-none transition-all resize-none disabled:opacity-80"
           />
         </div>
 
@@ -132,8 +178,11 @@ function ProfileInfoSection() {
               <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
               <input
                 type="email"
-                defaultValue="alex.martinez@email.com"
-                className="w-full bg-zinc-950/50 border border-zinc-800 rounded-lg pl-10 pr-4 py-2.5 text-white placeholder-zinc-600 focus:border-red-600 focus:ring-2 focus:ring-red-600/20 focus:outline-none transition-all"
+                name="email"
+                value={data.email}
+                onChange={onChange}
+                disabled={!isEditing}
+                className="w-full bg-zinc-950/50 border border-zinc-800 rounded-lg pl-10 pr-4 py-2.5 text-white placeholder-zinc-600 focus:border-red-600 focus:ring-2 focus:ring-red-600/20 focus:outline-none transition-all disabled:opacity-80"
               />
             </div>
           </div>
@@ -144,18 +193,33 @@ function ProfileInfoSection() {
               <Phone size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
               <input
                 type="tel"
-                defaultValue="+1 (555) 123-4567"
-                className="w-full bg-zinc-950/50 border border-zinc-800 rounded-lg pl-10 pr-4 py-2.5 text-white placeholder-zinc-600 focus:border-red-600 focus:ring-2 focus:ring-red-600/20 focus:outline-none transition-all"
+                name="phone"
+                value={data.phone}
+                onChange={onChange}
+                disabled={!isEditing}
+                className="w-full bg-zinc-950/50 border border-zinc-800 rounded-lg pl-10 pr-4 py-2.5 text-white placeholder-zinc-600 focus:border-red-600 focus:ring-2 focus:ring-red-600/20 focus:outline-none transition-all disabled:opacity-80"
               />
             </div>
           </div>
         </div>
       </div>
 
-      <div className="mt-6 flex justify-end">
-        <button className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all border border-red-600 flex items-center gap-2 shadow-lg shadow-red-600/20 hover:shadow-red-600/40">
+      <div className="mt-6 flex justify-end gap-3">
+        {isEditing && (
+          <button
+            onClick={onCancel}
+            className="px-5 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg transition-all border border-zinc-700"
+          >
+            Cancel
+          </button>
+        )}
+
+        <button
+          onClick={onSave}
+          className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all border border-red-600 flex items-center gap-2 shadow-lg shadow-red-600/20 hover:shadow-red-600/40"
+        >
           <Edit3 size={16} />
-          Save Changes
+          {isEditing ? 'Save Changes' : 'Edit Info'}
         </button>
       </div>
     </div>
@@ -581,14 +645,73 @@ function AccountDetailsSection() {
 // ─── ProfileTab (Main Component) ─────────────────────────────
 
 export function ProfileTab() {
+  const [profile, setProfile] = useState({
+    displayName: 'Alex Martinez',
+    username: 'alexmartinez',
+    bio: 'Film enthusiast | Collector of stories | Always searching for the next great watch',
+    email: 'alex.martinez@email.com',
+    phone: '+1 (555) 123-4567',
+  });
+
+  const [draftProfile, setDraftProfile] = useState(profile);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+
+  function handleStartEditing() {
+    setDraftProfile(profile);
+    setIsEditingProfile(true);
+  }
+
+  function handleProfileChange(
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) {
+    const { name, value } = e.target;
+    setDraftProfile((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  }
+
+  function handleSaveProfile() {
+    if (!isEditingProfile) {
+      setDraftProfile(profile);
+      setIsEditingProfile(true);
+      return;
+    }
+
+    setProfile(draftProfile);
+    setIsEditingProfile(false);
+
+    // later:
+    // await saveProfileToBackend(draftProfile)
+  }
+
+  function handleCancelProfileEdit() {
+    setDraftProfile(profile);
+    setIsEditingProfile(false);
+  }
+
   return (
-    <div>
-      {/* Main Container */}
-      <div className="">
-        <ProfileHeader />
+    <div className="min-h-screen bg-black">
+      <div className="absolute inset-0 bg-gradient-to-br from-black via-zinc-950 to-zinc-900 -z-10"></div>
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-red-950/10 via-transparent to-transparent -z-10"></div>
+      <div className="absolute inset-0 opacity-[0.02] bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZmlsdGVyIGlkPSJub2lzZSI+PGZlVHVyYnVsZW5jZSB0eXBlPSJmcmFjdGFsTm9pc2UiIGJhc2VGcmVxdWVuY3k9IjAuOSIgbnVtT2N0YXZlcz0iNCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNub2lzZSkiIG9wYWNpdHk9IjEiLz48L3N2Zz4=')] -z-10"></div>
+
+      <div className="max-w-6xl mx-auto">
+        <ProfileHeader
+          profile={profile}
+          onEdit={handleStartEditing}
+        />
 
         <div className="px-8 pb-16 space-y-6">
-          <ProfileInfoSection />
+          <ProfileInfoSection
+            profile={profile}
+            draftProfile={draftProfile}
+            isEditing={isEditingProfile}
+            onChange={handleProfileChange}
+            onSave={handleSaveProfile}
+            onCancel={handleCancelProfileEdit}
+          />
+
           <MoviePersonalizationSection />
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
