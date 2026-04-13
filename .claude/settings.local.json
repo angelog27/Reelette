@@ -1,7 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(powershell -Command \"Get-ChildItem 'C:\\\\Users\\\\mobroc1\\\\Downloads\\\\Reelette' -Name -Depth 3 -ErrorAction SilentlyContinue | Select-String 'lucide'\")"
-    ]
-  }
-}
