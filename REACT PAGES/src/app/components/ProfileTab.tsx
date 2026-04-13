@@ -27,7 +27,8 @@ import {
   Languages,
   Link as LinkIcon,
   Apple,
-  Chrome
+  Chrome,
+  Facebook
 } from 'lucide-react';
 
 // ─── ProfileHeader ───────────────────────────────────────────
@@ -556,6 +557,21 @@ function AccountDetailsSection() {
                 Disconnect
               </button>
             </div>
+            
+            <div className="flex items-center justify-between p-3 bg-zinc-950/50 rounded-lg border border-zinc-800">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center">
+                  <Facebook size={20} className="text-red-600" />
+                </div>
+                <div>
+                  <p className="text-zinc-300">Facebook</p>
+                  <p className="text-xs text-zinc-600">Not connected</p>
+                </div>
+              </div>
+              <button className="px-4 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white border border-zinc-700 rounded-lg transition-all">
+                Connect
+              </button>
+            </div>
 
             <div className="flex items-center justify-between p-3 bg-zinc-950/50 rounded-lg border border-zinc-800">
               <div className="flex items-center gap-3">
@@ -571,6 +587,7 @@ function AccountDetailsSection() {
                 Connect
               </button>
             </div>
+            
           </div>
         </div>
       </div>
