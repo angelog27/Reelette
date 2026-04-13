@@ -8,7 +8,10 @@ from firebase_helper import (
     update_streaming_services, get_user_streaming_services,
     add_to_watchlist, get_watchlist,
     add_watched_movie, get_watched_movies, get_watched_movie, update_watched_rating,
-    create_post, get_feed, like_post, add_reply, get_replies, delete_post, send_password_reset_email
+    create_post, get_feed, like_post, add_reply, get_replies, delete_post, send_password_reset_email,
+    get_notifications, mark_all_notifications_read,
+    search_users, get_or_create_dm, create_group_chat,
+    get_conversations, get_messages, send_message,
 )
 from tmdb_api import (
     search_movies, discover_movies, get_popular_movies, get_movie_details,
@@ -421,9 +424,10 @@ def create_feed_post():
 def like_feed_post(post_id):
     data = request.get_json() or {}
     user_id = data.get('user_id', '').strip()
+    username = data.get('username', '').strip()
     if not user_id:
         return jsonify({'success': False, 'message': 'user_id required'}), 400
-    return jsonify(like_post(post_id, user_id))
+    return jsonify(like_post(post_id, user_id, from_username=username))
 
 @app.route('/api/feed/<post_id>/replies', methods=['GET'])
 def get_post_replies(post_id):
@@ -446,6 +450,86 @@ def delete_feed_post(post_id):
     if not user_id:
         return jsonify({'success': False, 'message': 'user_id required'}), 400
     return jsonify(delete_post(post_id, user_id))
+
+# ── User Search Route ────────────────────────────────────────────
+
+@app.route('/api/users/search', methods=['GET'])
+def search_users_route():
+    q = request.args.get('q', '').strip()
+    exclude = request.args.get('exclude', '').strip() or None
+    if not q:
+        return jsonify({'users': []})
+    return jsonify({'users': search_users(q, exclude_user_id=exclude)})
+
+
+# ── Messaging Routes ─────────────────────────────────────────────
+
+@app.route('/api/conversations/<user_id>', methods=['GET'])
+def get_user_conversations(user_id):
+    convs = get_conversations(user_id)
+    return jsonify({'conversations': serialize_timestamps(convs)})
+
+
+@app.route('/api/conversations', methods=['POST'])
+def create_conversation():
+    data = request.get_json() or {}
+    conv_type   = data.get('type', '').strip()
+    creator_id  = data.get('creator_id', '').strip()
+    creator_name = data.get('creator_name', '').strip()
+    members     = data.get('members', [])   # [{user_id, username}, ...]
+    group_name  = data.get('name', '').strip()
+
+    if not creator_id or not creator_name:
+        return jsonify({'success': False, 'message': 'creator_id and creator_name required'}), 400
+
+    if conv_type == 'dm':
+        if len(members) != 1:
+            return jsonify({'success': False, 'message': 'DM requires exactly one other member'}), 400
+        result = get_or_create_dm(
+            creator_id, creator_name,
+            members[0]['user_id'], members[0]['username']
+        )
+    elif conv_type == 'group':
+        if not members or not group_name:
+            return jsonify({'success': False, 'message': 'Group requires members and a name'}), 400
+        result = create_group_chat(creator_id, creator_name, members, group_name)
+    else:
+        return jsonify({'success': False, 'message': 'type must be "dm" or "group"'}), 400
+
+    return jsonify(result)
+
+
+@app.route('/api/conversations/<conversation_id>/messages', methods=['GET'])
+def get_conversation_messages(conversation_id):
+    limit = request.args.get('limit', 50, type=int)
+    msgs = get_messages(conversation_id, limit=limit)
+    return jsonify({'messages': serialize_timestamps(msgs)})
+
+
+@app.route('/api/conversations/<conversation_id>/messages', methods=['POST'])
+def send_conversation_message(conversation_id):
+    data = request.get_json() or {}
+    user_id  = data.get('user_id', '').strip()
+    username = data.get('username', '').strip()
+    text     = data.get('text', '').strip()
+    if not all([user_id, username, text]):
+        return jsonify({'success': False, 'message': 'user_id, username, and text required'}), 400
+    return jsonify(send_message(conversation_id, user_id, username, text))
+
+
+# ── Notification Routes ──────────────────────────────────────────
+
+@app.route('/api/notifications/<user_id>', methods=['GET'])
+def get_user_notifications(user_id):
+    limit = request.args.get('limit', 30, type=int)
+    notifications = get_notifications(user_id, limit=limit)
+    return jsonify({'notifications': serialize_timestamps(notifications)})
+
+
+@app.route('/api/notifications/<user_id>/read-all', methods=['POST'])
+def mark_all_read(user_id):
+    return jsonify(mark_all_notifications_read(user_id))
+
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

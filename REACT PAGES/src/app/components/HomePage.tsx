@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import logoImage from '../../assets/Reelette_NAME_upscaled.png';
 import reeletteLogo from '../../assets/Reelette_LOGO_upscaled.png';
+import { NotificationPanel } from './NotificationPanel';
 
 type TabLink = {
   id: string;
@@ -15,6 +16,7 @@ export function HomePage() {
     { id: 'mystuff', label: 'My Stuff', path: '/home/mystuff' },
     { id: 'roulette', label: 'Reelette', path: '/home/roulette', imageLogo: reeletteLogo },
     { id: 'social', label: 'Social', path: '/home/social' },
+    { id: 'messages', label: 'Messages', path: '/home/messages' },
     { id: 'profile', label: 'Profile', path: '/home/profile' },
   ];
 
@@ -53,7 +55,9 @@ export function HomePage() {
               ))}
             </div>
 
-            <div className="w-65" />
+            <div className="w-65 flex justify-end">
+              <NotificationPanel />
+            </div>
           </div>
         </div>
       </nav>

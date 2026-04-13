@@ -97,7 +97,7 @@ export function SocialTab() {
 
   const handleLike = async (post_id: string) => {
     if (!currentUserId) return;
-    const result = await likePost(post_id, currentUserId);
+    const result = await likePost(post_id, currentUserId, currentUser?.username ?? '');
     if (result.success) {
       setPosts((prev) =>
         prev.map((p) => {

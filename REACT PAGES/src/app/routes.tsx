@@ -8,6 +8,7 @@ import { ProfileTab } from './components/ProfileTab';
 import { SettingsTab } from './components/SettingsTab';
 import { MyStuffTab } from './components/MyStuffTab';
 import { ProfileandSettingsTab } from './components/ProfileandSettingsTab';
+import { MessagesTab } from './components/MessagesTab';
 
 
 export const router = createBrowserRouter([
@@ -34,6 +35,10 @@ export const router = createBrowserRouter([
       {
         path: 'social',
         Component: SocialTab,
+      },
+      {
+        path: 'messages',
+        Component: MessagesTab,
       },
       {
         path: 'profile',
