@@ -36,6 +36,49 @@ export interface CurrentUser {
 }
 
 
+export interface Notification {
+  notification_id: string;
+  user_id: string;
+  type: 'like' | 'reply' | 'message';
+  from_username: string;
+  post_id: string;
+  movie_title: string;
+  message: string;
+  conversation_id: string;
+  conv_name: string;
+  read: boolean;
+  created_at: string;
+}
+
+
+export interface Conversation {
+  conversation_id: string;
+  type: 'dm' | 'group';
+  name: string;
+  members: string[];
+  member_names: Record<string, string>;
+  last_message: string;
+  last_message_at: string | null;
+  created_at: string;
+  created_by: string;
+}
+
+
+export interface Message {
+  message_id: string;
+  user_id: string;
+  username: string;
+  text: string;
+  created_at: string;
+}
+
+
+export interface SearchUser {
+  user_id: string;
+  username: string;
+}
+
+
 // Maps Firebase service keys → friendly display names (must match badge in MovieCard)
 export const SERVICE_DISPLAY: Record<string, string> = {
   netflix:     'Netflix',
@@ -292,11 +335,11 @@ export async function createPost(payload: {
 }
 
 
-export async function likePost(post_id: string, user_id: string) {
+export async function likePost(post_id: string, user_id: string, username: string) {
   const res = await fetch(`${BASE_URL}/feed/${post_id}/like`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ user_id }),
+    body: JSON.stringify({ user_id, username }),
   });
   return res.json();
 }
@@ -307,6 +350,93 @@ export async function deletePost(post_id: string, user_id: string) {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ user_id }),
+  });
+  return res.json();
+}
+
+
+// ── Notifications ────────────────────────────────────────────────
+
+
+export async function getNotifications(user_id: string): Promise<Notification[]> {
+  const res = await fetch(`${BASE_URL}/notifications/${user_id}`);
+  const data = await res.json();
+  return data.notifications ?? [];
+}
+
+
+export async function markAllNotificationsRead(user_id: string) {
+  const res = await fetch(`${BASE_URL}/notifications/${user_id}/read-all`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  return res.json();
+}
+
+
+// ── Messaging ────────────────────────────────────────────────────
+
+
+export async function searchUsers(query: string, excludeUserId?: string): Promise<SearchUser[]> {
+  const params = new URLSearchParams({ q: query });
+  if (excludeUserId) params.set('exclude', excludeUserId);
+  const res = await fetch(`${BASE_URL}/users/search?${params}`);
+  const data = await res.json();
+  return data.users ?? [];
+}
+
+
+export async function createDM(
+  myId: string, myUsername: string,
+  otherId: string, otherUsername: string,
+) {
+  const res = await fetch(`${BASE_URL}/conversations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      type: 'dm',
+      creator_id: myId,
+      creator_name: myUsername,
+      members: [{ user_id: otherId, username: otherUsername }],
+    }),
+  });
+  return res.json();
+}
+
+
+export async function createGroupChat(
+  myId: string, myUsername: string,
+  members: SearchUser[],
+  name: string,
+) {
+  const res = await fetch(`${BASE_URL}/conversations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type: 'group', creator_id: myId, creator_name: myUsername, members, name }),
+  });
+  return res.json();
+}
+
+
+export async function getConversations(user_id: string): Promise<Conversation[]> {
+  const res = await fetch(`${BASE_URL}/conversations/${user_id}`);
+  const data = await res.json();
+  return data.conversations ?? [];
+}
+
+
+export async function getMessages(conversation_id: string): Promise<Message[]> {
+  const res = await fetch(`${BASE_URL}/conversations/${conversation_id}/messages`);
+  const data = await res.json();
+  return data.messages ?? [];
+}
+
+
+export async function sendMessage(conversation_id: string, user_id: string, username: string, text: string) {
+  const res = await fetch(`${BASE_URL}/conversations/${conversation_id}/messages`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_id, username, text }),
   });
   return res.json();
 }

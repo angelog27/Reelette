@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from "react-router-dom";
 import { clearUser, clearServices } from '../services/api';
+import { useTheme } from '../hooks/useTheme';
 import {
   Bell,
   Film,
@@ -12,7 +13,9 @@ import {
   RotateCcw,
   Eye,
   LogOut,
-  Trash2
+  Trash2,
+  Sun,
+  Moon
 } from 'lucide-react';
 
 
@@ -99,7 +102,7 @@ function SettingsSection({ title, children }: SettingsSectionProps) {
 
 
 export function SettingsTab() {
- 
+
   const [settings, setSettings] = useState({
     newMovieAlerts: true,
     friendActivity: false,
@@ -107,7 +110,7 @@ export function SettingsTab() {
     groupChat: true,
   });
 
-
+  const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
 
 
@@ -149,6 +152,44 @@ export function SettingsTab() {
           </p>
         </div>
 
+
+        {/* Appearance Section */}
+        <div className="bg-zinc-900/50 backdrop-blur-sm rounded-lg p-8 border border-zinc-800/50 shadow-2xl mb-8">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="h-0.5 w-8 bg-gradient-to-r from-red-600 to-transparent"></div>
+            <h2 className="text-white/90 tracking-wide">Appearance</h2>
+          </div>
+          <div className="flex gap-4">
+            <button
+              onClick={() => setTheme('light')}
+              className={`flex-1 flex flex-col items-center gap-3 p-5 rounded-md border transition-all duration-200 ${
+                theme === 'light'
+                  ? 'border-red-600 bg-red-600/10 text-white'
+                  : 'border-zinc-800/50 text-zinc-400 hover:border-zinc-600 hover:bg-zinc-800/30'
+              }`}
+            >
+              <Sun size={24} />
+              <span className="tracking-wide text-sm">Light</span>
+              {theme === 'light' && (
+                <span className="text-xs text-red-500 font-medium">Active</span>
+              )}
+            </button>
+            <button
+              onClick={() => setTheme('dark')}
+              className={`flex-1 flex flex-col items-center gap-3 p-5 rounded-md border transition-all duration-200 ${
+                theme === 'dark'
+                  ? 'border-red-600 bg-red-600/10 text-white'
+                  : 'border-zinc-800/50 text-zinc-400 hover:border-zinc-600 hover:bg-zinc-800/30'
+              }`}
+            >
+              <Moon size={24} />
+              <span className="tracking-wide text-sm">Dark</span>
+              {theme === 'dark' && (
+                <span className="text-xs text-red-500 font-medium">Active</span>
+              )}
+            </button>
+          </div>
+        </div>
 
         {/* Settings Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

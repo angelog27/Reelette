@@ -6,6 +6,8 @@ from firebase_admin import credentials, firestore, auth
 from config import FIREBASE_CREDENTIALS_PATH, FIREBASE_WEB_API_KEY
 from datetime import datetime
 
+# ── Notifications ─────────────────────────────────────────────
+
 # Initialize Firebase Admin
 if not firebase_admin._apps:
     try:
@@ -315,7 +317,7 @@ def get_feed(limit=20):
         return []
 
 # toggle like on a post — likes if not already liked, unlikes if already liked
-def like_post(post_id, user_id):
+def like_post(post_id, user_id, from_username=''):
     try:
         post_ref = db.collection('posts').document(post_id)
         post_doc = post_ref.get()
@@ -323,10 +325,11 @@ def like_post(post_id, user_id):
         if not post_doc.exists:
             return {'success': False, 'message': 'Post not found'}
 
-        liked_by = post_doc.to_dict().get('liked_by', [])
+        post_data = post_doc.to_dict()
+        liked_by = post_data.get('liked_by', [])
+        owner_id = post_data.get('user_id')
 
         if user_id in liked_by:
-            # already liked, so remove the like
             post_ref.update({
                 'likes': firestore.Increment(-1),
                 'liked_by': firestore.ArrayRemove([user_id])
@@ -337,6 +340,13 @@ def like_post(post_id, user_id):
                 'likes': firestore.Increment(1),
                 'liked_by': firestore.ArrayUnion([user_id])
             })
+            # Notify the post owner, but not if they liked their own post
+            if owner_id and owner_id != user_id:
+                create_notification(owner_id, 'like', {
+                    'from_username': from_username,
+                    'post_id': post_id,
+                    'movie_title': post_data.get('movie_title', ''),
+                })
             return {'success': True, 'action': 'liked'}
     except Exception as e:
         return {'success': False, 'message': str(e)}
@@ -344,6 +354,10 @@ def like_post(post_id, user_id):
 # adds a reply to a post's replies subcollection
 def add_reply(post_id, user_id, username, message):
     try:
+        post_doc = db.collection('posts').document(post_id).get()
+        post_data = post_doc.to_dict() if post_doc.exists else {}
+        owner_id = post_data.get('user_id')
+
         reply_ref = db.collection('posts').document(post_id).collection('replies').document()
         reply_ref.set({
             'reply_id': reply_ref.id,
@@ -352,6 +366,16 @@ def add_reply(post_id, user_id, username, message):
             'message': message,
             'created_at': datetime.now()
         })
+
+        # Notify the post owner, but not if they replied to their own post
+        if owner_id and owner_id != user_id:
+            create_notification(owner_id, 'reply', {
+                'from_username': username,
+                'post_id': post_id,
+                'movie_title': post_data.get('movie_title', ''),
+                'message': message,
+            })
+
         return {'success': True, 'reply_id': reply_ref.id}
     except Exception as e:
         return {'success': False, 'message': str(e)}
@@ -368,6 +392,61 @@ def get_replies(post_id):
         print(f"Error getting replies: {e}")
         return []
 
+def create_notification(user_id, type_, data):
+    """Create a notification document for the given user."""
+    try:
+        notif_ref = db.collection('notifications').document()
+        notif_ref.set({
+            'notification_id': notif_ref.id,
+            'user_id': user_id,
+            'type': type_,
+            'from_username': data.get('from_username', ''),
+            'post_id': data.get('post_id', ''),
+            'movie_title': data.get('movie_title', ''),
+            'message': data.get('message', ''),
+            'conversation_id': data.get('conversation_id', ''),
+            'conv_name': data.get('conv_name', ''),
+            'read': False,
+            'created_at': datetime.now(),
+        })
+    except Exception as e:
+        print(f"Error creating notification: {e}")
+
+
+def get_notifications(user_id, limit=30):
+    """Return the most recent notifications for a user, newest first."""
+    try:
+        docs = (
+            db.collection('notifications')
+            .where('user_id', '==', user_id)
+            .order_by('created_at', direction=firestore.Query.DESCENDING)
+            .limit(limit)
+            .stream()
+        )
+        return [doc.to_dict() for doc in docs]
+    except Exception as e:
+        print(f"Error getting notifications: {e}")
+        return []
+
+
+def mark_all_notifications_read(user_id):
+    """Mark every unread notification for a user as read."""
+    try:
+        docs = (
+            db.collection('notifications')
+            .where('user_id', '==', user_id)
+            .where('read', '==', False)
+            .stream()
+        )
+        batch = db.batch()
+        for doc in docs:
+            batch.update(doc.reference, {'read': True})
+        batch.commit()
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+
 # deletes a post — only works if the requesting user owns it
 def delete_post(post_id, user_id):
     try:
@@ -382,5 +461,156 @@ def delete_post(post_id, user_id):
 
         post_ref.delete()
         return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+
+# ── Messaging ─────────────────────────────────────────────────
+
+def search_users(query, exclude_user_id=None, limit=10):
+    """Case-insensitive substring search on usernames (fetches up to 100, filters in Python)."""
+    try:
+        q = query.lower()
+        docs = db.collection('users').limit(100).stream()
+        results = []
+        for doc in docs:
+            if doc.id == exclude_user_id:
+                continue
+            username = doc.to_dict().get('username', '')
+            if q in username.lower():
+                results.append({'user_id': doc.id, 'username': username})
+                if len(results) >= limit:
+                    break
+        return results
+    except Exception as e:
+        print(f"Error searching users: {e}")
+        return []
+
+
+def get_or_create_dm(user_a_id, user_a_name, user_b_id, user_b_name):
+    """Return the existing DM between two users, or create a new one."""
+    try:
+        existing = (
+            db.collection('conversations')
+            .where('members', 'array_contains', user_a_id)
+            .stream()
+        )
+        for doc in existing:
+            data = doc.to_dict()
+            if data.get('type') == 'dm' and user_b_id in data.get('members', []):
+                return {'success': True, 'conversation_id': doc.id}
+
+        conv_ref = db.collection('conversations').document()
+        conv_ref.set({
+            'conversation_id': conv_ref.id,
+            'type': 'dm',
+            'name': '',
+            'members': [user_a_id, user_b_id],
+            'member_names': {user_a_id: user_a_name, user_b_id: user_b_name},
+            'last_message': '',
+            'last_message_at': None,
+            'created_at': datetime.now(),
+            'created_by': user_a_id,
+        })
+        return {'success': True, 'conversation_id': conv_ref.id}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+
+def create_group_chat(creator_id, creator_name, members, group_name):
+    """members = list of {user_id, username} dicts (not including the creator)."""
+    try:
+        all_ids = [creator_id] + [m['user_id'] for m in members]
+        name_map = {creator_id: creator_name}
+        for m in members:
+            name_map[m['user_id']] = m['username']
+
+        conv_ref = db.collection('conversations').document()
+        conv_ref.set({
+            'conversation_id': conv_ref.id,
+            'type': 'group',
+            'name': group_name,
+            'members': all_ids,
+            'member_names': name_map,
+            'last_message': '',
+            'last_message_at': None,
+            'created_at': datetime.now(),
+            'created_by': creator_id,
+        })
+        return {'success': True, 'conversation_id': conv_ref.id}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+
+def get_conversations(user_id):
+    """All conversations for a user, sorted by last_message_at DESC."""
+    try:
+        docs = (
+            db.collection('conversations')
+            .where('members', 'array_contains', user_id)
+            .stream()
+        )
+        convs = [doc.to_dict() for doc in docs]
+        # Sort in Python to avoid Firestore composite-index requirements with nullable field
+        convs.sort(key=lambda c: c.get('last_message_at') or datetime.min, reverse=True)
+        return convs
+    except Exception as e:
+        print(f"Error getting conversations: {e}")
+        return []
+
+
+def get_messages(conversation_id, limit=50):
+    """Messages for a conversation, oldest first, capped at `limit`."""
+    try:
+        docs = (
+            db.collection('conversations')
+            .document(conversation_id)
+            .collection('messages')
+            .order_by('created_at', direction=firestore.Query.ASCENDING)
+            .stream()
+        )
+        messages = [doc.to_dict() for doc in docs]
+        return messages[-limit:] if len(messages) > limit else messages
+    except Exception as e:
+        print(f"Error getting messages: {e}")
+        return []
+
+
+def send_message(conversation_id, user_id, username, text):
+    """Append a message, update conversation metadata, and notify other members."""
+    try:
+        conv_ref = db.collection('conversations').document(conversation_id)
+        conv_doc = conv_ref.get()
+        if not conv_doc.exists:
+            return {'success': False, 'message': 'Conversation not found'}
+
+        conv_data = conv_doc.to_dict()
+        members = conv_data.get('members', [])
+        conv_name = conv_data.get('name', '')
+
+        msg_ref = conv_ref.collection('messages').document()
+        msg_ref.set({
+            'message_id': msg_ref.id,
+            'user_id': user_id,
+            'username': username,
+            'text': text,
+            'created_at': datetime.now(),
+        })
+
+        conv_ref.update({
+            'last_message': text[:100],
+            'last_message_at': datetime.now(),
+        })
+
+        for member_id in members:
+            if member_id != user_id:
+                create_notification(member_id, 'message', {
+                    'from_username': username,
+                    'conversation_id': conversation_id,
+                    'conv_name': conv_name,
+                    'message': text[:100],
+                })
+
+        return {'success': True, 'message_id': msg_ref.id}
     except Exception as e:
         return {'success': False, 'message': str(e)}
