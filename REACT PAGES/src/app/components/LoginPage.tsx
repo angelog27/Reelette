@@ -218,7 +218,7 @@ export function LoginPage() {
 
   const scrollingSection = (
     <div className="hidden lg:flex lg:w-1/2 flex-col justify-center p-8 relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-black/20 to-black/60 z-10 pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent to-transparent z-10 pointer-events-none" />
       <ScrollingRow images={row1} direction="left" speed={40} />
       <ScrollingRow images={row2} direction="right" speed={35} />
       <ScrollingRow images={row3} direction="left" speed={45} />
@@ -238,16 +238,21 @@ export function LoginPage() {
           100% { transform: translateX(0); }
         }
         :root {
-          --color-bg1: rgb(108, 0, 162);
-          --color-bg2: rgb(0, 17, 82);
-          --color1: 18, 113, 255;
-          --color2: 221, 74, 255;
-          --color3: 100, 220, 255;
-          --color4: 200, 50, 50;
-          --color5: 180, 180, 50;
-          --color-interactive: 140, 100, 255;
+          --color-bg1: rgb(26, 15, 10);
+          --color-bg2: rgb(10, 10, 10);
+          --color1: 255, 69, 0;
+          --color2: 220, 38, 38;
+          --color3: 255, 87, 34;
+          --color4: 251, 191, 36;
+          --color5: 180, 30, 30;
+          --color-interactive: 255, 87, 34;
           --circle-size: 80%;
           --blending: hard-light;
+        }
+        .reel-input:focus {
+          border-color: #ff5722 !important;
+          box-shadow: 0 0 0 3px rgba(255, 87, 34, 0.2) !important;
+          outline: none;
         }
         @keyframes moveInCircle {
           0%   { transform: rotate(0deg); }
@@ -364,15 +369,15 @@ export function LoginPage() {
                 <img src={logoImage} alt="Reelette" className="h-56 w-auto scale-[2] origin-top" />
             </div>
             <p className="text-center mb-10 px-4 text-lg">
-              <span className="bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent">
+              <span className="text-[#fbbf24]">
                 The ultimate way to discover, rate, and share movies
               </span>
-              <span className="text-gray-400"> with friends.</span>
+              <span className="text-[#f5f5f5]/70"> with friends.</span>
             </p>
 
             {/* ── Login ── */}
             {view === 'login' && (
-              <div className="w-full bg-black/50 backdrop-blur-sm border border-gray-800 rounded-2xl p-8 shadow-2xl">
+              <div className="w-full bg-[rgba(15,15,15,0.75)] backdrop-blur-[12px] border border-[rgba(255,87,34,0.2)] rounded-2xl p-8 shadow-2xl">
                 <form onSubmit={handleLogin} className="space-y-6">
                   <div className="space-y-2">
                     <label className="text-sm text-gray-400">Email</label>
@@ -381,7 +386,7 @@ export function LoginPage() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="Enter your email"
-                      className="w-full bg-gray-900/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-red-500 rounded-lg h-12"
+                      className="reel-input w-full bg-[#0f0f0f] border-gray-700 text-white placeholder:text-gray-500 rounded-lg h-12"
                       required
                     />
                   </div>
@@ -392,7 +397,7 @@ export function LoginPage() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Enter your password"
-                      className="w-full bg-gray-900/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-red-500 rounded-lg h-12"
+                      className="reel-input w-full bg-[#0f0f0f] border-gray-700 text-white placeholder:text-gray-500 rounded-lg h-12"
                       required
                     />
                   </div>
@@ -400,17 +405,17 @@ export function LoginPage() {
                   <Button
                     type="submit"
                     disabled={loginLoading}
-                    className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white h-12 rounded-lg transition-all duration-200 disabled:opacity-50"
+                    className="w-full bg-gradient-to-r from-[#ff5722] to-[#dc2626] hover:from-[#ff6d3a] hover:to-[#ef4444] text-white h-12 rounded-lg transition-all duration-200 disabled:opacity-50"
                   >
                     {loginLoading ? 'Signing in...' : 'Login'}
                   </Button>
-                  <div className="text-center pt-4 border-t border-gray-800">
+                  <div className="text-center pt-4 border-t border-[rgba(255,87,34,0.15)]">
                     <p className="text-sm text-gray-400">
                       Don't have an account?{' '}
                       <button
                         type="button"
                         onClick={() => setView('register')}
-                        className="text-red-500 hover:text-red-400 transition-colors"
+                        className="text-[#fbbf24] hover:text-[#ff5722] transition-colors"
                       >
                         Sign up
                       </button>
@@ -425,7 +430,7 @@ export function LoginPage() {
                           setForgotMessage('');
                           setView('forgot-password');
                         }}
-                        className="text-sm text-red-500 hover:text-red-400 transition-colors"
+                        className="text-sm text-[#fbbf24] hover:text-[#ff5722] transition-colors"
                       >
                         Forgot your password?
                       </button>
@@ -437,7 +442,7 @@ export function LoginPage() {
 
             {/* ── Register ── */}
             {view === 'register' && (
-              <div className="w-full bg-black/50 backdrop-blur-sm border border-gray-800 rounded-2xl p-8 shadow-2xl">
+              <div className="w-full bg-[rgba(15,15,15,0.75)] backdrop-blur-[12px] border border-[rgba(255,87,34,0.2)] rounded-2xl p-8 shadow-2xl">
                 <h2 className="text-white text-xl font-semibold mb-6 text-center">Create Account</h2>
                 <form onSubmit={handleRegister} className="space-y-5">
                   <div className="space-y-2">
@@ -447,7 +452,7 @@ export function LoginPage() {
                       value={regUsername}
                       onChange={(e) => setRegUsername(e.target.value)}
                       placeholder="Choose a username"
-                      className="w-full bg-gray-900/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-red-500 rounded-lg h-12"
+                      className="reel-input w-full bg-[#0f0f0f] border-gray-700 text-white placeholder:text-gray-500 rounded-lg h-12"
                       required
                     />
                   </div>
@@ -458,7 +463,7 @@ export function LoginPage() {
                       value={regEmail}
                       onChange={(e) => setRegEmail(e.target.value)}
                       placeholder="Enter your email"
-                      className="w-full bg-gray-900/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-red-500 rounded-lg h-12"
+                      className="reel-input w-full bg-[#0f0f0f] border-gray-700 text-white placeholder:text-gray-500 rounded-lg h-12"
                       required
                     />
                   </div>
@@ -469,7 +474,7 @@ export function LoginPage() {
                       value={regPassword}
                       onChange={(e) => setRegPassword(e.target.value)}
                       placeholder="Choose a password"
-                      className="w-full bg-gray-900/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-red-500 rounded-lg h-12"
+                      className="reel-input w-full bg-[#0f0f0f] border-gray-700 text-white placeholder:text-gray-500 rounded-lg h-12"
                       required
                     />
                   </div>
@@ -477,17 +482,17 @@ export function LoginPage() {
                   <Button
                     type="submit"
                     disabled={regLoading}
-                    className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white h-12 rounded-lg disabled:opacity-50"
+                    className="w-full bg-gradient-to-r from-[#ff5722] to-[#dc2626] hover:from-[#ff6d3a] hover:to-[#ef4444] text-white h-12 rounded-lg transition-all duration-200 disabled:opacity-50"
                   >
                     {regLoading ? 'Creating account...' : 'Sign Up'}
                   </Button>
-                  <div className="text-center pt-4 border-t border-gray-800">
+                  <div className="text-center pt-4 border-t border-[rgba(255,87,34,0.15)]">
                     <p className="text-sm text-gray-400">
                       Already have an account?{' '}
                       <button
                         type="button"
                         onClick={() => setView('login')}
-                        className="text-red-500 hover:text-red-400 transition-colors"
+                        className="text-[#fbbf24] hover:text-[#ff5722] transition-colors"
                       >
                         Log in
                       </button>
@@ -498,7 +503,7 @@ export function LoginPage() {
             )}
 
             {view === 'forgot-password' && (
-              <div className="w-full bg-black/50 backdrop-blur-sm border border-gray-800 rounded-2xl p-8 shadow-2xl">
+              <div className="w-full bg-[rgba(15,15,15,0.75)] backdrop-blur-[12px] border border-[rgba(255,87,34,0.2)] rounded-2xl p-8 shadow-2xl">
                 <h2 className="text-white text-xl font-semibold mb-6 text-center">Reset Password</h2>
                 <form onSubmit={handleForgotPassword} className="space-y-5">
                   <div className="space-y-2">
@@ -508,7 +513,7 @@ export function LoginPage() {
                       value={forgotEmail}
                       onChange={(e) => setForgotEmail(e.target.value)}
                       placeholder="Enter your email"
-                      className="w-full bg-gray-900/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-red-500 rounded-lg h-12"
+                      className="reel-input w-full bg-[#0f0f0f] border-gray-700 text-white placeholder:text-gray-500 rounded-lg h-12"
                       required
                     />
                   </div>
@@ -523,12 +528,12 @@ export function LoginPage() {
                   <Button
                     type="submit"
                     disabled={forgotLoading}
-                    className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white h-12 rounded-lg disabled:opacity-50"
+                    className="w-full bg-gradient-to-r from-[#ff5722] to-[#dc2626] hover:from-[#ff6d3a] hover:to-[#ef4444] text-white h-12 rounded-lg transition-all duration-200 disabled:opacity-50"
                   >
                     {forgotLoading ? 'Sending...' : 'Send Reset Email'}
                   </Button>
 
-                  <div className="text-center pt-4 border-t border-gray-800">
+                  <div className="text-center pt-4 border-t border-[rgba(255,87,34,0.15)]">
                     <p className="text-sm text-gray-400">
                       Remember your password?{' '}
                       <button
@@ -538,7 +543,7 @@ export function LoginPage() {
                           setForgotMessage('');
                           setView('login');
                         }}
-                        className="text-red-500 hover:text-red-400 transition-colors"
+                        className="text-[#fbbf24] hover:text-[#ff5722] transition-colors"
                       >
                         Log in
                       </button>
@@ -550,7 +555,7 @@ export function LoginPage() {
 
             {/* ── Ask existing user about services ── */}
             {view === 'ask-streaming' && (
-              <div className="w-full bg-black/50 backdrop-blur-sm border border-gray-800 rounded-2xl p-8 shadow-2xl text-center">
+              <div className="w-full bg-[rgba(15,15,15,0.75)] backdrop-blur-[12px] border border-[rgba(255,87,34,0.2)] rounded-2xl p-8 shadow-2xl text-center">
                 <h2 className="text-white text-xl font-semibold mb-3">
                   Welcome back, {pendingUsername}!
                 </h2>
@@ -566,7 +571,7 @@ export function LoginPage() {
                   </button>
                   <button
                     onClick={() => setView('setup-streaming')}
-                    className="flex-1 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-6 py-3 rounded-lg transition-all font-medium"
+                    className="flex-1 bg-gradient-to-r from-[#ff5722] to-[#dc2626] hover:from-[#ff6d3a] hover:to-[#ef4444] text-white px-6 py-3 rounded-lg transition-all duration-200 font-medium"
                   >
                     Yes, update
                   </button>
