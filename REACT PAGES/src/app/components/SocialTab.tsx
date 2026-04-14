@@ -14,7 +14,7 @@ import {
   updateLastSeen, searchMovies, discoverMovies,
   type FeedPost, type Friend, type FriendRequest, type MovieGroup,
   type GroupMovie, type MemberProfile, type MemberServiceEntry,
-  SERVICE_DISPLAY,
+  SERVICE_DISPLAY, getUserPublicProfile,
 } from '../services/api';
 import { UserProfileModal } from './UserProfileModal';
 
@@ -328,6 +328,7 @@ function PostCard({ post, currentUserId, onLike, onDelete, onOpenProfile }: {
       <div className="flex items-start gap-4">
         <UserAvatar
           username={post.username}
+          avatarUrl={post.avatarUrl}
           size={48}
           onClick={() => onOpenProfile(post.user_id)}
         />
@@ -962,7 +963,24 @@ export function SocialTab() {
   useEffect(() => {
     if (activeTab === 'feed') {
       setLoading(true);
-      getFeed().then(p => { setPosts(p); setLoading(false); });
+      getFeed().then(async (feedPosts) => {
+        // If backend already returns avatarUrl on posts, nothing extra needed.
+        // Otherwise, batch-fetch avatars for every unique poster.
+        const needsAvatars = feedPosts.some(p => !p.avatarUrl);
+        if (needsAvatars) {
+          const uniqueIds = [...new Set(feedPosts.map(p => p.user_id))];
+          const profiles = await Promise.all(uniqueIds.map(id => getUserPublicProfile(id)));
+          const avatarMap: Record<string, string> = {};
+          uniqueIds.forEach((id, i) => {
+            const url = profiles[i]?.avatarUrl;
+            if (url) avatarMap[id] = url;
+          });
+          setPosts(feedPosts.map(p => ({ ...p, avatarUrl: p.avatarUrl ?? avatarMap[p.user_id] })));
+        } else {
+          setPosts(feedPosts);
+        }
+        setLoading(false);
+      });
     }
   }, [activeTab]);
 
@@ -993,7 +1011,16 @@ export function SocialTab() {
     const result = await createPost({ user_id: currentUser.user_id, username: currentUser.username, message: newMessage.trim(), movie_title: newMovieTitle.trim(), rating });
     if (result.success) {
       const updated = await getFeed();
-      setPosts(updated);
+      const needsAvatars = updated.some(p => !p.avatarUrl);
+      if (needsAvatars) {
+        const uniqueIds = [...new Set(updated.map(p => p.user_id))];
+        const profiles = await Promise.all(uniqueIds.map(id => getUserPublicProfile(id)));
+        const avatarMap: Record<string, string> = {};
+        uniqueIds.forEach((id, i) => { const url = profiles[i]?.avatarUrl; if (url) avatarMap[id] = url; });
+        setPosts(updated.map(p => ({ ...p, avatarUrl: p.avatarUrl ?? avatarMap[p.user_id] })));
+      } else {
+        setPosts(updated);
+      }
       setNewMovieTitle(''); setNewRating(''); setNewMessage('');
       setShowNewPostDialog(false);
     } else setPostError(result.message || 'Failed to create post.');

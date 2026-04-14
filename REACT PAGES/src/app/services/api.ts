@@ -19,6 +19,7 @@ export interface FeedPost {
   post_id: string;
   user_id: string;
   username: string;
+  avatarUrl?: string;
   message: string;
   movie_title: string;
   movie_id: string;
