@@ -232,53 +232,57 @@ function ProfileInfoSection({
 
 // ─── MoviePersonalizationSection ─────────────────────────────
 
-function MoviePersonalizationSection() {
+function MoviePersonalizationSection({
+  moviePreferences,
+  favoritePersonInput,
+  onFavoritePersonInputChange,
+  onAddFavoritePerson,
+  onRemoveFavoritePerson,
+  onToggleGenre,
+  onToggleStreamingService,
+  onContentRatingChange,
+  onWatchlistSettingChange,
+  onSavePreferences,
+  isSavingPreferences,
+}: {
+  moviePreferences: {
+    favoriteGenres: string[];
+    favoritePeople: string[];
+    streamingServices: Record<string, boolean>;
+    contentRating: string;
+    watchlistSettings: {
+      autoSortByReleaseDate: boolean;
+      hideWatchedContent: boolean;
+    };
+  };
+  favoritePersonInput: string;
+  onFavoritePersonInputChange: (value: string) => void;
+  onAddFavoritePerson: () => void;
+  onRemoveFavoritePerson: (name: string) => void;
+  onToggleGenre: (genre: string) => void;
+  onToggleStreamingService: (serviceKey: string) => void;
+  onContentRatingChange: (value: string) => void;
+  onWatchlistSettingChange: (
+    setting: 'autoSortByReleaseDate' | 'hideWatchedContent',
+    checked: boolean
+  ) => void;
+  onSavePreferences: () => void;
+  isSavingPreferences: boolean;
+}) {
   const genres = [
     'Action', 'Drama', 'Sci-Fi', 'Horror', 'Comedy', 'Thriller',
     'Romance', 'Documentary', 'Animation', 'Fantasy'
   ];
 
   const platforms = [
-    {
-      name: 'Netflix',
-      logo: 'https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg',
-      color: 'red'
-    },
-    {
-      name: 'Apple TV+',
-      logo: 'https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg',
-      color: 'dimgray'
-    },
-    {
-      name: 'HBO Max',
-      logo: 'https://upload.wikimedia.org/wikipedia/commons/1/17/HBO_Max_Logo.svg',
-      color: '#5B31B9'
-    },
-    {
-      name: 'Disney+',
-      logo: 'https://upload.wikimedia.org/wikipedia/commons/3/3e/Disney%2B_logo.svg',
-      color: '#00A2FF'
-    },
-    {
-      name: 'Hulu',
-      logo: 'https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/hulu.svg',
-      color: '#1CE783'
-    },
-    {
-      name: 'Amazon Prime',
-      logo: 'https://upload.wikimedia.org/wikipedia/commons/f/f1/Prime_Video.png',
-      color: '#00A8E1'
-    },
-    {
-      name: 'Paramount+',
-      logo: 'https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/paramountplus.svg',
-      color: 'blue'
-    },
-    {
-      name: 'Peacock',
-      logo: peacockLogo,
-      color: 'multicolor'
-    },
+    { key: 'netflix', name: 'Netflix', logo: 'https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg', color: 'red' },
+    { key: 'appleTV', name: 'Apple TV+', logo: 'https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg', color: 'dimgray' },
+    { key: 'hboMax', name: 'HBO Max', logo: 'https://upload.wikimedia.org/wikipedia/commons/1/17/HBO_Max_Logo.svg', color: '#5B31B9' },
+    { key: 'disneyPlus', name: 'Disney+', logo: 'https://upload.wikimedia.org/wikipedia/commons/3/3e/Disney%2B_logo.svg', color: '#00A2FF' },
+    { key: 'hulu', name: 'Hulu', logo: 'https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/hulu.svg', color: '#1CE783' },
+    { key: 'amazonPrime', name: 'Amazon Prime', logo: 'https://upload.wikimedia.org/wikipedia/commons/f/f1/Prime_Video.png', color: '#00A8E1' },
+    { key: 'paramount', name: 'Paramount+', logo: 'https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/paramountplus.svg', color: 'blue' },
+    { key: 'peacock', name: 'Peacock', logo: peacockLogo, color: 'multicolor' },
   ];
 
   return (
@@ -292,91 +296,118 @@ function MoviePersonalizationSection() {
       </div>
 
       <div className="space-y-6">
-        {/* Favorite Genres */}
         <div>
           <label className="block text-zinc-400 mb-3">Favorite Genres</label>
           <div className="flex flex-wrap gap-2">
-            {genres.map((genre) => (
-              <button
-                key={genre}
-                className="px-4 py-2 bg-zinc-950/50 hover:bg-red-600 border border-zinc-800 hover:border-red-600 text-zinc-400 hover:text-white rounded-lg transition-all"
-              >
-                {genre}
-              </button>
-            ))}
+            {genres.map((genre) => {
+              const isSelected = moviePreferences.favoriteGenres.includes(genre);
+
+              return (
+                <button
+                  key={genre}
+                  type="button"
+                  onClick={() => onToggleGenre(genre)}
+                  className={`px-4 py-2 border rounded-lg transition-all ${isSelected
+                    ? 'bg-red-600 border-red-600 text-white'
+                    : 'bg-zinc-950/50 border-zinc-800 text-zinc-400 hover:bg-red-600 hover:border-red-600 hover:text-white'
+                    }`}
+                >
+                  {genre}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* Favorite Actors/Directors */}
         <div>
           <label className="block text-zinc-400 mb-3">Favorite Actors & Directors</label>
+
           <div className="flex flex-wrap gap-2 mb-3">
-            {['Christopher Nolan', 'Meryl Streep', 'Quentin Tarantino', 'Viola Davis'].map((name) => (
-              <span
+            {moviePreferences.favoritePeople.map((name) => (
+              <button
                 key={name}
-                className="px-3 py-1.5 bg-red-600/20 border border-red-600/50 text-red-400 rounded-full text-sm flex items-center gap-2"
+                type="button"
+                onClick={() => onRemoveFavoritePerson(name)}
+                className="px-3 py-1.5 bg-red-600/20 border border-red-600/50 text-red-400 rounded-full text-sm flex items-center gap-2 hover:bg-red-600/30 transition-all"
+                title="Remove"
               >
                 <Star size={14} />
                 {name}
-              </span>
-            ))}
-          </div>
-          <input
-            type="text"
-            placeholder="Search and add favorites..."
-            className="w-full bg-zinc-950/50 border border-zinc-800 rounded-lg px-4 py-2.5 text-white placeholder-zinc-600 focus:border-red-600 focus:ring-2 focus:ring-red-600/20 focus:outline-none transition-all"
-          />
-        </div>
-
-        {/* Streaming Platforms */}
-        <div>
-          <label className="block text-zinc-400 mb-3">Preferred Streaming Platforms</label>
-          <div className="grid grid-cols-4 md:grid-cols-8 gap-3">
-            {platforms.map((platform) => (
-              <button
-                key={platform.name}
-                className="aspect-square border rounded-xl flex flex-col items-center justify-center gap-2 transition-all group"
-                style={{
-                  backgroundColor: 'black',
-                  borderColor: 'dimgray',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background =
-                    platform.color === 'multicolor'
-                      ? 'linear-gradient(90deg, yellow, red, green, blue, purple)'
-                      : platform.color;
-
-                  e.currentTarget.style.borderColor =
-                    platform.color === 'multicolor'
-                      ? 'white'
-                      : platform.color;
-                  e.currentTarget.style.borderColor = 'white';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'black';
-                  e.currentTarget.style.borderColor = 'dimgray';
-                }}
-              >
-                <div className="w-14 h-14 flex items-center justify-center bg-white rounded-md p-1">
-                  <img
-                    src={platform.logo}
-                    alt={platform.name}
-                    className="w-12 h-12 object-contain brightness-75 group-hover:brightness-100 transition-all"
-                  />
-                </div>
-
-                <span className="text-lg text-zinc-400 group-hover:text-white transition-all">
-                  {platform.name}
-                </span>
               </button>
             ))}
           </div>
+
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={favoritePersonInput}
+              onChange={(e) => onFavoritePersonInputChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  onAddFavoritePerson();
+                }
+              }}
+              placeholder="Search and add favorites..."
+              className="w-full bg-zinc-950/50 border border-zinc-800 rounded-lg px-4 py-2.5 text-white placeholder-zinc-600 focus:border-red-600 focus:ring-2 focus:ring-red-600/20 focus:outline-none transition-all"
+            />
+            <button
+              type="button"
+              onClick={onAddFavoritePerson}
+              className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg border border-red-600 transition-all"
+            >
+              Add
+            </button>
+          </div>
         </div>
 
-        {/* Content Rating */}
+        <div>
+          <label className="block text-zinc-400 mb-3">Preferred Streaming Platforms</label>
+          <div className="grid grid-cols-4 md:grid-cols-8 gap-3">
+            {platforms.map((platform) => {
+              const isSelected = !!moviePreferences.streamingServices[platform.key];
+
+              return (
+                <button
+                  key={platform.name}
+                  type="button"
+                  onClick={() => onToggleStreamingService(platform.key)}
+                  className={`aspect-square border rounded-xl flex flex-col items-center justify-center gap-2 transition-all group ${isSelected ? 'ring-2 ring-red-500' : ''
+                    }`}
+                  style={{
+                    background:
+                      isSelected && platform.color === 'multicolor'
+                        ? 'linear-gradient(90deg, yellow, red, green, blue, purple)'
+                        : isSelected
+                          ? platform.color
+                          : 'black',
+                    borderColor: isSelected ? 'white' : 'dimgray',
+                  }}
+                >
+                  <div className="w-14 h-14 flex items-center justify-center bg-white rounded-md p-1">
+                    <img
+                      src={platform.logo}
+                      alt={platform.name}
+                      className="w-12 h-12 object-contain brightness-75 group-hover:brightness-100 transition-all"
+                    />
+                  </div>
+
+                  <span className="text-lg text-zinc-400 group-hover:text-white transition-all text-center leading-tight">
+                    {platform.name}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <div>
           <label className="block text-zinc-400 mb-3">Content Rating Preferences</label>
-          <select className="w-full bg-zinc-950/50 border border-zinc-800 rounded-lg px-4 py-2.5 text-white focus:border-red-600 focus:ring-2 focus:ring-red-600/20 focus:outline-none transition-all">
+          <select
+            value={moviePreferences.contentRating}
+            onChange={(e) => onContentRatingChange(e.target.value)}
+            className="w-full bg-zinc-950/50 border border-zinc-800 rounded-lg px-4 py-2.5 text-white focus:border-red-600 focus:ring-2 focus:ring-red-600/20 focus:outline-none transition-all"
+          >
             <option>All Ratings</option>
             <option>G - General Audiences</option>
             <option>PG - Parental Guidance</option>
@@ -386,25 +417,53 @@ function MoviePersonalizationSection() {
           </select>
         </div>
 
-        {/* Watchlist Preferences */}
         <div>
           <label className="block text-zinc-400 mb-3">Watchlist Settings</label>
           <div className="space-y-3">
             <label className="flex items-center justify-between p-3 bg-zinc-950/30 rounded-lg border border-zinc-800/50 hover:border-zinc-700 transition-all cursor-pointer">
               <span className="text-zinc-300">Auto-sort by release date</span>
-              <input type="checkbox" className="w-5 h-5 rounded bg-zinc-800 border-zinc-700 text-red-600 focus:ring-red-600 focus:ring-offset-0" />
+              <input
+                type="checkbox"
+                checked={moviePreferences.watchlistSettings.autoSortByReleaseDate}
+                onChange={(e) =>
+                  onWatchlistSettingChange('autoSortByReleaseDate', e.target.checked)
+                }
+                className="w-5 h-5 rounded bg-zinc-800 border-zinc-700 text-red-600 focus:ring-red-600 focus:ring-offset-0"
+              />
             </label>
+
             <label className="flex items-center justify-between p-3 bg-zinc-950/30 rounded-lg border border-zinc-800/50 hover:border-zinc-700 transition-all cursor-pointer">
               <span className="text-zinc-300">Hide watched content</span>
-              <input type="checkbox" className="w-5 h-5 rounded bg-zinc-800 border-zinc-700 text-red-600 focus:ring-red-600 focus:ring-offset-0" defaultChecked />
+              <input
+                type="checkbox"
+                checked={moviePreferences.watchlistSettings.hideWatchedContent}
+                onChange={(e) =>
+                  onWatchlistSettingChange('hideWatchedContent', e.target.checked)
+                }
+                className="w-5 h-5 rounded bg-zinc-800 border-zinc-700 text-red-600 focus:ring-red-600 focus:ring-offset-0"
+              />
             </label>
           </div>
         </div>
       </div>
+
+      <div className="mt-6 flex justify-end">
+        <button
+          type="button"
+          onClick={onSavePreferences}
+          disabled={isSavingPreferences}
+          className={`px-5 py-2 rounded-lg transition-all border flex items-center gap-2 ${isSavingPreferences
+            ? 'bg-zinc-800 text-zinc-500 border-zinc-700 cursor-not-allowed'
+            : 'bg-red-600 hover:bg-red-700 text-white border-red-600 shadow-lg shadow-red-600/20 hover:shadow-red-600/40'
+            }`}
+        >
+          <Edit3 size={16} />
+          {isSavingPreferences ? 'Saving...' : 'Save Preferences'}
+        </button>
+      </div>
     </div>
   );
 }
-
 // ─── AppearanceSection ───────────────────────────────────────
 
 function AppearanceSection() {
@@ -665,8 +724,30 @@ export function ProfileTab() {
     phone: '',
   });
 
+  const [moviePreferences, setMoviePreferences] = useState({
+    favoriteGenres: [] as string[],
+    favoritePeople: [] as string[],
+    streamingServices: {
+      netflix: false,
+      appleTV: false,
+      hboMax: false,
+      disneyPlus: false,
+      hulu: false,
+      amazonPrime: false,
+      paramount: false,
+      peacock: false,
+    },
+    contentRating: 'All Ratings',
+    watchlistSettings: {
+      autoSortByReleaseDate: false,
+      hideWatchedContent: true,
+    },
+  });
+
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const [favoritePersonInput, setFavoritePersonInput] = useState('');
+  const [isSavingPreferences, setIsSavingPreferences] = useState(false);
 
   useEffect(() => {
     async function loadProfile() {
@@ -696,6 +777,23 @@ export function ProfileTab() {
 
         setProfile(loadedProfile);
         setDraftProfile(loadedProfile);
+
+        const streamingResponse = await fetch(`http://localhost:5000/api/user/${userId}/streaming`);
+        const streamingData = await streamingResponse.json();
+
+        setMoviePreferences((prev) => ({
+          ...prev,
+          streamingServices: {
+            netflix: streamingData.netflix || false,
+            appleTV: streamingData.appleTV || false,
+            hboMax: streamingData.hboMax || false,
+            disneyPlus: streamingData.disneyPlus || false,
+            hulu: streamingData.hulu || false,
+            amazonPrime: streamingData.amazonPrime || false,
+            paramount: streamingData.paramount || false,
+            peacock: streamingData.peacock || false,
+          },
+        }));
       } catch (error) {
         console.error('Failed to load profile:', error);
       } finally {
@@ -763,6 +861,98 @@ export function ProfileTab() {
     setIsEditingProfile(false);
   }
 
+  function handleToggleGenre(genre: string) {
+    setMoviePreferences((prev) => ({
+      ...prev,
+      favoriteGenres: prev.favoriteGenres.includes(genre)
+        ? prev.favoriteGenres.filter((item) => item !== genre)
+        : [...prev.favoriteGenres, genre],
+    }));
+  }
+
+  function handleToggleStreamingService(serviceKey: string) {
+    setMoviePreferences((prev) => ({
+      ...prev,
+      streamingServices: {
+        ...prev.streamingServices,
+        [serviceKey]: !prev.streamingServices[serviceKey],
+      },
+    }));
+  }
+
+  function handleContentRatingChange(value: string) {
+    setMoviePreferences((prev) => ({
+      ...prev,
+      contentRating: value,
+    }));
+  }
+
+  function handleWatchlistSettingChange(
+    setting: 'autoSortByReleaseDate' | 'hideWatchedContent',
+    checked: boolean
+  ) {
+    setMoviePreferences((prev) => ({
+      ...prev,
+      watchlistSettings: {
+        ...prev.watchlistSettings,
+        [setting]: checked,
+      },
+    }));
+  }
+
+  function handleAddFavoritePerson() {
+    const trimmed = favoritePersonInput.trim();
+
+    if (!trimmed) return;
+    if (moviePreferences.favoritePeople.includes(trimmed)) {
+      setFavoritePersonInput('');
+      return;
+    }
+
+    setMoviePreferences((prev) => ({
+      ...prev,
+      favoritePeople: [...prev.favoritePeople, trimmed],
+    }));
+    setFavoritePersonInput('');
+  }
+
+  function handleRemoveFavoritePerson(name: string) {
+    setMoviePreferences((prev) => ({
+      ...prev,
+      favoritePeople: prev.favoritePeople.filter((person) => person !== name),
+    }));
+  }
+
+  async function handleSaveMoviePreferences() {
+    try {
+      const userId = localStorage.getItem('user_id');
+      if (!userId) {
+        console.error('No user_id found');
+        return;
+      }
+
+      setIsSavingPreferences(true);
+
+      const response = await fetch(`http://localhost:5000/api/user/${userId}/streaming`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(moviePreferences.streamingServices),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || 'Failed to save streaming preferences');
+      }
+    } catch (error) {
+      console.error('Failed to save movie preferences:', error);
+    } finally {
+      setIsSavingPreferences(false);
+    }
+  }
+
   if (isLoadingProfile) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center text-zinc-400">
@@ -793,7 +983,19 @@ export function ProfileTab() {
             onCancel={handleCancelProfileEdit}
           />
 
-          <MoviePersonalizationSection />
+          <MoviePersonalizationSection
+            moviePreferences={moviePreferences}
+            favoritePersonInput={favoritePersonInput}
+            onFavoritePersonInputChange={setFavoritePersonInput}
+            onAddFavoritePerson={handleAddFavoritePerson}
+            onRemoveFavoritePerson={handleRemoveFavoritePerson}
+            onToggleGenre={handleToggleGenre}
+            onToggleStreamingService={handleToggleStreamingService}
+            onContentRatingChange={handleContentRatingChange}
+            onWatchlistSettingChange={handleWatchlistSettingChange}
+            onSavePreferences={handleSaveMoviePreferences}
+            isSavingPreferences={isSavingPreferences}
+          />
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <AppearanceSection />
