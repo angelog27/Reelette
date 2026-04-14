@@ -52,7 +52,7 @@ function ScrollingRow({ images, direction = 'left', speed = 30 }: ScrollingRowPr
         {duplicated.map((img, idx) => (
           <div
             key={idx}
-            className="h-40 w-28 flex-shrink-0 rounded-lg overflow-hidden shadow-lg hover:scale-105 transition-transform duration-300"
+            className="poster-card h-40 w-28 flex-shrink-0 rounded-lg overflow-hidden hover:scale-105 transition-transform duration-300"
           >
             <img src={img} alt="Movie poster" className="w-full h-full object-cover" />
           </div>
@@ -217,8 +217,7 @@ export function LoginPage() {
   const goHome = () => navigate('/home/discover');
 
   const scrollingSection = (
-    <div className="hidden lg:flex lg:w-1/2 flex-col justify-center p-8 relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-r from-transparent to-transparent z-10 pointer-events-none" />
+    <div className="poster-grid hidden lg:flex lg:w-1/2 flex-col justify-center p-8 relative overflow-hidden">
       <ScrollingRow images={row1} direction="left" speed={40} />
       <ScrollingRow images={row2} direction="right" speed={35} />
       <ScrollingRow images={row3} direction="left" speed={45} />
@@ -253,6 +252,110 @@ export function LoginPage() {
           border-color: #ff5722 !important;
           box-shadow: 0 0 0 3px rgba(255, 87, 34, 0.2) !important;
           outline: none;
+        }
+
+        /* ── Part 1: Poster grid grounding ── */
+        .poster-card {
+          box-shadow: 0 15px 30px rgba(0,0,0,0.8), 0 5px 15px rgba(0,0,0,0.6);
+        }
+        .poster-grid {
+          -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
+          mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
+          transform: perspective(900px) rotateY(-6deg);
+          transform-origin: right center;
+        }
+        .poster-grid::before {
+          content: '';
+          position: absolute; inset: 0;
+          box-shadow: inset 0 0 120px 40px rgba(0,0,0,0.85);
+          pointer-events: none;
+          z-index: 2;
+        }
+        .poster-grid::after {
+          content: '';
+          position: absolute; inset: 0;
+          background: radial-gradient(ellipse at center, transparent 40%, rgba(255,69,0,0.12) 100%);
+          pointer-events: none;
+          z-index: 1;
+        }
+        @media (max-width: 768px) {
+          .poster-grid { transform: none; }
+        }
+
+        /* ── Part 2: Spotlight on logo ── */
+        @keyframes spotlightPulse {
+          0%, 100% { opacity: 0.95; }
+          50%       { opacity: 1; }
+        }
+        .login-side {
+          position: relative;
+          background-color: #0a0505;
+          background-image:
+            linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+          background-size: 50px 50px;
+        }
+        .login-side::before {
+          content: '';
+          position: absolute;
+          top: -200px;
+          left: -100px;
+          width: 600px;
+          height: 800px;
+          background: linear-gradient(
+            165deg,
+            rgba(255,193,7,0.22) 0%,
+            rgba(255,140,30,0.12) 20%,
+            rgba(255,87,34,0.06) 40%,
+            transparent 65%
+          );
+          transform: rotate(-20deg);
+          transform-origin: top left;
+          filter: blur(40px);
+          pointer-events: none;
+          mix-blend-mode: screen;
+          z-index: 1;
+          animation: spotlightPulse 4s ease-in-out infinite;
+        }
+        .logo-container {
+          position: relative;
+          z-index: 2;
+        }
+        .logo-container::before {
+          content: '';
+          position: absolute;
+          top: -80px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 500px;
+          height: 400px;
+          background: radial-gradient(
+            ellipse at center,
+            rgba(255,220,130,0.4) 0%,
+            rgba(255,150,50,0.18) 20%,
+            rgba(255,87,34,0.06) 45%,
+            transparent 70%
+          );
+          filter: blur(30px);
+          pointer-events: none;
+          mix-blend-mode: screen;
+          z-index: -1;
+        }
+        .reelette-logo {
+          filter: drop-shadow(0 0 25px rgba(255,193,7,0.5))
+                  drop-shadow(0 0 10px rgba(255,140,30,0.4));
+        }
+        @media (max-width: 768px) {
+          .login-side::before {
+            width: 300px;
+            height: 400px;
+            filter: blur(25px);
+          }
+          .logo-container::before {
+            width: 250px;
+            height: 200px;
+            filter: blur(15px);
+          }
         }
         @keyframes moveInCircle {
           0%   { transform: rotate(0deg); }
@@ -363,10 +466,10 @@ export function LoginPage() {
         <div className="relative z-10 flex w-full">
           {scrollingSection}
 
-          <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
-          <div className="w-full max-w-md flex flex-col items-center">
-            <div className="mb-6">
-                <img src={logoImage} alt="Reelette" className="h-56 w-auto scale-[2] origin-top" />
+          <div className="login-side w-full lg:w-1/2 flex items-center justify-center p-8">
+          <div className="relative z-[2] w-full max-w-md flex flex-col items-center">
+            <div className="logo-container mb-6">
+                <img src={logoImage} alt="Reelette" className="reelette-logo h-56 w-auto scale-[2] origin-top" />
             </div>
             <p className="text-center mb-10 px-4 text-lg">
               <span className="text-[#fbbf24]">
