@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { Spotlight } from '@/components/ui/spotlight';
 import { useNavigate } from 'react-router-dom';
 import logoImage from '../../assets/Full_Reelette_upscaled.png';
 import { Input } from './ui/input';
@@ -261,8 +262,8 @@ export function LoginPage() {
         .poster-grid {
           -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
           mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
-          transform: perspective(900px) rotateY(-6deg);
-          transform-origin: right center;
+          transform: perspective(900px) rotateY(6deg);
+          transform-origin: left center;
         }
         .poster-grid::before {
           content: '';
@@ -282,80 +283,19 @@ export function LoginPage() {
           .poster-grid { transform: none; }
         }
 
-        /* ── Part 2: Spotlight on logo ── */
-        @keyframes spotlightPulse {
-          0%, 100% { opacity: 0.95; }
-          50%       { opacity: 1; }
-        }
+        /* ── Part 2: Spotlight on logo (Aceternity Spotlight component) ── */
         .login-side {
           position: relative;
-          background-color: #0a0505;
-          background-image:
-            linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
-          background-size: 50px 50px;
-        }
-        .login-side::before {
-          content: '';
-          position: absolute;
-          top: -200px;
-          left: -100px;
-          width: 600px;
-          height: 800px;
-          background: linear-gradient(
-            165deg,
-            rgba(255,193,7,0.22) 0%,
-            rgba(255,140,30,0.12) 20%,
-            rgba(255,87,34,0.06) 40%,
-            transparent 65%
-          );
-          transform: rotate(-20deg);
-          transform-origin: top left;
-          filter: blur(40px);
-          pointer-events: none;
-          mix-blend-mode: screen;
-          z-index: 1;
-          animation: spotlightPulse 4s ease-in-out infinite;
+          background: transparent;
+          overflow: hidden;
         }
         .logo-container {
           position: relative;
           z-index: 2;
         }
-        .logo-container::before {
-          content: '';
-          position: absolute;
-          top: -80px;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 500px;
-          height: 400px;
-          background: radial-gradient(
-            ellipse at center,
-            rgba(255,220,130,0.4) 0%,
-            rgba(255,150,50,0.18) 20%,
-            rgba(255,87,34,0.06) 45%,
-            transparent 70%
-          );
-          filter: blur(30px);
-          pointer-events: none;
-          mix-blend-mode: screen;
-          z-index: -1;
-        }
         .reelette-logo {
           filter: drop-shadow(0 0 25px rgba(255,193,7,0.5))
                   drop-shadow(0 0 10px rgba(255,140,30,0.4));
-        }
-        @media (max-width: 768px) {
-          .login-side::before {
-            width: 300px;
-            height: 400px;
-            filter: blur(25px);
-          }
-          .logo-container::before {
-            width: 250px;
-            height: 200px;
-            filter: blur(15px);
-          }
         }
         @keyframes moveInCircle {
           0%   { transform: rotate(0deg); }
@@ -373,7 +313,11 @@ export function LoginPage() {
           100% { transform: translateX(-50%) translateY(-10%); }
         }
         .gradient-bg {
-          background: linear-gradient(40deg, var(--color-bg1), var(--color-bg2));
+          background:
+            radial-gradient(ellipse 600px 400px at 25% 45%, rgba(80,20,8,0.55) 0%, transparent 70%),
+            radial-gradient(ellipse 500px 350px at 75% 55%, rgba(60,15,5,0.45) 0%, transparent 70%),
+            radial-gradient(ellipse 400px 300px at 50% 80%, rgba(90,25,10,0.3) 0%, transparent 70%),
+            #060303;
           overflow: hidden;
         }
         .gradient-bg > svg {
@@ -467,7 +411,11 @@ export function LoginPage() {
           {scrollingSection}
 
           <div className="login-side w-full lg:w-1/2 flex items-center justify-center p-8">
-          <div className="relative z-[2] w-full max-w-md flex flex-col items-center">
+          <Spotlight
+            className="-top-40 left-0 md:-top-20 md:left-60"
+            fill="#ff9933"
+          />
+          <div className="relative z-10 w-full max-w-md flex flex-col items-center">
             <div className="logo-container mb-6">
                 <img src={logoImage} alt="Reelette" className="reelette-logo h-56 w-auto scale-[2] origin-top" />
             </div>
