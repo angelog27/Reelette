@@ -215,7 +215,7 @@ export function LoginPage() {
     }
   };
 
-  const goHome = () => navigate('/home/discover');
+  const goHome = () => navigate('/home/roulette');
 
   const scrollingSection = (
     <div className="poster-grid hidden lg:flex lg:w-1/2 flex-col justify-center p-8 relative overflow-hidden">
