@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import logoImage from '../../assets/Full_Reelette_upscaled.png';
 import { Input } from './ui/input';
@@ -19,12 +19,12 @@ const moviePosters = [
   'https://image.tmdb.org/t/p/w500/oU7Oq2kFAAlGqbU4VoAE36g4hoI.jpg', // Jurassic Park  G
   'https://image.tmdb.org/t/p/w500/6FfCtAuVAW8XJjZ7eWeLibRLWTw.jpg', // Star Wars: A New Hope  G
   'https://image.tmdb.org/t/p/w500/74xTEgt7R36Fpooo50r9T25onhq.jpg', // The Batman   G
-  'https://image.tmdb.org/t/p/w500/hr0L2aueqlP2BYUblTTjmtn0hw4.jpg', // The Dark Knight Rises    Y
+  'https://image.tmdb.org/t/p/original/ierOUpBnzqEEVykLKxLeLZ9zKc.jpg', // Avatar Fire and Ash    Y
   'https://image.tmdb.org/t/p/original/8PWiwMBccJ67Ng7STjJSgr92qSJ.jpg', // Tron Legacy              Y
-  'https://image.tmdb.org/t/p/w500/1g0dhYtq4irTY1GPXvft6k4YLjm.jpg', // Avengers Endgame         G
+  'https://image.tmdb.org/t/p/w500/1g0dhYtq4irTY1GPXvft6k4YLjm.jpg', // No way home        G
   'https://image.tmdb.org/t/p/original/ceG9VzoRAVGwivFU403Wc3AHRys.jpg', // Indiana Jones            Y
   'https://image.tmdb.org/t/p/original/nNAeTmF4CtdSgMDplXTDPOpYzsX.jpg', // The Empire Strikes Back  N
-  'https://image.tmdb.org/t/p/w500/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg', // Spider-Man No Way Home   Y
+  'https://image.tmdb.org/t/p/original/eJGWx219ZcEMVQJhAgMiqo8tYY.jpg', // Mario
   'https://image.tmdb.org/t/p/original/dMc96Rn0XutMaIYJNwkJ5yO9oTh.jpg', // Iron Man                 N
   'https://image.tmdb.org/t/p/original/7sfbEnaARXDDhKm0CZ7D7uc2sbo.jpg', //inglorious bastards
   'https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg', // The Dark Knight          Y
@@ -89,6 +89,34 @@ export function LoginPage() {
   const [regUsername, setRegUsername] = useState('');
   const [regError, setRegError] = useState('');
   const [regLoading, setRegLoading] = useState(false);
+
+  const interBubbleRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const interBubble = interBubbleRef.current;
+    if (!interBubble) return;
+    let curX = 0;
+    let curY = 0;
+    let tgX = 0;
+    let tgY = 0;
+    let animFrameId: number;
+    function move() {
+      curX += (tgX - curX) / 20;
+      curY += (tgY - curY) / 20;
+      interBubble!.style.transform = `translate(${Math.round(curX)}px, ${Math.round(curY)}px)`;
+      animFrameId = requestAnimationFrame(move);
+    }
+    const handleMouseMove = (event: MouseEvent) => {
+      tgX = event.clientX;
+      tgY = event.clientY;
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    move();
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      cancelAnimationFrame(animFrameId);
+    };
+  }, []);
 
   const row1 = moviePosters.slice(0, 3);
   const row2 = moviePosters.slice(3, 6);
@@ -209,12 +237,128 @@ export function LoginPage() {
           0%   { transform: translateX(-33.333%); }
           100% { transform: translateX(0); }
         }
+        :root {
+          --color-bg1: rgb(108, 0, 162);
+          --color-bg2: rgb(0, 17, 82);
+          --color1: 18, 113, 255;
+          --color2: 221, 74, 255;
+          --color3: 100, 220, 255;
+          --color4: 200, 50, 50;
+          --color5: 180, 180, 50;
+          --color-interactive: 140, 100, 255;
+          --circle-size: 80%;
+          --blending: hard-light;
+        }
+        @keyframes moveInCircle {
+          0%   { transform: rotate(0deg); }
+          50%  { transform: rotate(180deg); }
+          100% { transform: rotate(360deg); }
+        }
+        @keyframes moveVertical {
+          0%   { transform: translateY(-50%); }
+          50%  { transform: translateY(50%); }
+          100% { transform: translateY(-50%); }
+        }
+        @keyframes moveHorizontal {
+          0%   { transform: translateX(-50%) translateY(-10%); }
+          50%  { transform: translateX(50%) translateY(10%); }
+          100% { transform: translateX(-50%) translateY(-10%); }
+        }
+        .gradient-bg {
+          background: linear-gradient(40deg, var(--color-bg1), var(--color-bg2));
+          overflow: hidden;
+        }
+        .gradient-bg > svg {
+          position: fixed; top: 0; left: 0; width: 0; height: 0;
+        }
+        .gradients-container {
+          filter: url(#goo) blur(40px);
+          position: absolute; inset: 0;
+        }
+        .g1 {
+          position: absolute;
+          background: radial-gradient(circle at center, rgba(var(--color1), 0.8) 0, rgba(var(--color1), 0) 50%) no-repeat;
+          mix-blend-mode: var(--blending);
+          width: var(--circle-size); height: var(--circle-size);
+          top: calc(50% - var(--circle-size) / 2);
+          left: calc(50% - var(--circle-size) / 2);
+          transform-origin: center center;
+          animation: moveVertical 30s ease infinite;
+        }
+        .g2 {
+          position: absolute;
+          background: radial-gradient(circle at center, rgba(var(--color2), 0.8) 0, rgba(var(--color2), 0) 50%) no-repeat;
+          mix-blend-mode: var(--blending);
+          width: var(--circle-size); height: var(--circle-size);
+          top: calc(50% - var(--circle-size) / 2);
+          left: calc(50% - var(--circle-size) / 2);
+          transform-origin: calc(50% - 400px);
+          animation: moveInCircle 20s reverse infinite;
+        }
+        .g3 {
+          position: absolute;
+          background: radial-gradient(circle at center, rgba(var(--color3), 0.8) 0, rgba(var(--color3), 0) 50%) no-repeat;
+          mix-blend-mode: var(--blending);
+          width: var(--circle-size); height: var(--circle-size);
+          top: calc(50% - var(--circle-size) / 2 + 200px);
+          left: calc(50% - var(--circle-size) / 2 - 500px);
+          transform-origin: calc(50% + 400px);
+          animation: moveInCircle 40s linear infinite;
+        }
+        .g4 {
+          position: absolute;
+          background: radial-gradient(circle at center, rgba(var(--color4), 0.8) 0, rgba(var(--color4), 0) 50%) no-repeat;
+          mix-blend-mode: var(--blending);
+          width: var(--circle-size); height: var(--circle-size);
+          top: calc(50% - var(--circle-size) / 2);
+          left: calc(50% - var(--circle-size) / 2);
+          transform-origin: calc(50% - 200px);
+          animation: moveHorizontal 40s ease infinite;
+          opacity: 0.7;
+        }
+        .g5 {
+          position: absolute;
+          background: radial-gradient(circle at center, rgba(var(--color5), 0.8) 0, rgba(var(--color5), 0) 50%) no-repeat;
+          mix-blend-mode: var(--blending);
+          width: calc(var(--circle-size) * 2); height: calc(var(--circle-size) * 2);
+          top: calc(50% - var(--circle-size));
+          left: calc(50% - var(--circle-size));
+          transform-origin: calc(50% - 800px) calc(50% + 200px);
+          animation: moveInCircle 20s ease infinite;
+        }
+        .interactive {
+          position: absolute;
+          background: radial-gradient(circle at center, rgba(var(--color-interactive), 0.8) 0, rgba(var(--color-interactive), 0) 50%) no-repeat;
+          mix-blend-mode: var(--blending);
+          width: 100%; height: 100%;
+          top: -50%; left: -50%;
+          opacity: 0.7;
+        }
       `}</style>
 
-      <div className="min-h-screen w-full bg-gradient-to-r from-[#2d0a0a] via-[#1a0000] via-30% via-[#0f0000] via-60% to-black flex">
-        {scrollingSection}
+      <div className="gradient-bg min-h-screen w-full flex relative">
+        <svg xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <filter id="goo">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
+              <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -8" result="goo" />
+              <feBlend in="SourceGraphic" in2="goo" />
+            </filter>
+          </defs>
+        </svg>
+        <div className="gradients-container">
+          <div className="g1" />
+          <div className="g2" />
+          <div className="g3" />
+          <div className="g4" />
+          <div className="g5" />
+          <div ref={interBubbleRef} className="interactive" />
+        </div>
 
-        <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
+        <div className="relative z-10 flex w-full">
+          {scrollingSection}
+
+          <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
           <div className="w-full max-w-md flex flex-col items-center">
             <div className="mb-6">
                 <img src={logoImage} alt="Reelette" className="h-56 w-auto scale-[2] origin-top" />
@@ -440,6 +584,7 @@ export function LoginPage() {
               />
             )}
           </div>
+        </div>
         </div>
       </div>
     </>
