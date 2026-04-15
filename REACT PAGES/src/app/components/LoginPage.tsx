@@ -417,7 +417,7 @@ export function LoginPage() {
           />
           <div className="relative z-10 w-full max-w-md flex flex-col items-center">
             <div className="logo-container mb-6">
-                <img src={logoImage} alt="Reelette" className="reelette-logo h-56 w-auto scale-[2] origin-top" />
+                <img src={logoImage} alt="Reelette" className="reelette-logo h-56 w-auto scale-[2] origin-top pointer-events-none" />
             </div>
             <p className="text-center mb-10 px-4 text-lg">
               <span className="text-[#fbbf24]">

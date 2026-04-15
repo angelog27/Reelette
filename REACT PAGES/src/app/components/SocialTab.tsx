@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Heart, MessageCircle, Plus, Star, Trash2, Users, UserPlus, UserMinus,
   Search, Check, X, Film, ChevronRight, Shuffle, Popcorn, Crown, LogOut,
-  Tv, Wifi, WifiOff, Loader2, Sparkles, Clapperboard,
+  Tv, Wifi, WifiOff, Loader2, Sparkles, Clapperboard, Send,
 } from 'lucide-react';
 import {
   getFeed, createPost, likePost, deletePost, getUser, timeAgo,
@@ -12,8 +12,9 @@ import {
   addToGroupWatchlist, removeFromGroupWatchlist, deleteGroup,
   spinGroupReelette, getGroupMemberProfiles, getGroupMemberServices,
   updateLastSeen, searchMovies, discoverMovies,
+  getReplies, addReply,
   type FeedPost, type Friend, type FriendRequest, type MovieGroup,
-  type GroupMovie, type MemberProfile, type MemberServiceEntry,
+  type GroupMovie, type MemberProfile, type MemberServiceEntry, type PostReply,
   SERVICE_DISPLAY, getUserPublicProfile,
 } from '../services/api';
 import { UserProfileModal } from './UserProfileModal';
@@ -316,13 +317,42 @@ function WatchModePanel({ groupId }: { groupId: string }) {
 }
 
 // ── Post Card ──────────────────────────────────────────────────
-function PostCard({ post, currentUserId, onLike, onDelete, onOpenProfile }: {
-  post: FeedPost; currentUserId: string;
+function PostCard({ post, currentUserId, currentUsername, onLike, onDelete, onOpenProfile }: {
+  post: FeedPost; currentUserId: string; currentUsername: string;
   onLike: (id: string) => void;
   onDelete: (id: string) => void;
   onOpenProfile: (userId: string) => void;
 }) {
   const isLiked = post.liked_by.includes(currentUserId);
+  const [showReplies, setShowReplies] = useState(false);
+  const [replies, setReplies] = useState<PostReply[]>([]);
+  const [loadingReplies, setLoadingReplies] = useState(false);
+  const [replyText, setReplyText] = useState('');
+  const [submittingReply, setSubmittingReply] = useState(false);
+
+  const loadReplies = useCallback(async () => {
+    setLoadingReplies(true);
+    const fetched = await getReplies(post.post_id);
+    setReplies(fetched);
+    setLoadingReplies(false);
+  }, [post.post_id]);
+
+  const toggleReplies = () => {
+    if (!showReplies) loadReplies();
+    setShowReplies(s => !s);
+  };
+
+  const handleSubmitReply = async () => {
+    if (!replyText.trim() || !currentUserId) return;
+    setSubmittingReply(true);
+    const result = await addReply(post.post_id, currentUserId, currentUsername, replyText.trim());
+    if (result.success) {
+      setReplyText('');
+      loadReplies();
+    }
+    setSubmittingReply(false);
+  };
+
   return (
     <div className="bg-[#1C1C1C] border border-[#2A2A2A] rounded-xl p-6 hover:border-[#333333] transition-colors">
       <div className="flex items-start gap-4">
@@ -365,10 +395,58 @@ function PostCard({ post, currentUserId, onLike, onDelete, onOpenProfile }: {
               <Heart className={`w-5 h-5 ${isLiked ? 'fill-[#C0392B]' : ''}`} />
               <span>{post.likes}</span>
             </button>
-            <button className="flex items-center gap-2 text-gray-500 hover:text-gray-400 transition-colors">
+            <button onClick={toggleReplies}
+              className={`flex items-center gap-2 transition-colors ${showReplies ? 'text-white' : 'text-gray-500 hover:text-gray-400'}`}>
               <MessageCircle className="w-5 h-5" />
+              {replies.length > 0 && <span className="text-sm">{replies.length}</span>}
             </button>
           </div>
+
+          {showReplies && (
+            <div className="mt-4 space-y-3 border-t border-[#2A2A2A] pt-4">
+              {loadingReplies ? (
+                <div className="flex items-center gap-2 text-gray-500 text-sm">
+                  <Loader2 className="w-3 h-3 animate-spin" /> Loading replies…
+                </div>
+              ) : replies.length === 0 ? (
+                <p className="text-gray-600 text-sm">No replies yet. Be the first!</p>
+              ) : (
+                replies.map(r => (
+                  <div key={r.reply_id} className="flex items-start gap-2">
+                    <UserAvatar username={r.username} size={28} onClick={() => onOpenProfile(r.user_id)} />
+                    <div className="flex-1 bg-[#141414] rounded-lg px-3 py-2 border border-[#2A2A2A]">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <button onClick={() => onOpenProfile(r.user_id)} className="text-white text-xs font-medium hover:text-[#C0392B] transition-colors">
+                          {r.username}
+                        </button>
+                        <span className="text-gray-600 text-xs">{timeAgo(r.created_at)}</span>
+                      </div>
+                      <p className="text-gray-400 text-sm">{r.message}</p>
+                    </div>
+                  </div>
+                ))
+              )}
+              {currentUserId && (
+                <div className="flex gap-2 pt-1">
+                  <input
+                    type="text"
+                    placeholder="Write a reply…"
+                    value={replyText}
+                    onChange={e => setReplyText(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSubmitReply()}
+                    className="flex-1 bg-[#141414] border border-[#2A2A2A] rounded-lg px-3 py-2 text-white text-sm placeholder:text-gray-600 focus:border-[#C0392B] focus:outline-none"
+                  />
+                  <button
+                    onClick={handleSubmitReply}
+                    disabled={submittingReply || !replyText.trim()}
+                    className="p-2 bg-[#C0392B] hover:bg-[#A93226] disabled:opacity-50 text-white rounded-lg transition-colors"
+                  >
+                    {submittingReply ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -1058,7 +1136,7 @@ export function SocialTab() {
           {loading ? <p className="text-gray-500 text-center py-16">Loading feed…</p>
             : posts.length === 0 ? <p className="text-gray-500 text-center py-16">No posts yet. Be the first to share!</p>
             : posts.map(post => (
-              <PostCard key={post.post_id} post={post} currentUserId={currentUserId}
+              <PostCard key={post.post_id} post={post} currentUserId={currentUserId} currentUsername={currentUser?.username ?? ''}
                 onLike={handleLike} onDelete={handleDelete}
                 onOpenProfile={setProfileUserId} />
             ))}

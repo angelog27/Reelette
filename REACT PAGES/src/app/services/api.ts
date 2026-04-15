@@ -336,6 +336,30 @@ export async function deletePost(post_id: string, user_id: string) {
 }
 
 
+export interface PostReply {
+  reply_id: string;
+  user_id: string;
+  username: string;
+  message: string;
+  created_at: string;
+}
+
+export async function getReplies(post_id: string): Promise<PostReply[]> {
+  const res = await fetch(`${BASE_URL}/feed/${post_id}/replies`);
+  const data = await res.json();
+  return data.replies ?? [];
+}
+
+export async function addReply(post_id: string, user_id: string, username: string, message: string) {
+  const res = await fetch(`${BASE_URL}/feed/${post_id}/reply`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_id, username, message }),
+  });
+  return res.json();
+}
+
+
 // ── User Profile ─────────────────────────────────────────────────
 
 export interface UserProfile {
