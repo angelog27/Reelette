@@ -466,7 +466,7 @@ function FriendsPanel({ onOpenProfile }: { onOpenProfile: (uid: string) => void 
   const [friends, setFriends] = useState<Friend[]>([]);
   const [requests, setRequests] = useState<FriendRequest[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<{ user_id: string; username: string; displayName: string }[]>([]);
+  const [searchResults, setSearchResults] = useState<{ user_id: string; username: string; displayName: string; avatarUrl?: string }[]>([]);
   const [searching, setSearching] = useState(false);
   const [sentTo, setSentTo] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -474,8 +474,14 @@ function FriendsPanel({ onOpenProfile }: { onOpenProfile: (uid: string) => void 
   const load = useCallback(async () => {
     if (!uid) return;
     const [f, r] = await Promise.all([getFriends(uid), getFriendRequests(uid)]);
-    setFriends(f);
-    setRequests(r);
+
+    const allIds = [...new Set([...f.map(x => x.friend_id), ...r.map(x => x.from_user_id)])];
+    const profiles = await Promise.all(allIds.map(id => getUserPublicProfile(id)));
+    const avatarMap: Record<string, string> = {};
+    allIds.forEach((id, i) => { const url = profiles[i]?.avatarUrl; if (url) avatarMap[id] = url; });
+
+    setFriends(f.map(x => ({ ...x, avatarUrl: avatarMap[x.friend_id] })));
+    setRequests(r.map(x => ({ ...x, avatarUrl: avatarMap[x.from_user_id] })));
     setLoading(false);
   }, [uid]);
 
@@ -486,7 +492,11 @@ function FriendsPanel({ onOpenProfile }: { onOpenProfile: (uid: string) => void 
     setSearching(true);
     const results = await searchUsers(searchQuery.trim(), uid);
     const friendIds = new Set(friends.map(f => f.friend_id));
-    setSearchResults(results.filter(u => !friendIds.has(u.user_id)));
+    const filtered = results.filter(u => !friendIds.has(u.user_id));
+    const profiles = await Promise.all(filtered.map(u => getUserPublicProfile(u.user_id)));
+    const avatarMap: Record<string, string> = {};
+    filtered.forEach((u, i) => { const url = profiles[i]?.avatarUrl; if (url) avatarMap[u.user_id] = url; });
+    setSearchResults(filtered.map(u => ({ ...u, avatarUrl: avatarMap[u.user_id] })));
     setSearching(false);
   };
 
@@ -524,7 +534,7 @@ function FriendsPanel({ onOpenProfile }: { onOpenProfile: (uid: string) => void 
           <div className="space-y-3">
             {requests.map(req => (
               <div key={req.from_user_id} className="flex items-center gap-3">
-                <UserAvatar username={req.from_username} size={40} onClick={() => onOpenProfile(req.from_user_id)} />
+                <UserAvatar username={req.from_username} avatarUrl={req.avatarUrl} size={40} onClick={() => onOpenProfile(req.from_user_id)} />
                 <div className="flex-1">
                   <button onClick={() => onOpenProfile(req.from_user_id)} className="text-white font-medium hover:text-[#C0392B] transition-colors">
                     @{req.from_username}
@@ -553,7 +563,7 @@ function FriendsPanel({ onOpenProfile }: { onOpenProfile: (uid: string) => void 
         </div>
         {searchResults.map(u => (
           <div key={u.user_id} className="flex items-center gap-3 p-3 bg-[#141414] rounded-lg border border-[#2A2A2A] mb-2">
-            <UserAvatar username={u.username} size={36} onClick={() => onOpenProfile(u.user_id)} />
+            <UserAvatar username={u.username} avatarUrl={u.avatarUrl} size={36} onClick={() => onOpenProfile(u.user_id)} />
             <div className="flex-1">
               <button onClick={() => onOpenProfile(u.user_id)} className="text-white font-medium hover:text-[#C0392B] transition-colors block">{u.displayName}</button>
               <p className="text-xs text-gray-500">@{u.username}</p>
@@ -583,7 +593,7 @@ function FriendsPanel({ onOpenProfile }: { onOpenProfile: (uid: string) => void 
             <div className="space-y-3">
               {friends.map(f => (
                 <div key={f.friend_id} className="flex items-center gap-3 p-3 bg-[#141414] rounded-lg border border-[#2A2A2A]">
-                  <UserAvatar username={f.friend_username} size={40} onClick={() => onOpenProfile(f.friend_id)} />
+                  <UserAvatar username={f.friend_username} avatarUrl={f.avatarUrl} size={40} onClick={() => onOpenProfile(f.friend_id)} />
                   <div className="flex-1">
                     <button onClick={() => onOpenProfile(f.friend_id)} className="text-white font-medium hover:text-[#C0392B] transition-colors">@{f.friend_username}</button>
                     <p className="text-xs text-gray-600">Friends since {timeAgo(f.since)}</p>
