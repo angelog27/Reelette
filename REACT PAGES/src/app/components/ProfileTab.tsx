@@ -750,59 +750,75 @@ export function ProfileTab() {
   const [isSavingPreferences, setIsSavingPreferences] = useState(false);
 
   useEffect(() => {
-    async function loadProfile() {
-      try {
-        const userId = localStorage.getItem('user_id');
-        console.log('userId from localStorage:', userId);
+  async function loadProfile() {
+    try {
+      const userId = localStorage.getItem('user_id');
+      console.log('userId from localStorage:', userId);
 
-        if (!userId) {
-          setIsLoadingProfile(false);
-          return;
-        }
-
-        const response = await fetch(`http://localhost:5000/api/user/${userId}`);
-        const data = await response.json();
-
-        console.log('profile API response:', data);
-
-        const loadedProfile = {
-          displayName: data.displayName || '',
-          username: data.username || '',
-          bio: data.bio || '',
-          email: data.email || '',
-          phone: data.phone || '',
-        };
-
-        console.log('loadedProfile:', loadedProfile);
-
-        setProfile(loadedProfile);
-        setDraftProfile(loadedProfile);
-
-        const streamingResponse = await fetch(`http://localhost:5000/api/user/${userId}/streaming`);
-        const streamingData = await streamingResponse.json();
-
-        setMoviePreferences((prev) => ({
-          ...prev,
-          streamingServices: {
-            netflix: streamingData.netflix || false,
-            appleTV: streamingData.appleTV || false,
-            hboMax: streamingData.hboMax || false,
-            disneyPlus: streamingData.disneyPlus || false,
-            hulu: streamingData.hulu || false,
-            amazonPrime: streamingData.amazonPrime || false,
-            paramount: streamingData.paramount || false,
-            peacock: streamingData.peacock || false,
-          },
-        }));
-      } catch (error) {
-        console.error('Failed to load profile:', error);
-      } finally {
+      if (!userId) {
         setIsLoadingProfile(false);
+        return;
       }
-    }
 
-    loadProfile();
-  }, []);
+      const response = await fetch(`http://localhost:5000/api/user/${userId}`);
+      const data = await response.json();
+
+      console.log('profile API response:', data);
+
+      const loadedProfile = {
+        displayName: data.displayName || '',
+        username: data.username || '',
+        bio: data.bio || '',
+        email: data.email || '',
+        phone: data.phone || '',
+      };
+
+      console.log('loadedProfile:', loadedProfile);
+
+      setProfile(loadedProfile);
+      setDraftProfile(loadedProfile);
+
+      const streamingResponse = await fetch(`http://localhost:5000/api/user/${userId}/streaming`);
+      const streamingData = await streamingResponse.json();
+
+      const moviePreferencesResponse = await fetch(
+        `http://localhost:5000/api/user/${userId}/movie-preferences`
+      );
+      const moviePreferencesData = await moviePreferencesResponse.json();
+
+      console.log('streaming API response:', streamingData);
+      console.log('movie preferences API response:', moviePreferencesData);
+
+      setMoviePreferences({
+        favoriteGenres: moviePreferencesData.favoriteGenres || [],
+        favoritePeople: moviePreferencesData.favoritePeople || [],
+        streamingServices: {
+          netflix: streamingData.netflix || false,
+          appleTV: streamingData.appleTV || false,
+          hboMax: streamingData.hboMax || false,
+          disneyPlus: streamingData.disneyPlus || false,
+          hulu: streamingData.hulu || false,
+          amazonPrime: streamingData.amazonPrime || false,
+          paramount: streamingData.paramount || false,
+          peacock: streamingData.peacock || false,
+        },
+        contentRating: moviePreferencesData.contentRating || 'All Ratings',
+        watchlistSettings: {
+          autoSortByReleaseDate:
+            moviePreferencesData.watchlistSettings?.autoSortByReleaseDate || false,
+          hideWatchedContent:
+            moviePreferencesData.watchlistSettings?.hideWatchedContent ?? true,
+        },
+      });
+    } catch (error) {
+      console.error('Failed to load profile:', error);
+    } finally {
+      setIsLoadingProfile(false);
+    }
+  }
+
+  loadProfile();
+}, []);
 
   function handleStartEditing() {
     setDraftProfile(profile);
@@ -924,34 +940,57 @@ export function ProfileTab() {
   }
 
   async function handleSaveMoviePreferences() {
-    try {
-      const userId = localStorage.getItem('user_id');
-      if (!userId) {
-        console.error('No user_id found');
-        return;
-      }
+  try {
+    const userId = localStorage.getItem('user_id');
+    if (!userId) {
+      console.error('No user_id found');
+      return;
+    }
 
-      setIsSavingPreferences(true);
+    setIsSavingPreferences(true);
 
-      const response = await fetch(`http://localhost:5000/api/user/${userId}/streaming`, {
+    const [streamingResponse, moviePreferencesResponse] = await Promise.all([
+      fetch(`http://localhost:5000/api/user/${userId}/streaming`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(moviePreferences.streamingServices),
-      });
+      }),
+      fetch(`http://localhost:5000/api/user/${userId}/movie-preferences`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          favoriteGenres: moviePreferences.favoriteGenres,
+          favoritePeople: moviePreferences.favoritePeople,
+          contentRating: moviePreferences.contentRating,
+          watchlistSettings: moviePreferences.watchlistSettings,
+        }),
+      }),
+    ]);
 
-      const result = await response.json();
+    const streamingResult = await streamingResponse.json();
+    const moviePreferencesResult = await moviePreferencesResponse.json();
 
-      if (!response.ok || !result.success) {
-        throw new Error(result.message || 'Failed to save streaming preferences');
-      }
-    } catch (error) {
-      console.error('Failed to save movie preferences:', error);
-    } finally {
-      setIsSavingPreferences(false);
+    if (!streamingResponse.ok || !streamingResult.success) {
+      throw new Error(
+        streamingResult.message || 'Failed to save streaming preferences'
+      );
     }
+
+    if (!moviePreferencesResponse.ok || !moviePreferencesResult.success) {
+      throw new Error(
+        moviePreferencesResult.message || 'Failed to save movie preferences'
+      );
+    }
+  } catch (error) {
+    console.error('Failed to save movie preferences:', error);
+  } finally {
+    setIsSavingPreferences(false);
   }
+}
 
   if (isLoadingProfile) {
     return (

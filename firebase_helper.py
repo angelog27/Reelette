@@ -48,6 +48,15 @@ def create_user(email, password, username):
                 'appleTV': False,
                 'paramount': False,
                 'peacock': False
+            },
+            'moviePreferences': {
+                'favoriteGenres': [],
+                'favoritePeople': [],
+                'contentRating': 'All Ratings',
+                'watchlistSettings': {
+                    'autoSortByReleaseDate': False,
+                    'hideWatchedContent': True
+                }
             }
         })
         
@@ -170,6 +179,68 @@ def get_user_streaming_services(user_id):
     except Exception as e:
         print(f"Error getting streaming services: {e}")
         return {}
+    
+def update_movie_preferences(user_id, preferences):
+    try:
+        user_ref = db.collection('users').document(user_id)
+        user_ref.update({
+            'moviePreferences': {
+                'favoriteGenres': preferences.get('favoriteGenres', []),
+                'favoritePeople': preferences.get('favoritePeople', []),
+                'contentRating': preferences.get('contentRating', 'All Ratings'),
+                'watchlistSettings': preferences.get('watchlistSettings', {
+                    'autoSortByReleaseDate': False,
+                    'hideWatchedContent': True
+                })
+            }
+        })
+        return {
+            'success': True,
+            'message': 'Movie preferences updated'
+        }
+    except Exception as e:
+        return {
+            'success': False,
+            'message': str(e)
+        }    
+
+def get_user_movie_preferences(user_id):
+    try:
+        user_ref = db.collection('users').document(user_id)
+        user_doc = user_ref.get()
+
+        if user_doc.exists:
+            user_data = user_doc.to_dict()
+            return user_data.get('moviePreferences', {
+                'favoriteGenres': [],
+                'favoritePeople': [],
+                'contentRating': 'All Ratings',
+                'watchlistSettings': {
+                    'autoSortByReleaseDate': False,
+                    'hideWatchedContent': True
+                }
+            })
+        else:
+            return {
+                'favoriteGenres': [],
+                'favoritePeople': [],
+                'contentRating': 'All Ratings',
+                'watchlistSettings': {
+                    'autoSortByReleaseDate': False,
+                    'hideWatchedContent': True
+                }
+            }
+    except Exception as e:
+        print(f"Error getting movie preferences: {e}")
+        return {
+            'favoriteGenres': [],
+            'favoritePeople': [],
+            'contentRating': 'All Ratings',
+            'watchlistSettings': {
+                'autoSortByReleaseDate': False,
+                'hideWatchedContent': True
+            }
+        }    
 
 def get_user_data(user_id):
     #get all user data.
