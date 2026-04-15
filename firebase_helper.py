@@ -784,3 +784,44 @@ def get_members_streaming_services(group_id):
     except Exception as e:
         print(f"Error getting member services: {e}")
         return {}
+
+
+# ── Roulette Spin History ─────────────────────────────────────────
+
+def log_roulette_spin(user_id, movie_id, movie_title, poster_url):
+    """Prepend a spin to /users/{user_id}/roulette, keep max 20 entries."""
+    try:
+        roulette_ref = db.collection('users').document(user_id).collection('roulette')
+        new_doc = roulette_ref.document()
+        new_doc.set({
+            'movie_id': str(movie_id),
+            'movie_title': movie_title,
+            'poster_url': poster_url or '',
+            'spun_at': datetime.now()
+        })
+        # Enforce a 20-entry cap
+        all_spins = list(
+            roulette_ref.order_by('spun_at', direction=firestore.Query.DESCENDING).stream()
+        )
+        if len(all_spins) > 20:
+            for doc in all_spins[20:]:
+                doc.reference.delete()
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+
+def get_roulette_history(user_id, limit=10):
+    """Return the most recent `limit` spins for a user, newest first."""
+    try:
+        docs = (
+            db.collection('users').document(user_id)
+              .collection('roulette')
+              .order_by('spun_at', direction=firestore.Query.DESCENDING)
+              .limit(limit)
+              .stream()
+        )
+        return [doc.to_dict() for doc in docs]
+    except Exception as e:
+        print(f"Error getting roulette history: {e}")
+        return []

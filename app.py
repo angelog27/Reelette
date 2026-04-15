@@ -25,7 +25,8 @@ from firebase_helper import (
     create_group, get_group, get_user_groups, add_group_member, remove_group_member, delete_group,
     add_to_group_watchlist, remove_from_group_watchlist, spin_group_reelette,
     update_user_avatar, update_user_last_seen,
-    get_user_public_profile, get_group_member_profiles, get_members_streaming_services
+    get_user_public_profile, get_group_member_profiles, get_members_streaming_services,
+    log_roulette_spin, get_roulette_history
 )
 from tmdb_api import (
     search_movies, discover_movies, get_popular_movies, get_movie_details,
@@ -627,6 +628,25 @@ def group_member_profiles(group_id):
 def group_member_services(group_id):
     services = get_members_streaming_services(group_id)
     return jsonify({'services': services})
+
+
+# ── Roulette Spin History ────────────────────────────────────────
+
+@app.route('/api/roulette/<user_id>/spin', methods=['POST'])
+def roulette_spin_route(user_id):
+    data = request.get_json() or {}
+    movie_id = str(data.get('movie_id', '')).strip()
+    movie_title = data.get('movie_title', '').strip()
+    poster_url = data.get('poster_url', '').strip()
+    if not movie_id or not movie_title:
+        return jsonify({'success': False, 'message': 'movie_id and movie_title required'}), 400
+    return jsonify(log_roulette_spin(user_id, movie_id, movie_title, poster_url))
+
+@app.route('/api/roulette/<user_id>/history', methods=['GET'])
+def roulette_history_route(user_id):
+    limit = request.args.get('limit', 10, type=int)
+    spins = get_roulette_history(user_id, limit=limit)
+    return jsonify({'spins': serialize_timestamps(spins)})
 
 
 if __name__ == '__main__':

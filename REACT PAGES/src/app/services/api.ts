@@ -610,6 +610,35 @@ export async function deleteGroup(group_id: string, user_id: string) {
 }
 
 
+// ── Roulette Spin History ────────────────────────────────────────
+
+export interface RouletteSpin {
+  movie_id: string;
+  movie_title: string;
+  poster_url: string;
+  spun_at: string;
+}
+
+export async function logRouletteSpin(
+  user_id: string,
+  movie_id: string,
+  movie_title: string,
+  poster_url: string
+): Promise<void> {
+  await fetch(`${BASE_URL}/roulette/${user_id}/spin`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ movie_id, movie_title, poster_url }),
+  });
+}
+
+export async function getRouletteHistory(user_id: string, limit = 10): Promise<RouletteSpin[]> {
+  const res = await fetch(`${BASE_URL}/roulette/${user_id}/history?limit=${limit}`);
+  const data = await res.json();
+  return data.spins ?? [];
+}
+
+
 // ── Helpers ──────────────────────────────────────────────────────
 
 
