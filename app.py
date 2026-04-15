@@ -602,12 +602,13 @@ def remove_member(group_id, member_id):
 def add_to_group_watchlist_route(group_id):
     data = request.get_json() or {}
     movie_id = str(data.get('movie_id', '')).strip()
+    movie_poster = data.get('movie_poster')
     movie_title = data.get('movie_title', '').strip()
     user_id = data.get('user_id', '').strip()
     username = data.get('username', '').strip()
     if not all([movie_id, movie_title, user_id, username]):
         return jsonify({'success': False, 'message': 'movie_id, movie_title, user_id, and username are required'}), 400
-    return jsonify(add_to_group_watchlist(group_id, movie_id, movie_title, user_id, username))
+    return jsonify(add_to_group_watchlist(group_id, movie_id, movie_title, movie_poster, user_id, username))
 
 @app.route('/api/groups/<group_id>/watchlist/<movie_id>', methods=['DELETE'])
 def remove_from_group_watchlist_route(group_id, movie_id):

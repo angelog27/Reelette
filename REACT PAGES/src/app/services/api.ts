@@ -521,6 +521,7 @@ export async function removeFriend(user_id: string, friend_id: string) {
 export interface GroupMovie {
   movie_id: string;
   movie_title: string;
+  movie_poster?: string;
   added_by: string;
   added_by_username: string;
   added_at: string;
@@ -575,16 +576,16 @@ export async function removeGroupMember(group_id: string, member_id: string) {
   return res.json();
 }
 
-export async function addToGroupWatchlist(group_id: string, movie_id: string, movie_title: string, user_id: string, username: string) {
+export async function addToGroupWatchlist(group_id: string, movie_id: string, movie_title: string, user_id: string, username: string, movie_poster?: string) {
   const res = await fetch(`${BASE_URL}/groups/${group_id}/watchlist`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ movie_id, movie_title, user_id, username }),
+    body: JSON.stringify({ movie_id, movie_title, movie_poster, user_id, username }),
   });
   return res.json();
 }
 
-export async function removeFromGroupWatchlist(group_id: string, movie_id: string) {
+export async function removeFromGroupWatchlist(group_id: string, movie_id: string, movie_poster?: string) {
   const res = await fetch(`${BASE_URL}/groups/${group_id}/watchlist/${movie_id}`, {
     method: 'DELETE',
   });

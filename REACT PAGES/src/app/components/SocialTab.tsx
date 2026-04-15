@@ -287,7 +287,7 @@ function WatchModePanel({ groupId }: { groupId: string }) {
                 onClick={async () => {
                   if (!currentUser) return;
                   setSelectedGroupMovie(m.id);
-                  await addToGroupWatchlist(groupId, m.id, m.title, currentUser.user_id, currentUser.username);
+                  await addToGroupWatchlist(groupId, m.id, m.title, currentUser.user_id, currentUser.username, m.poster);
                   setSelectedGroupMovie(null);
                 }}
                 disabled={selectedGroupMovie === m.id}
@@ -630,10 +630,10 @@ function TMDBMovieSearch({ groupId, onAdded }: { groupId: string; onAdded: () =>
     }, 400);
   }, [query]);
 
-  const handleAdd = async (m: { id: string; title: string }) => {
+  const handleAdd = async (m: { id: string; title: string; poster: string }) => {
     if (!currentUser) return;
     setAddingId(m.id);
-    await addToGroupWatchlist(groupId, m.id, m.title, currentUser.user_id, currentUser.username);
+    await addToGroupWatchlist(groupId, m.id, m.title, currentUser.user_id, currentUser.username, m.poster);
     setAddingId(null);
     setQuery('');
     setResults([]);
@@ -833,7 +833,9 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
                 {group.watchlist.map((m, i) => (
                   <div key={m.movie_id} className="flex items-center gap-3 p-3 bg-[#141414] rounded-lg border border-[#2A2A2A]">
                     <span className="text-gray-600 text-sm w-5 text-right shrink-0">{i + 1}</span>
-                    <Film className="w-4 h-4 text-gray-600 shrink-0" />
+                    {m.movie_poster
+                      ? <img src={m.movie_poster} alt={m.movie_title} className="w-8 h-12 object-cover rounded shrink-0" />
+                      : <Film className="w-4 h-4 text-gray-600 shrink-0" />}
                     <div className="flex-1 min-w-0">
                       <p className="text-white truncate">{m.movie_title}</p>
                       <p className="text-xs text-gray-600">by @{m.added_by_username}</p>

@@ -634,7 +634,7 @@ def delete_group(group_id, user_id):
         return {'success': False, 'message': str(e)}
 
 
-def add_to_group_watchlist(group_id, movie_id, movie_title, user_id, username):
+def add_to_group_watchlist(group_id, movie_id, movie_title, movie_poster, user_id, username):
     """Add a movie to the group's shared watchlist"""
     try:
         group_ref = db.collection('groups').document(group_id)
@@ -647,6 +647,7 @@ def add_to_group_watchlist(group_id, movie_id, movie_title, user_id, username):
         new_entry = {
             'movie_id': str(movie_id),
             'movie_title': movie_title,
+            'movie_poster': movie_poster or '',
             'added_by': user_id,
             'added_by_username': username,
             'added_at': datetime.now().isoformat()
