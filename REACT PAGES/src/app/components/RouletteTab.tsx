@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Shuffle, ChevronDown, ChevronUp, Star } from "lucide-react";
+import { Shuffle, ChevronDown, ChevronUp, Star, Play } from "lucide-react";
 import { MovieDetailModal } from "./MovieDetailModal";
 import { Switch } from "./ui/switch";
 import { Slider } from "./ui/slider";
@@ -68,7 +68,6 @@ export function RouletteTab() {
   const [feedAvatars, setFeedAvatars] = useState<Record<string, string>>({});
   const [recentSpins, setRecentSpins] = useState<RouletteSpin[]>([]);
   const [spinsLoaded, setSpinsLoaded] = useState(false);
-  const [historyExpanded, setHistoryExpanded] = useState(true);
 
   const user = getUser();
   const userServices = getServices();
@@ -80,17 +79,17 @@ export function RouletteTab() {
       .then((posts) => {
         setFeedPosts(posts);
         const uniqueIds = [...new Set(posts.map((p) => p.user_id))];
-        Promise.allSettled(uniqueIds.map((id) => getUserPublicProfile(id))).then(
-          (results) => {
-            const map: Record<string, string> = {};
-            results.forEach((r, i) => {
-              if (r.status === "fulfilled" && r.value?.avatarUrl) {
-                map[uniqueIds[i]] = r.value.avatarUrl;
-              }
-            });
-            setFeedAvatars(map);
-          }
-        );
+        Promise.allSettled(
+          uniqueIds.map((id) => getUserPublicProfile(id))
+        ).then((results) => {
+          const map: Record<string, string> = {};
+          results.forEach((r, i) => {
+            if (r.status === "fulfilled" && r.value?.avatarUrl) {
+              map[uniqueIds[i]] = r.value.avatarUrl;
+            }
+          });
+          setFeedAvatars(map);
+        });
       })
       .catch(() => {});
   }, []);
@@ -179,31 +178,118 @@ export function RouletteTab() {
   };
 
   return (
-    <div className="space-y-0">
-      {/* Hero Banner */}
-      <div
-        className="relative h-[340px] w-full bg-cover bg-center flex flex-col justify-end pb-8 px-6"
+    <div className="max-w-5xl mx-auto px-4 md:px-6 py-6 space-y-5">
+
+      {/* ── Sponsored Hero Card ─────────────────────────────────── */}
+      <div className="relative rounded-2xl overflow-hidden h-[260px] bg-cover bg-center"
         style={{ backgroundImage: `url(${HERO_POSTER})` }}
       >
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0D0D0D] via-[#0D0D0D]/50 to-transparent" />
-        <div className="relative z-10 space-y-1">
-          <span className="inline-block text-[10px] font-bold tracking-widest text-[#C0392B] uppercase bg-[#0D0D0D]/70 px-2.5 py-1 rounded">
-            Sponsored Spin
-          </span>
-          <h1 className="text-4xl font-bold text-white">
-            Movie Roulette
-            <div className="h-[3px] w-16 bg-[#C0392B] mt-1.5 rounded-full" />
-          </h1>
-          <p className="text-gray-400 text-sm pt-0.5">
-            Can't decide what to watch? Let fate decide.
-          </p>
+        {/* layered gradients for depth */}
+        <div className="absolute inset-0 bg-gradient-to-r from-[#0A0A0A]/95 via-[#0A0A0A]/55 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A]/60 via-transparent to-transparent" />
+
+        <div className="relative z-10 h-full flex flex-col justify-end p-6 gap-3">
+          {/* badges */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[9px] font-bold tracking-widest text-[#C0392B] uppercase border border-[#C0392B]/50 px-2 py-0.5 rounded-full">
+              Sponsored Spin
+            </span>
+            <span className="text-[9px] font-bold tracking-wide text-white bg-[#0063e5] px-2.5 py-0.5 rounded-full">
+              Only on Disney+
+            </span>
+          </div>
+
+          {/* title */}
+          <div>
+            <h2 className="text-3xl font-bold text-white leading-tight">
+              Tron: Ares
+            </h2>
+            <p className="text-gray-400 text-xs mt-0.5">
+              2025 · Sci-Fi · Action
+            </p>
+          </div>
+
+          {/* action buttons */}
+          <div className="flex items-center gap-2">
+            <button className="flex items-center gap-1.5 bg-white text-black font-semibold text-sm px-5 py-2 rounded-full hover:bg-gray-100 transition-colors">
+              <Play className="w-3.5 h-3.5 fill-black" />
+              Watch Now
+            </button>
+            <button className="flex items-center gap-1.5 border border-white/30 text-white font-medium text-sm px-5 py-2 rounded-full hover:bg-white/10 transition-colors backdrop-blur-sm">
+              Trailer
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Two-column layout */}
-      <div className="flex gap-5 items-start px-4 md:px-6 py-6 max-w-5xl mx-auto">
-        {/* Center controls */}
-        <div className="flex-1 space-y-4">
+      {/* ── Three-column layout ─────────────────────────────────── */}
+      <div className="flex gap-4 items-start">
+
+        {/* Left — My Recent Spins */}
+        <aside className="w-44 hidden md:flex flex-col gap-2 flex-shrink-0">
+          <h3 className="text-white font-semibold text-sm px-1 mb-1">
+            My Recent Spins
+          </h3>
+
+          {/* not loaded yet — blank placeholders */}
+          {!spinsLoaded && (
+            <>
+              {[...Array(4)].map((_, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-2 animate-pulse"
+                >
+                  <div className="w-9 h-12 rounded bg-[#1C1C1C] flex-shrink-0" />
+                  <div className="flex-1 space-y-1.5">
+                    <div className="h-2.5 bg-[#1C1C1C] rounded w-3/4" />
+                    <div className="h-2 bg-[#1C1C1C] rounded w-1/2" />
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+
+          {/* loaded, empty */}
+          {spinsLoaded && recentSpins.length === 0 && (
+            <p className="text-gray-600 text-xs px-1 leading-relaxed">
+              {user
+                ? "Your spins will appear here."
+                : "Log in to track your spins."}
+            </p>
+          )}
+
+          {/* loaded, has spins */}
+          {spinsLoaded && recentSpins.length > 0 && (
+            <div className="flex flex-col gap-2 max-h-[480px] overflow-y-auto pr-0.5">
+              {recentSpins.map((s, i) => (
+                <div key={i} className="flex items-center gap-2 group">
+                  <div className="w-9 h-12 rounded overflow-hidden bg-[#1C1C1C] flex-shrink-0">
+                    {s.poster_url ? (
+                      <img
+                        src={s.poster_url}
+                        alt={s.movie_title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-[#252525]" />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-white text-[11px] font-medium truncate leading-tight">
+                      {s.movie_title}
+                    </p>
+                    <p className="text-gray-600 text-[10px] mt-0.5">
+                      {timeAgo(s.spun_at)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </aside>
+
+        {/* Center — Roulette controls */}
+        <div className="flex-1 space-y-4 min-w-0">
           {/* Streaming toggle */}
           <div className="flex items-center gap-3 bg-[#1A1A1A] rounded-full px-5 py-3.5 w-fit">
             <Switch
@@ -331,7 +417,9 @@ export function RouletteTab() {
               disabled={spinning}
               className="relative w-full py-5 flex items-center justify-center gap-3 bg-[#C0392B] hover:bg-[#A93226] disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold text-xl rounded-full transition-colors shadow-lg shadow-[#C0392B]/30"
             >
-              <Shuffle className={`w-6 h-6 ${spinning ? "animate-spin" : ""}`} />
+              <Shuffle
+                className={`w-6 h-6 ${spinning ? "animate-spin" : ""}`}
+              />
               {spinning ? "Finding your movie..." : "Spin the Roulette"}
             </button>
           </div>
@@ -340,63 +428,11 @@ export function RouletteTab() {
           {error && (
             <p className="text-center text-yellow-500 text-sm">{error}</p>
           )}
-
-          {/* My Recent Spins */}
-          {spinsLoaded && user && (
-            <div className="bg-[#1C1C1C] border border-[#2A2A2A] rounded-xl overflow-hidden">
-              <button
-                onClick={() => setHistoryExpanded(!historyExpanded)}
-                className="w-full px-6 py-3.5 flex items-center justify-between hover:bg-[#252525] transition-colors"
-              >
-                <span className="text-white font-medium text-sm">
-                  My Recent Spins
-                </span>
-                {historyExpanded ? (
-                  <ChevronUp className="w-4 h-4 text-gray-500" />
-                ) : (
-                  <ChevronDown className="w-4 h-4 text-gray-500" />
-                )}
-              </button>
-              {historyExpanded && (
-                <div className="px-4 pb-4 border-t border-[#2A2A2A]">
-                  {recentSpins.length === 0 ? (
-                    <p className="text-gray-600 text-sm text-center py-4">
-                      Your spins will appear here.
-                    </p>
-                  ) : (
-                    <div className="flex gap-3 overflow-x-auto pt-4 pb-1">
-                      {recentSpins.map((s, i) => (
-                        <div key={i} className="flex-shrink-0 w-20">
-                          <div className="w-20 h-28 rounded-md overflow-hidden bg-[#141414]">
-                            {s.poster_url ? (
-                              <img
-                                src={s.poster_url}
-                                alt={s.movie_title}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <div className="w-full h-full bg-[#222] rounded-md" />
-                            )}
-                          </div>
-                          <p className="text-white text-xs mt-1 truncate leading-tight">
-                            {s.movie_title}
-                          </p>
-                          <p className="text-gray-500 text-[10px]">
-                            {timeAgo(s.spun_at)}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
-        {/* Right sidebar — Friends' Spins */}
-        <aside className="w-52 hidden md:flex flex-col gap-3 flex-shrink-0">
-          <h3 className="text-white font-semibold text-sm px-1">
+        {/* Right — Friends' Spins */}
+        <aside className="w-44 hidden md:flex flex-col gap-2 flex-shrink-0">
+          <h3 className="text-white font-semibold text-sm px-1 mb-1">
             Friends' Spins
           </h3>
           {feedPosts.slice(0, 6).map((post) => {
