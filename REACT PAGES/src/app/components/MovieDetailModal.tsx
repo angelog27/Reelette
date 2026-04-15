@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { X, Star, Clock, Tv } from 'lucide-react';
-import { getMovieDetails, getWatchedMovie, addWatchedMovie, updateWatchedMovie, getUser } from '../services/api';
+import { X, Star, Clock, Tv, Bookmark, BookmarkCheck } from 'lucide-react';
+import { getMovieDetails, getWatchedMovie, addWatchedMovie, updateWatchedMovie, getUser, getWatchLater, watchMovieLater, removeFromWatchLater } from '../services/api';
 import type { WatchedMovie } from '../services/api';
 
 interface Props {
@@ -17,6 +17,8 @@ export function MovieDetailModal({ movieId, onClose }: Props) {
   const [commentInput, setCommentInput] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [inWatchLater, setInWatchLater] = useState(false);
+  const [watchLaterLoading, setWatchLaterLoading] = useState(false);
 
   const user = getUser();
 
@@ -25,6 +27,7 @@ export function MovieDetailModal({ movieId, onClose }: Props) {
     setWatchEntry(null);
     setShowWatchForm(false);
     setSaveSuccess(false);
+    setInWatchLater(false);
     getMovieDetails(movieId).then((data) => {
       setMovie(data);
       setLoading(false);
@@ -37,8 +40,24 @@ export function MovieDetailModal({ movieId, onClose }: Props) {
           setCommentInput(entry.comment ?? '');
         }
       });
+      getWatchLater(user.user_id).then((ids) => {
+        setInWatchLater(ids.includes(String(movieId)));
+      });
     }
   }, [movieId]);
+
+  async function handleToggleWatchLater() {
+    if (!user) return;
+    setWatchLaterLoading(true);
+    if (inWatchLater) {
+      await removeFromWatchLater(user.user_id, movieId);
+      setInWatchLater(false);
+    } else {
+      await watchMovieLater(user.user_id, movieId);
+      setInWatchLater(true);
+    }
+    setWatchLaterLoading(false);
+  }
 
   // Close on backdrop click
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -255,6 +274,24 @@ export function MovieDetailModal({ movieId, onClose }: Props) {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Watch Later button */}
+          {user && (
+            <div className="mt-5 border-t border-[#2A2A2A] pt-5">
+              <button
+                onClick={handleToggleWatchLater}
+                disabled={watchLaterLoading}
+                className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors disabled:opacity-50"
+              >
+                {inWatchLater ? (
+                  <BookmarkCheck className="w-4 h-4 text-[#C0392B]" />
+                ) : (
+                  <Bookmark className="w-4 h-4" />
+                )}
+                {inWatchLater ? 'Saved to Watch Later' : 'Watch Later'}
+              </button>
             </div>
           )}
 

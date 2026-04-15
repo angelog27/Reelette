@@ -1,14 +1,32 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from config import SECRET_KEY
+import os
 import time
+
+try:
+    from config import SECRET_KEY
+except ImportError:
+    SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret")
+
+try:
+    from config import CORS_ORIGINS
+except ImportError:
+    CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000").split(",")
 from firebase_helper import (
     create_user, verify_user, get_user_data,
     update_streaming_services, get_user_streaming_services,
-    add_to_watchlist, get_watchlist,
+    add_to_watchlist, get_watchlist, remove_from_watchlist,
     add_watched_movie, get_watched_movies, get_watched_movie, update_watched_rating,
-    create_post, get_feed, like_post, add_reply, get_replies, delete_post, send_password_reset_email, update_user_profile, get_user_movie_preferences, update_movie_preferences
+    create_post, get_feed, like_post, add_reply, get_replies, delete_post, send_password_reset_email,
+    update_user_profile, get_user_movie_preferences, update_movie_preferences, search_users,
+    send_friend_request, get_friend_requests, accept_friend_request, reject_friend_request,
+    remove_friend, get_friends,
+    create_group, get_group, get_user_groups, add_group_member, remove_group_member, delete_group,
+    add_to_group_watchlist, remove_from_group_watchlist, spin_group_reelette,
+    update_user_avatar, update_user_last_seen,
+    get_user_public_profile, get_group_member_profiles, get_members_streaming_services,
+    log_roulette_spin, get_roulette_history
 )
 from tmdb_api import (
     search_movies, discover_movies, get_popular_movies, get_movie_details,
@@ -17,7 +35,16 @@ from tmdb_api import (
 )
 
 app = Flask(__name__)
-CORS(app, origins=["http://localhost:5173", "http://localhost:3000"])
+
+import re
+# Convert string patterns starting with "regex:" into compiled regex objects
+_cors_origins = [
+    re.compile(o[6:]) if o.startswith("regex:") else o
+    for o in CORS_ORIGINS
+]
+CORS(app, origins=_cors_origins)
+
+
 app.secret_key = SECRET_KEY
 
 # ── Genre cache ──────────────────────────────────────────────────
@@ -383,6 +410,10 @@ def add_to_user_watchlist(user_id):
         return jsonify({'success': False, 'message': 'movie_id required'}), 400
     return jsonify(add_to_watchlist(user_id, movie_id))
 
+@app.route('/api/watchlist/<user_id>/<movie_id>', methods=['DELETE'])
+def remove_from_user_watchlist(user_id, movie_id):
+    return jsonify(remove_from_watchlist(user_id, movie_id))
+
 # ── Watched Movies Routes ────────────────────────────────────────
 
 @app.route('/api/watched/<user_id>', methods=['GET'])
@@ -396,6 +427,7 @@ def get_user_watched_movie(user_id, movie_id):
         return jsonify({'watched': False})
     return jsonify({'watched': True, **serialize_timestamps(entry)})
 
+# This endpoint is used both for initially marking a movie as watched and for adding a user rating + comment. If the movie is already marked as watched, it will update the existing entry with the new rating/comment.
 @app.route('/api/watched/<user_id>', methods=['POST'])
 def add_user_watched(user_id):
     data = request.get_json() or {}
@@ -466,5 +498,176 @@ def delete_feed_post(post_id):
         return jsonify({'success': False, 'message': 'user_id required'}), 400
     return jsonify(delete_post(post_id, user_id))
 
+# ── User Profile Update / Avatar / Presence ──────────────────────
+
+@app.route('/api/user/<user_id>/profile', methods=['PUT'])
+def update_profile(user_id):
+    data = request.get_json() or {}
+    result = update_user_profile(user_id, data)
+    return jsonify(result)
+
+@app.route('/api/user/<user_id>/avatar', methods=['PUT'])
+def update_avatar_route(user_id):
+    data = request.get_json() or {}
+    avatar_url = data.get('avatar_url', '').strip()
+    if not avatar_url:
+        return jsonify({'success': False, 'message': 'avatar_url required'}), 400
+    return jsonify(update_user_avatar(user_id, avatar_url))
+
+@app.route('/api/user/<user_id>/lastseen', methods=['PUT'])
+def update_lastseen_route(user_id):
+    return jsonify(update_user_last_seen(user_id))
+
+@app.route('/api/user/<user_id>/public', methods=['GET'])
+def get_public_profile(user_id):
+    profile = get_user_public_profile(user_id)
+    if not profile:
+        return jsonify({'error': 'User not found'}), 404
+    return jsonify(serialize_timestamps(profile))
+
+# ── User Search ──────────────────────────────────────────────────
+
+@app.route('/api/users/search', methods=['GET'])
+def search_users_route():
+    query = request.args.get('q', '').strip()
+    exclude = request.args.get('exclude', '').strip()
+    if not query:
+        return jsonify({'users': []})
+    users = search_users(query, exclude_user_id=exclude or None)
+    return jsonify({'users': users})
+
+# ── Friends ──────────────────────────────────────────────────────
+
+@app.route('/api/friends/<user_id>', methods=['GET'])
+def get_user_friends(user_id):
+    friends = get_friends(user_id)
+    return jsonify({'friends': serialize_timestamps(friends)})
+
+@app.route('/api/friends/<user_id>/requests', methods=['GET'])
+def get_user_friend_requests(user_id):
+    reqs = get_friend_requests(user_id)
+    return jsonify({'requests': serialize_timestamps(reqs)})
+
+@app.route('/api/friends/<user_id>/request', methods=['POST'])
+def send_request(user_id):
+    data = request.get_json() or {}
+    from_user_id = data.get('from_user_id', '').strip()
+    from_username = data.get('from_username', '').strip()
+    if not from_user_id or not from_username:
+        return jsonify({'success': False, 'message': 'from_user_id and from_username required'}), 400
+    return jsonify(send_friend_request(from_user_id, from_username, user_id))
+
+@app.route('/api/friends/<user_id>/request/<from_id>/accept', methods=['POST'])
+def accept_request(user_id, from_id):
+    data = request.get_json() or {}
+    user_username = data.get('user_username', '').strip()
+    from_username = data.get('from_username', '').strip()
+    return jsonify(accept_friend_request(user_id, user_username, from_id, from_username))
+
+@app.route('/api/friends/<user_id>/request/<from_id>/reject', methods=['POST'])
+def reject_request(user_id, from_id):
+    return jsonify(reject_friend_request(user_id, from_id))
+
+@app.route('/api/friends/<user_id>/<friend_id>', methods=['DELETE'])
+def delete_friend(user_id, friend_id):
+    return jsonify(remove_friend(user_id, friend_id))
+
+# ── Groups ───────────────────────────────────────────────────────
+
+@app.route('/api/groups', methods=['POST'])
+def create_new_group():
+    data = request.get_json() or {}
+    name = data.get('name', '').strip()
+    description = data.get('description', '').strip()
+    creator_id = data.get('creator_id', '').strip()
+    creator_username = data.get('creator_username', '').strip()
+    if not all([name, creator_id, creator_username]):
+        return jsonify({'success': False, 'message': 'name, creator_id, and creator_username are required'}), 400
+    return jsonify(create_group(name, description, creator_id, creator_username))
+
+@app.route('/api/groups/<group_id>', methods=['GET'])
+def get_group_route(group_id):
+    group = get_group(group_id)
+    if not group:
+        return jsonify({'error': 'Group not found'}), 404
+    return jsonify(serialize_timestamps(group))
+
+@app.route('/api/groups/<group_id>', methods=['DELETE'])
+def delete_group_route(group_id):
+    data = request.get_json() or {}
+    user_id = data.get('user_id', '').strip()
+    if not user_id:
+        return jsonify({'success': False, 'message': 'user_id required'}), 400
+    return jsonify(delete_group(group_id, user_id))
+
+@app.route('/api/user/<user_id>/groups', methods=['GET'])
+def get_user_groups_route(user_id):
+    groups = get_user_groups(user_id)
+    return jsonify({'groups': serialize_timestamps(groups)})
+
+@app.route('/api/groups/<group_id>/members', methods=['POST'])
+def add_member(group_id):
+    data = request.get_json() or {}
+    new_member_id = data.get('user_id', '').strip()
+    new_member_username = data.get('username', '').strip()
+    if not new_member_id or not new_member_username:
+        return jsonify({'success': False, 'message': 'user_id and username are required'}), 400
+    return jsonify(add_group_member(group_id, new_member_id, new_member_username))
+
+@app.route('/api/groups/<group_id>/members/<member_id>', methods=['DELETE'])
+def remove_member(group_id, member_id):
+    return jsonify(remove_group_member(group_id, member_id))
+
+@app.route('/api/groups/<group_id>/watchlist', methods=['POST'])
+def add_to_group_watchlist_route(group_id):
+    data = request.get_json() or {}
+    movie_id = str(data.get('movie_id', '')).strip()
+    movie_poster = data.get('movie_poster')
+    movie_title = data.get('movie_title', '').strip()
+    user_id = data.get('user_id', '').strip()
+    username = data.get('username', '').strip()
+    if not all([movie_id, movie_title, user_id, username]):
+        return jsonify({'success': False, 'message': 'movie_id, movie_title, user_id, and username are required'}), 400
+    return jsonify(add_to_group_watchlist(group_id, movie_id, movie_title, movie_poster, user_id, username))
+
+@app.route('/api/groups/<group_id>/watchlist/<movie_id>', methods=['DELETE'])
+def remove_from_group_watchlist_route(group_id, movie_id):
+    return jsonify(remove_from_group_watchlist(group_id, movie_id))
+
+@app.route('/api/groups/<group_id>/spin', methods=['POST'])
+def spin_reelette(group_id):
+    return jsonify(spin_group_reelette(group_id))
+
+@app.route('/api/groups/<group_id>/members/profiles', methods=['GET'])
+def group_member_profiles(group_id):
+    profiles = get_group_member_profiles(group_id)
+    return jsonify({'profiles': serialize_timestamps(profiles)})
+
+@app.route('/api/groups/<group_id>/members/services', methods=['GET'])
+def group_member_services(group_id):
+    services = get_members_streaming_services(group_id)
+    return jsonify({'services': services})
+
+
+# ── Roulette Spin History ────────────────────────────────────────
+
+@app.route('/api/roulette/<user_id>/spin', methods=['POST'])
+def roulette_spin_route(user_id):
+    data = request.get_json() or {}
+    movie_id = str(data.get('movie_id', '')).strip()
+    movie_title = data.get('movie_title', '').strip()
+    poster_url = data.get('poster_url', '').strip()
+    if not movie_id or not movie_title:
+        return jsonify({'success': False, 'message': 'movie_id and movie_title required'}), 400
+    return jsonify(log_roulette_spin(user_id, movie_id, movie_title, poster_url))
+
+@app.route('/api/roulette/<user_id>/history', methods=['GET'])
+def roulette_history_route(user_id):
+    limit = request.args.get('limit', 10, type=int)
+    spins = get_roulette_history(user_id, limit=limit)
+    return jsonify({'spins': serialize_timestamps(spins)})
+
+
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { Spotlight } from '@/components/ui/spotlight';
 import { useNavigate } from 'react-router-dom';
 import logoImage from '../../assets/Full_Reelette_upscaled.png';
 import { Input } from './ui/input';
@@ -19,12 +20,12 @@ const moviePosters = [
   'https://image.tmdb.org/t/p/w500/oU7Oq2kFAAlGqbU4VoAE36g4hoI.jpg', // Jurassic Park  G
   'https://image.tmdb.org/t/p/w500/6FfCtAuVAW8XJjZ7eWeLibRLWTw.jpg', // Star Wars: A New Hope  G
   'https://image.tmdb.org/t/p/w500/74xTEgt7R36Fpooo50r9T25onhq.jpg', // The Batman   G
-  'https://image.tmdb.org/t/p/w500/hr0L2aueqlP2BYUblTTjmtn0hw4.jpg', // The Dark Knight Rises    Y
+  'https://image.tmdb.org/t/p/original/ierOUpBnzqEEVykLKxLeLZ9zKc.jpg', // Avatar Fire and Ash    Y
   'https://image.tmdb.org/t/p/original/8PWiwMBccJ67Ng7STjJSgr92qSJ.jpg', // Tron Legacy              Y
-  'https://image.tmdb.org/t/p/w500/1g0dhYtq4irTY1GPXvft6k4YLjm.jpg', // Avengers Endgame         G
+  'https://image.tmdb.org/t/p/w500/1g0dhYtq4irTY1GPXvft6k4YLjm.jpg', // No way home        G
   'https://image.tmdb.org/t/p/original/ceG9VzoRAVGwivFU403Wc3AHRys.jpg', // Indiana Jones            Y
   'https://image.tmdb.org/t/p/original/nNAeTmF4CtdSgMDplXTDPOpYzsX.jpg', // The Empire Strikes Back  N
-  'https://image.tmdb.org/t/p/w500/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg', // Spider-Man No Way Home   Y
+  'https://image.tmdb.org/t/p/original/eJGWx219ZcEMVQJhAgMiqo8tYY.jpg', // Mario
   'https://image.tmdb.org/t/p/original/dMc96Rn0XutMaIYJNwkJ5yO9oTh.jpg', // Iron Man                 N
   'https://image.tmdb.org/t/p/original/7sfbEnaARXDDhKm0CZ7D7uc2sbo.jpg', //inglorious bastards
   'https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg', // The Dark Knight          Y
@@ -52,7 +53,7 @@ function ScrollingRow({ images, direction = 'left', speed = 30 }: ScrollingRowPr
         {duplicated.map((img, idx) => (
           <div
             key={idx}
-            className="h-40 w-28 flex-shrink-0 rounded-lg overflow-hidden shadow-lg hover:scale-105 transition-transform duration-300"
+            className="poster-card h-40 w-28 flex-shrink-0 rounded-lg overflow-hidden hover:scale-105 transition-transform duration-300"
           >
             <img src={img} alt="Movie poster" className="w-full h-full object-cover" />
           </div>
@@ -89,6 +90,34 @@ export function LoginPage() {
   const [regUsername, setRegUsername] = useState('');
   const [regError, setRegError] = useState('');
   const [regLoading, setRegLoading] = useState(false);
+
+  const interBubbleRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const interBubble = interBubbleRef.current;
+    if (!interBubble) return;
+    let curX = 0;
+    let curY = 0;
+    let tgX = 0;
+    let tgY = 0;
+    let animFrameId: number;
+    function move() {
+      curX += (tgX - curX) / 20;
+      curY += (tgY - curY) / 20;
+      interBubble!.style.transform = `translate(${Math.round(curX)}px, ${Math.round(curY)}px)`;
+      animFrameId = requestAnimationFrame(move);
+    }
+    const handleMouseMove = (event: MouseEvent) => {
+      tgX = event.clientX;
+      tgY = event.clientY;
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    move();
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      cancelAnimationFrame(animFrameId);
+    };
+  }, []);
 
   const row1 = moviePosters.slice(0, 3);
   const row2 = moviePosters.slice(3, 6);
@@ -196,11 +225,10 @@ export function LoginPage() {
     }
   };
 
-  const goHome = () => navigate('/home/discover');
+  const goHome = () => navigate('/home/roulette');
 
   const scrollingSection = (
-    <div className="hidden lg:flex lg:w-1/2 flex-col justify-center p-8 relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-black/20 to-black/60 z-10 pointer-events-none" />
+    <div className="poster-grid hidden lg:flex lg:w-1/2 flex-col justify-center p-8 relative overflow-hidden">
       <ScrollingRow images={row1} direction="left" speed={40} />
       <ScrollingRow images={row2} direction="right" speed={35} />
       <ScrollingRow images={row3} direction="left" speed={45} />
@@ -219,26 +247,198 @@ export function LoginPage() {
           0%   { transform: translateX(-33.333%); }
           100% { transform: translateX(0); }
         }
+        :root {
+          --color-bg1: rgb(26, 15, 10);
+          --color-bg2: rgb(10, 10, 10);
+          --color1: 255, 69, 0;
+          --color2: 220, 38, 38;
+          --color3: 255, 87, 34;
+          --color4: 251, 191, 36;
+          --color5: 180, 30, 30;
+          --color-interactive: 255, 87, 34;
+          --circle-size: 80%;
+          --blending: hard-light;
+        }
+        .reel-input:focus {
+          border-color: #ff5722 !important;
+          box-shadow: 0 0 0 3px rgba(255, 87, 34, 0.2) !important;
+          outline: none;
+        }
+
+        /* ── Part 1: Poster grid grounding ── */
+        .poster-card {
+          box-shadow: 0 15px 30px rgba(0,0,0,0.8), 0 5px 15px rgba(0,0,0,0.6);
+        }
+        .poster-grid {
+          -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
+          mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
+          transform: perspective(900px) rotateY(6deg);
+          transform-origin: left center;
+        }
+        .poster-grid::before {
+          content: '';
+          position: absolute; inset: 0;
+          box-shadow: inset 0 0 120px 40px rgba(0,0,0,0.85);
+          pointer-events: none;
+          z-index: 2;
+        }
+        .poster-grid::after {
+          content: '';
+          position: absolute; inset: 0;
+          background: radial-gradient(ellipse at center, transparent 40%, rgba(255,69,0,0.12) 100%);
+          pointer-events: none;
+          z-index: 1;
+        }
+        @media (max-width: 768px) {
+          .poster-grid { transform: none; }
+        }
+
+        /* ── Part 2: Spotlight on logo (Aceternity Spotlight component) ── */
+        .login-side {
+          position: relative;
+          background: transparent;
+          overflow: hidden;
+        }
+        .logo-container {
+          position: relative;
+          z-index: 2;
+        }
+        .reelette-logo {
+          filter: drop-shadow(0 0 25px rgba(255,193,7,0.5))
+                  drop-shadow(0 0 10px rgba(255,140,30,0.4));
+        }
+        @keyframes moveInCircle {
+          0%   { transform: rotate(0deg); }
+          50%  { transform: rotate(180deg); }
+          100% { transform: rotate(360deg); }
+        }
+        @keyframes moveVertical {
+          0%   { transform: translateY(-50%); }
+          50%  { transform: translateY(50%); }
+          100% { transform: translateY(-50%); }
+        }
+        @keyframes moveHorizontal {
+          0%   { transform: translateX(-50%) translateY(-10%); }
+          50%  { transform: translateX(50%) translateY(10%); }
+          100% { transform: translateX(-50%) translateY(-10%); }
+        }
+        .gradient-bg {
+          background:
+            radial-gradient(ellipse 600px 400px at 25% 45%, rgba(80,20,8,0.55) 0%, transparent 70%),
+            radial-gradient(ellipse 500px 350px at 75% 55%, rgba(60,15,5,0.45) 0%, transparent 70%),
+            radial-gradient(ellipse 400px 300px at 50% 80%, rgba(90,25,10,0.3) 0%, transparent 70%),
+            #060303;
+          overflow: hidden;
+        }
+        .gradient-bg > svg {
+          position: fixed; top: 0; left: 0; width: 0; height: 0;
+        }
+        .gradients-container {
+          filter: url(#goo) blur(40px);
+          position: absolute; inset: 0;
+        }
+        .g1 {
+          position: absolute;
+          background: radial-gradient(circle at center, rgba(var(--color1), 0.8) 0, rgba(var(--color1), 0) 50%) no-repeat;
+          mix-blend-mode: var(--blending);
+          width: var(--circle-size); height: var(--circle-size);
+          top: calc(50% - var(--circle-size) / 2);
+          left: calc(50% - var(--circle-size) / 2);
+          transform-origin: center center;
+          animation: moveVertical 30s ease infinite;
+        }
+        .g2 {
+          position: absolute;
+          background: radial-gradient(circle at center, rgba(var(--color2), 0.8) 0, rgba(var(--color2), 0) 50%) no-repeat;
+          mix-blend-mode: var(--blending);
+          width: var(--circle-size); height: var(--circle-size);
+          top: calc(50% - var(--circle-size) / 2);
+          left: calc(50% - var(--circle-size) / 2);
+          transform-origin: calc(50% - 400px);
+          animation: moveInCircle 20s reverse infinite;
+        }
+        .g3 {
+          position: absolute;
+          background: radial-gradient(circle at center, rgba(var(--color3), 0.8) 0, rgba(var(--color3), 0) 50%) no-repeat;
+          mix-blend-mode: var(--blending);
+          width: var(--circle-size); height: var(--circle-size);
+          top: calc(50% - var(--circle-size) / 2 + 200px);
+          left: calc(50% - var(--circle-size) / 2 - 500px);
+          transform-origin: calc(50% + 400px);
+          animation: moveInCircle 40s linear infinite;
+        }
+        .g4 {
+          position: absolute;
+          background: radial-gradient(circle at center, rgba(var(--color4), 0.8) 0, rgba(var(--color4), 0) 50%) no-repeat;
+          mix-blend-mode: var(--blending);
+          width: var(--circle-size); height: var(--circle-size);
+          top: calc(50% - var(--circle-size) / 2);
+          left: calc(50% - var(--circle-size) / 2);
+          transform-origin: calc(50% - 200px);
+          animation: moveHorizontal 40s ease infinite;
+          opacity: 0.7;
+        }
+        .g5 {
+          position: absolute;
+          background: radial-gradient(circle at center, rgba(var(--color5), 0.8) 0, rgba(var(--color5), 0) 50%) no-repeat;
+          mix-blend-mode: var(--blending);
+          width: calc(var(--circle-size) * 2); height: calc(var(--circle-size) * 2);
+          top: calc(50% - var(--circle-size));
+          left: calc(50% - var(--circle-size));
+          transform-origin: calc(50% - 800px) calc(50% + 200px);
+          animation: moveInCircle 20s ease infinite;
+        }
+        .interactive {
+          position: absolute;
+          background: radial-gradient(circle at center, rgba(var(--color-interactive), 0.8) 0, rgba(var(--color-interactive), 0) 50%) no-repeat;
+          mix-blend-mode: var(--blending);
+          width: 100%; height: 100%;
+          top: -50%; left: -50%;
+          opacity: 0.7;
+        }
       `}</style>
 
-      <div className="min-h-screen w-full bg-gradient-to-r from-[#2d0a0a] via-[#1a0000] via-30% via-[#0f0000] via-60% to-black flex">
-        {scrollingSection}
+      <div className="gradient-bg min-h-screen w-full flex relative">
+        <svg xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <filter id="goo">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
+              <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -8" result="goo" />
+              <feBlend in="SourceGraphic" in2="goo" />
+            </filter>
+          </defs>
+        </svg>
+        <div className="gradients-container">
+          <div className="g1" />
+          <div className="g2" />
+          <div className="g3" />
+          <div className="g4" />
+          <div className="g5" />
+          <div ref={interBubbleRef} className="interactive" />
+        </div>
 
-        <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
-          <div className="w-full max-w-md flex flex-col items-center">
-            <div className="mb-6">
-                <img src={logoImage} alt="Reelette" className="h-56 w-auto scale-[2] origin-top" />
+        <div className="relative z-10 flex w-full">
+          {scrollingSection}
+
+          <div className="login-side w-full lg:w-1/2 flex items-center justify-center p-8">
+          <Spotlight
+            className="-top-40 left-0 md:-top-20 md:left-60"
+            fill="#ff9933"
+          />
+          <div className="relative z-10 w-full max-w-md flex flex-col items-center">
+            <div className="logo-container mb-6">
+                <img src={logoImage} alt="Reelette" className="reelette-logo h-56 w-auto scale-[2] origin-top pointer-events-none" />
             </div>
             <p className="text-center mb-10 px-4 text-lg">
-              <span className="bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent">
+              <span className="text-[#fbbf24]">
                 The ultimate way to discover, rate, and share movies
               </span>
-              <span className="text-gray-400"> with friends.</span>
+              <span className="text-[#f5f5f5]/70"> with friends.</span>
             </p>
 
             {/* ── Login ── */}
             {view === 'login' && (
-              <div className="w-full bg-black/50 backdrop-blur-sm border border-gray-800 rounded-2xl p-8 shadow-2xl">
+              <div className="w-full bg-[rgba(15,15,15,0.75)] backdrop-blur-[12px] border border-[rgba(255,87,34,0.2)] rounded-2xl p-8 shadow-2xl">
                 <form onSubmit={handleLogin} className="space-y-6">
                   <div className="space-y-2">
                     <label className="text-sm text-gray-400">Email</label>
@@ -247,7 +447,7 @@ export function LoginPage() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="Enter your email"
-                      className="w-full bg-gray-900/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-red-500 rounded-lg h-12"
+                      className="reel-input w-full bg-[#0f0f0f] border-gray-700 text-white placeholder:text-gray-500 rounded-lg h-12"
                       required
                     />
                   </div>
@@ -258,7 +458,7 @@ export function LoginPage() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Enter your password"
-                      className="w-full bg-gray-900/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-red-500 rounded-lg h-12"
+                      className="reel-input w-full bg-[#0f0f0f] border-gray-700 text-white placeholder:text-gray-500 rounded-lg h-12"
                       required
                     />
                   </div>
@@ -266,17 +466,17 @@ export function LoginPage() {
                   <Button
                     type="submit"
                     disabled={loginLoading}
-                    className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white h-12 rounded-lg transition-all duration-200 disabled:opacity-50"
+                    className="w-full bg-gradient-to-r from-[#ff5722] to-[#dc2626] hover:from-[#ff6d3a] hover:to-[#ef4444] text-white h-12 rounded-lg transition-all duration-200 disabled:opacity-50"
                   >
                     {loginLoading ? 'Signing in...' : 'Login'}
                   </Button>
-                  <div className="text-center pt-4 border-t border-gray-800">
+                  <div className="text-center pt-4 border-t border-[rgba(255,87,34,0.15)]">
                     <p className="text-sm text-gray-400">
                       Don't have an account?{' '}
                       <button
                         type="button"
                         onClick={() => setView('register')}
-                        className="text-red-500 hover:text-red-400 transition-colors"
+                        className="text-[#fbbf24] hover:text-[#ff5722] transition-colors"
                       >
                         Sign up
                       </button>
@@ -291,7 +491,7 @@ export function LoginPage() {
                           setForgotMessage('');
                           setView('forgot-password');
                         }}
-                        className="text-sm text-red-500 hover:text-red-400 transition-colors"
+                        className="text-sm text-[#fbbf24] hover:text-[#ff5722] transition-colors"
                       >
                         Forgot your password?
                       </button>
@@ -303,7 +503,7 @@ export function LoginPage() {
 
             {/* ── Register ── */}
             {view === 'register' && (
-              <div className="w-full bg-black/50 backdrop-blur-sm border border-gray-800 rounded-2xl p-8 shadow-2xl">
+              <div className="w-full bg-[rgba(15,15,15,0.75)] backdrop-blur-[12px] border border-[rgba(255,87,34,0.2)] rounded-2xl p-8 shadow-2xl">
                 <h2 className="text-white text-xl font-semibold mb-6 text-center">Create Account</h2>
                 <form onSubmit={handleRegister} className="space-y-5">
                   <div className="space-y-2">
@@ -313,7 +513,7 @@ export function LoginPage() {
                       value={regUsername}
                       onChange={(e) => setRegUsername(e.target.value)}
                       placeholder="Choose a username"
-                      className="w-full bg-gray-900/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-red-500 rounded-lg h-12"
+                      className="reel-input w-full bg-[#0f0f0f] border-gray-700 text-white placeholder:text-gray-500 rounded-lg h-12"
                       required
                     />
                   </div>
@@ -324,7 +524,7 @@ export function LoginPage() {
                       value={regEmail}
                       onChange={(e) => setRegEmail(e.target.value)}
                       placeholder="Enter your email"
-                      className="w-full bg-gray-900/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-red-500 rounded-lg h-12"
+                      className="reel-input w-full bg-[#0f0f0f] border-gray-700 text-white placeholder:text-gray-500 rounded-lg h-12"
                       required
                     />
                   </div>
@@ -335,7 +535,7 @@ export function LoginPage() {
                       value={regPassword}
                       onChange={(e) => setRegPassword(e.target.value)}
                       placeholder="Choose a password"
-                      className="w-full bg-gray-900/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-red-500 rounded-lg h-12"
+                      className="reel-input w-full bg-[#0f0f0f] border-gray-700 text-white placeholder:text-gray-500 rounded-lg h-12"
                       required
                     />
                   </div>
@@ -343,17 +543,17 @@ export function LoginPage() {
                   <Button
                     type="submit"
                     disabled={regLoading}
-                    className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white h-12 rounded-lg disabled:opacity-50"
+                    className="w-full bg-gradient-to-r from-[#ff5722] to-[#dc2626] hover:from-[#ff6d3a] hover:to-[#ef4444] text-white h-12 rounded-lg transition-all duration-200 disabled:opacity-50"
                   >
                     {regLoading ? 'Creating account...' : 'Sign Up'}
                   </Button>
-                  <div className="text-center pt-4 border-t border-gray-800">
+                  <div className="text-center pt-4 border-t border-[rgba(255,87,34,0.15)]">
                     <p className="text-sm text-gray-400">
                       Already have an account?{' '}
                       <button
                         type="button"
                         onClick={() => setView('login')}
-                        className="text-red-500 hover:text-red-400 transition-colors"
+                        className="text-[#fbbf24] hover:text-[#ff5722] transition-colors"
                       >
                         Log in
                       </button>
@@ -364,7 +564,7 @@ export function LoginPage() {
             )}
 
             {view === 'forgot-password' && (
-              <div className="w-full bg-black/50 backdrop-blur-sm border border-gray-800 rounded-2xl p-8 shadow-2xl">
+              <div className="w-full bg-[rgba(15,15,15,0.75)] backdrop-blur-[12px] border border-[rgba(255,87,34,0.2)] rounded-2xl p-8 shadow-2xl">
                 <h2 className="text-white text-xl font-semibold mb-6 text-center">Reset Password</h2>
                 <form onSubmit={handleForgotPassword} className="space-y-5">
                   <div className="space-y-2">
@@ -374,7 +574,7 @@ export function LoginPage() {
                       value={forgotEmail}
                       onChange={(e) => setForgotEmail(e.target.value)}
                       placeholder="Enter your email"
-                      className="w-full bg-gray-900/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-red-500 rounded-lg h-12"
+                      className="reel-input w-full bg-[#0f0f0f] border-gray-700 text-white placeholder:text-gray-500 rounded-lg h-12"
                       required
                     />
                   </div>
@@ -389,12 +589,12 @@ export function LoginPage() {
                   <Button
                     type="submit"
                     disabled={forgotLoading}
-                    className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white h-12 rounded-lg disabled:opacity-50"
+                    className="w-full bg-gradient-to-r from-[#ff5722] to-[#dc2626] hover:from-[#ff6d3a] hover:to-[#ef4444] text-white h-12 rounded-lg transition-all duration-200 disabled:opacity-50"
                   >
                     {forgotLoading ? 'Sending...' : 'Send Reset Email'}
                   </Button>
 
-                  <div className="text-center pt-4 border-t border-gray-800">
+                  <div className="text-center pt-4 border-t border-[rgba(255,87,34,0.15)]">
                     <p className="text-sm text-gray-400">
                       Remember your password?{' '}
                       <button
@@ -404,7 +604,7 @@ export function LoginPage() {
                           setForgotMessage('');
                           setView('login');
                         }}
-                        className="text-red-500 hover:text-red-400 transition-colors"
+                        className="text-[#fbbf24] hover:text-[#ff5722] transition-colors"
                       >
                         Log in
                       </button>
@@ -416,7 +616,7 @@ export function LoginPage() {
 
             {/* ── Ask existing user about services ── */}
             {view === 'ask-streaming' && (
-              <div className="w-full bg-black/50 backdrop-blur-sm border border-gray-800 rounded-2xl p-8 shadow-2xl text-center">
+              <div className="w-full bg-[rgba(15,15,15,0.75)] backdrop-blur-[12px] border border-[rgba(255,87,34,0.2)] rounded-2xl p-8 shadow-2xl text-center">
                 <h2 className="text-white text-xl font-semibold mb-3">
                   Welcome back, {pendingUsername}!
                 </h2>
@@ -432,7 +632,7 @@ export function LoginPage() {
                   </button>
                   <button
                     onClick={() => setView('setup-streaming')}
-                    className="flex-1 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-6 py-3 rounded-lg transition-all font-medium"
+                    className="flex-1 bg-gradient-to-r from-[#ff5722] to-[#dc2626] hover:from-[#ff6d3a] hover:to-[#ef4444] text-white px-6 py-3 rounded-lg transition-all duration-200 font-medium"
                   >
                     Yes, update
                   </button>
@@ -450,6 +650,7 @@ export function LoginPage() {
               />
             )}
           </div>
+        </div>
         </div>
       </div>
     </>

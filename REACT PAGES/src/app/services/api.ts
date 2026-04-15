@@ -1,4 +1,4 @@
-const BASE_URL = 'http://127.0.0.1:5000/api';
+const BASE_URL = (import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000') + '/api';
 
 
 // ── Types ────────────────────────────────────────────────────────
@@ -19,6 +19,7 @@ export interface FeedPost {
   post_id: string;
   user_id: string;
   username: string;
+  avatarUrl?: string;
   message: string;
   movie_title: string;
   movie_id: string;
@@ -33,6 +34,7 @@ export interface CurrentUser {
   user_id: string;
   username: string;
   email: string;
+  avatarUrl?: string;
 }
 
 
@@ -264,6 +266,28 @@ export async function updateWatchedMovie(user_id: string, movie_id: string, rati
   return res.json();
 }
 
+export async function getWatchLater(user_id: string): Promise<string[]> {
+  const res = await fetch(`${BASE_URL}/watchlist/${user_id}`);
+  const data = await res.json();
+  return data.movies ?? [];
+}
+
+export async function watchMovieLater(user_id: string, movie_id: string) {
+  const res = await fetch(`${BASE_URL}/watchlist/${user_id}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ movie_id }),
+  });
+  return res.json();
+}
+
+export async function removeFromWatchLater(user_id: string, movie_id: string) {
+  const res = await fetch(`${BASE_URL}/watchlist/${user_id}/${movie_id}`, {
+    method: 'DELETE',
+  });
+  return res.json();
+}
+
 
 // ── Social Feed ──────────────────────────────────────────────────
 
@@ -309,6 +333,309 @@ export async function deletePost(post_id: string, user_id: string) {
     body: JSON.stringify({ user_id }),
   });
   return res.json();
+}
+
+
+export interface PostReply {
+  reply_id: string;
+  user_id: string;
+  username: string;
+  avatarUrl?: string;
+  message: string;
+  created_at: string;
+}
+
+export async function getReplies(post_id: string): Promise<PostReply[]> {
+  const res = await fetch(`${BASE_URL}/feed/${post_id}/replies`);
+  const data = await res.json();
+  return data.replies ?? [];
+}
+
+export async function addReply(post_id: string, user_id: string, username: string, message: string) {
+  const res = await fetch(`${BASE_URL}/feed/${post_id}/reply`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_id, username, message }),
+  });
+  return res.json();
+}
+
+
+// ── User Profile ─────────────────────────────────────────────────
+
+export interface UserProfile {
+  user_id?: string;
+  username: string;
+  displayName: string;
+  email: string;
+  bio?: string;
+  createdAt?: string;
+  streamingServices?: Record<string, boolean>;
+}
+
+export async function getUserProfile(user_id: string): Promise<UserProfile | null> {
+  const res = await fetch(`${BASE_URL}/user/${user_id}`);
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export async function updateUserAvatar(user_id: string, avatar_url: string) {
+  const res = await fetch(`${BASE_URL}/user/${user_id}/avatar`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ avatar_url }),
+  });
+  return res.json();
+}
+
+export async function updateLastSeen(user_id: string) {
+  // Fire-and-forget heartbeat — no need to await the result
+  fetch(`${BASE_URL}/user/${user_id}/lastseen`, { method: 'PUT' }).catch(() => {});
+}
+
+export interface UserPublicProfile {
+  user_id: string;
+  username: string;
+  displayName: string;
+  bio?: string;
+  avatarUrl?: string;
+  createdAt?: string;
+  watchedCount: number;
+  watchlistCount: number;
+  friendsCount: number;
+}
+
+export async function getUserPublicProfile(user_id: string): Promise<UserPublicProfile | null> {
+  const res = await fetch(`${BASE_URL}/user/${user_id}/public`);
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export interface MemberProfile {
+  user_id: string;
+  username: string;
+  displayName: string;
+  avatarUrl?: string;
+  lastSeen?: string;
+}
+
+export async function getGroupMemberProfiles(group_id: string): Promise<MemberProfile[]> {
+  const res = await fetch(`${BASE_URL}/groups/${group_id}/members/profiles`);
+  const data = await res.json();
+  return data.profiles ?? [];
+}
+
+export interface MemberServiceEntry {
+  username: string;
+  services: Record<string, boolean>;
+}
+
+export async function getGroupMemberServices(group_id: string): Promise<Record<string, MemberServiceEntry>> {
+  const res = await fetch(`${BASE_URL}/groups/${group_id}/members/services`);
+  const data = await res.json();
+  return data.services ?? {};
+}
+
+export async function updateUserProfile(user_id: string, data: Partial<Pick<UserProfile, 'displayName' | 'bio' | 'username'>>) {
+  const res = await fetch(`${BASE_URL}/user/${user_id}/profile`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return res.json();
+}
+
+export async function searchUsers(query: string, excludeUserId?: string): Promise<{ user_id: string; username: string; displayName: string }[]> {
+  const params = new URLSearchParams({ q: query });
+  if (excludeUserId) params.set('exclude', excludeUserId);
+  const res = await fetch(`${BASE_URL}/users/search?${params}`);
+  const data = await res.json();
+  return data.users ?? [];
+}
+
+// ── Friends ──────────────────────────────────────────────────────
+
+export interface Friend {
+  friend_id: string;
+  friend_username: string;
+  avatarUrl?: string;
+  since: string;
+}
+
+export interface FriendRequest {
+  from_user_id: string;
+  from_username: string;
+  avatarUrl?: string;
+  status: string;
+  created_at: string;
+}
+
+export async function getFriends(user_id: string): Promise<Friend[]> {
+  const res = await fetch(`${BASE_URL}/friends/${user_id}`);
+  const data = await res.json();
+  return data.friends ?? [];
+}
+
+export async function getFriendRequests(user_id: string): Promise<FriendRequest[]> {
+  const res = await fetch(`${BASE_URL}/friends/${user_id}/requests`);
+  const data = await res.json();
+  return data.requests ?? [];
+}
+
+export async function sendFriendRequest(to_user_id: string, from_user_id: string, from_username: string, from_avatarUrl?: string) {
+  const res = await fetch(`${BASE_URL}/friends/${to_user_id}/request`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from_user_id, from_username, from_avatarUrl }),
+  });
+  return res.json();
+}
+
+export async function acceptFriendRequest(user_id: string, user_username: string, from_id: string, from_username: string, from_avatarUrl?: string) {
+  const res = await fetch(`${BASE_URL}/friends/${user_id}/request/${from_id}/accept`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_username, from_username, from_avatarUrl }),
+  });
+  return res.json();
+}
+
+export async function rejectFriendRequest(user_id: string, from_id: string, from_username: string, from_avatarUrl?: string) {
+  const res = await fetch(`${BASE_URL}/friends/${user_id}/request/${from_id}/reject`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from_username, from_avatarUrl }),
+  });
+  return res.json();
+}
+
+export async function removeFriend(user_id: string, friend_id: string) {
+  const res = await fetch(`${BASE_URL}/friends/${user_id}/${friend_id}`, {
+    method: 'DELETE',
+  });
+  return res.json();
+}
+
+// ── Groups ───────────────────────────────────────────────────────
+
+export interface GroupMovie {
+  movie_id: string;
+  movie_title: string;
+  movie_poster?: string;
+  added_by: string;
+  added_by_username: string;
+  added_at: string;
+}
+
+export interface MovieGroup {
+  group_id: string;
+  name: string;
+  description: string;
+  created_by: string;
+  created_by_username: string;
+  members: string[];
+  member_usernames: Record<string, string>;
+  watchlist: GroupMovie[];
+  created_at: string;
+}
+
+export async function createGroup(name: string, description: string, creator_id: string, creator_username: string) {
+  const res = await fetch(`${BASE_URL}/groups`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, description, creator_id, creator_username }),
+  });
+  return res.json();
+}
+
+export async function getGroup(group_id: string): Promise<MovieGroup | null> {
+  const res = await fetch(`${BASE_URL}/groups/${group_id}`);
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export async function getUserGroups(user_id: string): Promise<MovieGroup[]> {
+  const res = await fetch(`${BASE_URL}/user/${user_id}/groups`);
+  const data = await res.json();
+  return data.groups ?? [];
+}
+
+export async function addGroupMember(group_id: string, user_id: string, username: string) {
+  const res = await fetch(`${BASE_URL}/groups/${group_id}/members`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_id, username }),
+  });
+  return res.json();
+}
+
+export async function removeGroupMember(group_id: string, member_id: string) {
+  const res = await fetch(`${BASE_URL}/groups/${group_id}/members/${member_id}`, {
+    method: 'DELETE',
+  });
+  return res.json();
+}
+
+export async function addToGroupWatchlist(group_id: string, movie_id: string, movie_title: string, user_id: string, username: string, movie_poster?: string) {
+  const res = await fetch(`${BASE_URL}/groups/${group_id}/watchlist`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ movie_id, movie_title, movie_poster, user_id, username }),
+  });
+  return res.json();
+}
+
+export async function removeFromGroupWatchlist(group_id: string, movie_id: string, movie_poster?: string) {
+  const res = await fetch(`${BASE_URL}/groups/${group_id}/watchlist/${movie_id}`, {
+    method: 'DELETE',
+  });
+  return res.json();
+}
+
+export async function spinGroupReelette(group_id: string): Promise<{ success: boolean; movie?: GroupMovie; message?: string }> {
+  const res = await fetch(`${BASE_URL}/groups/${group_id}/spin`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  return res.json();
+}
+
+export async function deleteGroup(group_id: string, user_id: string) {
+  const res = await fetch(`${BASE_URL}/groups/${group_id}`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_id }),
+  });
+  return res.json();
+}
+
+
+// ── Roulette Spin History ────────────────────────────────────────
+
+export interface RouletteSpin {
+  movie_id: string;
+  movie_title: string;
+  poster_url: string;
+  spun_at: string;
+}
+
+export async function logRouletteSpin(
+  user_id: string,
+  movie_id: string,
+  movie_title: string,
+  poster_url: string
+): Promise<void> {
+  await fetch(`${BASE_URL}/roulette/${user_id}/spin`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ movie_id, movie_title, poster_url }),
+  });
+}
+
+export async function getRouletteHistory(user_id: string, limit = 10): Promise<RouletteSpin[]> {
+  const res = await fetch(`${BASE_URL}/roulette/${user_id}/history?limit=${limit}`);
+  const data = await res.json();
+  return data.spins ?? [];
 }
 
 
