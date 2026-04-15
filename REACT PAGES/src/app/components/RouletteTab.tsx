@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Shuffle, ChevronDown, ChevronUp, Star, Play } from "lucide-react";
+import { Shuffle, ChevronDown, ChevronUp, Star } from "lucide-react";
 import { MovieDetailModal } from "./MovieDetailModal";
 import { Switch } from "./ui/switch";
 import { Slider } from "./ui/slider";
@@ -178,52 +178,43 @@ export function RouletteTab() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 md:px-6 py-6 space-y-5">
+    <div className="space-y-0">
 
-      {/* ── Sponsored Hero Card ─────────────────────────────────── */}
-      <div className="relative rounded-2xl overflow-hidden h-[260px] bg-cover bg-center"
-        style={{ backgroundImage: `url(${HERO_POSTER})` }}
-      >
-        {/* layered gradients for depth */}
-        <div className="absolute inset-0 bg-gradient-to-r from-[#0A0A0A]/95 via-[#0A0A0A]/55 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A]/60 via-transparent to-transparent" />
+      {/* ── Hero Banner ─────────────────────────────────────────── */}
+      <div className="px-4 md:px-6 pt-6">
+        <div
+          className="relative rounded-2xl overflow-hidden h-[340px] w-full bg-cover bg-center"
+          style={{ backgroundImage: `url(${HERO_POSTER})` }}
+        >
+          {/* gradient overlays */}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0D0D0D] via-[#0D0D0D]/40 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#0D0D0D]/30 to-transparent" />
 
-        <div className="relative z-10 h-full flex flex-col justify-end p-6 gap-3">
-          {/* badges */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[9px] font-bold tracking-widest text-[#C0392B] uppercase border border-[#C0392B]/50 px-2 py-0.5 rounded-full">
+          {/* top-left badges */}
+          <div className="absolute top-5 left-6 z-10 flex items-center gap-2">
+            <span className="text-[9px] font-bold tracking-widest text-[#C0392B] uppercase border border-[#C0392B]/60 px-2.5 py-1 rounded-full backdrop-blur-sm bg-black/30">
               Sponsored Spin
             </span>
-            <span className="text-[9px] font-bold tracking-wide text-white bg-[#0063e5] px-2.5 py-0.5 rounded-full">
+            <span className="text-[9px] font-bold tracking-wide text-white bg-[#0063e5] px-2.5 py-1 rounded-full">
               Only on Disney+
             </span>
           </div>
 
-          {/* title */}
-          <div>
-            <h2 className="text-3xl font-bold text-white leading-tight">
-              Tron: Ares
-            </h2>
-            <p className="text-gray-400 text-xs mt-0.5">
-              2025 · Sci-Fi · Action
+          {/* bottom title area */}
+          <div className="absolute bottom-0 left-0 right-0 p-7 z-10">
+            <h1 className="text-4xl font-bold text-white">
+              Movie Roulette
+              <div className="h-[3px] w-16 bg-[#C0392B] mt-1.5 rounded-full" />
+            </h1>
+            <p className="text-gray-400 text-sm mt-2">
+              Can't decide what to watch? Let fate decide.
             </p>
-          </div>
-
-          {/* action buttons */}
-          <div className="flex items-center gap-2">
-            <button className="flex items-center gap-1.5 bg-white text-black font-semibold text-sm px-5 py-2 rounded-full hover:bg-gray-100 transition-colors">
-              <Play className="w-3.5 h-3.5 fill-black" />
-              Watch Now
-            </button>
-            <button className="flex items-center gap-1.5 border border-white/30 text-white font-medium text-sm px-5 py-2 rounded-full hover:bg-white/10 transition-colors backdrop-blur-sm">
-              Trailer
-            </button>
           </div>
         </div>
       </div>
 
       {/* ── Three-column layout ─────────────────────────────────── */}
-      <div className="flex gap-4 items-start">
+      <div className="flex gap-5 items-start px-4 md:px-6 py-6">
 
         {/* Left — My Recent Spins */}
         <aside className="w-44 hidden md:flex flex-col gap-2 flex-shrink-0">
@@ -231,14 +222,11 @@ export function RouletteTab() {
             My Recent Spins
           </h3>
 
-          {/* not loaded yet — blank placeholders */}
+          {/* skeleton while loading */}
           {!spinsLoaded && (
             <>
               {[...Array(4)].map((_, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-2 animate-pulse"
-                >
+                <div key={i} className="flex items-center gap-2 animate-pulse">
                   <div className="w-9 h-12 rounded bg-[#1C1C1C] flex-shrink-0" />
                   <div className="flex-1 space-y-1.5">
                     <div className="h-2.5 bg-[#1C1C1C] rounded w-3/4" />
@@ -249,7 +237,7 @@ export function RouletteTab() {
             </>
           )}
 
-          {/* loaded, empty */}
+          {/* empty state */}
           {spinsLoaded && recentSpins.length === 0 && (
             <p className="text-gray-600 text-xs px-1 leading-relaxed">
               {user
@@ -258,11 +246,11 @@ export function RouletteTab() {
             </p>
           )}
 
-          {/* loaded, has spins */}
+          {/* spin list */}
           {spinsLoaded && recentSpins.length > 0 && (
-            <div className="flex flex-col gap-2 max-h-[480px] overflow-y-auto pr-0.5">
+            <div className="flex flex-col gap-2.5 max-h-[480px] overflow-y-auto">
               {recentSpins.map((s, i) => (
-                <div key={i} className="flex items-center gap-2 group">
+                <div key={i} className="flex items-center gap-2">
                   <div className="w-9 h-12 rounded overflow-hidden bg-[#1C1C1C] flex-shrink-0">
                     {s.poster_url ? (
                       <img
@@ -290,6 +278,7 @@ export function RouletteTab() {
 
         {/* Center — Roulette controls */}
         <div className="flex-1 space-y-4 min-w-0">
+
           {/* Streaming toggle */}
           <div className="flex items-center gap-3 bg-[#1A1A1A] rounded-full px-5 py-3.5 w-fit">
             <Switch
@@ -436,8 +425,7 @@ export function RouletteTab() {
             Friends' Spins
           </h3>
           {feedPosts.slice(0, 6).map((post) => {
-            const avatar =
-              feedAvatars[post.user_id] || post.avatarUrl || null;
+            const avatar = feedAvatars[post.user_id] || post.avatarUrl || null;
             return (
               <div
                 key={post.post_id}
