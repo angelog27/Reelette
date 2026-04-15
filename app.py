@@ -19,7 +19,7 @@ from firebase_helper import (
     add_to_watchlist, get_watchlist, remove_from_watchlist,
     add_watched_movie, get_watched_movies, get_watched_movie, update_watched_rating,
     create_post, get_feed, like_post, add_reply, get_replies, delete_post, send_password_reset_email,
-    update_user_profile, search_users,
+    update_user_profile, get_user_movie_preferences, update_movie_preferences, search_users,
     send_friend_request, get_friend_requests, accept_friend_request, reject_friend_request,
     remove_friend, get_friends,
     create_group, get_group, get_user_groups, add_group_member, remove_group_member, delete_group,
@@ -366,6 +366,13 @@ def user_data(user_id):
         return jsonify({'error': 'User not found'}), 404
     return jsonify(serialize_timestamps(data))
 
+@app.route('/api/user/<user_id>', methods=['PUT'])
+def update_user(user_id):
+    data = request.get_json() or {}
+    result = update_user_profile(user_id, data)
+    status_code = 200 if result.get('success') else 400
+    return jsonify(result), status_code
+
 @app.route('/api/user/<user_id>/streaming', methods=['GET'])
 def get_streaming(user_id):
     services = get_user_streaming_services(user_id)
@@ -376,6 +383,18 @@ def update_streaming(user_id):
     services = request.get_json() or {}
     result = update_streaming_services(user_id, services)
     return jsonify(result)
+
+@app.route('/api/user/<user_id>/movie-preferences', methods=['GET'])
+def get_movie_preferences(user_id):
+    preferences = get_user_movie_preferences(user_id)
+    return jsonify(preferences)
+
+@app.route('/api/user/<user_id>/movie-preferences', methods=['PUT'])
+def update_movie_preferences_route(user_id):
+    preferences = request.get_json() or {}
+    result = update_movie_preferences(user_id, preferences)
+    status_code = 200 if result.get('success') else 400
+    return jsonify(result), status_code
 
 # ── Watchlist Routes ─────────────────────────────────────────────
 
