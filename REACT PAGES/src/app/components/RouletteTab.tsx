@@ -184,7 +184,7 @@ export function RouletteTab() {
           className="absolute inset-0 bg-cover"
           style={{
             backgroundImage: `url(${HERO_POSTER})`,
-            backgroundPosition: "right center",
+            backgroundPosition: "absolute",
           }}
         />
 
