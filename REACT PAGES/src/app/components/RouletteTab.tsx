@@ -177,7 +177,8 @@ export function RouletteTab() {
     <div className="space-y-0">
 
       {/* ── Hero — Disney+ cinematic style ──────────────────────── */}
-      <div className="relative overflow-hidden h-[240px] w-full">
+      <div className="px-4 md:px-6 pt-6">
+      <div className="relative overflow-hidden rounded-2xl h-[320px] w-full">
         {/* poster anchored right so the character fills the right half */}
         <div
           className="absolute inset-0 bg-cover"
@@ -247,6 +248,7 @@ export function RouletteTab() {
             </button>
           </div>
         </div>
+      </div>
       </div>
 
       {/* ── Three-column layout ─────────────────────────────────── */}
