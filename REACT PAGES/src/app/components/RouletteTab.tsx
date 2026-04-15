@@ -188,7 +188,11 @@ export function RouletteTab() {
           }}
         />
 
-       
+        {/* heavy left-to-right dark overlay */}
+        <div className="absolute inset-0 bg-gradient-to-r from-[#080808] from-0% via-[#080808]/75 via-60% to-transparent" />
+        {/* subtle bottom fade to blend into page bg */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0D0D0D]/70 via-transparent to-transparent" />
+
         {/* content — left column */}
         <div className="relative z-10 h-full flex flex-col justify-center px-8 py-5 max-w-[540px]">
           {/* badges */}
