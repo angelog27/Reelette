@@ -73,7 +73,6 @@ export function RouletteTab() {
   const userServices = getServices();
   const hasServices = hasServicesConfigured(userServices);
 
-  // Load community feed for the right sidebar
   useEffect(() => {
     getFeed(10)
       .then((posts) => {
@@ -94,7 +93,6 @@ export function RouletteTab() {
       .catch(() => {});
   }, []);
 
-  // Load the user's own spin history on mount
   useEffect(() => {
     if (!user) {
       setSpinsLoaded(true);
@@ -148,11 +146,9 @@ export function RouletteTab() {
 
     try {
       let movies = await discoverMovies({ ...filters, page: randomPage });
-
       if (movies.length === 0) {
         movies = await discoverMovies({ ...filters, page: 1 });
       }
-
       if (movies.length === 0) {
         setError(
           "No movies found with these filters. Try adjusting your criteria."
@@ -180,35 +176,75 @@ export function RouletteTab() {
   return (
     <div className="space-y-0">
 
-      {/* ── Hero Banner ─────────────────────────────────────────── */}
-      <div className="px-4 md:px-6 pt-6">
+      {/* ── Hero — Disney+ cinematic style ──────────────────────── */}
+      <div className="relative overflow-hidden h-[240px] w-full">
+        {/* poster anchored right so the character fills the right half */}
         <div
-          className="relative rounded-2xl overflow-hidden h-[340px] w-full bg-cover bg-center"
-          style={{ backgroundImage: `url(${HERO_POSTER})` }}
-        >
-          {/* gradient overlays */}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0D0D0D] via-[#0D0D0D]/40 to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0D0D0D]/30 to-transparent" />
+          className="absolute inset-0 bg-cover"
+          style={{
+            backgroundImage: `url(${HERO_POSTER})`,
+            backgroundPosition: "right center",
+          }}
+        />
 
-          {/* top-left badges */}
-          <div className="absolute top-5 left-6 z-10 flex items-center gap-2">
-            <span className="text-[9px] font-bold tracking-widest text-[#C0392B] uppercase border border-[#C0392B]/60 px-2.5 py-1 rounded-full backdrop-blur-sm bg-black/30">
+        {/* heavy left-to-right dark overlay */}
+        <div className="absolute inset-0 bg-gradient-to-r from-[#080808] from-35% via-[#080808]/75 via-60% to-transparent" />
+        {/* subtle bottom fade to blend into page bg */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0D0D0D]/70 via-transparent to-transparent" />
+
+        {/* content — left column */}
+        <div className="relative z-10 h-full flex flex-col justify-center px-8 py-5 max-w-[540px]">
+          {/* badges */}
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-[9px] font-bold tracking-widest text-[#C0392B] uppercase border border-[#C0392B]/60 px-2.5 py-0.5 rounded-full backdrop-blur-sm">
               Sponsored Spin
             </span>
-            <span className="text-[9px] font-bold tracking-wide text-white bg-[#0063e5] px-2.5 py-1 rounded-full">
+            <span className="text-[9px] font-bold tracking-wide text-white bg-[#0063e5] px-2.5 py-0.5 rounded-full">
               Only on Disney+
             </span>
           </div>
 
-          {/* bottom title area */}
-          <div className="absolute bottom-0 left-0 right-0 p-7 z-10">
-            <h1 className="text-4xl font-bold text-white">
-              Movie Roulette
-              <div className="h-[3px] w-16 bg-[#C0392B] mt-1.5 rounded-full" />
-            </h1>
-            <p className="text-gray-400 text-sm mt-2">
-              Can't decide what to watch? Let fate decide.
-            </p>
+          {/* title */}
+          <h1 className="text-5xl font-black uppercase text-white tracking-tight leading-none">
+            TRON: ARES
+          </h1>
+
+          {/* meta row */}
+          <div className="flex items-center gap-2 mt-2 flex-wrap">
+            <span className="text-gray-400 text-xs">2025</span>
+            <span className="text-gray-600 text-xs">·</span>
+            <span className="text-yellow-400 text-xs font-medium">★ 7.4</span>
+            <span className="text-gray-600 text-xs">·</span>
+            {["Action", "Sci-Fi", "Adventure"].map((g) => (
+              <span
+                key={g}
+                className="text-[10px] text-gray-300 border border-gray-600/70 px-1.5 py-0.5 rounded"
+              >
+                {g}
+              </span>
+            ))}
+          </div>
+
+          {/* description */}
+          <p className="text-gray-400 text-xs mt-2 leading-relaxed line-clamp-2 max-w-[380px]">
+            A rogue program escapes the digital Grid and enters the real world
+            — only Ares, a lethal enforcer built for war, can bring him back.
+            Starring Jared Leto &amp; Evan Peters.
+          </p>
+
+          {/* CTA buttons */}
+          <div className="flex items-center gap-2.5 mt-4">
+            <button className="flex items-center gap-1.5 bg-[#0063e5] hover:bg-[#0057cc] text-white font-semibold text-xs px-4 py-2 rounded-full transition-colors">
+              Watch on Disney+
+            </button>
+            <button
+              onClick={spin}
+              disabled={spinning}
+              className="flex items-center gap-1.5 border border-white/30 bg-white/5 hover:bg-white/10 text-white font-semibold text-xs px-4 py-2 rounded-full transition-colors disabled:opacity-50"
+            >
+              <Shuffle className={`w-3 h-3 ${spinning ? "animate-spin" : ""}`} />
+              Re-spin
+            </button>
           </div>
         </div>
       </div>
@@ -222,7 +258,6 @@ export function RouletteTab() {
             My Recent Spins
           </h3>
 
-          {/* skeleton while loading */}
           {!spinsLoaded && (
             <>
               {[...Array(4)].map((_, i) => (
@@ -237,7 +272,6 @@ export function RouletteTab() {
             </>
           )}
 
-          {/* empty state */}
           {spinsLoaded && recentSpins.length === 0 && (
             <p className="text-gray-600 text-xs px-1 leading-relaxed">
               {user
@@ -246,7 +280,6 @@ export function RouletteTab() {
             </p>
           )}
 
-          {/* spin list */}
           {spinsLoaded && recentSpins.length > 0 && (
             <div className="flex flex-col gap-2.5 max-h-[480px] overflow-y-auto">
               {recentSpins.map((s, i) => (
@@ -413,7 +446,6 @@ export function RouletteTab() {
             </button>
           </div>
 
-          {/* Error */}
           {error && (
             <p className="text-center text-yellow-500 text-sm">{error}</p>
           )}
@@ -466,7 +498,6 @@ export function RouletteTab() {
         </aside>
       </div>
 
-      {/* Movie Detail Modal */}
       {selectedMovieId && (
         <MovieDetailModal
           movieId={selectedMovieId}
