@@ -458,12 +458,14 @@ export async function searchUsers(query: string, excludeUserId?: string): Promis
 export interface Friend {
   friend_id: string;
   friend_username: string;
+  avatarUrl?: string;
   since: string;
 }
 
 export interface FriendRequest {
   from_user_id: string;
   from_username: string;
+  avatarUrl?: string;
   status: string;
   created_at: string;
 }
@@ -480,28 +482,29 @@ export async function getFriendRequests(user_id: string): Promise<FriendRequest[
   return data.requests ?? [];
 }
 
-export async function sendFriendRequest(to_user_id: string, from_user_id: string, from_username: string) {
+export async function sendFriendRequest(to_user_id: string, from_user_id: string, from_username: string, from_avatarUrl?: string) {
   const res = await fetch(`${BASE_URL}/friends/${to_user_id}/request`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from_user_id, from_username }),
+    body: JSON.stringify({ from_user_id, from_username, from_avatarUrl }),
   });
   return res.json();
 }
 
-export async function acceptFriendRequest(user_id: string, user_username: string, from_id: string, from_username: string) {
+export async function acceptFriendRequest(user_id: string, user_username: string, from_id: string, from_username: string, from_avatarUrl?: string) {
   const res = await fetch(`${BASE_URL}/friends/${user_id}/request/${from_id}/accept`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ user_username, from_username }),
+    body: JSON.stringify({ user_username, from_username, from_avatarUrl }),
   });
   return res.json();
 }
 
-export async function rejectFriendRequest(user_id: string, from_id: string) {
+export async function rejectFriendRequest(user_id: string, from_id: string, from_username: string, from_avatarUrl?: string) {
   const res = await fetch(`${BASE_URL}/friends/${user_id}/request/${from_id}/reject`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from_username, from_avatarUrl }),
   });
   return res.json();
 }
