@@ -340,6 +340,7 @@ export interface PostReply {
   reply_id: string;
   user_id: string;
   username: string;
+  avatarUrl?: string;
   message: string;
   created_at: string;
 }

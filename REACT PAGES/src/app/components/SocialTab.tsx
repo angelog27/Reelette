@@ -333,7 +333,11 @@ function PostCard({ post, currentUserId, currentUsername, onLike, onDelete, onOp
   const loadReplies = useCallback(async () => {
     setLoadingReplies(true);
     const fetched = await getReplies(post.post_id);
-    setReplies(fetched);
+    const uniqueIds = [...new Set(fetched.map(r => r.user_id))];
+    const profiles = await Promise.all(uniqueIds.map(id => getUserPublicProfile(id)));
+    const avatarMap: Record<string, string> = {};
+    uniqueIds.forEach((id, i) => { const url = profiles[i]?.avatarUrl; if (url) avatarMap[id] = url; });
+    setReplies(fetched.map(r => ({ ...r, avatarUrl: avatarMap[r.user_id] })));
     setLoadingReplies(false);
   }, [post.post_id]);
 
@@ -413,7 +417,7 @@ function PostCard({ post, currentUserId, currentUsername, onLike, onDelete, onOp
               ) : (
                 replies.map(r => (
                   <div key={r.reply_id} className="flex items-start gap-2">
-                    <UserAvatar username={r.username} size={28} onClick={() => onOpenProfile(r.user_id)} />
+                    <UserAvatar username={r.username} avatarUrl={r.avatarUrl} size={28} onClick={() => onOpenProfile(r.user_id)} />
                     <div className="flex-1 bg-[#141414] rounded-lg px-3 py-2 border border-[#2A2A2A]">
                       <div className="flex items-center gap-2 mb-0.5">
                         <button onClick={() => onOpenProfile(r.user_id)} className="text-white text-xs font-medium hover:text-[#C0392B] transition-colors">
