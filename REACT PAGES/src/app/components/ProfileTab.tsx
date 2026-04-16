@@ -24,11 +24,20 @@ import {
   Lock,
   Settings,
   Globe,
-  Languages,
   Link as LinkIcon,
-  Apple,
-  Chrome
+  Apple
 } from 'lucide-react';
+
+function GoogleIcon({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+    </svg>
+  );
+}
 
 // ─── Banner presets ───────────────────────────────────────────
 
@@ -691,7 +700,33 @@ function SocialSection() {
 
 // ─── AccountDetailsSection ───────────────────────────────────
 
-function AccountDetailsSection() {
+function AccountDetailsSection({
+  providers,
+  email,
+  emailVerified,
+  joinedAt,
+}: {
+  providers: { providerId: string; email: string }[];
+  email: string;
+  emailVerified: boolean;
+  joinedAt: string;
+}) {
+  const PROVIDER_CONFIG: Record<string, { label: string; icon: React.ReactNode }> = {
+    'google.com':  { label: 'Google', icon: <GoogleIcon size={20} /> },
+    'apple.com':   { label: 'Apple',  icon: <Apple  size={20} className="text-zinc-200" /> },
+    'password':    { label: 'Email / Password', icon: <Mail size={20} className="text-zinc-400" /> },
+    'phone':       { label: 'Phone',  icon: <Phone  size={20} className="text-zinc-400" /> },
+  };
+
+  // All providers we display (connected + not connected)
+  const ALL_PROVIDERS = ['google.com', 'apple.com', 'password'];
+
+  const connectedIds = new Set(providers.map(p => p.providerId));
+
+  const joinedFormatted = joinedAt
+    ? new Date(joinedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+    : '';
+
   return (
     <div className="bg-zinc-900/50 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-zinc-800/50">
       <div className="flex items-center justify-between mb-6">
@@ -703,77 +738,68 @@ function AccountDetailsSection() {
       </div>
 
       <div className="space-y-6">
-        {/* Region */}
+
+        {/* Email + verified badge */}
         <div>
-          <label className="block text-zinc-400 mb-3">Region / Location</label>
-          <div className="relative">
-            <Globe size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
-            <select className="w-full bg-zinc-950/50 border border-zinc-800 rounded-lg pl-10 pr-4 py-2.5 text-white focus:border-red-600 focus:ring-2 focus:ring-red-600/20 focus:outline-none transition-all appearance-none">
-              <option>United States</option>
-              <option>Canada</option>
-              <option>United Kingdom</option>
-              <option>Australia</option>
-              <option>Germany</option>
-              <option>France</option>
-              <option>Japan</option>
-              <option>India</option>
-            </select>
+          <label className="block text-zinc-400 mb-2">Email Address</label>
+          <div className="flex items-center gap-3 px-4 py-2.5 bg-zinc-950/50 border border-zinc-800 rounded-lg">
+            <Mail size={16} className="text-zinc-600 shrink-0" />
+            <span className="text-zinc-300 flex-1">{email || '—'}</span>
+            {email && (
+              <span className={`text-xs px-2 py-0.5 rounded-full border ${emailVerified ? 'text-green-400 border-green-800 bg-green-950/50' : 'text-yellow-400 border-yellow-800 bg-yellow-950/50'}`}>
+                {emailVerified ? 'Verified' : 'Unverified'}
+              </span>
+            )}
           </div>
         </div>
 
-        {/* Language */}
-        <div>
-          <label className="block text-zinc-400 mb-3">Preferred Language</label>
-          <div className="relative">
-            <Languages size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
-            <select className="w-full bg-zinc-950/50 border border-zinc-800 rounded-lg pl-10 pr-4 py-2.5 text-white focus:border-red-600 focus:ring-2 focus:ring-red-600/20 focus:outline-none transition-all appearance-none">
-              <option>English</option>
-              <option>Spanish</option>
-              <option>French</option>
-              <option>German</option>
-              <option>Japanese</option>
-              <option>Mandarin</option>
-              <option>Portuguese</option>
-              <option>Italian</option>
-            </select>
+        {/* Joined date */}
+        {joinedFormatted && (
+          <div>
+            <label className="block text-zinc-400 mb-2">Member Since</label>
+            <div className="flex items-center gap-3 px-4 py-2.5 bg-zinc-950/50 border border-zinc-800 rounded-lg">
+              <Globe size={16} className="text-zinc-600 shrink-0" />
+              <span className="text-zinc-300">{joinedFormatted}</span>
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Connected Accounts */}
+        {/* Sign-in providers */}
         <div>
-          <label className="block text-zinc-400 mb-3">Connected Accounts</label>
+          <label className="block text-zinc-400 mb-3">Sign-in Methods</label>
           <div className="space-y-3">
-            <div className="flex items-center justify-between p-3 bg-zinc-950/50 rounded-lg border border-zinc-800">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center">
-                  <Chrome size={20} className="text-red-600" />
+            {ALL_PROVIDERS.map(id => {
+              const cfg = PROVIDER_CONFIG[id];
+              const connected = connectedIds.has(id);
+              const providerEmail = providers.find(p => p.providerId === id)?.email || '';
+              return (
+                <div key={id} className="flex items-center justify-between p-3 bg-zinc-950/50 rounded-lg border border-zinc-800">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center">
+                      {cfg?.icon}
+                    </div>
+                    <div>
+                      <p className="text-zinc-300">{cfg?.label ?? id}</p>
+                      <p className="text-xs text-zinc-500">
+                        {connected ? (providerEmail || 'Connected') : 'Not connected'}
+                      </p>
+                    </div>
+                  </div>
+                  {connected ? (
+                    <span className="px-3 py-1 text-xs text-green-400 border border-green-800 bg-green-950/40 rounded-full">
+                      Connected
+                    </span>
+                  ) : (
+                    <span className="px-3 py-1 text-xs text-zinc-500 border border-zinc-700 rounded-full">
+                      Not linked
+                    </span>
+                  )}
                 </div>
-                <div>
-                  <p className="text-zinc-300">Google</p>
-                  <p className="text-xs text-zinc-600">alex.martinez@gmail.com</p>
-                </div>
-              </div>
-              <button className="px-4 py-1.5 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-600/50 hover:border-red-600 rounded-lg transition-all">
-                Disconnect
-              </button>
-            </div>
-
-            <div className="flex items-center justify-between p-3 bg-zinc-950/50 rounded-lg border border-zinc-800">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center">
-                  <Apple size={20} className="text-red-600" />
-                </div>
-                <div>
-                  <p className="text-zinc-300">Apple</p>
-                  <p className="text-xs text-zinc-600">Not connected</p>
-                </div>
-              </div>
-              <button className="px-4 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white border border-zinc-700 rounded-lg transition-all">
-                Connect
-              </button>
-            </div>
+              );
+            })}
           </div>
         </div>
+
       </div>
     </div>
   );
@@ -822,6 +848,10 @@ export function ProfileTab() {
     },
   });
 
+  const [providers, setProviders] = useState<{ providerId: string; email: string }[]>([]);
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [joinedAt, setJoinedAt] = useState('');
+
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [favoritePersonInput, setFavoritePersonInput] = useState('');
@@ -857,6 +887,9 @@ export function ProfileTab() {
 
       setProfile(loadedProfile);
       setDraftProfile(loadedProfile);
+      setProviders(data.providerData || []);
+      setEmailVerified(data.emailVerified || false);
+      setJoinedAt(data.joinedAt || '');
 
       const streamingResponse = await fetch(`http://localhost:5000/api/user/${userId}/streaming`);
       const streamingData = await streamingResponse.json();
@@ -1144,7 +1177,12 @@ export function ProfileTab() {
             <SocialSection />
           </div>
 
-          <AccountDetailsSection />
+          <AccountDetailsSection
+            providers={providers}
+            email={profile.email}
+            emailVerified={emailVerified}
+            joinedAt={joinedAt}
+          />
         </div>
       </div>
     </div>

@@ -260,15 +260,46 @@ def get_user_movie_preferences(user_id):
         }    
 
 def get_user_data(user_id):
-    #get all user data.
+    """Return Firestore profile merged with Firebase Auth metadata (providers, email verified, joined date)."""
     try:
         user_ref = db.collection('users').document(user_id)
         user_doc = user_ref.get()
-        
-        if user_doc.exists:
-            return user_doc.to_dict()
-        else:
+
+        if not user_doc.exists:
             return None
+
+        data = user_doc.to_dict()
+
+        # Merge in Auth record (providers, emailVerified, creation time)
+        try:
+            auth_user = auth.get_user(user_id)
+            data['emailVerified'] = auth_user.email_verified
+            data['providerData'] = [
+                {
+                    'providerId': p.provider_id,
+                    'email': p.email or '',
+                    'displayName': p.display_name or '',
+                    'photoUrl': p.photo_url or '',
+                }
+                for p in (auth_user.provider_data or [])
+            ]
+            # Fall back to Auth email if Firestore doc doesn't have one
+            if not data.get('email') and auth_user.email:
+                data['email'] = auth_user.email
+            # Account creation timestamp (ms → ISO string)
+            if auth_user.user_metadata and auth_user.user_metadata.creation_timestamp:
+                from datetime import timezone
+                import datetime as dt
+                ts_ms = auth_user.user_metadata.creation_timestamp
+                data['joinedAt'] = dt.datetime.fromtimestamp(
+                    ts_ms / 1000, tz=timezone.utc
+                ).isoformat()
+        except Exception as auth_err:
+            print(f"Warning: could not fetch Auth record for {user_id}: {auth_err}")
+            data.setdefault('providerData', [])
+            data.setdefault('emailVerified', False)
+
+        return data
     except Exception as e:
         print(f"Error getting user data: {e}")
         return None
