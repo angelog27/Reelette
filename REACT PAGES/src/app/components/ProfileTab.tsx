@@ -608,7 +608,7 @@ function SocialSection() {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="w-1 h-6 bg-red-600 rounded-full"></div>
-          <h2 className="text-white uppercase tracking-wider">Social & Privacy</h2>
+          <h2 className="text-white uppercase tracking-wider">Social</h2>
         </div>
         <Users size={20} className="text-zinc-600" />
       </div>
@@ -638,35 +638,18 @@ function SocialSection() {
           </button>
         </div>
 
-        {/* Block/Mute */}
-        <div>
-          <label className="block text-zinc-400 mb-3">Manage Blocked Users</label>
-          <button className="w-full p-3 bg-zinc-950/50 hover:bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-lg text-zinc-300 hover:text-white transition-all flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Shield size={18} className="text-zinc-500" />
-              <span>Block & Mute Settings</span>
-            </div>
-            <span className="text-zinc-600">→</span>
-          </button>
-        </div>
+       
 
-        {/* Share Profile */}
-        <div>
-          <label className="block text-zinc-400 mb-3">Share Profile</label>
-          <button className="w-full p-3 bg-zinc-950/50 hover:bg-red-600 border border-zinc-800 hover:border-red-600 rounded-lg text-zinc-300 hover:text-white transition-all flex items-center justify-center gap-2">
-            <Share2 size={18} />
-            Copy Profile Link
-          </button>
-        </div>
+      
 
         {/* Privacy Settings */}
         <div>
-          <label className="block text-zinc-400 mb-3">Privacy Settings</label>
+          <label className="block text-zinc-400 mb-3">Social Settings</label>
           <div className="space-y-3">
             <label className="flex items-center justify-between p-3 bg-zinc-950/30 rounded-lg border border-zinc-800/50 hover:border-zinc-700 transition-all cursor-pointer group">
               <div className="flex items-center gap-3">
                 <Eye size={18} className="text-zinc-500 group-hover:text-red-400" />
-                <span className="text-zinc-300">Show Activity Status</span>
+                <span className="text-zinc-300">Show Online Status</span>
               </div>
               <input
                 type="checkbox"
@@ -677,23 +660,14 @@ function SocialSection() {
             <label className="flex items-center justify-between p-3 bg-zinc-950/30 rounded-lg border border-zinc-800/50 hover:border-zinc-700 transition-all cursor-pointer group">
               <div className="flex items-center gap-3">
                 <Lock size={18} className="text-zinc-500 group-hover:text-red-400" />
-                <span className="text-zinc-300">Show Watchlist Publicly</span>
+                <span className="text-zinc-300">Show MyStuff Publicly</span>
               </div>
               <input
                 type="checkbox"
                 className="w-5 h-5 rounded bg-zinc-800 border-zinc-700 text-red-600 focus:ring-red-600 focus:ring-offset-0"
               />
             </label>
-            <label className="flex items-center justify-between p-3 bg-zinc-950/30 rounded-lg border border-zinc-800/50 hover:border-zinc-700 transition-all cursor-pointer group">
-              <div className="flex items-center gap-3">
-                <EyeOff size={18} className="text-zinc-500 group-hover:text-red-400" />
-                <span className="text-zinc-300">Hide Ratings & Reviews</span>
-              </div>
-              <input
-                type="checkbox"
-                className="w-5 h-5 rounded bg-zinc-800 border-zinc-700 text-red-600 focus:ring-red-600 focus:ring-offset-0"
-              />
-            </label>
+      
           </div>
         </div>
       </div>
