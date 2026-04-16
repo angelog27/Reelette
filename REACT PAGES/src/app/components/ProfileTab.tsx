@@ -872,9 +872,18 @@ export function ProfileTab() {
       }
 
       try {
-        // Fetch all three endpoints in parallel; a failure in one won't block the others
-        const [profileRes, streamingRes, prefsRes] = await Promise.all([
-          fetch(`http://localhost:5000/api/user/${userId}`).then(r => r.json()).catch(() => ({})),
+        // Profile is required — let it throw so the error screen shows if the backend is down
+        const profileFetch = await fetch(`http://localhost:5000/api/user/${userId}`);
+        if (!profileFetch.ok) {
+          throw new Error(`Server returned ${profileFetch.status} for user profile`);
+        }
+        const profileRes = await profileFetch.json();
+        if (profileRes.error) {
+          throw new Error(profileRes.error);
+        }
+
+        // Streaming + preferences are best-effort — silently fall back to empty on failure
+        const [streamingRes, prefsRes] = await Promise.all([
           fetch(`http://localhost:5000/api/user/${userId}/streaming`).then(r => r.json()).catch(() => ({})),
           fetch(`http://localhost:5000/api/user/${userId}/movie-preferences`).then(r => r.json()).catch(() => ({})),
         ]);
