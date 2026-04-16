@@ -260,52 +260,57 @@ def get_user_movie_preferences(user_id):
         }    
 
 def get_user_data(user_id):
-    """Return Firestore profile merged with Firebase Auth metadata.
+    """Return Firestore profile, optionally enriched with Firebase Auth metadata.
 
-    For OAuth users who have no Firestore document yet, a skeleton document
-    is created on-the-fly so the profile page always has something to show.
+    Firestore is always the primary source. Auth data is layered on top as
+    fallbacks (avatar, display name, provider list). If the Auth call fails
+    for any reason the Firestore data is still returned intact.
     """
     import datetime as dt
     from datetime import timezone
 
     try:
-        # ── 1. Auth record (always authoritative for identity fields) ──
-        try:
-            auth_user = auth.get_user(user_id)
-        except Exception as auth_err:
-            print(f"Auth lookup failed for {user_id}: {auth_err}")
-            return None
-
-        provider_data = [
-            {
-                'providerId': p.provider_id,
-                'email': p.email or '',
-                'displayName': p.display_name or '',
-                'photoUrl': p.photo_url or '',
-            }
-            for p in (auth_user.provider_data or [])
-        ]
-
-        # Best photo URL: prefer manually-uploaded avatar, fall back to OAuth provider photo
-        provider_photo = next(
-            (p['photoUrl'] for p in provider_data if p['photoUrl']), ''
-        )
-
-        joined_at = ''
-        if auth_user.user_metadata and auth_user.user_metadata.creation_timestamp:
-            joined_at = dt.datetime.fromtimestamp(
-                auth_user.user_metadata.creation_timestamp / 1000, tz=timezone.utc
-            ).isoformat()
-
-        # ── 2. Firestore document ──
+        # ── 1. Firestore document (primary source) ──
         user_ref = db.collection('users').document(user_id)
         user_doc = user_ref.get()
 
         if user_doc.exists:
             data = user_doc.to_dict()
         else:
-            # OAuth user with no Firestore doc — seed a minimal one so
-            # subsequent writes (streaming prefs, etc.) have a home.
+            data = None  # will try to seed from Auth below
+
+        # ── 2. Firebase Auth record (enrichment / fallback) ──
+        auth_user = None
+        provider_data = []
+        provider_photo = ''
+        joined_at = ''
+
+        try:
+            auth_user = auth.get_user(user_id)
+            provider_data = [
+                {
+                    'providerId': p.provider_id,
+                    'email': p.email or '',
+                    'displayName': p.display_name or '',
+                    'photoUrl': p.photo_url or '',
+                }
+                for p in (auth_user.provider_data or [])
+            ]
+            provider_photo = next(
+                (p['photoUrl'] for p in provider_data if p['photoUrl']), ''
+            )
+            if auth_user.user_metadata and auth_user.user_metadata.creation_timestamp:
+                joined_at = dt.datetime.fromtimestamp(
+                    auth_user.user_metadata.creation_timestamp / 1000, tz=timezone.utc
+                ).isoformat()
+        except Exception as auth_err:
+            print(f"Warning: Auth enrichment skipped for {user_id}: {auth_err}")
+
+        # ── 3. Seed Firestore doc for OAuth users who bypassed /register ──
+        if data is None:
+            if auth_user is None:
+                # No Firestore doc and no Auth record — user truly doesn't exist
+                return None
             seed = {
                 'username': (auth_user.display_name or '').lower().replace(' ', '') or user_id[:8],
                 'displayName': auth_user.display_name or '',
@@ -329,17 +334,17 @@ def get_user_data(user_id):
             user_ref.set(seed)
             data = seed
 
-        # ── 3. Fill in gaps from Auth ──
-        if not data.get('email') and auth_user.email:
-            data['email'] = auth_user.email
-        if not data.get('displayName') and auth_user.display_name:
-            data['displayName'] = auth_user.display_name
-        # Use provider photo only when no custom avatar has been uploaded
-        if not data.get('avatarUrl') and provider_photo:
-            data['avatarUrl'] = provider_photo
+        # ── 4. Fill gaps from Auth (only when Auth call succeeded) ──
+        if auth_user is not None:
+            if not data.get('email') and auth_user.email:
+                data['email'] = auth_user.email
+            if not data.get('displayName') and auth_user.display_name:
+                data['displayName'] = auth_user.display_name
+            if not data.get('avatarUrl') and provider_photo:
+                data['avatarUrl'] = provider_photo
 
-        # ── 4. Attach Auth metadata ──
-        data['emailVerified'] = auth_user.email_verified
+        # ── 5. Attach Auth metadata (empty defaults when Auth unavailable) ──
+        data['emailVerified'] = auth_user.email_verified if auth_user else False
         data['providerData'] = provider_data
         data['joinedAt'] = joined_at
 

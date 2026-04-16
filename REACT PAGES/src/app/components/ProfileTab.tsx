@@ -856,13 +856,20 @@ export function ProfileTab() {
 
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [retryCount, setRetryCount] = useState(0);
   const [favoritePersonInput, setFavoritePersonInput] = useState('');
   const [isSavingPreferences, setIsSavingPreferences] = useState(false);
 
   useEffect(() => {
     async function loadProfile() {
+      setLoadError('');
       const userId = localStorage.getItem('user_id');
-      if (!userId) { setIsLoadingProfile(false); return; }
+      if (!userId) {
+        setLoadError('No user session found. Please log in again.');
+        setIsLoadingProfile(false);
+        return;
+      }
 
       try {
         // Fetch all three endpoints in parallel; a failure in one won't block the others
@@ -918,13 +925,14 @@ export function ProfileTab() {
         });
       } catch (error) {
         console.error('Failed to load profile:', error);
+        setLoadError('Could not reach the server. Make sure the backend is running.');
       } finally {
         setIsLoadingProfile(false);
       }
     }
 
     loadProfile();
-  }, []);
+  }, [retryCount]);
 
   function handleStartEditing() {
     setDraftProfile(profile);
@@ -1120,6 +1128,20 @@ export function ProfileTab() {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center text-zinc-400">
         Loading profile...
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center gap-3">
+        <p className="text-red-400 font-medium">{loadError}</p>
+        <button
+          onClick={() => { setIsLoadingProfile(true); setRetryCount(c => c + 1); }}
+          className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm transition-all"
+        >
+          Retry
+        </button>
       </div>
     );
   }
