@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import peacockLogo from '../../assets/Peacock.png';
+import { BASE_URL } from '../services/api';
 import {
   Camera,
   Edit2,
@@ -873,7 +874,7 @@ export function ProfileTab() {
 
       try {
         // Profile is required — let it throw so the error screen shows if the backend is down
-        const profileFetch = await fetch(`http://localhost:5000/api/user/${userId}`);
+        const profileFetch = await fetch(`${BASE_URL}/user/${userId}`);
         if (!profileFetch.ok) {
           throw new Error(`Server returned ${profileFetch.status} for user profile`);
         }
@@ -884,8 +885,8 @@ export function ProfileTab() {
 
         // Streaming + preferences are best-effort — silently fall back to empty on failure
         const [streamingRes, prefsRes] = await Promise.all([
-          fetch(`http://localhost:5000/api/user/${userId}/streaming`).then(r => r.json()).catch(() => ({})),
-          fetch(`http://localhost:5000/api/user/${userId}/movie-preferences`).then(r => r.json()).catch(() => ({})),
+          fetch(`${BASE_URL}/user/${userId}/streaming`).then(r => r.json()).catch(() => ({})),
+          fetch(`${BASE_URL}/user/${userId}/movie-preferences`).then(r => r.json()).catch(() => ({})),
         ]);
 
         // ── Profile fields ──
@@ -966,7 +967,7 @@ export function ProfileTab() {
         return;
       }
 
-      const response = await fetch(`http://localhost:5000/api/user/${userId}`, {
+      const response = await fetch(`${BASE_URL}/user/${userId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -1091,14 +1092,14 @@ export function ProfileTab() {
     setIsSavingPreferences(true);
 
     const [streamingResponse, moviePreferencesResponse] = await Promise.all([
-      fetch(`http://localhost:5000/api/user/${userId}/streaming`, {
+      fetch(`${BASE_URL}/user/${userId}/streaming`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(moviePreferences.streamingServices),
       }),
-      fetch(`http://localhost:5000/api/user/${userId}/movie-preferences`, {
+      fetch(`${BASE_URL}/user/${userId}/movie-preferences`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
