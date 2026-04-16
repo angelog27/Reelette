@@ -570,9 +570,9 @@ def delete_post(post_id, user_id):
 # ── User Profile ──────────────────────────────────────────────────
 
 def update_user_profile(user_id, data):
-    """Update editable profile fields: displayName, bio, username, phone"""
+    """Update editable profile fields: displayName, bio, username, phone, socialSettings"""
     try:
-        allowed = {'displayName', 'bio', 'username', 'phone', 'profileBannerBg'}
+        allowed = {'displayName', 'bio', 'username', 'phone', 'profileBannerBg', 'socialSettings'}
         update_data = {k: v for k, v in data.items() if k in allowed}
         if not update_data:
             return {'success': False, 'message': 'No valid fields to update'}
@@ -875,16 +875,20 @@ def get_user_public_profile(user_id):
         watched_docs  = db.collection('users').document(user_id).collection('watched_movies').stream()
         watchlist_doc = db.collection('users').document(user_id).collection('lists').document('watchlist').get()
         friends_docs  = db.collection('users').document(user_id).collection('friends').stream()
+        social = d.get('socialSettings', {})
         return {
-            'user_id':        user_id,
-            'username':       d.get('username', ''),
-            'displayName':    d.get('displayName', d.get('username', '')),
-            'bio':            d.get('bio', ''),
-            'avatarUrl':      d.get('avatarUrl'),
-            'createdAt':      d.get('createdAt'),
-            'watchedCount':   sum(1 for _ in watched_docs),
-            'watchlistCount': len(watchlist_doc.to_dict().get('movies', [])) if watchlist_doc.exists else 0,
-            'friendsCount':   sum(1 for _ in friends_docs),
+            'user_id':             user_id,
+            'username':            d.get('username', ''),
+            'displayName':         d.get('displayName', d.get('username', '')),
+            'bio':                 d.get('bio', ''),
+            'avatarUrl':           d.get('avatarUrl'),
+            'createdAt':           d.get('createdAt'),
+            'lastSeen':            d.get('lastSeen'),
+            'watchedCount':        sum(1 for _ in watched_docs),
+            'watchlistCount':      len(watchlist_doc.to_dict().get('movies', [])) if watchlist_doc.exists else 0,
+            'friendsCount':        sum(1 for _ in friends_docs),
+            'showMyStuffPublicly': social.get('showMyStuffPublicly', False),
+            'showOnlineStatus':    social.get('showOnlineStatus', True),
         }
     except Exception as e:
         print(f"Error getting public profile: {e}")

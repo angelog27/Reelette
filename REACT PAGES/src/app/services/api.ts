@@ -400,9 +400,12 @@ export interface UserPublicProfile {
   bio?: string;
   avatarUrl?: string;
   createdAt?: string;
+  lastSeen?: string;
   watchedCount: number;
   watchlistCount: number;
   friendsCount: number;
+  showMyStuffPublicly: boolean;
+  showOnlineStatus: boolean;
 }
 
 export async function getUserPublicProfile(user_id: string): Promise<UserPublicProfile | null> {
@@ -434,6 +437,15 @@ export async function getGroupMemberServices(group_id: string): Promise<Record<s
   const res = await fetch(`${BASE_URL}/groups/${group_id}/members/services`);
   const data = await res.json();
   return data.services ?? {};
+}
+
+export async function saveSocialSettings(user_id: string, settings: { showOnlineStatus: boolean; showMyStuffPublicly: boolean }) {
+  const res = await fetch(`${BASE_URL}/user/${user_id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ socialSettings: settings }),
+  });
+  return res.json();
 }
 
 export async function updateUserProfile(user_id: string, data: Partial<Pick<UserProfile, 'displayName' | 'bio' | 'username'>>) {
@@ -585,7 +597,7 @@ export async function addToGroupWatchlist(group_id: string, movie_id: string, mo
   return res.json();
 }
 
-export async function removeFromGroupWatchlist(group_id: string, movie_id: string, movie_poster?: string) {
+export async function removeFromGroupWatchlist(group_id: string, movie_id: string) {
   const res = await fetch(`${BASE_URL}/groups/${group_id}/watchlist/${movie_id}`, {
     method: 'DELETE',
   });
