@@ -205,7 +205,7 @@ export function UserProfileModal({ userId, onClose }: Props) {
       setHasPendingRequest(requests.some((r) => r.from_user_id === currentUid));
       setLoading(false);
 
-      // Load MyStuff preview if public
+      // Load MyStuff preview whenever content is public
       if (prof?.showMyStuffPublicly) {
         setPreviewLoading(true);
         Promise.all([
@@ -231,6 +231,8 @@ export function UserProfileModal({ userId, onClose }: Props) {
           setPreviewWatchLater(wl);
           setPreviewLoading(false);
         });
+      } else {
+        setPreviewLoading(false);
       }
     });
   }, [userId, currentUid]);
@@ -384,11 +386,11 @@ export function UserProfileModal({ userId, onClose }: Props) {
                     ))}
                   </div>
 
-                  {/* MyStuff preview — only when showMyStuffPublicly is true */}
-                  {profile.showMyStuffPublicly && (
-                    <div className="mt-5 pt-4 border-t border-[#2A2A2A]">
-                      <div className="flex items-center justify-between mb-3">
-                        <p className="text-white text-sm font-semibold">MyStuff</p>
+                  {/* MyStuff section — always visible, gated by showMyStuffPublicly */}
+                  <div className="mt-5 pt-4 border-t border-[#2A2A2A]">
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-white text-sm font-semibold">MyStuff</p>
+                      {profile.showMyStuffPublicly && (
                         <button
                           onClick={() => setMyStuffOpen(true)}
                           className="flex items-center gap-1.5 text-xs text-[#C0392B] hover:text-[#E74C3C] transition-colors"
@@ -396,80 +398,90 @@ export function UserProfileModal({ userId, onClose }: Props) {
                           <Maximize2 className="w-3.5 h-3.5" />
                           View Fullscreen
                         </button>
-                      </div>
-
-                      {previewLoading ? (
-                        <div className="flex items-center gap-2 text-gray-500 text-sm py-2">
-                          <Loader2 className="w-4 h-4 animate-spin" /> Loading…
-                        </div>
-                      ) : (
-                        <>
-                          {/* Watched strip */}
-                          {previewWatched.length > 0 && (
-                            <div className="mb-4">
-                              <p className="text-gray-500 text-xs mb-2 flex items-center gap-1">
-                                <Star className="w-3 h-3 fill-[#C0392B] text-[#C0392B]" />
-                                Watched ({profile.watchedCount})
-                              </p>
-                              <div className="flex gap-2 overflow-x-auto pb-1">
-                                {previewWatched.map((m) => (
-                                  <div
-                                    key={m.movie_id}
-                                    className="relative shrink-0 w-16 rounded-lg overflow-hidden border border-[#2A2A2A]"
-                                  >
-                                    {m.poster ? (
-                                      <img src={m.poster} alt={m.title} className="w-full aspect-[2/3] object-cover" />
-                                    ) : (
-                                      <div className="w-full aspect-[2/3] bg-[#2A2A2A] flex items-center justify-center">
-                                        <Film className="w-4 h-4 text-gray-600" />
-                                      </div>
-                                    )}
-                                    <div className="absolute top-1 right-1 flex items-center gap-0.5 bg-black/70 rounded-full px-1 py-0.5">
-                                      <Star className="w-2 h-2 fill-[#C0392B] text-[#C0392B]" />
-                                      <span className="text-white text-[9px]">{m.user_rating}</span>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Watch Later strip */}
-                          {previewWatchLater.length > 0 && (
-                            <div>
-                              <p className="text-gray-500 text-xs mb-2 flex items-center gap-1">
-                                <BookMarked className="w-3 h-3 text-gray-400" />
-                                Watch Later ({profile.watchlistCount})
-                              </p>
-                              <div className="flex gap-2 overflow-x-auto pb-1">
-                                {previewWatchLater.map((m) => (
-                                  <div
-                                    key={m.movie_id}
-                                    className="relative shrink-0 w-16 rounded-lg overflow-hidden border border-[#2A2A2A]"
-                                  >
-                                    {m.poster ? (
-                                      <img src={m.poster} alt={m.title} className="w-full aspect-[2/3] object-cover" />
-                                    ) : (
-                                      <div className="w-full aspect-[2/3] bg-[#2A2A2A] flex items-center justify-center">
-                                        <Film className="w-4 h-4 text-gray-600" />
-                                      </div>
-                                    )}
-                                    <div className="absolute top-1 right-1 bg-black/70 rounded-full p-0.5">
-                                      <BookMarked className="w-2 h-2 fill-white text-white" />
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                          {previewWatched.length === 0 && previewWatchLater.length === 0 && (
-                            <p className="text-gray-600 text-xs py-2">Nothing saved yet.</p>
-                          )}
-                        </>
                       )}
                     </div>
-                  )}
+
+                    {!profile.showMyStuffPublicly ? (
+                      <div className="flex items-center gap-3 py-4 px-4 bg-[#141414] rounded-xl border border-[#2A2A2A]">
+                        <div className="w-8 h-8 rounded-full bg-[#2A2A2A] flex items-center justify-center shrink-0">
+                          <BookMarked className="w-4 h-4 text-gray-500" />
+                        </div>
+                        <div>
+                          <p className="text-gray-400 text-sm">Content is private</p>
+                          <p className="text-gray-600 text-xs">{profile.displayName} hasn't made their MyStuff public.</p>
+                        </div>
+                      </div>
+                    ) : previewLoading ? (
+                      <div className="flex items-center gap-2 text-gray-500 text-sm py-2">
+                        <Loader2 className="w-4 h-4 animate-spin" /> Loading…
+                      </div>
+                    ) : (
+                      <>
+                        {/* Watched strip */}
+                        {previewWatched.length > 0 && (
+                          <div className="mb-4">
+                            <p className="text-gray-500 text-xs mb-2 flex items-center gap-1">
+                              <Star className="w-3 h-3 fill-[#C0392B] text-[#C0392B]" />
+                              Watched ({profile.watchedCount})
+                            </p>
+                            <div className="flex gap-2 overflow-x-auto pb-1">
+                              {previewWatched.map((m) => (
+                                <div
+                                  key={m.movie_id}
+                                  className="relative shrink-0 w-16 rounded-lg overflow-hidden border border-[#2A2A2A]"
+                                >
+                                  {m.poster ? (
+                                    <img src={m.poster} alt={m.title} className="w-full aspect-[2/3] object-cover" />
+                                  ) : (
+                                    <div className="w-full aspect-[2/3] bg-[#2A2A2A] flex items-center justify-center">
+                                      <Film className="w-4 h-4 text-gray-600" />
+                                    </div>
+                                  )}
+                                  <div className="absolute top-1 right-1 flex items-center gap-0.5 bg-black/70 rounded-full px-1 py-0.5">
+                                    <Star className="w-2 h-2 fill-[#C0392B] text-[#C0392B]" />
+                                    <span className="text-white text-[9px]">{m.user_rating}</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Watch Later strip */}
+                        {previewWatchLater.length > 0 && (
+                          <div>
+                            <p className="text-gray-500 text-xs mb-2 flex items-center gap-1">
+                              <BookMarked className="w-3 h-3 text-gray-400" />
+                              Watch Later ({profile.watchlistCount})
+                            </p>
+                            <div className="flex gap-2 overflow-x-auto pb-1">
+                              {previewWatchLater.map((m) => (
+                                <div
+                                  key={m.movie_id}
+                                  className="relative shrink-0 w-16 rounded-lg overflow-hidden border border-[#2A2A2A]"
+                                >
+                                  {m.poster ? (
+                                    <img src={m.poster} alt={m.title} className="w-full aspect-[2/3] object-cover" />
+                                  ) : (
+                                    <div className="w-full aspect-[2/3] bg-[#2A2A2A] flex items-center justify-center">
+                                      <Film className="w-4 h-4 text-gray-600" />
+                                    </div>
+                                  )}
+                                  <div className="absolute top-1 right-1 bg-black/70 rounded-full p-0.5">
+                                    <BookMarked className="w-2 h-2 fill-white text-white" />
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {previewWatched.length === 0 && previewWatchLater.length === 0 && (
+                          <p className="text-gray-600 text-xs py-2">Nothing saved yet.</p>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </>
               ) : (
                 <p className="text-gray-500">User not found.</p>
