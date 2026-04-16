@@ -30,48 +30,122 @@ import {
   Chrome
 } from 'lucide-react';
 
+// ─── Banner presets ───────────────────────────────────────────
+
+const BANNER_PRESETS = [
+  { id: 'default', label: 'Cinematic',  swatch: '#27272a', gradient: 'linear-gradient(135deg,#18181b 0%,#09090b 60%,#000 100%)' },
+  { id: 'crimson', label: 'Crimson',    swatch: '#7f1d1d', gradient: 'linear-gradient(135deg,#450a0a 0%,#0d0d0d 60%,#000 100%)' },
+  { id: 'midnight',label: 'Midnight',   swatch: '#1e3a8a', gradient: 'linear-gradient(135deg,#0c1a3d 0%,#0d0d0d 60%,#000 100%)' },
+  { id: 'dusk',    label: 'Dusk',       swatch: '#4c1d95', gradient: 'linear-gradient(135deg,#2e1065 0%,#0d0d0d 60%,#000 100%)' },
+  { id: 'forest',  label: 'Forest',     swatch: '#14532d', gradient: 'linear-gradient(135deg,#052e16 0%,#0d0d0d 60%,#000 100%)' },
+  { id: 'ember',   label: 'Ember',      swatch: '#92400e', gradient: 'linear-gradient(135deg,#451a03 0%,#0d0d0d 60%,#000 100%)' },
+  { id: 'ocean',   label: 'Ocean',      swatch: '#134e4a', gradient: 'linear-gradient(135deg,#042f2e 0%,#0d0d0d 60%,#000 100%)' },
+  { id: 'rose',    label: 'Rose',       swatch: '#9f1239', gradient: 'linear-gradient(135deg,#500724 0%,#0d0d0d 60%,#000 100%)' },
+];
+
+function getBannerGradient(id: string) {
+  return (BANNER_PRESETS.find(p => p.id === id) ?? BANNER_PRESETS[0]).gradient;
+}
+
 // ─── ProfileHeader ───────────────────────────────────────────
 
 function ProfileHeader({
   profile,
+  avatarUrl,
+  bannerBg,
+  isEditing,
   onEdit,
+  onAvatarChange,
+  onBannerChange,
 }: {
-  profile: {
-    displayName: string;
-    username: string;
-    bio: string;
-  };
+  profile: { displayName: string; username: string; bio: string };
+  avatarUrl?: string;
+  bannerBg: string;
+  isEditing: boolean;
   onEdit: () => void;
+  onAvatarChange: (dataUrl: string) => void;
+  onBannerChange: (presetId: string) => void;
 }) {
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => onAvatarChange(reader.result as string);
+    reader.readAsDataURL(file);
+  }
+
   return (
     <div className="relative">
       <div className="px-8 pt-12 pb-8">
-        <h1 className="text-2xl md:text-2xl tracking-tight text-white relative inline-block">
+        <h1 className="text-2xl tracking-tight text-white relative inline-block">
           Profile
           <div className="absolute -bottom-2 left-0 right-0 h-[2px] bg-gradient-to-r from-red-600 via-red-500 to-transparent shadow-[0_0_15px_rgba(220,38,38,0.4)]"></div>
         </h1>
       </div>
 
-      <div className="h-48 bg-gradient-to-br from-zinc-900 via-zinc-950 to-black relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-red-950/20 to-transparent"></div>
-        <div className="absolute inset-0 opacity-10 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')]"></div>
+      {/* Banner */}
+      <div
+        className="h-48 relative"
+        style={{ background: getBannerGradient(bannerBg) }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-r from-red-950/20 to-transparent pointer-events-none" />
+        <div className="absolute inset-0 opacity-10 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] pointer-events-none" />
+
+        {/* Banner colour swatches — visible only in edit mode */}
+        {isEditing && (
+          <div className="absolute bottom-3 right-4 flex items-center gap-1.5 bg-black/50 backdrop-blur-sm rounded-full px-3 py-1.5">
+            <span className="text-zinc-400 text-[10px] mr-1 uppercase tracking-wider">Banner</span>
+            {BANNER_PRESETS.map(p => (
+              <button
+                key={p.id}
+                title={p.label}
+                onClick={() => onBannerChange(p.id)}
+                className="w-5 h-5 rounded-full border-2 transition-transform hover:scale-125 focus:outline-none"
+                style={{
+                  backgroundColor: p.swatch,
+                  borderColor: bannerBg === p.id ? '#fff' : 'transparent',
+                }}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
+      {/* Avatar + name row — sits below the banner, avatar overlaps upward */}
       <div className="px-8 pb-6">
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between -mt-10 gap-6">
+        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6" style={{ marginTop: '-40px' }}>
           <div className="flex flex-col md:flex-row items-start md:items-end gap-6">
-            <div className="relative group">
+
+            {/* Avatar */}
+            <div className="relative group flex-shrink-0 z-10">
               <div className="w-32 h-32 rounded-full bg-gradient-to-br from-zinc-800 to-zinc-900 border-4 border-zinc-950 overflow-hidden shadow-2xl">
-                <div className="w-full h-full flex items-center justify-center text-zinc-600">
-                  <Camera size={40} />
-                </div>
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-zinc-600">
+                    <Camera size={40} />
+                  </div>
+                )}
               </div>
-              <button className="absolute bottom-0 right-0 w-10 h-10 bg-red-600 hover:bg-red-700 rounded-full flex items-center justify-center shadow-lg transition-all group-hover:scale-110">
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="absolute bottom-0 right-0 w-10 h-10 bg-red-600 hover:bg-red-700 rounded-full flex items-center justify-center shadow-lg transition-all group-hover:scale-110"
+                title="Change photo"
+              >
                 <Camera size={18} className="text-white" />
               </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleFileChange}
+              />
             </div>
 
-            <div className="space-y-1">
+            <div className="space-y-1 pb-1">
               <h1 className="text-white tracking-tight">{profile.displayName}</h1>
               <p className="text-zinc-400">@{profile.username}</p>
               <p className="text-zinc-500 max-w-md">{profile.bio}</p>
@@ -80,7 +154,7 @@ function ProfileHeader({
 
           <button
             onClick={onEdit}
-            className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg flex items-center gap-2 transition-all shadow-lg shadow-red-600/20 hover:shadow-red-600/30"
+            className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg flex items-center gap-2 transition-all shadow-lg shadow-red-600/20 hover:shadow-red-600/30 self-end md:self-auto"
           >
             <Edit2 size={16} />
             Edit Profile
@@ -714,6 +788,8 @@ export function ProfileTab() {
     bio: '',
     email: '',
     phone: '',
+    avatarUrl: '',
+    profileBannerBg: 'default',
   });
 
   const [draftProfile, setDraftProfile] = useState({
@@ -722,6 +798,8 @@ export function ProfileTab() {
     bio: '',
     email: '',
     phone: '',
+    avatarUrl: '',
+    profileBannerBg: 'default',
   });
 
   const [moviePreferences, setMoviePreferences] = useState({
@@ -771,6 +849,8 @@ export function ProfileTab() {
         bio: data.bio || '',
         email: data.email || '',
         phone: data.phone || '',
+        avatarUrl: data.avatarUrl || '',
+        profileBannerBg: data.profileBannerBg || 'default',
       };
 
       console.log('loadedProfile:', loadedProfile);
@@ -853,6 +933,7 @@ export function ProfileTab() {
           username: draftProfile.username,
           bio: draftProfile.bio,
           phone: draftProfile.phone,
+          profileBannerBg: draftProfile.profileBannerBg,
         }),
       });
 
@@ -875,6 +956,23 @@ export function ProfileTab() {
   function handleCancelProfileEdit() {
     setDraftProfile(profile);
     setIsEditingProfile(false);
+  }
+
+  async function handleAvatarChange(dataUrl: string) {
+    const userId = localStorage.getItem('user_id');
+    if (!userId) return;
+    try {
+      const { updateUserAvatar } = await import('../services/api');
+      await updateUserAvatar(userId, dataUrl);
+      setProfile(prev => ({ ...prev, avatarUrl: dataUrl }));
+      setDraftProfile(prev => ({ ...prev, avatarUrl: dataUrl }));
+    } catch (err) {
+      console.error('Failed to update avatar:', err);
+    }
+  }
+
+  function handleBannerChange(presetId: string) {
+    setDraftProfile(prev => ({ ...prev, profileBannerBg: presetId }));
   }
 
   function handleToggleGenre(genre: string) {
@@ -1009,7 +1107,12 @@ export function ProfileTab() {
       <div className="max-w-6xl mx-auto">
         <ProfileHeader
           profile={profile}
+          avatarUrl={profile.avatarUrl}
+          bannerBg={draftProfile.profileBannerBg || profile.profileBannerBg || 'default'}
+          isEditing={isEditingProfile}
           onEdit={handleStartEditing}
+          onAvatarChange={handleAvatarChange}
+          onBannerChange={handleBannerChange}
         />
 
         <div className="px-8 pb-16 space-y-6">

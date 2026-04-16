@@ -273,29 +273,6 @@ def get_user_data(user_id):
         print(f"Error getting user data: {e}")
         return None
     
-def update_user_profile(user_id, profile_data):
-    try:
-        user_ref = db.collection('users').document(user_id)
-
-        update_data = {
-            'displayName': profile_data.get('displayName', '').strip(),
-            'username': profile_data.get('username', '').strip(),
-            'bio': profile_data.get('bio', '').strip(),
-            'phone': profile_data.get('phone', '').strip(),
-        }
-
-        user_ref.update(update_data)
-
-        return {
-            'success': True,
-            'message': 'Profile updated successfully'
-        }
-    except Exception as e:
-        return {
-            'success': False,
-            'message': str(e)
-        }    
-
 def add_to_watchlist(user_id, movie_id):
     #add movies to watchlist.
     try:
@@ -512,9 +489,9 @@ def delete_post(post_id, user_id):
 # ── User Profile ──────────────────────────────────────────────────
 
 def update_user_profile(user_id, data):
-    """Update editable profile fields: displayName, bio, username"""
+    """Update editable profile fields: displayName, bio, username, phone"""
     try:
-        allowed = {'displayName', 'bio', 'username'}
+        allowed = {'displayName', 'bio', 'username', 'phone', 'profileBannerBg'}
         update_data = {k: v for k, v in data.items() if k in allowed}
         if not update_data:
             return {'success': False, 'message': 'No valid fields to update'}
