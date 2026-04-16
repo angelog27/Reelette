@@ -185,6 +185,7 @@ function ProfileInfoSection({
   onCancel,
 }: {
   profile: {
+    avatarUrl?: string;
     displayName: string;
     username: string;
     bio: string;
@@ -192,6 +193,7 @@ function ProfileInfoSection({
     phone: string;
   };
   draftProfile: {
+    avatarUrl?: string;
     displayName: string;
     username: string;
     bio: string;
@@ -858,80 +860,71 @@ export function ProfileTab() {
   const [isSavingPreferences, setIsSavingPreferences] = useState(false);
 
   useEffect(() => {
-  async function loadProfile() {
-    try {
+    async function loadProfile() {
       const userId = localStorage.getItem('user_id');
-      console.log('userId from localStorage:', userId);
+      if (!userId) { setIsLoadingProfile(false); return; }
 
-      if (!userId) {
+      try {
+        // Fetch all three endpoints in parallel; a failure in one won't block the others
+        const [profileRes, streamingRes, prefsRes] = await Promise.all([
+          fetch(`http://localhost:5000/api/user/${userId}`).then(r => r.json()).catch(() => ({})),
+          fetch(`http://localhost:5000/api/user/${userId}/streaming`).then(r => r.json()).catch(() => ({})),
+          fetch(`http://localhost:5000/api/user/${userId}/movie-preferences`).then(r => r.json()).catch(() => ({})),
+        ]);
+
+        // ── Profile fields ──
+        const loadedProfile = {
+          displayName: profileRes.displayName || '',
+          username:    profileRes.username    || '',
+          bio:         profileRes.bio         || '',
+          email:       profileRes.email       || '',
+          phone:       profileRes.phone       || '',
+          avatarUrl:   profileRes.avatarUrl   || '',
+          profileBannerBg: profileRes.profileBannerBg || 'default',
+        };
+        setProfile(loadedProfile);
+        setDraftProfile(loadedProfile);
+        setProviders(profileRes.providerData  || []);
+        setEmailVerified(profileRes.emailVerified || false);
+        setJoinedAt(profileRes.joinedAt || '');
+
+        // ── Streaming services ──
+        // Primary source: dedicated /streaming endpoint.
+        // Fallback: streamingServices field embedded in the main profile doc
+        //           (present for OAuth users seeded on first load).
+        const streaming = Object.keys(streamingRes).length > 0
+          ? streamingRes
+          : (profileRes.streamingServices || {});
+
+        // ── Movie preferences ──
+        setMoviePreferences({
+          favoriteGenres: prefsRes.favoriteGenres || [],
+          favoritePeople: prefsRes.favoritePeople || [],
+          streamingServices: {
+            netflix:      !!streaming.netflix,
+            appleTV:      !!streaming.appleTV,
+            hboMax:       !!streaming.hboMax,
+            disneyPlus:   !!streaming.disneyPlus,
+            hulu:         !!streaming.hulu,
+            amazonPrime:  !!streaming.amazonPrime,
+            paramount:    !!streaming.paramount,
+            peacock:      !!streaming.peacock,
+          },
+          contentRating: prefsRes.contentRating || 'All Ratings',
+          watchlistSettings: {
+            autoSortByReleaseDate: prefsRes.watchlistSettings?.autoSortByReleaseDate || false,
+            hideWatchedContent:    prefsRes.watchlistSettings?.hideWatchedContent    ?? true,
+          },
+        });
+      } catch (error) {
+        console.error('Failed to load profile:', error);
+      } finally {
         setIsLoadingProfile(false);
-        return;
       }
-
-      const response = await fetch(`http://localhost:5000/api/user/${userId}`);
-      const data = await response.json();
-
-      console.log('profile API response:', data);
-
-      const loadedProfile = {
-        displayName: data.displayName || '',
-        username: data.username || '',
-        bio: data.bio || '',
-        email: data.email || '',
-        phone: data.phone || '',
-        avatarUrl: data.avatarUrl || '',
-        profileBannerBg: data.profileBannerBg || 'default',
-      };
-
-      console.log('loadedProfile:', loadedProfile);
-
-      setProfile(loadedProfile);
-      setDraftProfile(loadedProfile);
-      setProviders(data.providerData || []);
-      setEmailVerified(data.emailVerified || false);
-      setJoinedAt(data.joinedAt || '');
-
-      const streamingResponse = await fetch(`http://localhost:5000/api/user/${userId}/streaming`);
-      const streamingData = await streamingResponse.json();
-
-      const moviePreferencesResponse = await fetch(
-        `http://localhost:5000/api/user/${userId}/movie-preferences`
-      );
-      const moviePreferencesData = await moviePreferencesResponse.json();
-
-      console.log('streaming API response:', streamingData);
-      console.log('movie preferences API response:', moviePreferencesData);
-
-      setMoviePreferences({
-        favoriteGenres: moviePreferencesData.favoriteGenres || [],
-        favoritePeople: moviePreferencesData.favoritePeople || [],
-        streamingServices: {
-          netflix: streamingData.netflix || false,
-          appleTV: streamingData.appleTV || false,
-          hboMax: streamingData.hboMax || false,
-          disneyPlus: streamingData.disneyPlus || false,
-          hulu: streamingData.hulu || false,
-          amazonPrime: streamingData.amazonPrime || false,
-          paramount: streamingData.paramount || false,
-          peacock: streamingData.peacock || false,
-        },
-        contentRating: moviePreferencesData.contentRating || 'All Ratings',
-        watchlistSettings: {
-          autoSortByReleaseDate:
-            moviePreferencesData.watchlistSettings?.autoSortByReleaseDate || false,
-          hideWatchedContent:
-            moviePreferencesData.watchlistSettings?.hideWatchedContent ?? true,
-        },
-      });
-    } catch (error) {
-      console.error('Failed to load profile:', error);
-    } finally {
-      setIsLoadingProfile(false);
     }
-  }
 
-  loadProfile();
-}, []);
+    loadProfile();
+  }, []);
 
   function handleStartEditing() {
     setDraftProfile(profile);

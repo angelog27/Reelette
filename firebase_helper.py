@@ -260,46 +260,91 @@ def get_user_movie_preferences(user_id):
         }    
 
 def get_user_data(user_id):
-    """Return Firestore profile merged with Firebase Auth metadata (providers, email verified, joined date)."""
+    """Return Firestore profile merged with Firebase Auth metadata.
+
+    For OAuth users who have no Firestore document yet, a skeleton document
+    is created on-the-fly so the profile page always has something to show.
+    """
+    import datetime as dt
+    from datetime import timezone
+
     try:
+        # ── 1. Auth record (always authoritative for identity fields) ──
+        try:
+            auth_user = auth.get_user(user_id)
+        except Exception as auth_err:
+            print(f"Auth lookup failed for {user_id}: {auth_err}")
+            return None
+
+        provider_data = [
+            {
+                'providerId': p.provider_id,
+                'email': p.email or '',
+                'displayName': p.display_name or '',
+                'photoUrl': p.photo_url or '',
+            }
+            for p in (auth_user.provider_data or [])
+        ]
+
+        # Best photo URL: prefer manually-uploaded avatar, fall back to OAuth provider photo
+        provider_photo = next(
+            (p['photoUrl'] for p in provider_data if p['photoUrl']), ''
+        )
+
+        joined_at = ''
+        if auth_user.user_metadata and auth_user.user_metadata.creation_timestamp:
+            joined_at = dt.datetime.fromtimestamp(
+                auth_user.user_metadata.creation_timestamp / 1000, tz=timezone.utc
+            ).isoformat()
+
+        # ── 2. Firestore document ──
         user_ref = db.collection('users').document(user_id)
         user_doc = user_ref.get()
 
-        if not user_doc.exists:
-            return None
+        if user_doc.exists:
+            data = user_doc.to_dict()
+        else:
+            # OAuth user with no Firestore doc — seed a minimal one so
+            # subsequent writes (streaming prefs, etc.) have a home.
+            seed = {
+                'username': (auth_user.display_name or '').lower().replace(' ', '') or user_id[:8],
+                'displayName': auth_user.display_name or '',
+                'email': auth_user.email or '',
+                'bio': '',
+                'phone': '',
+                'avatarUrl': provider_photo,
+                'profileBannerBg': 'default',
+                'createdAt': datetime.now(),
+                'streamingServices': {
+                    'netflix': False, 'hulu': False, 'disneyPlus': False,
+                    'hboMax': False, 'amazonPrime': False, 'appleTV': False,
+                    'paramount': False, 'peacock': False,
+                },
+                'moviePreferences': {
+                    'favoriteGenres': [], 'favoritePeople': [],
+                    'contentRating': 'All Ratings',
+                    'watchlistSettings': {'autoSortByReleaseDate': False, 'hideWatchedContent': True},
+                },
+            }
+            user_ref.set(seed)
+            data = seed
 
-        data = user_doc.to_dict()
+        # ── 3. Fill in gaps from Auth ──
+        if not data.get('email') and auth_user.email:
+            data['email'] = auth_user.email
+        if not data.get('displayName') and auth_user.display_name:
+            data['displayName'] = auth_user.display_name
+        # Use provider photo only when no custom avatar has been uploaded
+        if not data.get('avatarUrl') and provider_photo:
+            data['avatarUrl'] = provider_photo
 
-        # Merge in Auth record (providers, emailVerified, creation time)
-        try:
-            auth_user = auth.get_user(user_id)
-            data['emailVerified'] = auth_user.email_verified
-            data['providerData'] = [
-                {
-                    'providerId': p.provider_id,
-                    'email': p.email or '',
-                    'displayName': p.display_name or '',
-                    'photoUrl': p.photo_url or '',
-                }
-                for p in (auth_user.provider_data or [])
-            ]
-            # Fall back to Auth email if Firestore doc doesn't have one
-            if not data.get('email') and auth_user.email:
-                data['email'] = auth_user.email
-            # Account creation timestamp (ms → ISO string)
-            if auth_user.user_metadata and auth_user.user_metadata.creation_timestamp:
-                from datetime import timezone
-                import datetime as dt
-                ts_ms = auth_user.user_metadata.creation_timestamp
-                data['joinedAt'] = dt.datetime.fromtimestamp(
-                    ts_ms / 1000, tz=timezone.utc
-                ).isoformat()
-        except Exception as auth_err:
-            print(f"Warning: could not fetch Auth record for {user_id}: {auth_err}")
-            data.setdefault('providerData', [])
-            data.setdefault('emailVerified', False)
+        # ── 4. Attach Auth metadata ──
+        data['emailVerified'] = auth_user.email_verified
+        data['providerData'] = provider_data
+        data['joinedAt'] = joined_at
 
         return data
+
     except Exception as e:
         print(f"Error getting user data: {e}")
         return None
