@@ -3,6 +3,7 @@ import peacockLogo from '../../assets/Peacock.png';
 import { BASE_URL, getFriends, getUserPublicProfile, saveSocialSettings } from '../services/api';
 import type { Friend } from '../services/api';
 import { UserProfileModal } from './UserProfileModal';
+import { useTheme } from './ThemeContext';
 import {
   Camera,
   Edit2,
@@ -548,6 +549,8 @@ function MoviePersonalizationSection({
 // ─── AppearanceSection ───────────────────────────────────────
 
 function AppearanceSection() {
+  const { theme, setTheme } = useTheme();
+
   return (
     <div className="bg-zinc-900/50 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-zinc-800/50">
       <div className="flex items-center justify-between mb-6">
@@ -561,25 +564,43 @@ function AppearanceSection() {
       <label className="block text-zinc-400 mb-3">Style</label>
 
       <div className="space-y-3">
-        {/* Modern */}
-        <button className="w-full p-14 bg-red-600 border-2 border-red-600 rounded-xl flex flex-col items-center text-center gap-1 transition-all">
+        {/* Dark */}
+        <button
+          onClick={() => setTheme('dark')}
+          className={`w-full p-14 border-2 rounded-xl flex flex-col items-center text-center gap-1 transition-all ${
+            theme === 'dark'
+              ? 'bg-red-600 border-red-600'
+              : 'bg-zinc-950/50 hover:bg-zinc-900 border-zinc-800 hover:border-red-600'
+          }`}
+        >
           <div className="flex items-center gap-3">
-            <Moon size={22} className="text-white" />
-            <span className="text-white font-semibold text-3xl">Dark </span>
+            <Moon size={22} className={theme === 'dark' ? 'text-white' : 'text-zinc-400'} />
+            <span className={`font-semibold text-3xl ${theme === 'dark' ? 'text-white' : 'text-zinc-300'}`}>
+              Dark
+            </span>
           </div>
-          <p className="text-sm text-red-100">Dark, cinematic, and premium. Deep blacks, glowing reds, smooth gradients, and
-            a sleek movie theater vibe. Perfect for nighttime viewing.</p>
+          <p className={`text-sm ${theme === 'dark' ? 'text-red-100' : 'text-zinc-500'}`}>
+            Dark, cinematic, and premium. Deep blacks, glowing reds, smooth gradients, and a sleek movie theater vibe.
+          </p>
         </button>
 
-        {/* Retro */}
-        <button className="w-full p-14 bg-zinc-950/50 hover:bg-zinc-900 border-2 border-zinc-800 hover:border-red-600 rounded-xl flex flex-col items-center text-center gap-1 transition-all group">
+        {/* Light */}
+        <button
+          onClick={() => setTheme('light')}
+          className={`w-full p-14 border-2 rounded-xl flex flex-col items-center text-center gap-1 transition-all ${
+            theme === 'light'
+              ? 'bg-red-600 border-red-600'
+              : 'bg-zinc-950/50 hover:bg-zinc-900 border-zinc-800 hover:border-red-600'
+          }`}
+        >
           <div className="flex items-center gap-3">
-            <Sun size={22} className="text-zinc-400 group-hover:text-red-400" />
-            <span className="text-zinc-300 group-hover:text-white font-semibold text-3xl">Light</span>
+            <Sun size={22} className={theme === 'light' ? 'text-white' : 'text-zinc-400'} />
+            <span className={`font-semibold text-3xl ${theme === 'light' ? 'text-white' : 'text-zinc-300'}`}>
+              Light
+            </span>
           </div>
-          <p className="text-sm text-zinc-500 group-hover:text-zinc-400">
-            A bright and airy theme with a modern look and feel. Slick tabs that maintain that theatre like feel.
-
+          <p className={`text-sm ${theme === 'light' ? 'text-red-100' : 'text-zinc-500'}`}>
+            A bright and airy theme with a modern look and feel. Slick tabs that maintain that theatre-like feel.
           </p>
         </button>
       </div>
