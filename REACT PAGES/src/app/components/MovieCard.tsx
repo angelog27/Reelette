@@ -5,7 +5,7 @@ interface MovieCardProps {
   movie: Movie;
   onClick?: (movie: Movie) => void;
 }
-
+//comment
 export function MovieCard({ movie, onClick }: MovieCardProps) {
   const streamingColors: Record<string, string> = {
     Netflix:      'bg-[#E50914]',
@@ -32,6 +32,8 @@ export function MovieCard({ movie, onClick }: MovieCardProps) {
             src={movie.poster}
             alt={movie.title}
             className="w-full h-full object-cover"
+            loading="lazy"
+            decoding="async"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-gray-700 text-xs px-2 text-center">

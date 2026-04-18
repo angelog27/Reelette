@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import peacockLogo from '../../assets/Peacock.png';
-import { BASE_URL } from '../services/api';
+import { BASE_URL, getFriends, getUserPublicProfile, saveSocialSettings } from '../services/api';
+import type { Friend } from '../services/api';
+import { UserProfileModal } from './UserProfileModal';
+import { useTheme } from './ThemeContext';
 import {
   Camera,
   Edit2,
@@ -10,23 +13,16 @@ import {
   Phone,
   Film,
   Star,
-  Tv,
-  Heart,
-  Sparkles,
   Moon,
   Sun,
-  Monitor,
   Palette,
   Users,
-  Shield,
-  Share2,
   Eye,
-  EyeOff,
   Lock,
   Settings,
   Globe,
-  Link as LinkIcon,
-  Apple
+  Apple,
+  Loader2,
 } from 'lucide-react';
 
 function GoogleIcon({ size = 20 }: { size?: number }) {
@@ -553,6 +549,8 @@ function MoviePersonalizationSection({
 // ─── AppearanceSection ───────────────────────────────────────
 
 function AppearanceSection() {
+  const { theme, setTheme } = useTheme();
+
   return (
     <div className="bg-zinc-900/50 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-zinc-800/50">
       <div className="flex items-center justify-between mb-6">
@@ -563,27 +561,46 @@ function AppearanceSection() {
         <Palette size={20} className="text-zinc-600" />
       </div>
 
-      <label className="block text-zinc-400 mb-3">Theme Styles</label>
+      <label className="block text-zinc-400 mb-3">Style</label>
 
       <div className="space-y-3">
-        {/* Modern */}
-        <button className="w-full p-14 bg-red-600 border-2 border-red-600 rounded-xl flex flex-col items-center text-center gap-1 transition-all">
+        {/* Dark */}
+        <button
+          onClick={() => setTheme('dark')}
+          className={`w-full p-14 border-2 rounded-xl flex flex-col items-center text-center gap-1 transition-all ${
+            theme === 'dark'
+              ? 'bg-red-600 border-red-600'
+              : 'bg-zinc-950/50 hover:bg-zinc-900 border-zinc-800 hover:border-red-600'
+          }`}
+        >
           <div className="flex items-center gap-3">
-            <Monitor size={22} className="text-white" />
-            <span className="text-white font-semibold text-3xl">Modern</span>
+            <Moon size={22} className={theme === 'dark' ? 'text-white' : 'text-zinc-400'} />
+            <span className={`font-semibold text-3xl ${theme === 'dark' ? 'text-white' : 'text-zinc-300'}`}>
+              Dark
+            </span>
           </div>
-          <p className="text-sm text-red-100">Dark, cinematic, and premium. Deep blacks, glowing reds, smooth gradients, and
-            a sleek movie theater vibe.</p>
+          <p className={`text-sm ${theme === 'dark' ? 'text-red-100' : 'text-zinc-500'}`}>
+            Dark, cinematic, and premium. Deep blacks, glowing reds, smooth gradients, and a sleek movie theater vibe.
+          </p>
         </button>
 
-        {/* Retro */}
-        <button className="w-full p-14 bg-zinc-950/50 hover:bg-zinc-900 border-2 border-zinc-800 hover:border-red-600 rounded-xl flex flex-col items-center text-center gap-1 transition-all group">
+        {/* Light */}
+        <button
+          onClick={() => setTheme('light')}
+          className={`w-full p-14 border-2 rounded-xl flex flex-col items-center text-center gap-1 transition-all ${
+            theme === 'light'
+              ? 'bg-red-600 border-red-600'
+              : 'bg-zinc-950/50 hover:bg-zinc-900 border-zinc-800 hover:border-red-600'
+          }`}
+        >
           <div className="flex items-center gap-3">
-            <Sun size={22} className="text-zinc-400 group-hover:text-red-400" />
-            <span className="text-zinc-300 group-hover:text-white font-semibold text-3xl">Retro</span>
+            <Sun size={22} className={theme === 'light' ? 'text-white' : 'text-zinc-400'} />
+            <span className={`font-semibold text-3xl ${theme === 'light' ? 'text-white' : 'text-zinc-300'}`}>
+              Light
+            </span>
           </div>
-          <p className="text-sm text-zinc-500 group-hover:text-zinc-400">Throw it back with a nostalgic film‑lover aesthetic.
-            Warm tones, vintage charm, and a classic old‑school movie vibe.
+          <p className={`text-sm ${theme === 'light' ? 'text-red-100' : 'text-zinc-500'}`}>
+            A bright and airy theme with a modern look and feel. Slick tabs that maintain that theatre-like feel.
           </p>
         </button>
       </div>
@@ -594,21 +611,55 @@ function AppearanceSection() {
 
 // ─── SocialSection ───────────────────────────────────────────
 
-function SocialSection() {
-  const friends = [
-    { initial: 'JD', name: 'John Doe', color: 'bg-blue-600' },
-    { initial: 'SM', name: 'Sarah Miller', color: 'bg-purple-600' },
-    { initial: 'RJ', name: 'Robert Johnson', color: 'bg-green-600' },
-    { initial: 'EW', name: 'Emily White', color: 'bg-pink-600' },
-    { initial: 'MB', name: 'Michael Brown', color: 'bg-orange-600' },
-  ];
+interface SocialFriend extends Friend {
+  avatarUrl?: string;
+  displayName?: string;
+}
+
+function SocialSection({
+  userId,
+  onOpenProfile,
+  socialSettings,
+  onSocialSettingToggle,
+}: {
+  userId: string;
+  onOpenProfile: (uid: string) => void;
+  socialSettings: { showOnlineStatus: boolean; showMyStuffPublicly: boolean };
+  onSocialSettingToggle: (key: 'showOnlineStatus' | 'showMyStuffPublicly', value: boolean) => void;
+}) {
+  const [friends, setFriends] = useState<SocialFriend[]>([]);
+  const [loadingFriends, setLoadingFriends] = useState(true);
+  const [showAll, setShowAll] = useState(false);
+
+  const PREVIEW_COUNT = 7;
+
+  useEffect(() => {
+    if (!userId) return;
+    setLoadingFriends(true);
+    getFriends(userId).then(async (rawFriends) => {
+      const profiles = await Promise.all(
+        rawFriends.map((f) => getUserPublicProfile(f.friend_id))
+      );
+      setFriends(
+        rawFriends.map((f, i) => ({
+          ...f,
+          avatarUrl: profiles[i]?.avatarUrl,
+          displayName: profiles[i]?.displayName,
+        }))
+      );
+      setLoadingFriends(false);
+    });
+  }, [userId]);
+
+  const visibleFriends = showAll ? friends : friends.slice(0, PREVIEW_COUNT);
+  const remaining = friends.length - PREVIEW_COUNT;
 
   return (
     <div className="bg-zinc-900/50 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-zinc-800/50">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="w-1 h-6 bg-red-600 rounded-full"></div>
-          <h2 className="text-white uppercase tracking-wider">Social & Privacy</h2>
+          <h2 className="text-white uppercase tracking-wider">Social</h2>
         </div>
         <Users size={20} className="text-zinc-600" />
       </div>
@@ -616,81 +667,93 @@ function SocialSection() {
       <div className="space-y-6">
         {/* Friends List */}
         <div>
-          <label className="block text-zinc-400 mb-3">Friends List (127)</label>
-          <div className="flex items-center gap-3 mb-3">
-            {friends.map((friend) => (
-              <div
-                key={friend.name}
-                className="w-12 h-12 rounded-full flex items-center justify-center text-white cursor-pointer hover:scale-110 transition-transform shadow-lg"
-                style={{ backgroundColor: friend.color.replace('bg-', '#') }}
-                title={friend.name}
-              >
-                {friend.initial}
-              </div>
-            ))}
-            <button className="w-12 h-12 rounded-full bg-zinc-800 hover:bg-zinc-700 border-2 border-dashed border-zinc-700 flex items-center justify-center text-zinc-500 hover:text-zinc-300 transition-all">
-              +54
-            </button>
-          </div>
-          <button className="text-red-400 hover:text-red-300 transition-all flex items-center gap-2">
-            <Users size={16} />
-            View All Friends
-          </button>
-        </div>
+          <label className="block text-zinc-400 mb-3">
+            Friends List {!loadingFriends && `(${friends.length})`}
+          </label>
 
-        {/* Block/Mute */}
-        <div>
-          <label className="block text-zinc-400 mb-3">Manage Blocked Users</label>
-          <button className="w-full p-3 bg-zinc-950/50 hover:bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-lg text-zinc-300 hover:text-white transition-all flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Shield size={18} className="text-zinc-500" />
-              <span>Block & Mute Settings</span>
+          {loadingFriends ? (
+            <div className="flex items-center gap-2 text-zinc-500 py-2">
+              <Loader2 size={16} className="animate-spin" />
+              <span className="text-sm">Loading friends…</span>
             </div>
-            <span className="text-zinc-600">→</span>
-          </button>
+          ) : friends.length === 0 ? (
+            <p className="text-zinc-500 text-sm py-2">No friends yet — head to Social to connect!</p>
+          ) : (
+            <>
+              <div className="flex flex-wrap items-center gap-3 mb-3">
+                {visibleFriends.map((friend) => (
+                  <button
+                    key={friend.friend_id}
+                    title={friend.displayName || friend.friend_username}
+                    onClick={() => onOpenProfile(friend.friend_id)}
+                    className="group relative flex flex-col items-center gap-1"
+                  >
+                    <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-zinc-700 group-hover:border-red-500 transition-all shadow-lg">
+                      {friend.avatarUrl ? (
+                        <img
+                          src={friend.avatarUrl}
+                          alt={friend.friend_username}
+                          className="w-full h-full object-cover object-top"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-zinc-800 flex items-center justify-center text-zinc-400 text-sm font-semibold">
+                          {(friend.displayName || friend.friend_username).slice(0, 2).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-zinc-500 text-[10px] group-hover:text-zinc-300 transition-colors max-w-[48px] truncate">
+                      {friend.friend_username}
+                    </span>
+                  </button>
+                ))}
+
+                {!showAll && remaining > 0 && (
+                  <button
+                    onClick={() => setShowAll(true)}
+                    className="w-12 h-12 rounded-full bg-zinc-800 hover:bg-zinc-700 border-2 border-dashed border-zinc-600 flex items-center justify-center text-zinc-400 hover:text-white text-xs font-medium transition-all"
+                  >
+                    +{remaining}
+                  </button>
+                )}
+              </div>
+
+              {showAll && friends.length > PREVIEW_COUNT && (
+                <button
+                  onClick={() => setShowAll(false)}
+                  className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors mb-1"
+                >
+                  Show less
+                </button>
+              )}
+            </>
+          )}
         </div>
 
-        {/* Share Profile */}
+        {/* Social Settings */}
         <div>
-          <label className="block text-zinc-400 mb-3">Share Profile</label>
-          <button className="w-full p-3 bg-zinc-950/50 hover:bg-red-600 border border-zinc-800 hover:border-red-600 rounded-lg text-zinc-300 hover:text-white transition-all flex items-center justify-center gap-2">
-            <Share2 size={18} />
-            Copy Profile Link
-          </button>
-        </div>
-
-        {/* Privacy Settings */}
-        <div>
-          <label className="block text-zinc-400 mb-3">Privacy Settings</label>
+          <label className="block text-zinc-400 mb-3">Social Settings</label>
           <div className="space-y-3">
             <label className="flex items-center justify-between p-3 bg-zinc-950/30 rounded-lg border border-zinc-800/50 hover:border-zinc-700 transition-all cursor-pointer group">
               <div className="flex items-center gap-3">
                 <Eye size={18} className="text-zinc-500 group-hover:text-red-400" />
-                <span className="text-zinc-300">Show Activity Status</span>
+                <span className="text-zinc-300">Show Online Status</span>
               </div>
               <input
                 type="checkbox"
+                checked={socialSettings.showOnlineStatus}
+                onChange={(e) => onSocialSettingToggle('showOnlineStatus', e.target.checked)}
                 className="w-5 h-5 rounded bg-zinc-800 border-zinc-700 text-red-600 focus:ring-red-600 focus:ring-offset-0"
-                defaultChecked
               />
             </label>
             <label className="flex items-center justify-between p-3 bg-zinc-950/30 rounded-lg border border-zinc-800/50 hover:border-zinc-700 transition-all cursor-pointer group">
               <div className="flex items-center gap-3">
                 <Lock size={18} className="text-zinc-500 group-hover:text-red-400" />
-                <span className="text-zinc-300">Show Watchlist Publicly</span>
+                <span className="text-zinc-300">Show MyStuff Publicly</span>
               </div>
               <input
                 type="checkbox"
-                className="w-5 h-5 rounded bg-zinc-800 border-zinc-700 text-red-600 focus:ring-red-600 focus:ring-offset-0"
-              />
-            </label>
-            <label className="flex items-center justify-between p-3 bg-zinc-950/30 rounded-lg border border-zinc-800/50 hover:border-zinc-700 transition-all cursor-pointer group">
-              <div className="flex items-center gap-3">
-                <EyeOff size={18} className="text-zinc-500 group-hover:text-red-400" />
-                <span className="text-zinc-300">Hide Ratings & Reviews</span>
-              </div>
-              <input
-                type="checkbox"
+                checked={socialSettings.showMyStuffPublicly}
+                onChange={(e) => onSocialSettingToggle('showMyStuffPublicly', e.target.checked)}
                 className="w-5 h-5 rounded bg-zinc-800 border-zinc-700 text-red-600 focus:ring-red-600 focus:ring-offset-0"
               />
             </label>
@@ -831,6 +894,13 @@ export function ProfileTab() {
     profileBannerBg: 'default',
   });
 
+  const [socialSettings, setSocialSettings] = useState({
+    showOnlineStatus: true,
+    showMyStuffPublicly: false,
+  });
+
+  const [viewingProfileId, setViewingProfileId] = useState<string | null>(null);
+
   const [moviePreferences, setMoviePreferences] = useState({
     favoriteGenres: [] as string[],
     favoritePeople: [] as string[],
@@ -904,6 +974,10 @@ export function ProfileTab() {
         setProviders(profileRes.providerData  || []);
         setEmailVerified(profileRes.emailVerified || false);
         setJoinedAt(profileRes.joinedAt || '');
+        setSocialSettings({
+          showOnlineStatus:    profileRes.socialSettings?.showOnlineStatus    ?? true,
+          showMyStuffPublicly: profileRes.socialSettings?.showMyStuffPublicly ?? false,
+        });
 
         // ── Streaming services ──
         // Primary source: dedicated /streaming endpoint.
@@ -1081,6 +1155,21 @@ export function ProfileTab() {
     }));
   }
 
+  async function handleSocialSettingToggle(
+    key: 'showOnlineStatus' | 'showMyStuffPublicly',
+    value: boolean
+  ) {
+    const updated = { ...socialSettings, [key]: value };
+    setSocialSettings(updated);
+    const userId = localStorage.getItem('user_id');
+    if (!userId) return;
+    try {
+      await saveSocialSettings(userId, updated);
+    } catch (err) {
+      console.error('Failed to save social settings:', err);
+    }
+  }
+
   async function handleSaveMoviePreferences() {
   try {
     const userId = localStorage.getItem('user_id');
@@ -1156,8 +1245,14 @@ export function ProfileTab() {
     );
   }
 
+  const userId = localStorage.getItem('user_id') ?? '';
+
   return (
     <div className="min-h-screen bg-black">
+      {viewingProfileId && (
+        <UserProfileModal userId={viewingProfileId} onClose={() => setViewingProfileId(null)} />
+      )}
+
       <div className="absolute inset-0 bg-gradient-to-br from-black via-zinc-950 to-zinc-900 -z-10"></div>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-red-950/10 via-transparent to-transparent -z-10"></div>
       <div className="absolute inset-0 opacity-[0.02] bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZmlsdGVyIGlkPSJub2lzZSI+PGZlVHVyYnVsZW5jZSB0eXBlPSJmcmFjdGFsTm9pc2UiIGJhc2VGcmVxdWVuY3k9IjAuOSIgbnVtT2N0YXZlcz0iNCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNub2lzZSkiIG9wYWNpdHk9IjEiLz48L3N2Zz4=')] -z-10"></div>
@@ -1199,7 +1294,12 @@ export function ProfileTab() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <AppearanceSection />
-            <SocialSection />
+            <SocialSection
+              userId={userId}
+              onOpenProfile={setViewingProfileId}
+              socialSettings={socialSettings}
+              onSocialSettingToggle={handleSocialSettingToggle}
+            />
           </div>
 
           <AccountDetailsSection
