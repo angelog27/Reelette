@@ -113,7 +113,7 @@ export function MyStuffTab() {
               >
                 <div className="relative rounded-xl overflow-hidden bg-[#1A1A1A] border border-[#2A2A2A] group-hover:border-[#C0392B]/50 transition-colors">
                   {m.poster ? (
-                    <img src={m.poster} alt={m.title} className="w-full aspect-[2/3] object-cover" />
+                    <img src={m.poster} alt={m.title} className="w-full aspect-[2/3] object-cover" loading="lazy" decoding="async" />
                   ) : (
                     <div className="w-full aspect-[2/3] bg-[#2A2A2A] flex items-center justify-center">
                       <span className="text-gray-600 text-xs text-center px-2">{m.title}</span>
@@ -150,7 +150,7 @@ export function MyStuffTab() {
               >
                 <div className="relative rounded-xl overflow-hidden bg-[#1A1A1A] border border-[#2A2A2A] group-hover:border-[#C0392B]/50 transition-colors">
                   {m.poster ? (
-                    <img src={m.poster} alt={m.title} className="w-full aspect-[2/3] object-cover" />
+                    <img src={m.poster} alt={m.title} className="w-full aspect-[2/3] object-cover" loading="lazy" decoding="async" />
                   ) : (
                     <div className="w-full aspect-[2/3] bg-[#2A2A2A] flex items-center justify-center">
                       <span className="text-gray-600 text-xs text-center px-2">{m.title}</span>

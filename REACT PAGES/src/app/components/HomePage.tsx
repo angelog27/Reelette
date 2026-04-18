@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import logoImage from '../../assets/Reelette_NAME_upscaled.png';
 import reeletteLogo from '../../assets/Reelette_LOGO_upscaled.png';
@@ -59,7 +60,11 @@ export function HomePage() {
       </nav>
 
       <main className="container mx-auto px-6 py-8">
-        <Outlet />
+        <Suspense fallback={
+          <div className="flex items-center justify-center py-24 text-gray-500">Loading…</div>
+        }>
+          <Outlet />
+        </Suspense>
       </main>
     </div>
   );

@@ -1,6 +1,32 @@
 export const BASE_URL = (import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000') + '/api';
 
 
+// ── Simple in-memory TTL cache ───────────────────────────────────
+// Caches stable/global data (movie catalogs, movie details) to avoid
+// redundant network hits on every tab visit.
+
+const _cache = new Map<string, { data: unknown; expires: number }>();
+
+function fromCache<T>(key: string, ttlMs: number, fn: () => Promise<T>): Promise<T> {
+  const hit = _cache.get(key);
+  if (hit && hit.expires > Date.now()) return Promise.resolve(hit.data as T);
+  return fn().then((data) => {
+    _cache.set(key, { data, expires: Date.now() + ttlMs });
+    return data;
+  });
+}
+
+/** Manually bust a cache key (call after user mutations that affect cached data). */
+export function bustCache(key: string) {
+  _cache.delete(key);
+}
+
+const TTL = {
+  CATALOG: 5 * 60 * 1000,   // 5 min — popular / trending / top-rated
+  MOVIE:   10 * 60 * 1000,  // 10 min — individual movie details (TMDB data)
+};
+
+
 // ── Types ────────────────────────────────────────────────────────
 
 
@@ -149,24 +175,30 @@ export async function updateUserStreaming(user_id: string, services: Record<stri
 // ── Movies ───────────────────────────────────────────────────────
 
 
-export async function getPopularMovies(page = 1): Promise<Movie[]> {
-  const res = await fetch(`${BASE_URL}/movies/popular?page=${page}`);
-  const data = await res.json();
-  return data.movies ?? [];
+export function getPopularMovies(page = 1): Promise<Movie[]> {
+  return fromCache(`popular:${page}`, TTL.CATALOG, async () => {
+    const res = await fetch(`${BASE_URL}/movies/popular?page=${page}`);
+    const data = await res.json();
+    return data.movies ?? [];
+  });
 }
 
 
-export async function getTrendingMovies(window = 'week'): Promise<Movie[]> {
-  const res = await fetch(`${BASE_URL}/movies/trending?window=${window}`);
-  const data = await res.json();
-  return data.movies ?? [];
+export function getTrendingMovies(window = 'week'): Promise<Movie[]> {
+  return fromCache(`trending:${window}`, TTL.CATALOG, async () => {
+    const res = await fetch(`${BASE_URL}/movies/trending?window=${window}`);
+    const data = await res.json();
+    return data.movies ?? [];
+  });
 }
 
 
-export async function getTopRatedMovies(page = 1): Promise<Movie[]> {
-  const res = await fetch(`${BASE_URL}/movies/top_rated?page=${page}`);
-  const data = await res.json();
-  return data.movies ?? [];
+export function getTopRatedMovies(page = 1): Promise<Movie[]> {
+  return fromCache(`toprated:${page}`, TTL.CATALOG, async () => {
+    const res = await fetch(`${BASE_URL}/movies/top_rated?page=${page}`);
+    const data = await res.json();
+    return data.movies ?? [];
+  });
 }
 
 
@@ -198,9 +230,11 @@ export async function discoverMovies(filters: {
 }
 
 
-export async function getMovieDetails(movie_id: string) {
-  const res = await fetch(`${BASE_URL}/movies/${movie_id}`);
-  return res.json();
+export function getMovieDetails(movie_id: string): Promise<Record<string, unknown>> {
+  return fromCache(`movie:${movie_id}`, TTL.MOVIE, async () => {
+    const res = await fetch(`${BASE_URL}/movies/${movie_id}`);
+    return res.json();
+  });
 }
 
 
