@@ -150,11 +150,37 @@ export function MovieDetailModal({ movieId, onClose }: Props) {
     ? `${Math.floor(movie.runtime / 60)}h ${String(movie.runtime % 60).padStart(2, '0')}m`
     : null;
 
-  const overviewText  = movie.overview ?? '';
+  const overviewText   = movie.overview ?? '';
   const isLongOverview = overviewText.length > 180;
   const displayOverview = (!overviewExpanded && isLongOverview)
     ? overviewText.slice(0, 180).trimEnd() + '…'
     : overviewText;
+
+  // JustWatch deep-link for this movie (provided by TMDB watch/providers)
+  const justwatchUrl: string | null = movie['watch/providers']?.results?.US?.link ?? null;
+
+  // Per-provider search URLs as a best-effort fallback
+  const PROVIDER_SEARCH: Record<number, string> = {
+    8:   `https://www.netflix.com/search?q=${encodeURIComponent(movie.title)}`,
+    15:  `https://www.hulu.com/search?q=${encodeURIComponent(movie.title)}`,
+    337: `https://www.disneyplus.com/search?q=${encodeURIComponent(movie.title)}`,
+    384: `https://www.max.com/search?q=${encodeURIComponent(movie.title)}`,
+    9:   `https://www.amazon.com/s?k=${encodeURIComponent(movie.title)}&i=instant-video`,
+    350: `https://tv.apple.com/search?term=${encodeURIComponent(movie.title)}`,
+    531: `https://www.paramountplus.com/search/?q=${encodeURIComponent(movie.title)}`,
+    386: `https://www.peacocktv.com/search?q=${encodeURIComponent(movie.title)}`,
+  };
+
+  function providerUrl(p: any): string {
+    return PROVIDER_SEARCH[p.provider_id as number]
+      ?? `https://www.justwatch.com/us/search?q=${encodeURIComponent(movie.title)}`;
+  }
+
+  // "Play Now" destination: JustWatch movie page > first provider search > generic JustWatch
+  const playNowUrl: string =
+    justwatchUrl
+    ?? (providers.length > 0 ? providerUrl(providers[0]) : null)
+    ?? `https://www.justwatch.com/us/search?q=${encodeURIComponent(movie.title)}`;
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
@@ -162,26 +188,13 @@ export function MovieDetailModal({ movieId, onClose }: Props) {
       {/* ── Background ───────────────────────────────────────────── */}
       <div className="absolute inset-0">
         {backdropUrl ? (
-          <img
-            src={backdropUrl}
-            alt={movie.title}
-            className="w-full h-full object-cover"
-            draggable={false}
-          />
+          <img src={backdropUrl} alt={movie.title} className="w-full h-full object-cover" draggable={false} />
         ) : posterUrl ? (
-          <img
-            src={posterUrl}
-            alt={movie.title}
-            className="w-full h-full object-cover blur-sm scale-105"
-            draggable={false}
-          />
+          <img src={posterUrl} alt={movie.title} className="w-full h-full object-cover blur-sm scale-105" draggable={false} />
         ) : (
           <div className="w-full h-full bg-[#0A0A0A]" />
         )}
-
-        {/* left-to-right gradient so content is readable */}
         <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-black/20" />
-        {/* bottom fade for the strip */}
         <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/40" />
       </div>
 
@@ -193,11 +206,14 @@ export function MovieDetailModal({ movieId, onClose }: Props) {
         <X className="w-5 h-5" />
       </button>
 
-      {/* ── Main content ─────────────────────────────────────────── */}
-      <div className="relative z-10 h-full flex flex-col justify-end">
+      {/* ── Layout: content centered vertically, strip pinned to bottom ── */}
+      <div className="relative z-10 h-full flex flex-col">
 
-        {/* Info block — anchored to the bottom-left */}
-        <div className="px-10 md:px-16 pb-6 max-w-2xl">
+        {/* Flexible top spacer — pushes content into the middle */}
+        <div className="flex-1" />
+
+        {/* ── Info block ───────────────────────────────────────── */}
+        <div className="px-10 md:px-16 pb-8 max-w-2xl">
 
           {/* Genre badge */}
           <span className="inline-block bg-[#C0392B] text-white text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded mb-4">
@@ -217,8 +233,8 @@ export function MovieDetailModal({ movieId, onClose }: Props) {
                 {movie.vote_average.toFixed(1)}
               </div>
             )}
-            {year     && <span className="text-gray-300 font-medium">{year}</span>}
-            {runtime  && <span className="text-gray-300">{runtime}</span>}
+            {year    && <span className="text-gray-300 font-medium">{year}</span>}
+            {runtime && <span className="text-gray-300">{runtime}</span>}
             {genres.slice(0, 3).map((g) => (
               <span key={g.id} className="text-gray-400">{g.name}</span>
             ))}
@@ -234,77 +250,100 @@ export function MovieDetailModal({ movieId, onClose }: Props) {
                     onClick={() => setOverviewExpanded(!overviewExpanded)}
                     className="text-[#C0392B] hover:text-[#E74C3C] ml-1 inline-flex items-center gap-0.5 text-xs font-medium"
                   >
-                    {overviewExpanded ? (
-                      <><ChevronUp className="w-3 h-3" /> Less</>
-                    ) : (
-                      <><ChevronDown className="w-3 h-3" /> See more</>
-                    )}
+                    {overviewExpanded
+                      ? <><ChevronUp className="w-3 h-3" /> Less</>
+                      : <><ChevronDown className="w-3 h-3" /> See more</>}
                   </button>
                 )}
               </p>
             </div>
           )}
 
-          {/* Watch Later + Mark as Watched / rating display */}
+          {/* ── Action buttons ──────────────────────────────────── */}
           {!showWatchForm ? (
-            <div className="flex flex-wrap items-center gap-3">
-              {/* Watch Later */}
-              {user && (
-                <button
-                  onClick={handleToggleWatchLater}
-                  disabled={watchLaterLoading}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-white/30 bg-white/5 hover:bg-white/15 text-white text-sm font-medium transition-colors disabled:opacity-50"
-                >
-                  {inWatchLater
-                    ? <BookmarkCheck className="w-4 h-4 text-[#C0392B]" />
-                    : <Bookmark className="w-4 h-4" />}
-                  {inWatchLater ? 'Saved' : 'Watch Later'}
-                </button>
-              )}
+            <div className="space-y-3">
 
-              {/* Mark as Watched / your rating */}
-              {user && (
-                watchEntry && !saveSuccess ? (
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1.5 bg-black/40 border border-white/10 rounded-full px-4 py-2">
-                      <Star className="w-4 h-4 fill-[#C0392B] text-[#C0392B]" />
-                      <span className="text-white text-sm font-semibold">{watchEntry.user_rating}/10</span>
+              {/* Primary row: Play Now + Watch Later + Mark as Watched */}
+              <div className="flex flex-wrap items-center gap-3">
+
+                {/* Play Now — opens streaming service */}
+                <a
+                  href={playNowUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-white text-black text-sm font-bold transition-opacity hover:opacity-90 shadow-lg"
+                >
+                  <Play className="w-4 h-4 fill-black" />
+                  Play Now
+                </a>
+
+                {/* Watch Later */}
+                {user && (
+                  <button
+                    onClick={handleToggleWatchLater}
+                    disabled={watchLaterLoading}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-white/30 bg-white/5 hover:bg-white/15 text-white text-sm font-medium transition-colors disabled:opacity-50"
+                  >
+                    {inWatchLater
+                      ? <BookmarkCheck className="w-4 h-4 text-[#C0392B]" />
+                      : <Bookmark className="w-4 h-4" />}
+                    {inWatchLater ? 'Saved' : 'Watch Later'}
+                  </button>
+                )}
+
+                {/* Mark as Watched / your rating */}
+                {user && (
+                  (watchEntry && !saveSuccess) || (saveSuccess && watchEntry) ? (
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1.5 bg-black/40 border border-white/10 rounded-full px-4 py-2">
+                        <Star className="w-4 h-4 fill-[#C0392B] text-[#C0392B]" />
+                        <span className="text-white text-sm font-semibold">{watchEntry.user_rating}/10</span>
+                      </div>
+                      {!saveSuccess && (
+                        <button
+                          onClick={() => setShowWatchForm(true)}
+                          className="text-xs text-gray-400 hover:text-white transition-colors underline underline-offset-2"
+                        >
+                          Update
+                        </button>
+                      )}
                     </div>
+                  ) : (
                     <button
                       onClick={() => setShowWatchForm(true)}
-                      className="text-xs text-gray-400 hover:text-white transition-colors underline underline-offset-2"
+                      className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#C0392B] hover:bg-[#E74C3C] text-white text-sm font-medium transition-colors shadow-lg shadow-[#C0392B]/30"
                     >
-                      Update
+                      <Star className="w-4 h-4" />
+                      Mark as Watched
                     </button>
-                  </div>
-                ) : saveSuccess && watchEntry ? (
-                  <div className="flex items-center gap-1.5 bg-black/40 border border-white/10 rounded-full px-4 py-2">
-                    <Star className="w-4 h-4 fill-[#C0392B] text-[#C0392B]" />
-                    <span className="text-white text-sm font-semibold">{watchEntry.user_rating}/10</span>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setShowWatchForm(true)}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#C0392B] hover:bg-[#E74C3C] text-white text-sm font-medium transition-colors shadow-lg shadow-[#C0392B]/30"
-                  >
-                    <Play className="w-4 h-4 fill-white" />
-                    Mark as Watched
-                  </button>
-                )
-              )}
+                  )
+                )}
+              </div>
 
-              {/* Streaming badges (compact) */}
-              {providers.slice(0, 3).map((p: any) => (
-                p.logo_path && (
-                  <img
-                    key={p.provider_id}
-                    src={`https://image.tmdb.org/t/p/original${p.logo_path}`}
-                    alt={p.provider_name}
-                    title={p.provider_name}
-                    className="w-7 h-7 rounded-lg opacity-80 hover:opacity-100 transition-opacity"
-                  />
-                )
-              ))}
+              {/* Streaming services row — logo + name, each links to that service */}
+              {providers.length > 0 && (
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {providers.map((p: any) => (
+                    <a
+                      key={p.provider_id}
+                      href={providerUrl(p)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/10 rounded-full pl-1 pr-3 py-1 transition-colors"
+                      title={`Watch on ${p.provider_name}`}
+                    >
+                      {p.logo_path && (
+                        <img
+                          src={`https://image.tmdb.org/t/p/original${p.logo_path}`}
+                          alt={p.provider_name}
+                          className="w-6 h-6 rounded-full"
+                        />
+                      )}
+                      <span className="text-white text-xs font-medium">{p.provider_name}</span>
+                    </a>
+                  ))}
+                </div>
+              )}
             </div>
           ) : (
             /* Rating form */
@@ -353,10 +392,10 @@ export function MovieDetailModal({ movieId, onClose }: Props) {
           )}
         </div>
 
-        {/* ── Similar movies strip ─────────────────────────────── */}
+        {/* ── Similar movies strip — pinned to very bottom ─────── */}
         {similar.length > 0 && (
           <div className="border-t border-white/10 bg-black/50 backdrop-blur-sm px-10 md:px-16 py-4">
-            <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-white/10">
+            <div className="flex gap-3 overflow-x-auto pb-1">
               {similar.slice(0, 10).map((m: any) => (
                 m.poster_path && (
                   <div
