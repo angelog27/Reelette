@@ -23,6 +23,7 @@ export function MovieDetailModal({ movieId, onClose }: Props) {
   const [inWatchLater, setInWatchLater]     = useState(false);
   const [watchLaterLoading, setWatchLaterLoading] = useState(false);
   const [overviewExpanded, setOverviewExpanded]   = useState(false);
+  const [relatedMovieId, setRelatedMovieId]       = useState<string | null>(null);
 
   const user = getUser();
 
@@ -188,6 +189,15 @@ export function MovieDetailModal({ movieId, onClose }: Props) {
     justwatchUrl
     ?? (providers.length > 0 ? providerUrl(providers[0]) : null)
     ?? `https://www.justwatch.com/us/search?q=${encodeURIComponent(movie.title)}`;
+
+  if (relatedMovieId) {
+    return (
+      <MovieDetailModal
+        movieId={relatedMovieId}
+        onClose={() => setRelatedMovieId(null)}
+      />
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
@@ -423,6 +433,7 @@ export function MovieDetailModal({ movieId, onClose }: Props) {
                 m.poster_path && (
                   <div
                     key={m.id}
+                    onClick={() => setRelatedMovieId(String(m.id))}
                     className="flex-shrink-0 w-16 md:w-20 cursor-pointer hover:scale-105 transition-transform rounded-lg overflow-hidden ring-1 ring-white/10 hover:ring-[#C0392B]/60"
                     title={m.title}
                   >

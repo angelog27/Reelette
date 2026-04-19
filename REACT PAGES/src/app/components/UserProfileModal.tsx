@@ -283,50 +283,54 @@ export function UserProfileModal({ userId, onClose }: Props) {
       >
         <div className="bg-[#1C1C1C] border border-[#2A2A2A] rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh]">
 
-          {/* Header gradient — fixed height, no overflow-hidden so avatar isn't clipped */}
-          <div className="h-28 bg-gradient-to-br from-zinc-900 via-zinc-950 to-black relative rounded-t-2xl shrink-0 overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-red-950/30 to-transparent" />
+          {/* Header banner */}
+          <div className="h-28 bg-gradient-to-br from-zinc-900 via-zinc-950 to-black relative rounded-t-2xl shrink-0">
+            <div className="absolute inset-0 bg-gradient-to-r from-red-950/30 to-transparent rounded-t-2xl" />
             <button
               onClick={onClose}
               className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/50 hover:bg-black/80 flex items-center justify-center text-gray-400 hover:text-white transition-colors z-10"
             >
               <X className="w-4 h-4" />
             </button>
+            {/* Avatar anchored to bottom-left of banner so it's never clipped */}
+            <div className="absolute -bottom-12 left-6 z-10">
+              <div className="relative shrink-0">
+                <div className="w-24 h-24 rounded-full border-4 border-[#1C1C1C] overflow-hidden bg-[#141414] shadow-xl">
+                  {loading ? (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Loader2 className="w-6 h-6 text-gray-600 animate-spin" />
+                    </div>
+                  ) : (
+                    <img
+                      src={avatar}
+                      alt={profile?.username}
+                      className="w-full h-full object-cover"
+                    />
+                  )}
+                </div>
+                {!loading && profile?.showOnlineStatus && (
+                  <span
+                    className={`absolute bottom-1 right-1 w-4 h-4 rounded-full border-2 border-[#1C1C1C] ${
+                      online ? 'bg-green-500' : 'bg-zinc-600'
+                    }`}
+                    title={online ? 'Online' : 'Offline'}
+                  />
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Scrollable body */}
           <div className="overflow-y-auto flex-1 rounded-b-2xl">
-            {/* Avatar row — overlaps banner */}
-            <div className="px-6 -mt-12 pb-5">
+            {/* Space for avatar overlap + friend button row */}
+            <div className="px-6 pt-14 pb-5">
               <div className="flex items-end justify-between mb-4">
-                {/* Avatar with online dot */}
-                <div className="relative shrink-0">
-                  <div className="w-24 h-24 rounded-full border-4 border-[#1C1C1C] overflow-hidden bg-[#141414] shadow-xl">
-                    {loading ? (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <Loader2 className="w-6 h-6 text-gray-600 animate-spin" />
-                      </div>
-                    ) : (
-                      <img
-                        src={avatar}
-                        alt={profile?.username}
-                        className="w-full h-full object-cover object-top"
-                      />
-                    )}
-                  </div>
-                  {!loading && profile?.showOnlineStatus && (
-                    <span
-                      className={`absolute bottom-1 right-1 w-4 h-4 rounded-full border-2 border-[#1C1C1C] ${
-                        online ? 'bg-green-500' : 'bg-zinc-600'
-                      }`}
-                      title={online ? 'Online' : 'Offline'}
-                    />
-                  )}
-                </div>
+                {/* Spacer so the friend button aligns to the right while avatar is in the banner */}
+                <div />
 
                 {/* Friend action */}
                 {!isOwnProfile && !loading && (
-                  <div className="mt-14">
+                  <div>
                     {isFriend ? (
                       <button
                         onClick={handleRemoveFriend}

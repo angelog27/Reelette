@@ -667,6 +667,7 @@ export interface RouletteSpin {
 
 export async function logRouletteSpin(
   user_id: string,
+  avatarUrl: string | undefined,
   movie_id: string,
   movie_title: string,
   poster_url: string

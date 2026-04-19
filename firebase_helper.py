@@ -996,10 +996,16 @@ def get_friends_roulette_history(user_id, limit=1):
                 continue
             spins = get_roulette_history(friend_id, limit=limit)
             if spins:
+                # Look up the friend's avatar from their user document directly
+                try:
+                    user_doc = db.collection('users').document(friend_id).get()
+                    avatar_url = user_doc.to_dict().get('avatarUrl') if user_doc.exists else None
+                except Exception:
+                    avatar_url = None
                 result.append({
                     'friend_id': friend_id,
                     'friend_username': friend.get('friend_username', ''),
-                    'avatarUrl': friend.get('avatarUrl'),
+                    'avatarUrl': avatar_url,
                     'spins': spins,
                 })
         return result
