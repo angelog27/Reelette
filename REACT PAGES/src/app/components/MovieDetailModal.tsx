@@ -156,6 +156,13 @@ export function MovieDetailModal({ movieId, onClose }: Props) {
     ? overviewText.slice(0, 180).trimEnd() + '…'
     : overviewText;
 
+  // YouTube trailer — prefer an official "Trailer" type, fall back to any Teaser
+  const videos: any[] = movie.videos?.results ?? [];
+  const trailer = videos.find((v) => v.site === 'YouTube' && v.type === 'Trailer')
+    ?? videos.find((v) => v.site === 'YouTube' && v.type === 'Teaser')
+    ?? null;
+  const trailerUrl = trailer ? `https://www.youtube.com/watch?v=${trailer.key}` : null;
+
   // JustWatch deep-link for this movie (provided by TMDB watch/providers)
   const justwatchUrl: string | null = movie['watch/providers']?.results?.US?.link ?? null;
 
@@ -194,8 +201,8 @@ export function MovieDetailModal({ movieId, onClose }: Props) {
         ) : (
           <div className="w-full h-full bg-[#0A0A0A]" />
         )}
-        <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-black/20" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/40" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-black/10" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
       </div>
 
       {/* ── Close button ─────────────────────────────────────────── */}
@@ -221,7 +228,7 @@ export function MovieDetailModal({ movieId, onClose }: Props) {
           </span>
 
           {/* Title */}
-          <h1 className="text-3xl md:text-5xl font-bold text-white leading-tight mb-3 drop-shadow-lg">
+          <h1 className="text-4xl md:text-6xl font-bold text-white leading-tight mb-3 drop-shadow-lg">
             {movie.title}
           </h1>
 
@@ -243,7 +250,7 @@ export function MovieDetailModal({ movieId, onClose }: Props) {
           {/* Overview */}
           {overviewText && (
             <div className="mb-5">
-              <p className="text-gray-300 text-sm leading-relaxed">
+              <p className="text-gray-300 text-base leading-relaxed">
                 {displayOverview}
                 {isLongOverview && (
                   <button
@@ -276,6 +283,19 @@ export function MovieDetailModal({ movieId, onClose }: Props) {
                   <Play className="w-4 h-4 fill-black" />
                   Play Now
                 </a>
+
+                {/* Watch Trailer — opens YouTube */}
+                {trailerUrl && (
+                  <a
+                    href={trailerUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-white/30 bg-white/5 hover:bg-white/15 text-white text-sm font-medium transition-colors"
+                  >
+                    <Play className="w-4 h-4" />
+                    Watch Trailer
+                  </a>
+                )}
 
                 {/* Watch Later */}
                 {user && (
@@ -395,6 +415,9 @@ export function MovieDetailModal({ movieId, onClose }: Props) {
         {/* ── Similar movies strip — pinned to very bottom ─────── */}
         {similar.length > 0 && (
           <div className="border-t border-white/10 bg-black/50 backdrop-blur-sm px-10 md:px-16 py-4">
+            <p className="text-gray-400 text-xs font-semibold uppercase tracking-widest mb-3">
+              Related Movies
+            </p>
             <div className="flex gap-3 overflow-x-auto pb-1">
               {similar.slice(0, 10).map((m: any) => (
                 m.poster_path && (

@@ -983,3 +983,26 @@ def get_roulette_history(user_id, limit=10):
     except Exception as e:
         print(f"Error getting roulette history: {e}")
         return []
+
+
+def get_friends_roulette_history(user_id, limit=1):
+    """Return the most recent `limit` spins for each of the user's friends."""
+    try:
+        friends = get_friends(user_id)
+        result = []
+        for friend in friends:
+            friend_id = friend.get('friend_id')
+            if not friend_id:
+                continue
+            spins = get_roulette_history(friend_id, limit=limit)
+            if spins:
+                result.append({
+                    'friend_id': friend_id,
+                    'friend_username': friend.get('friend_username', ''),
+                    'avatarUrl': friend.get('avatarUrl'),
+                    'spins': spins,
+                })
+        return result
+    except Exception as e:
+        print(f"Error getting friends roulette history: {e}")
+        return []

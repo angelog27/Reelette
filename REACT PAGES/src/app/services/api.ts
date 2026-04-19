@@ -684,6 +684,12 @@ export async function getRouletteHistory(user_id: string, limit = 10): Promise<R
   return data.spins ?? [];
 }
 
+  export async function getfriendsRouletteHistory(user_id: string, limit = 1): Promise<{ friend_id: string; friend_username: string; avatarUrl?: string; spins: RouletteSpin[] }[]> {
+    const res = await fetch(`${BASE_URL}/roulette/${user_id}/friends-history?limit=${limit}`);
+    const data = await res.json();
+    return data.friendsHistory ?? [];
+}
+
 
 // ── Helpers ──────────────────────────────────────────────────────
 

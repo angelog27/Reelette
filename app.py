@@ -26,7 +26,7 @@ from firebase_helper import (
     add_to_group_watchlist, remove_from_group_watchlist, spin_group_reelette,
     update_user_avatar, update_user_last_seen,
     get_user_public_profile, get_group_member_profiles, get_members_streaming_services,
-    log_roulette_spin, get_roulette_history
+    log_roulette_spin, get_roulette_history, get_friends_roulette_history
 )
 from tmdb_api import (
     search_movies, discover_movies, get_popular_movies, get_movie_details,
@@ -666,6 +666,12 @@ def roulette_history_route(user_id):
     limit = request.args.get('limit', 10, type=int)
     spins = get_roulette_history(user_id, limit=limit)
     return jsonify({'spins': serialize_timestamps(spins)})
+
+@app.route('/api/roulette/<user_id>/friends-history', methods=['GET'])
+def friends_roulette_history_route(user_id):
+    limit = request.args.get('limit', 1, type=int)
+    friends_history = get_friends_roulette_history(user_id, limit=limit)
+    return jsonify({'friendsHistory': serialize_timestamps(friends_history)})
 
 
 if __name__ == '__main__':
