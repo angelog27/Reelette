@@ -356,7 +356,7 @@ export function MovieDetailModal({ movieId, onClose }: Props) {
                   {providers.map((p: any) => (
                     <a
                       key={p.provider_id}
-                      href={providerUrl(p)}
+                      href={justwatchUrl ?? providerUrl(p)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/10 rounded-full pl-1 pr-3 py-1 transition-colors"

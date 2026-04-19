@@ -145,6 +145,7 @@ export function RouletteTab() {
         if (user) {
           logRouletteSpin(
             user.user_id,
+            user.avatarUrl,
             pick.id,
             pick.title,
             pick.poster
