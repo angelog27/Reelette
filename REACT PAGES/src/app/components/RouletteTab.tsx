@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Shuffle, ChevronDown, ChevronUp, Star } from "lucide-react";
+import { Shuffle, ChevronDown, ChevronUp } from "lucide-react";
 import { MovieDetailModal } from "./MovieDetailModal";
 import { Switch } from "./ui/switch";
 import { Slider } from "./ui/slider";
@@ -9,13 +9,11 @@ import {
   getServices,
   hasServicesConfigured,
   getUser,
-  getFeed,
-  getUserPublicProfile,
+  getfriendsRouletteHistory,
   logRouletteSpin,
   getRouletteHistory,
   timeAgo,
   type RouletteSpin,
-  type FeedPost,
 } from "../services/api";
 
 const HERO_POSTER =
@@ -64,8 +62,9 @@ export function RouletteTab() {
   const [selectedMovieId, setSelectedMovieId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [activeMood, setActiveMood] = useState("");
-  const [feedPosts, setFeedPosts] = useState<FeedPost[]>([]);
-  const [feedAvatars, setFeedAvatars] = useState<Record<string, string>>({});
+  const [friendSpins, setFriendSpins] = useState<
+    { friend_id: string; friend_username: string; avatarUrl?: string; spins: RouletteSpin[] }[]
+  >([]);
   const [recentSpins, setRecentSpins] = useState<RouletteSpin[]>([]);
   const [spinsLoaded, setSpinsLoaded] = useState(false);
 
@@ -74,24 +73,11 @@ export function RouletteTab() {
   const hasServices = hasServicesConfigured(userServices);
 
   useEffect(() => {
-    getFeed(10)
-      .then((posts) => {
-        setFeedPosts(posts);
-        const uniqueIds = [...new Set(posts.map((p) => p.user_id))];
-        Promise.allSettled(
-          uniqueIds.map((id) => getUserPublicProfile(id))
-        ).then((results) => {
-          const map: Record<string, string> = {};
-          results.forEach((r, i) => {
-            if (r.status === "fulfilled" && r.value?.avatarUrl) {
-              map[uniqueIds[i]] = r.value.avatarUrl;
-            }
-          });
-          setFeedAvatars(map);
-        });
-      })
+    if (!user) return;
+    getfriendsRouletteHistory(user.user_id, 1)
+      .then(setFriendSpins)
       .catch(() => {});
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!user) {
@@ -159,6 +145,7 @@ export function RouletteTab() {
         if (user) {
           logRouletteSpin(
             user.user_id,
+            user.avatarUrl,
             pick.id,
             pick.title,
             pick.poster
@@ -458,44 +445,41 @@ export function RouletteTab() {
           <h3 className="text-white font-semibold text-sm px-1 mb-1">
             Friends' Spins
           </h3>
-          {feedPosts.slice(0, 6).map((post) => {
-            const avatar = feedAvatars[post.user_id] || post.avatarUrl || null;
+          {friendSpins.slice(0, 6).map((entry) => {
+            const spin = entry.spins[0];
             return (
               <div
-                key={post.post_id}
+                key={entry.friend_id}
                 className="flex items-start gap-2 bg-[#1A1A1A] rounded-lg p-2.5"
               >
                 <img
-                  src={avatar || dicebearUrl(post.username)}
-                  alt={post.username}
+                  src={entry.avatarUrl || dicebearUrl(entry.friend_username)}
+                  alt={entry.friend_username}
                   className="w-8 h-8 rounded-full object-cover flex-shrink-0 bg-[#2A2A2A]"
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = dicebearUrl(
-                      post.username
+                      entry.friend_username
                     );
                   }}
                 />
                 <div className="min-w-0 flex-1">
                   <p className="text-white text-xs font-medium truncate">
-                    {post.movie_title}
+                    {spin.movie_title}
                   </p>
                   <p className="text-gray-500 text-[10px] truncate">
-                    @{post.username}
+                    @{entry.friend_username}
                   </p>
-                  {post.rating > 0 && (
-                    <div className="flex items-center gap-0.5 mt-0.5">
-                      <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
-                      <span className="text-gray-400 text-[10px]">
-                        {post.rating}
-                      </span>
-                    </div>
-                  )}
+                  <p className="text-gray-600 text-[10px] mt-0.5">
+                    {timeAgo(spin.spun_at)}
+                  </p>
                 </div>
               </div>
             );
           })}
-          {feedPosts.length === 0 && (
-            <p className="text-gray-600 text-xs px-1">No activity yet.</p>
+          {friendSpins.length === 0 && (
+            <p className="text-gray-600 text-xs px-1">
+              {user ? "No friend spins yet." : "Log in to see friends' spins."}
+            </p>
           )}
         </aside>
       </div>
