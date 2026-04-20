@@ -55,6 +55,8 @@ def create_user(email, password, username):
             'displayName': username,
             'bio': '',
             'phone': '',
+            'avatarUrl': '',
+            'profileBannerBg': 'default',
             'createdAt': datetime.now(),
             'streamingServices': {
                 'netflix': False,
@@ -131,6 +133,230 @@ def verify_user(email, password):
             'email': data['email'],
             'username': user.display_name
         }
+    except Exception as e:
+        return {
+            'success': False,
+            'message': str(e)
+        }
+    
+def verify_firebase_id_token(id_token):
+    try:
+        decoded_token = auth.verify_id_token(id_token)
+        return {
+            'success': True,
+            'decoded_token': decoded_token
+        }
+    except Exception as e:
+        return {
+            'success': False,
+            'message': str(e)
+        }
+
+def create_or_update_social_user(decoded_token):
+    try:
+        user_id = decoded_token.get('uid')
+        email = decoded_token.get('email', '')
+        firebase_data = decoded_token.get('firebase', {})
+        provider = firebase_data.get('sign_in_provider', '')
+        name = decoded_token.get('name') or ''
+        picture = decoded_token.get('picture') or ''
+
+        if not user_id:
+            return {
+                'success': False,
+                'message': 'Missing Firebase user ID'
+            }
+
+        user_ref = db.collection('users').document(user_id)
+        user_doc = user_ref.get()
+
+        username = ''
+        if name:
+            username = name.lower().replace(' ', '')
+        elif email:
+            username = email.split('@')[0]
+        else:
+            username = user_id[:8]
+
+        default_data = {
+            'username': username,
+            'email': email,
+            'displayName': name or username,
+            'bio': '',
+            'phone': '',
+            'avatarUrl': picture,
+            'profileBannerBg': 'default',
+            'createdAt': datetime.now(),
+            'streamingServices': {
+                'netflix': False,
+                'hulu': False,
+                'disneyPlus': False,
+                'hboMax': False,
+                'amazonPrime': False,
+                'appleTV': False,
+                'paramount': False,
+                'peacock': False
+            },
+            'moviePreferences': {
+                'favoriteGenres': [],
+                'favoritePeople': [],
+                'contentRating': 'All Ratings',
+                'watchlistSettings': {
+                    'autoSortByReleaseDate': False,
+                    'hideWatchedContent': True
+                }
+            }
+        }
+
+        if user_doc.exists:
+            update_data = {
+                'email': email,
+                'displayName': name or username,
+            }
+
+            if picture:
+                update_data['avatarUrl'] = picture
+
+            user_ref.update(update_data)
+        else:
+            user_ref.set(default_data)
+            user_ref.collection('lists').document('watchlist').set({'movies': []})
+            user_ref.collection('lists').document('favorites').set({'movies': []})
+            user_ref.collection('lists').document('watched').set({'movies': []})
+
+        return {
+            'success': True,
+            'user_id': user_id,
+            'email': email,
+            'username': username,
+            'provider': provider
+        }
+
+    except Exception as e:
+        return {
+            'success': False,
+            'message': str(e)
+        }
+
+def get_provider_summary(user_id):
+    try:
+        auth_user = auth.get_user(user_id)
+
+        providers = [
+            {
+                'providerId': p.provider_id,
+                'email': p.email or '',
+                'displayName': p.display_name or '',
+                'photoUrl': p.photo_url or '',
+            }
+            for p in (auth_user.provider_data or [])
+        ]
+
+        return {
+            'success': True,
+            'providers': providers
+        }
+    except Exception as e:
+        return {
+            'success': False,
+            'message': str(e),
+            'providers': []
+        }
+    
+def verify_firebase_id_token(id_token):
+    try:
+        decoded_token = auth.verify_id_token(id_token)
+        return {
+            'success': True,
+            'decoded_token': decoded_token
+        }
+    except Exception as e:
+        return {
+            'success': False,
+            'message': str(e)
+        }
+
+def create_or_update_social_user(decoded_token):
+    try:
+        user_id = decoded_token.get('uid')
+        email = decoded_token.get('email', '')
+        firebase_data = decoded_token.get('firebase', {})
+        provider = firebase_data.get('sign_in_provider', '')
+        name = decoded_token.get('name') or ''
+        picture = decoded_token.get('picture') or ''
+
+        if not user_id:
+            return {
+                'success': False,
+                'message': 'Missing Firebase user ID'
+            }
+
+        user_ref = db.collection('users').document(user_id)
+        user_doc = user_ref.get()
+
+        username = ''
+        if name:
+            username = name.lower().replace(' ', '')
+        elif email:
+            username = email.split('@')[0]
+        else:
+            username = user_id[:8]
+
+        default_data = {
+            'username': username,
+            'email': email,
+            'displayName': name or username,
+            'bio': '',
+            'phone': '',
+            'avatarUrl': picture,
+            'profileBannerBg': 'default',
+            'createdAt': datetime.now(),
+            'streamingServices': {
+                'netflix': False,
+                'hulu': False,
+                'disneyPlus': False,
+                'hboMax': False,
+                'amazonPrime': False,
+                'appleTV': False,
+                'paramount': False,
+                'peacock': False
+            },
+            'moviePreferences': {
+                'favoriteGenres': [],
+                'favoritePeople': [],
+                'contentRating': 'All Ratings',
+                'watchlistSettings': {
+                    'autoSortByReleaseDate': False,
+                    'hideWatchedContent': True
+                }
+            }
+        }
+
+        if user_doc.exists:
+            update_data = {
+                'email': email,
+                'displayName': name or username,
+            }
+
+            if picture:
+                update_data['avatarUrl'] = picture
+
+            user_ref.update(update_data)
+        else:
+            user_ref.set(default_data)
+
+            user_ref.collection('lists').document('watchlist').set({'movies': []})
+            user_ref.collection('lists').document('favorites').set({'movies': []})
+            user_ref.collection('lists').document('watched').set({'movies': []})
+
+        return {
+            'success': True,
+            'user_id': user_id,
+            'email': email,
+            'username': username,
+            'provider': provider
+        }
+
     except Exception as e:
         return {
             'success': False,
@@ -353,6 +579,31 @@ def get_user_data(user_id):
     except Exception as e:
         print(f"Error getting user data: {e}")
         return None
+    
+def get_provider_summary(user_id):
+    try:
+        auth_user = auth.get_user(user_id)
+
+        providers = [
+            {
+                'providerId': p.provider_id,
+                'email': p.email or '',
+                'displayName': p.display_name or '',
+                'photoUrl': p.photo_url or '',
+            }
+            for p in (auth_user.provider_data or [])
+        ]
+
+        return {
+            'success': True,
+            'providers': providers
+        }
+    except Exception as e:
+        return {
+            'success': False,
+            'message': str(e),
+            'providers': []
+        }
     
 def add_to_watchlist(user_id, movie_id):
     #add movies to watchlist.

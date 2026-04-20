@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
+import { Mail, Facebook, Apple } from 'lucide-react';
 import { Spotlight } from '@/components/ui/spotlight';
 import { useNavigate } from 'react-router-dom';
 import logoImage from '../../assets/Full_Reelette_upscaled.png';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { StreamingSetup } from './StreamingSetup';
+import { signInWithGoogle, signInWithFacebook } from '../services/socialAuth';
 import {
   login,
   register,
@@ -13,6 +15,7 @@ import {
   saveServices,
   hasServicesConfigured,
   forgotPassword,
+  socialLogin
 } from '../services/api';
 
 // Real TMDB movie poster images
@@ -223,6 +226,84 @@ export function LoginPage() {
     } finally {
       setForgotLoading(false);
     }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setLoginError('');
+
+    try {
+      const userCredential = await signInWithGoogle();
+
+      const idToken = await userCredential.user.getIdToken(); // 🔥 FIX
+
+      const result = await socialLogin(idToken, 'google');
+
+      if (!result.success) {
+        setLoginError(result.message || 'Google sign-in failed');
+        return;
+      }
+
+      const user = {
+        user_id: result.user_id,
+        username: result.username,
+        email: result.email,
+      };
+
+      saveUser(user);
+
+      const services = await getUserStreaming(result.user_id);
+      saveServices(services);
+
+      setPendingUserId(result.user_id);
+      setPendingUsername(result.username);
+      setExistingServices(services);
+
+      navigate('/home'); // simplify
+    } catch (error) {
+      console.error(error);
+      setLoginError('Google sign-in failed. Please try again.');
+    }
+  };
+
+const handleFacebookSignIn = async () => {
+    setLoginError('');
+
+    try {
+      const userCredential = await signInWithFacebook();
+
+      const idToken = await userCredential.user.getIdToken(); // 🔥 FIX
+
+      const result = await socialLogin(idToken, 'facebook');
+
+      if (!result.success) {
+        setLoginError(result.message || 'Facebook sign-in failed');
+        return;
+      }
+
+      const user = {
+        user_id: result.user_id,
+        username: result.username,
+        email: result.email,
+      };
+
+      saveUser(user);
+
+      const services = await getUserStreaming(result.user_id);
+      saveServices(services);
+
+      setPendingUserId(result.user_id);
+      setPendingUsername(result.username);
+      setExistingServices(services);
+
+      navigate('/home');
+    } catch (error) {
+      console.error(error);
+      setLoginError('Facebook sign-in failed. Please try again.');
+    }
+  };
+
+  const handleAppleUnavailable = () => {
+    alert('This feature will be implemented in the future');
   };
 
   const goHome = () => navigate('/home/roulette');
@@ -547,7 +628,51 @@ export function LoginPage() {
                   >
                     {regLoading ? 'Creating account...' : 'Sign Up'}
                   </Button>
-                  <div className="text-center pt-4 border-t border-[rgba(255,87,34,0.15)]">
+
+                  <div className="pt-1">
+                    <div className="border-t border-gray-800" />
+                  </div>
+
+                  <div className="flex justify-center items-center gap-4 py-2">
+                    {/* Google */}
+                    <button
+                      type="button"
+                      onClick={handleGoogleSignIn}  // 🔥 ADD THIS
+                      className="w-10 h-10 rounded-full border border-gray-700 bg-gray-900/60 hover:border-red-500 hover:bg-gray-900 text-gray-300 flex items-center justify-center transition-all duration-200"
+                      aria-label="Continue with Google"
+                      title="Continue with Google"
+                    >
+                      <Mail size={18} />
+                    </button>
+
+                    {/* Apple */}
+                    <button
+                      type="button"
+                      onClick={handleAppleUnavailable}  // 🔥 ADD THIS
+                      className="w-10 h-10 rounded-full border border-gray-700 bg-gray-900/60 hover:border-red-500 hover:bg-gray-900 text-gray-300 flex items-center justify-center transition-all duration-200"
+                      aria-label="Continue with Apple"
+                      title="Continue with Apple"
+                    >
+                      <Apple size={18} />
+                    </button>
+
+                    {/* Facebook */}
+                    <button
+                      type="button"
+                      onClick={handleFacebookSignIn}  // 🔥 ADD THIS
+                      className="w-10 h-10 rounded-full border border-gray-700 bg-gray-900/60 hover:border-red-500 hover:bg-gray-900 text-gray-300 flex items-center justify-center transition-all duration-200"
+                      aria-label="Continue with Facebook"
+                      title="Continue with Facebook"
+                    >
+                      <Facebook size={18} />
+                    </button>
+                  </div>
+
+                  <div className="pt-1">
+                    <div className="border-t border-gray-800" />
+                  </div>
+
+                  <div className="text-center pt-1">
                     <p className="text-sm text-gray-400">
                       Already have an account?{' '}
                       <button

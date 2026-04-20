@@ -26,7 +26,7 @@ from firebase_helper import (
     add_to_group_watchlist, remove_from_group_watchlist, spin_group_reelette,
     update_user_avatar, update_user_last_seen,
     get_user_public_profile, get_group_member_profiles, get_members_streaming_services,
-    log_roulette_spin, get_roulette_history, get_friends_roulette_history
+    log_roulette_spin, get_roulette_history, get_friends_roulette_history, verify_firebase_id_token, create_or_update_social_user
 )
 from tmdb_api import (
     search_movies, discover_movies, get_popular_movies, get_movie_details,
@@ -214,6 +214,52 @@ def forgot_password():
     result = send_password_reset_email(email)
     status_code = 200 if result.get('success') else 400
     return jsonify(result), status_code
+
+    result = send_password_reset_email(email)
+    status_code = 200 if result.get('success') else 400
+    return jsonify(result), status_code
+
+@app.route('/api/auth/social-login', methods=['POST'])
+def social_login():
+    data = request.get_json() or {}
+    id_token = data.get('idToken', '').strip()
+    provider = data.get('provider', '').strip()
+
+    if not id_token:
+        return jsonify({
+            'success': False,
+            'message': 'Missing Firebase ID token'
+        }), 400
+
+    if provider not in ['google', 'facebook']:
+        return jsonify({
+            'success': False,
+            'message': 'Unsupported provider'
+        }), 400
+
+    verify_result = verify_firebase_id_token(id_token)
+
+    if not verify_result.get('success'):
+        return jsonify({
+            'success': False,
+            'message': verify_result.get('message', 'Invalid Firebase token')
+        }), 400
+
+    user_result = create_or_update_social_user(verify_result['decoded_token'])
+
+    if not user_result.get('success'):
+        return jsonify({
+            'success': False,
+            'message': user_result.get('message', 'Failed to create social user')
+        }), 400
+
+    return jsonify({
+        'success': True,
+        'user_id': user_result['user_id'],
+        'email': user_result['email'],
+        'username': user_result['username'],
+        'provider': user_result.get('provider', '')
+    }), 200
 
 # ── Movie Routes ─────────────────────────────────────────────────
 

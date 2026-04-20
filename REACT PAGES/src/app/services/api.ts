@@ -153,6 +153,21 @@ export async function forgotPassword(email: string) {
   return res.json();
 }
 
+export async function socialLogin(idToken: string, provider: 'google' | 'facebook') {
+  const res = await fetch(`${BASE_URL}/auth/social-login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      idToken,
+      provider,
+    }),
+  });
+
+  return res.json();
+}
+
 // ── User streaming services ──────────────────────────────────────
 
 

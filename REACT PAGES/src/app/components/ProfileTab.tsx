@@ -22,6 +22,8 @@ import {
   Settings,
   Globe,
   Apple,
+  Chrome,
+  Facebook,
   Loader2,
 } from 'lucide-react';
 
