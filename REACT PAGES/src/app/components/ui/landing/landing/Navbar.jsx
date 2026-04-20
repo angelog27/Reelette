@@ -1,6 +1,8 @@
 import { Film } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export default function Navbar({ onCtaClick }) {
+  const navigate = useNavigate();
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/60 backdrop-blur-xl border-b border-border/30">
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -11,7 +13,7 @@ export default function Navbar({ onCtaClick }) {
           </span>
         </div>
         <button
-          onClick={onCtaClick}
+          onClick={() => navigate("/login")}
           className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
         >
           Get Started

@@ -4,27 +4,27 @@ import { Disc3, Layers, Users, Rss, Bot } from "lucide-react";
 const features = [
   {
     icon: Disc3,
-    title: "Roulette Wheel Discovery",
-    desc: "Spin, land, watch. The thrill of randomness meets smart filtering for serendipitous picks every time.",
+    title: "Roulette Wheel",
+    desc: "Spin, land, and watch. The thrill of randomness meets your filtering for unique picks every time.",
   },
   {
     icon: Layers,
-    title: "Cross-Platform Streaming",
-    desc: "One unified search across every service you subscribe to. No more app-hopping to find where something plays.",
+    title: "Cross Platform Streaming",
+    desc: "All of your services in one place. No more hopping between apps.",
   },
   {
     icon: Users,
     title: "Group Watch",
-    desc: "Collaborative ranking with friends. Everyone votes, Reelette picks the winner. No more group chat arguments.",
+    desc: "Movie night, made easy. Sync up with friends and family, no matter where they are. Whether it's a sleepover or a long-distance movie date, we've got you covered.",
   },
   {
     icon: Rss,
     title: "Social Feed",
-    desc: "See what your friends are watching, rating, and recommending. Your personal movie community, built in.",
+    desc: "See what your friends are watching, rating, and recommending. Your own movie community at the tip of your fingers.",
   },
   {
     icon: Bot,
-    title: '"The Director" AI',
+    title: '"The Director" (Coming Soon) AI',
     desc: "Your personal AI film advisor. Describe a vibe, a memory, a feeling — and it finds the perfect match.",
   },
 ];
@@ -38,7 +38,7 @@ export default function FeaturesSection() {
             Features
           </p>
           <h2 className="font-space font-bold text-3xl sm:text-4xl md:text-5xl tracking-tight">
-            Everything you need. Nothing you don't.
+            Everything you need. All in once place.
           </h2>
         </AnimatedSection>
 

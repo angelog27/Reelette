@@ -10,7 +10,7 @@ export default function TaglineSection() {
         <h2 className="font-space font-bold text-4xl sm:text-5xl md:text-6xl lg:text-7xl tracking-tight leading-tight">
           One app. Every service.
           <br />
-          <span className="text-primary">Zero excuses.</span>
+          <span className="text-primary">Zero scrolling.</span>
         </h2>
       </AnimatedSection>
     </section>

@@ -1,7 +1,9 @@
 import AnimatedSection from "./AnimatedSection";
 import { Film, ArrowRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export default function FooterCTA() {
+  const navigate = useNavigate();
   return (
     <section id="signup" className="px-6 pb-12">
       <div className="max-w-4xl mx-auto">
@@ -22,15 +24,21 @@ export default function FooterCTA() {
               </h2>
 
               <p className="text-muted-foreground text-base md:text-lg max-w-lg mx-auto mb-10 font-inter">
-                Join the beta and stop wasting your evenings scrolling.
+                Join now and stop wasting your evenings scrolling.
               </p>
 
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <button className="group inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-3.5 rounded-lg font-space font-semibold text-base transition-all duration-300 hover:shadow-[0_0_40px_rgba(229,9,20,0.25)] hover:scale-[1.02] active:scale-[0.98]">
+                <button
+                  onClick={() => navigate("/login")}
+                  className="group inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-3.5 rounded-lg font-space font-semibold text-base transition-all duration-300 hover:shadow-[0_0_40px_rgba(229,9,20,0.25)] hover:scale-[1.02] active:scale-[0.98]"
+                >
                   Get Started
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
                 </button>
-                <button className="inline-flex items-center gap-2 border border-border hover:border-foreground/30 text-foreground/80 hover:text-foreground px-8 py-3.5 rounded-lg font-space font-semibold text-base transition-all duration-300">
+                <button
+                  onClick={() => navigate("/login")}
+                  className="inline-flex items-center gap-2 border border-border hover:border-foreground/30 text-foreground/80 hover:text-foreground px-8 py-3.5 rounded-lg font-space font-semibold text-base transition-all duration-300"
+                >
                   Log In
                 </button>
               </div>

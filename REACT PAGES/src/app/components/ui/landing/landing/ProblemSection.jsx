@@ -2,7 +2,7 @@ import AnimatedSection from "./AnimatedSection";
 import { Tv, Search, Star } from "lucide-react";
 
 const problems = [
-  { icon: Tv, service: "Netflix", verb: "catalogues." },
+  { icon: Tv, service: "Netflix", verb: "shows." },
   { icon: Search, service: "JustWatch", verb: "tells." },
   { icon: Star, service: "Letterboxd", verb: "rates." },
 ];

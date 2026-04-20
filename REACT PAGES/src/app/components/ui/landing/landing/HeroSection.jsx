@@ -38,7 +38,7 @@ export default function HeroSection({ onCtaClick }) {
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-border/50 bg-secondary/50 mb-8">
             <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
             <span className="text-xs font-medium text-muted-foreground tracking-wide uppercase">
-              Now in Beta
+              Now live
             </span>
           </div>
         </motion.div>
@@ -61,7 +61,7 @@ export default function HeroSection({ onCtaClick }) {
           className="text-muted-foreground text-base sm:text-lg md:text-xl max-w-2xl mx-auto leading-relaxed mb-10 font-inter"
         >
           The average household subscribes to 3–4 streaming services. That's 20,000+ titles
-          sitting right in front of you — and still nothing to watch.
+          sitting right in front of you and still nothing to watch. Lets fix that.
         </motion.p>
 
         <motion.div
@@ -74,7 +74,7 @@ export default function HeroSection({ onCtaClick }) {
             className="group relative inline-flex items-center gap-3 bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 rounded-lg font-space font-semibold text-lg transition-all duration-300 hover:shadow-[0_0_40px_rgba(229,9,20,0.3)] hover:scale-[1.02] active:scale-[0.98]"
           >
             <Play className="w-5 h-5 fill-current" />
-            Find My Movie
+            Find My Next Movie
           </button>
         </motion.div>
       </div>
