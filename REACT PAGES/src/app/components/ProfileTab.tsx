@@ -106,14 +106,12 @@ function ProfileInfoSection({
     username: string;
     bio: string;
     email: string;
-    phone: string;
   };
   draftProfile: {
     displayName: string;
     username: string;
     bio: string;
     email: string;
-    phone: string;
   };
   isEditing: boolean;
   onChange: (
@@ -182,21 +180,6 @@ function ProfileInfoSection({
                 value={data.email}
                 disabled
                 className="w-full bg-zinc-950/50 border border-zinc-800 rounded-lg pl-10 pr-4 py-2.5 text-zinc-400 placeholder-zinc-600 focus:outline-none cursor-not-allowed disabled:opacity-80"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-zinc-400 mb-2">Phone Number</label>
-            <div className="relative">
-              <Phone size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
-              <input
-                type="tel"
-                name="phone"
-                value={data.phone}
-                onChange={onChange}
-                disabled={!isEditing}
-                className="w-full bg-zinc-950/50 border border-zinc-800 rounded-lg pl-10 pr-4 py-2.5 text-white placeholder-zinc-600 focus:border-red-600 focus:ring-2 focus:ring-red-600/20 focus:outline-none transition-all disabled:opacity-80"
               />
             </div>
           </div>
@@ -480,25 +463,20 @@ function AppearanceSection() {
       <label className="block text-zinc-400 mb-3">Theme Styles</label>
 
       <div className="space-y-3">
-        {/* Modern */}
+        {/* Dark */}
         <button className="w-full p-14 bg-red-600 border-2 border-red-600 rounded-xl flex flex-col items-center text-center gap-1 transition-all">
           <div className="flex items-center gap-3">
             <Monitor size={22} className="text-white" />
-            <span className="text-white font-semibold text-3xl">Modern</span>
+            <span className="text-white font-semibold text-3xl">Dark</span>
           </div>
-          <p className="text-sm text-red-100">Dark, cinematic, and premium. Deep blacks, glowing reds, smooth gradients, and
-            a sleek movie theater vibe.</p>
         </button>
 
-        {/* Retro */}
+        {/* Light */}
         <button className="w-full p-14 bg-zinc-950/50 hover:bg-zinc-900 border-2 border-zinc-800 hover:border-red-600 rounded-xl flex flex-col items-center text-center gap-1 transition-all group">
           <div className="flex items-center gap-3">
             <Sun size={22} className="text-zinc-400 group-hover:text-red-400" />
-            <span className="text-zinc-300 group-hover:text-white font-semibold text-3xl">Retro</span>
+            <span className="text-zinc-300 group-hover:text-white font-semibold text-3xl">Light</span>
           </div>
-          <p className="text-sm text-zinc-500 group-hover:text-zinc-400">Throw it back with a nostalgic film‑lover aesthetic.
-            Warm tones, vintage charm, and a classic old‑school movie vibe.
-          </p>
         </button>
       </div>
     </div>
@@ -713,7 +691,6 @@ export function ProfileTab() {
     username: '',
     bio: '',
     email: '',
-    phone: '',
   });
 
   const [draftProfile, setDraftProfile] = useState({
@@ -721,7 +698,6 @@ export function ProfileTab() {
     username: '',
     bio: '',
     email: '',
-    phone: '',
   });
 
   const [moviePreferences, setMoviePreferences] = useState({
@@ -770,7 +746,6 @@ export function ProfileTab() {
         username: data.username || '',
         bio: data.bio || '',
         email: data.email || '',
-        phone: data.phone || '',
       };
 
       console.log('loadedProfile:', loadedProfile);
@@ -852,7 +827,6 @@ export function ProfileTab() {
           displayName: draftProfile.displayName,
           username: draftProfile.username,
           bio: draftProfile.bio,
-          phone: draftProfile.phone,
         }),
       });
 
