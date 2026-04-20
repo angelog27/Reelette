@@ -1,11 +1,11 @@
-import netflixLogo from "../../../../../assets/netflix-logo.jpg";
-import huluLogo from "../../../../../assets/hulu-logo.avif";
+import netflixLogo from "../../../../../assets/netflix-logo.png";
+import huluLogo from "../../../../../assets/hulu.webp";
 import disneyLogo from "../../../../../assets/disney-plus.jpg";
 import hboLogo from "../../../../../assets/hbo-max.png";
 import primeLogo from "../../../../../assets/prime-video.jpg";
-import appleLogo from "../../../../../assets/apple-tv.png";
-import paramountLogo from "../../../../../assets/paramount-plus.webp";
-import peacockLogo from "../../../../../assets/peacock.webp";
+import appleLogo from "../../../../../assets/apple-tv+.webp";
+import paramountLogo from "../../../../../assets/paramount-plus.jpg";
+import peacockLogo from "../../../../../assets/Peacock.png";
 
 const services = [
   { name: "Netflix", logo: netflixLogo },
@@ -21,11 +21,11 @@ const services = [
 function LogoTile({ name, logo }) {
   return (
     <div className="flex-shrink-0 flex flex-col items-center gap-2">
-      <div className="w-16 h-16 rounded-xl border border-border/40 bg-secondary/30 flex items-center justify-center overflow-hidden">
+      <div className="w-28 h-28 rounded-xl border border-[#e50914]/20 bg-[#e50914]/10 flex items-center justify-center overflow-hidden">
         <img
           src={logo}
           alt={name}
-          style={{ width: "100%", height: "100%", objectFit: "contain" }}
+          style={{ width: "100%", height: "100%", objectFit: "cover" }}
         />
       </div>
       <span className="text-xs font-medium text-foreground/40 whitespace-nowrap">{name}</span>
