@@ -55,6 +55,7 @@ def create_user(email, password, username):
             'displayName': username,
             'bio': '',
             'phone': '',
+            'quizCompleted': False,
             'createdAt': datetime.now(),
             'streamingServices': {
                 'netflix': False,
@@ -1012,3 +1013,15 @@ def get_friends_roulette_history(user_id, limit=1):
     except Exception as e:
         print(f"Error getting friends roulette history: {e}")
         return []
+    
+# ── Quiz ──────────────────────────────────────────────────────────
+def save_quiz_result(uid, top_genre, answers):
+    """Save quiz completion status and top genre to the user's Firestore document"""
+    try:
+        db.collection('users').document(uid).set({
+            'quizCompleted': True,
+            'topGenre': top_genre,
+        }, merge=True)
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
