@@ -217,46 +217,17 @@ function ProfileInfoSection({
 
 function MoviePersonalizationSection({
   moviePreferences,
-  favoritePersonInput,
-  onFavoritePersonInputChange,
-  onAddFavoritePerson,
-  onRemoveFavoritePerson,
-  onToggleGenre,
   onToggleStreamingService,
-  onContentRatingChange,
-  onWatchlistSettingChange,
   onSavePreferences,
   isSavingPreferences,
 }: {
   moviePreferences: {
-    favoriteGenres: string[];
-    favoritePeople: string[];
     streamingServices: Record<string, boolean>;
-    contentRating: string;
-    watchlistSettings: {
-      autoSortByReleaseDate: boolean;
-      hideWatchedContent: boolean;
-    };
   };
-  favoritePersonInput: string;
-  onFavoritePersonInputChange: (value: string) => void;
-  onAddFavoritePerson: () => void;
-  onRemoveFavoritePerson: (name: string) => void;
-  onToggleGenre: (genre: string) => void;
   onToggleStreamingService: (serviceKey: string) => void;
-  onContentRatingChange: (value: string) => void;
-  onWatchlistSettingChange: (
-    setting: 'autoSortByReleaseDate' | 'hideWatchedContent',
-    checked: boolean
-  ) => void;
   onSavePreferences: () => void;
   isSavingPreferences: boolean;
 }) {
-  const genres = [
-    'Action', 'Drama', 'Sci-Fi', 'Horror', 'Comedy', 'Thriller',
-    'Romance', 'Documentary', 'Animation', 'Fantasy'
-  ];
-
   const platforms = [
     { key: 'netflix', name: 'Netflix', logo: 'https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg', color: 'red' },
     { key: 'appleTV', name: 'Apple TV+', logo: 'https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg', color: 'dimgray' },
@@ -273,77 +244,12 @@ function MoviePersonalizationSection({
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="w-1 h-6 bg-red-600 rounded-full"></div>
-          <h2 className="text-white uppercase tracking-wider">Movie Preferences</h2>
+          <h2 className="text-white uppercase tracking-wider">Streaming Services</h2>
         </div>
         <Film size={20} className="text-zinc-600" />
       </div>
 
       <div className="space-y-6">
-        <div>
-          <label className="block text-zinc-400 mb-3">Favorite Genres</label>
-          <div className="flex flex-wrap gap-2">
-            {genres.map((genre) => {
-              const isSelected = moviePreferences.favoriteGenres.includes(genre);
-
-              return (
-                <button
-                  key={genre}
-                  type="button"
-                  onClick={() => onToggleGenre(genre)}
-                  className={`px-4 py-2 border rounded-lg transition-all ${isSelected
-                    ? 'bg-red-600 border-red-600 text-white'
-                    : 'bg-zinc-950/50 border-zinc-800 text-zinc-400 hover:bg-red-600 hover:border-red-600 hover:text-white'
-                    }`}
-                >
-                  {genre}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-zinc-400 mb-3">Favorite Actors & Directors</label>
-
-          <div className="flex flex-wrap gap-2 mb-3">
-            {moviePreferences.favoritePeople.map((name) => (
-              <button
-                key={name}
-                type="button"
-                onClick={() => onRemoveFavoritePerson(name)}
-                className="px-3 py-1.5 bg-red-600/20 border border-red-600/50 text-red-400 rounded-full text-sm flex items-center gap-2 hover:bg-red-600/30 transition-all"
-                title="Remove"
-              >
-                <Star size={14} />
-                {name}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={favoritePersonInput}
-              onChange={(e) => onFavoritePersonInputChange(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  onAddFavoritePerson();
-                }
-              }}
-              placeholder="Search and add favorites..."
-              className="w-full bg-zinc-950/50 border border-zinc-800 rounded-lg px-4 py-2.5 text-white placeholder-zinc-600 focus:border-red-600 focus:ring-2 focus:ring-red-600/20 focus:outline-none transition-all"
-            />
-            <button
-              type="button"
-              onClick={onAddFavoritePerson}
-              className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg border border-red-600 transition-all"
-            >
-              Add
-            </button>
-          </div>
-        </div>
-
         <div>
           <label className="block text-zinc-400 mb-3">Preferred Streaming Platforms</label>
           <div className="grid grid-cols-4 md:grid-cols-8 gap-3">
@@ -383,51 +289,6 @@ function MoviePersonalizationSection({
             })}
           </div>
         </div>
-
-        <div>
-          <label className="block text-zinc-400 mb-3">Content Rating Preferences</label>
-          <select
-            value={moviePreferences.contentRating}
-            onChange={(e) => onContentRatingChange(e.target.value)}
-            className="w-full bg-zinc-950/50 border border-zinc-800 rounded-lg px-4 py-2.5 text-white focus:border-red-600 focus:ring-2 focus:ring-red-600/20 focus:outline-none transition-all"
-          >
-            <option>All Ratings</option>
-            <option>G - General Audiences</option>
-            <option>PG - Parental Guidance</option>
-            <option>PG-13 - Parents Strongly Cautioned</option>
-            <option>R - Restricted</option>
-            <option>NC-17 - Adults Only</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-zinc-400 mb-3">Watchlist Settings</label>
-          <div className="space-y-3">
-            <label className="flex items-center justify-between p-3 bg-zinc-950/30 rounded-lg border border-zinc-800/50 hover:border-zinc-700 transition-all cursor-pointer">
-              <span className="text-zinc-300">Auto-sort by release date</span>
-              <input
-                type="checkbox"
-                checked={moviePreferences.watchlistSettings.autoSortByReleaseDate}
-                onChange={(e) =>
-                  onWatchlistSettingChange('autoSortByReleaseDate', e.target.checked)
-                }
-                className="w-5 h-5 rounded bg-zinc-800 border-zinc-700 text-red-600 focus:ring-red-600 focus:ring-offset-0"
-              />
-            </label>
-
-            <label className="flex items-center justify-between p-3 bg-zinc-950/30 rounded-lg border border-zinc-800/50 hover:border-zinc-700 transition-all cursor-pointer">
-              <span className="text-zinc-300">Hide watched content</span>
-              <input
-                type="checkbox"
-                checked={moviePreferences.watchlistSettings.hideWatchedContent}
-                onChange={(e) =>
-                  onWatchlistSettingChange('hideWatchedContent', e.target.checked)
-                }
-                className="w-5 h-5 rounded bg-zinc-800 border-zinc-700 text-red-600 focus:ring-red-600 focus:ring-offset-0"
-              />
-            </label>
-          </div>
-        </div>
       </div>
 
       <div className="mt-6 flex justify-end">
@@ -436,12 +297,12 @@ function MoviePersonalizationSection({
           onClick={onSavePreferences}
           disabled={isSavingPreferences}
           className={`px-5 py-2 rounded-lg transition-all border flex items-center gap-2 ${isSavingPreferences
-            ? 'bg-zinc-800 text-zinc-500 border-zinc-700 cursor-not-allowed'
-            : 'bg-red-600 hover:bg-red-700 text-white border-red-600 shadow-lg shadow-red-600/20 hover:shadow-red-600/40'
+              ? 'bg-zinc-800 text-zinc-500 border-zinc-700 cursor-not-allowed'
+              : 'bg-red-600 hover:bg-red-700 text-white border-red-600 shadow-lg shadow-red-600/20 hover:shadow-red-600/40'
             }`}
         >
           <Edit3 size={16} />
-          {isSavingPreferences ? 'Saving...' : 'Save Preferences'}
+          {isSavingPreferences ? 'Saving...' : 'Save Services'}
         </button>
       </div>
     </div>
@@ -713,87 +574,73 @@ export function ProfileTab() {
       paramount: false,
       peacock: false,
     },
-    contentRating: 'All Ratings',
-    watchlistSettings: {
-      autoSortByReleaseDate: false,
-      hideWatchedContent: true,
-    },
   });
 
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
-  const [favoritePersonInput, setFavoritePersonInput] = useState('');
   const [isSavingPreferences, setIsSavingPreferences] = useState(false);
 
   useEffect(() => {
-  async function loadProfile() {
-    try {
-      const userId = localStorage.getItem('user_id');
-      console.log('userId from localStorage:', userId);
+    async function loadProfile() {
+      try {
+        const userId = localStorage.getItem('user_id');
+        console.log('userId from localStorage:', userId);
 
-      if (!userId) {
+        if (!userId) {
+          setIsLoadingProfile(false);
+          return;
+        }
+
+        const response = await fetch(`http://localhost:5000/api/user/${userId}`);
+        const data = await response.json();
+
+        console.log('profile API response:', data);
+
+        const loadedProfile = {
+          displayName: data.displayName || '',
+          username: data.username || '',
+          bio: data.bio || '',
+          email: data.email || '',
+        };
+
+        console.log('loadedProfile:', loadedProfile);
+
+        setProfile(loadedProfile);
+        setDraftProfile(loadedProfile);
+
+        const streamingResponse = await fetch(`http://localhost:5000/api/user/${userId}/streaming`);
+        const streamingData = await streamingResponse.json();
+
+        const moviePreferencesResponse = await fetch(
+          `http://localhost:5000/api/user/${userId}/movie-preferences`
+        );
+        const moviePreferencesData = await moviePreferencesResponse.json();
+
+        console.log('streaming API response:', streamingData);
+
+        setMoviePreferences({
+          favoriteGenres: moviePreferencesData.favoriteGenres || [],
+          favoritePeople: moviePreferencesData.favoritePeople || [],
+          streamingServices: {
+            netflix: streamingData.netflix || false,
+            appleTV: streamingData.appleTV || false,
+            hboMax: streamingData.hboMax || false,
+            disneyPlus: streamingData.disneyPlus || false,
+            hulu: streamingData.hulu || false,
+            amazonPrime: streamingData.amazonPrime || false,
+            paramount: streamingData.paramount || false,
+            peacock: streamingData.peacock || false,
+          },
+        });
+      } catch (error) {
+        console.error('Failed to load profile:', error);
+      } finally {
         setIsLoadingProfile(false);
-        return;
       }
-
-      const response = await fetch(`http://localhost:5000/api/user/${userId}`);
-      const data = await response.json();
-
-      console.log('profile API response:', data);
-
-      const loadedProfile = {
-        displayName: data.displayName || '',
-        username: data.username || '',
-        bio: data.bio || '',
-        email: data.email || '',
-      };
-
-      console.log('loadedProfile:', loadedProfile);
-
-      setProfile(loadedProfile);
-      setDraftProfile(loadedProfile);
-
-      const streamingResponse = await fetch(`http://localhost:5000/api/user/${userId}/streaming`);
-      const streamingData = await streamingResponse.json();
-
-      const moviePreferencesResponse = await fetch(
-        `http://localhost:5000/api/user/${userId}/movie-preferences`
-      );
-      const moviePreferencesData = await moviePreferencesResponse.json();
-
-      console.log('streaming API response:', streamingData);
-      console.log('movie preferences API response:', moviePreferencesData);
-
-      setMoviePreferences({
-        favoriteGenres: moviePreferencesData.favoriteGenres || [],
-        favoritePeople: moviePreferencesData.favoritePeople || [],
-        streamingServices: {
-          netflix: streamingData.netflix || false,
-          appleTV: streamingData.appleTV || false,
-          hboMax: streamingData.hboMax || false,
-          disneyPlus: streamingData.disneyPlus || false,
-          hulu: streamingData.hulu || false,
-          amazonPrime: streamingData.amazonPrime || false,
-          paramount: streamingData.paramount || false,
-          peacock: streamingData.peacock || false,
-        },
-        contentRating: moviePreferencesData.contentRating || 'All Ratings',
-        watchlistSettings: {
-          autoSortByReleaseDate:
-            moviePreferencesData.watchlistSettings?.autoSortByReleaseDate || false,
-          hideWatchedContent:
-            moviePreferencesData.watchlistSettings?.hideWatchedContent ?? true,
-        },
-      });
-    } catch (error) {
-      console.error('Failed to load profile:', error);
-    } finally {
-      setIsLoadingProfile(false);
     }
-  }
 
-  loadProfile();
-}, []);
+    loadProfile();
+  }, []);
 
   function handleStartEditing() {
     setDraftProfile(profile);
@@ -851,14 +698,6 @@ export function ProfileTab() {
     setIsEditingProfile(false);
   }
 
-  function handleToggleGenre(genre: string) {
-    setMoviePreferences((prev) => ({
-      ...prev,
-      favoriteGenres: prev.favoriteGenres.includes(genre)
-        ? prev.favoriteGenres.filter((item) => item !== genre)
-        : [...prev.favoriteGenres, genre],
-    }));
-  }
 
   function handleToggleStreamingService(serviceKey: string) {
     setMoviePreferences((prev) => ({
@@ -870,101 +709,35 @@ export function ProfileTab() {
     }));
   }
 
-  function handleContentRatingChange(value: string) {
-    setMoviePreferences((prev) => ({
-      ...prev,
-      contentRating: value,
-    }));
-  }
-
-  function handleWatchlistSettingChange(
-    setting: 'autoSortByReleaseDate' | 'hideWatchedContent',
-    checked: boolean
-  ) {
-    setMoviePreferences((prev) => ({
-      ...prev,
-      watchlistSettings: {
-        ...prev.watchlistSettings,
-        [setting]: checked,
-      },
-    }));
-  }
-
-  function handleAddFavoritePerson() {
-    const trimmed = favoritePersonInput.trim();
-
-    if (!trimmed) return;
-    if (moviePreferences.favoritePeople.includes(trimmed)) {
-      setFavoritePersonInput('');
-      return;
-    }
-
-    setMoviePreferences((prev) => ({
-      ...prev,
-      favoritePeople: [...prev.favoritePeople, trimmed],
-    }));
-    setFavoritePersonInput('');
-  }
-
-  function handleRemoveFavoritePerson(name: string) {
-    setMoviePreferences((prev) => ({
-      ...prev,
-      favoritePeople: prev.favoritePeople.filter((person) => person !== name),
-    }));
-  }
-
   async function handleSaveMoviePreferences() {
-  try {
-    const userId = localStorage.getItem('user_id');
-    if (!userId) {
-      console.error('No user_id found');
-      return;
-    }
+    try {
+      const userId = localStorage.getItem('user_id');
+      if (!userId) {
+        console.error('No user_id found');
+        return;
+      }
 
-    setIsSavingPreferences(true);
+      setIsSavingPreferences(true);
 
-    const [streamingResponse, moviePreferencesResponse] = await Promise.all([
-      fetch(`http://localhost:5000/api/user/${userId}/streaming`, {
+      const response = await fetch(`http://localhost:5000/api/user/${userId}/streaming`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(moviePreferences.streamingServices),
-      }),
-      fetch(`http://localhost:5000/api/user/${userId}/movie-preferences`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          favoriteGenres: moviePreferences.favoriteGenres,
-          favoritePeople: moviePreferences.favoritePeople,
-          contentRating: moviePreferences.contentRating,
-          watchlistSettings: moviePreferences.watchlistSettings,
-        }),
-      }),
-    ]);
+      });
 
-    const streamingResult = await streamingResponse.json();
-    const moviePreferencesResult = await moviePreferencesResponse.json();
+      const result = await response.json();
 
-    if (!streamingResponse.ok || !streamingResult.success) {
-      throw new Error(
-        streamingResult.message || 'Failed to save streaming preferences'
-      );
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || 'Failed to save streaming preferences');
+      }
+    } catch (error) {
+      console.error('Failed to save movie preferences:', error);
+    } finally {
+      setIsSavingPreferences(false);
     }
-
-    if (!moviePreferencesResponse.ok || !moviePreferencesResult.success) {
-      throw new Error(
-        moviePreferencesResult.message || 'Failed to save movie preferences'
-      );
-    }
-  } catch (error) {
-    console.error('Failed to save movie preferences:', error);
-  } finally {
-    setIsSavingPreferences(false);
   }
-}
 
   if (isLoadingProfile) {
     return (
@@ -998,14 +771,7 @@ export function ProfileTab() {
 
           <MoviePersonalizationSection
             moviePreferences={moviePreferences}
-            favoritePersonInput={favoritePersonInput}
-            onFavoritePersonInputChange={setFavoritePersonInput}
-            onAddFavoritePerson={handleAddFavoritePerson}
-            onRemoveFavoritePerson={handleRemoveFavoritePerson}
-            onToggleGenre={handleToggleGenre}
             onToggleStreamingService={handleToggleStreamingService}
-            onContentRatingChange={handleContentRatingChange}
-            onWatchlistSettingChange={handleWatchlistSettingChange}
             onSavePreferences={handleSaveMoviePreferences}
             isSavingPreferences={isSavingPreferences}
           />
