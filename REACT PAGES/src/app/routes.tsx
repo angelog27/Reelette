@@ -12,9 +12,16 @@ const SocialTab            = lazy(() => import('./components/SocialTab').then(m 
 const ProfileandSettingsTab = lazy(() => import('./components/ProfileandSettingsTab').then(m => ({ default: m.ProfileandSettingsTab })));
 const MyStuffTab           = lazy(() => import('./components/MyStuffTab').then(m => ({ default: m.MyStuffTab })));
 
+function hasSeenLanding() {
+  return document.cookie.split(';').some(c => c.trim().startsWith('reelette_visited='));
+}
+
 function LandingGuard() {
   if (localStorage.getItem('user_id')) {
     return <Navigate to="/home/roulette" replace />;
+  }
+  if (hasSeenLanding()) {
+    return <Navigate to="/login" replace />;
   }
   return <Landing />;
 }
