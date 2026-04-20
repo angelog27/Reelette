@@ -4,16 +4,19 @@ import { MonitorPlay, SlidersHorizontal, Sparkles } from "lucide-react";
 const steps = [
   {
     num: "01",
+    icon: MonitorPlay,
     title: "Log your streaming services",
     desc: "Tell us what you have: Netflix, Hulu, Disney+, whatever. We only show what you can actually watch. No more false promises or empty trailers.",
   },
   {
     num: "02",
+    icon: SlidersHorizontal,
     title: "Take the genre quiz, and apply your filters",
     desc: "Genre, decade, runtime, or rating dial in exactly what you're feeling tonight. Or don't. We'll surprise you.",
   },
   {
     num: "03",
+    icon: Sparkles,
     title: "Spin the Reelette and watch instantly",
     desc: "One tap. One movie. Instantly. No more 45 minutes of browsing for a movie. Bring the fun back to movie night.",
   },
