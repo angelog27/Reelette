@@ -15,6 +15,8 @@
 
     --animate-spotlight: spotlight 2s ease 0.75s 1 forwards;
 
+    --animate-marquee-left: marquee-left 30s linear infinite;
+
     --font-heading: var(--font-sans);
 
     --font-sans: 'Geist Variable', sans-serif;
@@ -226,6 +228,11 @@
     --sidebar-border: oklch(1 0 0 / 10%);
 
     --sidebar-ring: oklch(0.556 0 0);
+}
+
+@keyframes marquee-left {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
 }
 
 @keyframes spotlight {

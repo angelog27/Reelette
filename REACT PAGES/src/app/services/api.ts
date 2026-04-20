@@ -667,6 +667,7 @@ export interface RouletteSpin {
 
 export async function logRouletteSpin(
   user_id: string,
+  avatarUrl: string | undefined,
   movie_id: string,
   movie_title: string,
   poster_url: string
@@ -682,6 +683,12 @@ export async function getRouletteHistory(user_id: string, limit = 10): Promise<R
   const res = await fetch(`${BASE_URL}/roulette/${user_id}/history?limit=${limit}`);
   const data = await res.json();
   return data.spins ?? [];
+}
+
+  export async function getfriendsRouletteHistory(user_id: string, limit = 1): Promise<{ friend_id: string; friend_username: string; avatarUrl?: string; spins: RouletteSpin[] }[]> {
+    const res = await fetch(`${BASE_URL}/roulette/${user_id}/friends-history?limit=${limit}`);
+    const data = await res.json();
+    return data.friendsHistory ?? [];
 }
 
 
