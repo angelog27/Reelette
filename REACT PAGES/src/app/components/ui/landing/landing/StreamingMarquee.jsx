@@ -21,7 +21,7 @@ const services = [
 function LogoTile({ name, logo }) {
   return (
     <div className="flex-shrink-0 flex flex-col items-center gap-2">
-      <div className="w-28 h-28 rounded-xl border border-[#e50914]/20 bg-[#e50914]/10 flex items-center justify-center overflow-hidden">
+      <div className="w-28 h-28 rounded-xl border border-black bg-[#e50914]/10 flex items-center justify-center overflow-hidden">
         <img
           src={logo}
           alt={name}

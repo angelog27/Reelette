@@ -1,4 +1,4 @@
-import { Film } from "lucide-react";
+import reeletteLogo from "../../../../../assets/Reelette_LOGO_upscaled.png";
 import { useNavigate } from "react-router-dom";
 
 export default function Navbar({ onCtaClick }) {
@@ -7,7 +7,7 @@ export default function Navbar({ onCtaClick }) {
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/60 backdrop-blur-xl border-b border-border/30">
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Film className="w-6 h-6 text-primary" />
+          <img src={reeletteLogo} alt="Reelette" className="w-6 h-6 object-contain" />
           <span className="font-space font-bold text-lg tracking-tight text-foreground">
             Reelette
           </span>

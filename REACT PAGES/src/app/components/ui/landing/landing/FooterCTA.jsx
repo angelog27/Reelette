@@ -1,6 +1,7 @@
 import AnimatedSection from "./AnimatedSection";
-import { Film, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import reeletteLogo from "../../../../../assets/Reelette_LOGO_upscaled.png";
 
 export default function FooterCTA() {
   const navigate = useNavigate();
@@ -14,7 +15,7 @@ export default function FooterCTA() {
 
             <div className="relative">
               <div className="w-14 h-14 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-8">
-                <Film className="w-7 h-7 text-primary" />
+                <img src={reeletteLogo} alt="Reelette" className="w-8 h-8 object-contain" />
               </div>
 
               <h2 className="font-space font-bold text-3xl sm:text-4xl md:text-5xl tracking-tight mb-4">
@@ -49,7 +50,7 @@ export default function FooterCTA() {
         {/* Footer text */}
         <div className="mt-12 text-center">
           <div className="flex items-center justify-center gap-2 mb-3">
-            <Film className="w-4 h-4 text-primary" />
+            <img src={reeletteLogo} alt="Reelette" className="w-4 h-4 object-contain" />
             <span className="font-space font-semibold text-sm text-foreground">Reelette</span>
           </div>
           <p className="text-xs text-muted-foreground/50">

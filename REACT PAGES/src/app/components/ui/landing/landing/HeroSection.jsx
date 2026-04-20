@@ -26,7 +26,7 @@ export default function HeroSection({ onCtaClick }) {
           </div>
         </div>
         {/* Red glow */}
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[160px] z-10" />
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#e50914]/15 rounded-full blur-[160px] z-10" />
       </div>
 
       <div className="relative z-20 max-w-4xl mx-auto px-6 text-center">
