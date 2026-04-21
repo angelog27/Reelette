@@ -462,11 +462,12 @@ def create_feed_post():
     username   = data.get('username', '').strip()
     message    = data.get('message', '').strip()
     movie_title = data.get('movie_title', '').strip()
-    movie_id   = data.get('movie_id', '')
-    rating     = data.get('rating', 0)
+    movie_id     = data.get('movie_id', '')
+    movie_poster = data.get('movie_poster', '')
+    rating       = data.get('rating', 0)
     if not all([user_id, username, message, movie_title]):
         return jsonify({'success': False, 'message': 'user_id, username, message, and movie_title are required'}), 400
-    return jsonify(create_post(user_id, username, message, movie_title, movie_id, rating))
+    return jsonify(create_post(user_id, username, message, movie_title, movie_id, movie_poster, rating))
 
 @app.route('/api/feed/<post_id>/like', methods=['POST'])
 def like_feed_post(post_id):

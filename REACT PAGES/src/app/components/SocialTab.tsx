@@ -466,14 +466,23 @@ function PostCard({ post, currentUserId, currentUsername, onLike, onDelete, onOp
               href={`https://www.themoviedb.org/movie/${post.movie_id}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="block bg-[#141414] rounded-lg mb-4 border border-[#2A2A2A] overflow-hidden hover:border-[#C0392B] transition-colors group"
+              className="flex gap-4 bg-[#141414] rounded-xl mb-4 border border-[#2A2A2A] overflow-hidden hover:border-[#C0392B] transition-colors group p-3"
             >
-              {post.movie_poster && (
-                <img src={post.movie_poster} alt={post.movie_title} className="w-full h-40 object-cover" />
+              {post.movie_poster ? (
+                <img
+                  src={post.movie_poster}
+                  alt={post.movie_title}
+                  className="w-28 shrink-0 rounded-lg object-cover self-stretch"
+                  style={{ aspectRatio: '2/3' }}
+                />
+              ) : (
+                <div className="w-28 shrink-0 rounded-lg bg-[#2A2A2A] flex items-center justify-center" style={{ aspectRatio: '2/3' }}>
+                  <Film className="w-8 h-8 text-gray-600" />
+                </div>
               )}
-              <div className="p-3 flex items-center justify-between">
-                <span className="text-white font-medium truncate group-hover:text-[#E74C3C] transition-colors">{post.movie_title}</span>
-                <div className="flex items-center gap-1.5 shrink-0 ml-2">
+              <div className="flex flex-col justify-between py-1 min-w-0">
+                <span className="text-white font-semibold text-base leading-snug group-hover:text-[#E74C3C] transition-colors">{post.movie_title}</span>
+                <div className="flex items-center gap-1.5 mt-2">
                   <Star className="w-4 h-4 fill-yellow-500 text-yellow-500" />
                   <span className="text-white font-medium">{post.rating}/10</span>
                 </div>
