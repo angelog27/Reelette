@@ -218,24 +218,27 @@ export function DiscoverTab() {
         </div>
       </div>
 
-      {/* ── Catalog mode pills (only when not in search/filter mode) ── */}
-      {!isSearchMode && (
-        <div className="flex gap-3 flex-wrap">
-          {(['popular', 'trending', 'allTime'] as const).map((mode) => (
-            <button
-              key={mode}
-              onClick={() => setCatalogMode(mode)}
-              className={`px-6 py-2 rounded-full transition-all font-medium text-sm ${
-                catalogMode === mode
-                  ? 'bg-[#C0392B] text-white'
-                  : 'bg-[#2A2A2A] text-white hover:bg-[#333333]'
-              }`}
-            >
-              {mode === 'popular' ? 'Trending' : mode === 'trending' ? 'New Releases' : 'Classics'}
-            </button>
-          ))}
-        </div>
-      )}
+      {/* ── Catalog mode pills — always visible; clicking one clears active filters ── */}
+      <div className="flex gap-3 flex-wrap">
+        {(['popular', 'trending', 'allTime'] as const).map((mode) => (
+          <button
+            key={mode}
+            onClick={() => {
+              setCatalogMode(mode);
+              // Clear search + filters so the catalog fetch fires
+              setSearchQuery('');
+              f.clearFilters();
+            }}
+            className={`px-6 py-2 rounded-full transition-all font-medium text-sm ${
+              catalogMode === mode && !isSearchMode
+                ? 'bg-[#C0392B] text-white'
+                : 'bg-[#2A2A2A] text-white hover:bg-[#333333]'
+            }`}
+          >
+            {mode === 'popular' ? 'Trending' : mode === 'trending' ? 'New Releases' : 'Classics'}
+          </button>
+        ))}
+      </div>
 
       {/* ── Result count (search mode) ── */}
       {isSearchMode && !loading && (

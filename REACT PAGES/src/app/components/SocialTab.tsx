@@ -18,6 +18,7 @@ import {
   SERVICE_DISPLAY, getUserPublicProfile,
 } from '../services/api';
 import { UserProfileModal } from './UserProfileModal';
+import { MovieDetailModal } from './MovieDetailModal';
 
 // ── Constants ──────────────────────────────────────────────────
 const SERVICE_KEYS = ['netflix', 'hulu', 'disneyPlus', 'hboMax', 'amazonPrime', 'appleTV', 'paramount', 'peacock'] as const;
@@ -163,7 +164,10 @@ function SpinWheel({ items, onSpinEnd }: { items: GroupMovie[]; onSpinEnd: (m: G
 // ── Watch Mode Panel ───────────────────────────────────────────
 type WatchMode = 'separately' | 'together';
 
-function WatchModePanel({ groupId }: { groupId: string }) {
+function WatchModePanel({ groupId, onModeChange }: {
+  groupId: string;
+  onModeChange?: (mode: WatchMode | null, memberServices: Record<string, MemberServiceEntry>) => void;
+}) {
   const [mode, setMode] = useState<WatchMode | null>(null);
   const [memberServices, setMemberServices] = useState<Record<string, MemberServiceEntry>>({});
   const [loading, setLoading] = useState(false);
@@ -178,6 +182,7 @@ function WatchModePanel({ groupId }: { groupId: string }) {
     setMovies([]);
     const svcMap = await getGroupMemberServices(groupId);
     setMemberServices(svcMap);
+    onModeChange?.(m, svcMap);
 
     const filter = m === 'separately' ? computeIntersection(svcMap) : computeUnion(svcMap);
     const hasAny = Object.values(filter).some(Boolean);
@@ -189,7 +194,7 @@ function WatchModePanel({ groupId }: { groupId: string }) {
     setMovies(results.slice(0, 20));
     setDiscovering(false);
     setLoading(false);
-  }, [groupId]);
+  }, [groupId, onModeChange]);
 
   const handleMode = (m: WatchMode) => {
     setMode(m);
@@ -802,6 +807,12 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
   const [friendResults, setFriendResults] = useState<{ user_id: string; username: string }[]>([]);
   const [addingMember, setAddingMember] = useState<string | null>(null);
   const [profileUserId, setProfileUserId] = useState<string | null>(null);
+  const [randomMovieId, setRandomMovieId] = useState<string | null>(null);
+  const [randomMovieOpen, setRandomMovieOpen] = useState(false);
+  const [randomSpinning, setRandomSpinning] = useState(false);
+  const [randomError, setRandomError] = useState('');
+  const [watchMode, setWatchMode] = useState<WatchMode | null>(null);
+  const [watchMemberServices, setWatchMemberServices] = useState<Record<string, MemberServiceEntry>>({});
 
   const isCreator = group.created_by === currentUserId;
 
@@ -861,11 +872,44 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
     refresh();
   };
 
+  const handleRandomSpin = async () => {
+    setRandomSpinning(true);
+    setRandomMovieId(null);
+    setRandomError('');
+    const randomPage = Math.floor(Math.random() * 5) + 1;
+
+    // Build streaming filter if a watch mode is active
+    const servicesFilter = watchMode
+      ? (watchMode === 'separately'
+          ? computeIntersection(watchMemberServices)
+          : computeUnion(watchMemberServices))
+      : undefined;
+
+    try {
+      let movies = await discoverMovies({ services_filter: servicesFilter, page: randomPage });
+      if (movies.length === 0) movies = await discoverMovies({ services_filter: servicesFilter, page: 1 });
+      if (movies.length === 0) {
+        setRandomError('Could not find a movie. Try again.');
+      } else {
+        const pick = movies[Math.floor(Math.random() * movies.length)];
+        setRandomMovieId(pick.id);
+        setRandomMovieOpen(true);
+      }
+    } catch {
+      setRandomError('Something went wrong. Please try again.');
+    } finally {
+      setRandomSpinning(false);
+    }
+  };
+
   const onlineCount = memberProfiles.filter(p => isOnline(p.lastSeen)).length;
 
   return (
     <>
       {profileUserId && <UserProfileModal userId={profileUserId} onClose={() => setProfileUserId(null)} />}
+      {randomMovieOpen && randomMovieId && (
+        <MovieDetailModal movieId={randomMovieId} onClose={() => setRandomMovieOpen(false)} />
+      )}
 
       <div className="max-w-3xl mx-auto space-y-6">
         {/* Header */}
@@ -893,35 +937,100 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
         </div>
 
         {/* Movie Night — Watch Together/Separately */}
-        <WatchModePanel groupId={group.group_id} />
+        <WatchModePanel
+          groupId={group.group_id}
+          onModeChange={(m, svcMap) => { setWatchMode(m); setWatchMemberServices(svcMap); }}
+        />
 
         {/* Reelette Wheel */}
-        {group.watchlist.length > 0 && (
-          <section className="bg-[#1C1C1C] border border-[#2A2A2A] rounded-xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-white font-semibold flex items-center gap-2"><Popcorn className="w-5 h-5 text-[#C0392B]" />Group Reelette</h3>
-              <button onClick={() => { setShowWheel(w => !w); setWinner(null); }}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#C0392B] to-[#E74C3C] hover:from-[#A93226] hover:to-[#C0392B] text-white rounded-lg text-sm font-medium transition-all hover:scale-105">
-                <Shuffle className="w-4 h-4" />{showWheel ? 'Hide Wheel' : 'Spin the Wheel'}
+        <section className="bg-[#1C1C1C] border border-[#2A2A2A] rounded-xl p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-white font-semibold flex items-center gap-2">
+              <Popcorn className="w-5 h-5 text-[#C0392B]" />Group Reelette
+            </h3>
+            <div className="flex gap-2">
+              {/* Random Reelette — always available */}
+              <button
+                onClick={handleRandomSpin}
+                disabled={randomSpinning}
+                className="flex items-center gap-2 px-4 py-2 bg-[#2A2A2A] hover:bg-[#333] border border-[#3A3A3A] text-gray-300 hover:text-white rounded-lg text-sm font-medium transition-all disabled:opacity-50"
+                title={watchMode
+                  ? `Pick a random movie from ${watchMode === 'separately' ? 'shared' : 'all member'} streaming services`
+                  : 'Pick a totally random movie from all of TMDB'}
+              >
+                <Shuffle className={`w-4 h-4 ${randomSpinning ? 'animate-spin' : ''}`} />
+                {randomSpinning
+                  ? 'Finding…'
+                  : watchMode === 'separately'
+                    ? 'Random (Shared Services)'
+                    : watchMode === 'together'
+                      ? 'Random (All Services)'
+                      : 'Random Movie'}
               </button>
+
+              {/* Watchlist spin — only when watchlist has movies */}
+              {group.watchlist.length > 0 && (
+                <button
+                  onClick={() => { setShowWheel(w => !w); setWinner(null); }}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#C0392B] to-[#E74C3C] hover:from-[#A93226] hover:to-[#C0392B] text-white rounded-lg text-sm font-medium transition-all hover:scale-105"
+                >
+                  <Shuffle className="w-4 h-4" />{showWheel ? 'Hide Wheel' : 'Spin the Wheel'}
+                </button>
+              )}
             </div>
-            {showWheel && (
-              <div className="flex flex-col items-center gap-6 py-4">
-                {winner ? (
-                  <div className="text-center space-y-4 py-4">
-                    <div className="text-6xl animate-bounce">🎬</div>
-                    <div className="bg-gradient-to-r from-[#C0392B] to-[#E74C3C] rounded-2xl p-6 shadow-2xl shadow-[#C0392B]/30 max-w-sm mx-auto">
-                      <p className="text-white/80 text-sm mb-1">Tonight you're watching…</p>
-                      <h3 className="text-white text-2xl font-bold">{winner.movie_title}</h3>
-                      <p className="text-white/60 text-sm mt-2">Added by @{winner.added_by_username}</p>
-                    </div>
-                    <button onClick={() => setWinner(null)} className="px-6 py-2 bg-[#2A2A2A] hover:bg-[#333] text-gray-300 rounded-lg text-sm transition-colors">Spin Again</button>
-                  </div>
-                ) : <SpinWheel items={group.watchlist} onSpinEnd={setWinner} />}
+          </div>
+
+          {randomError && <p className="text-yellow-500 text-sm text-center mb-3">{randomError}</p>}
+
+          {/* Random movie result */}
+          {randomMovieId && (
+            <div className="mb-4 p-4 bg-[#141414] border border-[#C0392B]/30 rounded-xl flex items-center justify-between gap-4">
+              <div>
+                <p className="text-gray-400 text-xs mb-1">Random pick for the group</p>
+                <button
+                  onClick={() => setRandomMovieOpen(true)}
+                  className="text-white font-semibold hover:text-[#E74C3C] transition-colors text-left"
+                >
+                  Click to view
+                </button>
               </div>
-            )}
-          </section>
-        )}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setRandomMovieOpen(true)}
+                  className="px-3 py-1.5 bg-[#C0392B] hover:bg-[#E74C3C] text-white rounded-lg text-sm transition-colors"
+                >
+                  View Movie
+                </button>
+                <button onClick={() => { setRandomMovieId(null); setRandomMovieOpen(false); }} className="p-1.5 text-gray-500 hover:text-white transition-colors">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Watchlist wheel */}
+          {showWheel && group.watchlist.length > 0 && (
+            <div className="flex flex-col items-center gap-6 py-4">
+              {winner ? (
+                <div className="text-center space-y-4 py-4">
+                  <div className="text-6xl animate-bounce">🎬</div>
+                  <div className="bg-gradient-to-r from-[#C0392B] to-[#E74C3C] rounded-2xl p-6 shadow-2xl shadow-[#C0392B]/30 max-w-sm mx-auto">
+                    <p className="text-white/80 text-sm mb-1">Tonight you're watching…</p>
+                    <h3 className="text-white text-2xl font-bold">{winner.movie_title}</h3>
+                    <p className="text-white/60 text-sm mt-2">Added by @{winner.added_by_username}</p>
+                  </div>
+                  <button onClick={() => setWinner(null)} className="px-6 py-2 bg-[#2A2A2A] hover:bg-[#333] text-gray-300 rounded-lg text-sm transition-colors">Spin Again</button>
+                </div>
+              ) : <SpinWheel items={group.watchlist} onSpinEnd={setWinner} />}
+            </div>
+          )}
+
+          {group.watchlist.length === 0 && !randomMovieId && (
+            <p className="text-gray-600 text-sm text-center py-2">
+              Add movies to the watchlist below to use the wheel, or hit <span className="text-gray-400">Random Movie</span> to discover something new.
+            </p>
+          )}
+        </section>
 
         {/* Watchlist with TMDB search */}
         <section className="bg-[#1C1C1C] border border-[#2A2A2A] rounded-xl p-5">
