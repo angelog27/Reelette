@@ -242,6 +242,27 @@ export function getMovieDetails(movie_id: string): Promise<Record<string, unknow
   });
 }
 
+// Returns the first flatrate streaming service name for a movie, or '' if none.
+// Cached for 6 hours to match the backend provider TTL.
+export function getMovieProvider(movie_id: string): Promise<string> {
+  return fromCache(`provider:${movie_id}`, 6 * 60 * 60 * 1000, async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/movies/${movie_id}/providers`);
+      const data = await res.json();
+      const flatrate: { provider_id: number; provider_name: string }[] = data?.flatrate ?? [];
+      const NAMES: Record<number, string> = {
+        8: 'Netflix', 15: 'Hulu', 337: 'Disney+', 1899: 'Max',
+        9: 'Prime Video', 350: 'Apple TV+', 531: 'Paramount+', 386: 'Peacock',
+      };
+      for (const p of flatrate) {
+        const name = NAMES[p.provider_id];
+        if (name) return name;
+      }
+    } catch { /* ignore */ }
+    return '';
+  });
+}
+
 
 // ── Watched Movies ───────────────────────────────────────────────
 

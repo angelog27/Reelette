@@ -164,7 +164,10 @@ function SpinWheel({ items, onSpinEnd }: { items: GroupMovie[]; onSpinEnd: (m: G
 // ── Watch Mode Panel ───────────────────────────────────────────
 type WatchMode = 'separately' | 'together';
 
-function WatchModePanel({ groupId }: { groupId: string }) {
+function WatchModePanel({ groupId, onModeChange }: {
+  groupId: string;
+  onModeChange?: (mode: WatchMode | null, memberServices: Record<string, MemberServiceEntry>) => void;
+}) {
   const [mode, setMode] = useState<WatchMode | null>(null);
   const [memberServices, setMemberServices] = useState<Record<string, MemberServiceEntry>>({});
   const [loading, setLoading] = useState(false);
@@ -179,6 +182,7 @@ function WatchModePanel({ groupId }: { groupId: string }) {
     setMovies([]);
     const svcMap = await getGroupMemberServices(groupId);
     setMemberServices(svcMap);
+    onModeChange?.(m, svcMap);
 
     const filter = m === 'separately' ? computeIntersection(svcMap) : computeUnion(svcMap);
     const hasAny = Object.values(filter).some(Boolean);
@@ -190,7 +194,7 @@ function WatchModePanel({ groupId }: { groupId: string }) {
     setMovies(results.slice(0, 20));
     setDiscovering(false);
     setLoading(false);
-  }, [groupId]);
+  }, [groupId, onModeChange]);
 
   const handleMode = (m: WatchMode) => {
     setMode(m);
@@ -807,6 +811,8 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
   const [randomMovieOpen, setRandomMovieOpen] = useState(false);
   const [randomSpinning, setRandomSpinning] = useState(false);
   const [randomError, setRandomError] = useState('');
+  const [watchMode, setWatchMode] = useState<WatchMode | null>(null);
+  const [watchMemberServices, setWatchMemberServices] = useState<Record<string, MemberServiceEntry>>({});
 
   const isCreator = group.created_by === currentUserId;
 
@@ -871,9 +877,17 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
     setRandomMovieId(null);
     setRandomError('');
     const randomPage = Math.floor(Math.random() * 5) + 1;
+
+    // Build streaming filter if a watch mode is active
+    const servicesFilter = watchMode
+      ? (watchMode === 'separately'
+          ? computeIntersection(watchMemberServices)
+          : computeUnion(watchMemberServices))
+      : undefined;
+
     try {
-      let movies = await discoverMovies({ page: randomPage });
-      if (movies.length === 0) movies = await discoverMovies({ page: 1 });
+      let movies = await discoverMovies({ services_filter: servicesFilter, page: randomPage });
+      if (movies.length === 0) movies = await discoverMovies({ services_filter: servicesFilter, page: 1 });
       if (movies.length === 0) {
         setRandomError('Could not find a movie. Try again.');
       } else {
@@ -923,7 +937,10 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
         </div>
 
         {/* Movie Night — Watch Together/Separately */}
-        <WatchModePanel groupId={group.group_id} />
+        <WatchModePanel
+          groupId={group.group_id}
+          onModeChange={(m, svcMap) => { setWatchMode(m); setWatchMemberServices(svcMap); }}
+        />
 
         {/* Reelette Wheel */}
         <section className="bg-[#1C1C1C] border border-[#2A2A2A] rounded-xl p-6">
@@ -937,10 +954,18 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
                 onClick={handleRandomSpin}
                 disabled={randomSpinning}
                 className="flex items-center gap-2 px-4 py-2 bg-[#2A2A2A] hover:bg-[#333] border border-[#3A3A3A] text-gray-300 hover:text-white rounded-lg text-sm font-medium transition-all disabled:opacity-50"
-                title="Pick a totally random movie from all of TMDB"
+                title={watchMode
+                  ? `Pick a random movie from ${watchMode === 'separately' ? 'shared' : 'all member'} streaming services`
+                  : 'Pick a totally random movie from all of TMDB'}
               >
                 <Shuffle className={`w-4 h-4 ${randomSpinning ? 'animate-spin' : ''}`} />
-                {randomSpinning ? 'Finding…' : 'Random Movie'}
+                {randomSpinning
+                  ? 'Finding…'
+                  : watchMode === 'separately'
+                    ? 'Random (Shared Services)'
+                    : watchMode === 'together'
+                      ? 'Random (All Services)'
+                      : 'Random Movie'}
               </button>
 
               {/* Watchlist spin — only when watchlist has movies */}

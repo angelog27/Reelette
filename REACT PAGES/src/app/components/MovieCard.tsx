@@ -1,22 +1,11 @@
 import { Star } from 'lucide-react';
 import { Movie } from '../types/movie';
+import { PROVIDER_LOGOS } from '../constants/providers';
 
 interface MovieCardProps {
   movie: Movie;
   onClick?: (movie: Movie) => void;
 }
-
-// Official provider logos via TMDB CDN
-const PROVIDER_LOGOS: Record<string, string> = {
-  'Netflix':      'https://image.tmdb.org/t/p/original/t2yyOv40HZeVlLjYsCsPHnWLk4W.jpg',
-  'Max':          'https://image.tmdb.org/t/p/original/aS2zvJWn9mwiU7M3tuiubDufoM.jpg',
-  'Hulu':         'https://image.tmdb.org/t/p/original/zxrVdFjIjLqkfnwyghnfywTn3Lh.jpg',
-  'Paramount+':   'https://image.tmdb.org/t/p/original/h5DcR0J2EESLitnhR8xLG1QymTE.jpg',
-  'Disney+':      'https://image.tmdb.org/t/p/original/7rwgEs15tFwyR9NPQ5vpzxTj19Q.jpg',
-  'Prime Video':  'https://image.tmdb.org/t/p/original/emthp39XA2YScoYL1p0sdbMH2fh.jpg',
-  'Apple TV+':    'https://image.tmdb.org/t/p/original/2E03IAZsX4ZaUqM7tXlctEPMGWS.jpg',
-  'Peacock':      'https://image.tmdb.org/t/p/original/8VCV78prwd9QzZnEm0ReO6bERDa.jpg',
-};
 
 export function MovieCard({ movie, onClick }: MovieCardProps) {
 
