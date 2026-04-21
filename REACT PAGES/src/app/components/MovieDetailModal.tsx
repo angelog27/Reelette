@@ -278,6 +278,20 @@ export function MovieDetailModal({ movieId, onClose, onWatchedChange }: Props) {
             </div>
           )}
 
+          {/*cast and director*/}
+          <div className="mb-5">  
+          {movie.credits?.crew && (
+            <p className="text-gray-400 text-sm mb-1">
+              Directed by <span className="text-white">{movie.credits.crew.find((c: any) => c.job === 'Director')?.name}</span>
+            </p>
+          )}
+          {movie.credits?.cast && (
+            <p className="text-gray-400 text-sm">
+              Starring <span className="text-white">{movie.credits.cast.slice(0, 6).map((c: any) => c.name).join(', ')}</span>
+            </p>
+          )}
+          </div>
+
           {/* ── Action buttons ──────────────────────────────────── */}
           {!showWatchForm ? (
             <div className="space-y-3">
