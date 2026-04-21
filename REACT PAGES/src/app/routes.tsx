@@ -1,7 +1,8 @@
-import { lazy } from 'react';
+import { lazy, Suspense } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { HomePage } from './components/HomePage';
 import { LoginPage } from './components/LoginPage';
+import QuizGate from './components/QuizGate';
 import Landing from '../pages/Landing';
 
 // Tab components are code-split: their JS is only downloaded when the user
@@ -34,6 +35,10 @@ export const router = createBrowserRouter([
   {
     path: '/login',
     Component: LoginPage,
+  },
+  {
+    path: '/quiz',
+    element: <QuizGate />,
   },
   {
     path: '/home',

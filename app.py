@@ -26,7 +26,7 @@ from firebase_helper import (
     add_to_group_watchlist, remove_from_group_watchlist, spin_group_reelette,
     update_user_avatar, update_user_last_seen,
     get_user_public_profile, get_group_member_profiles, get_members_streaming_services,
-    log_roulette_spin, get_roulette_history, get_friends_roulette_history
+    log_roulette_spin, get_roulette_history, get_friends_roulette_history, save_quiz_result
 )
 from tmdb_api import (
     search_movies, discover_movies, get_popular_movies, get_movie_details,
@@ -505,6 +505,28 @@ def update_profile(user_id):
     data = request.get_json() or {}
     result = update_user_profile(user_id, data)
     return jsonify(result)
+
+# ── Quiz Routes ──────────────────────────────────────────────────
+
+@app.route('/api/user/<uid>/profile', methods=['GET'])
+def get_user_profile(uid):
+    from firebase_helper import get_user_data
+    data = get_user_data(uid)
+    if not data:
+        return jsonify({'quizCompleted': False})
+    return jsonify({'quizCompleted': data.get('quizCompleted', True)})
+
+@app.route('/api/quiz/complete', methods=['POST'])
+def complete_quiz():
+    data = request.get_json() or {}
+    uid = data.get('uid', '').strip()
+    top_genre = data.get('topGenre')
+    answers = data.get('answers', {})
+    if not uid:
+        return jsonify({'success': False, 'message': 'uid required'}), 400
+    from firebase_helper import save_quiz_result
+    save_quiz_result(uid, top_genre, answers)
+    return jsonify({'success': True})
 
 @app.route('/api/user/<user_id>/avatar', methods=['PUT'])
 def update_avatar_route(user_id):

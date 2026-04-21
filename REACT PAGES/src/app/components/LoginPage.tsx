@@ -226,6 +226,7 @@ export function LoginPage() {
   };
 
   const goHome = () => navigate('/home/roulette');
+  const goQuiz = () => navigate('/quiz');
 
   const scrollingSection = (
     <div className="poster-grid hidden lg:flex lg:w-1/2 flex-col justify-center p-8 relative overflow-hidden">
@@ -625,7 +626,7 @@ export function LoginPage() {
                 </p>
                 <div className="flex gap-3">
                   <button
-                    onClick={goHome}
+                    onClick={goQuiz}
                     className="flex-1 bg-[#2A2A2A] hover:bg-[#333333] text-white px-6 py-3 rounded-lg transition-colors font-medium"
                   >
                     No, go to app
@@ -645,8 +646,8 @@ export function LoginPage() {
               <StreamingSetup
                 userId={pendingUserId}
                 initialServices={existingServices}
-                onDone={goHome}
-                onSkip={goHome}
+                onDone={goQuiz}
+                onSkip={goQuiz}
               />
             )}
           </div>
