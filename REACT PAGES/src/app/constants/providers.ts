@@ -1,9 +1,9 @@
-import netflixLogo    from '../../assets/netflix-logo.jpg';
+import netflixLogo    from '../../assets/netflix-logo.png';
 import hboMaxLogo     from '../../assets/hbo-max.png';
 import disneyLogo     from '../../assets/disney-plus.jpg';
 import primeLogo      from '../../assets/prime-video.jpg';
 import appleLogo      from '../../assets/apple-tv.png';
-import paramountLogo  from '../../assets/paramount-plus.webp';
+import paramountLogo  from '../../assets/paramount-plus.jpg';
 import peacockLogo    from '../../assets/peacock.webp';
 
 // Map of streaming service display name → local asset URL.
