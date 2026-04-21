@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Star, Bookmark } from 'lucide-react';
 import { getWatchedMovies, getWatchLater, getMovieDetails, getUser } from '../services/api';
 import type { WatchedMovie } from '../services/api';
@@ -20,6 +20,9 @@ export function MyStuffTab() {
   const [loading, setLoading] = useState(true);
   const [selectedMovieId, setSelectedMovieId] = useState<string | null>(null);
 
+  // Cache movie details for the session so modal closes don't re-fetch every entry
+  const movieDetailsCacheRef = useRef<Map<string, WatchLaterMovie>>(new Map());
+
   const user = getUser();
 
   function loadWatched() {
@@ -35,15 +38,24 @@ export function MyStuffTab() {
     if (!user) { setLoading(false); return; }
     setLoading(true);
     getWatchLater(user.user_id).then(async (ids) => {
+      const cache = movieDetailsCacheRef.current;
       const details = await Promise.all(
-        ids.map((id) =>
-          getMovieDetails(id).then((d) => ({
-            movie_id: String(id),
-            title: d?.title ?? 'Unknown',
-            year: d?.release_date ? d.release_date.slice(0, 4) : '',
-            poster: d?.poster_path ? `https://image.tmdb.org/t/p/w500${d.poster_path}` : null,
-          }))
-        )
+        ids.map((id) => {
+          const strId = String(id);
+          if (cache.has(strId)) return Promise.resolve(cache.get(strId)!);
+          return getMovieDetails(strId).then((d) => {
+            const entry: WatchLaterMovie = {
+              movie_id: strId,
+              title: (d as any)?.title ?? 'Unknown',
+              year: (d as any)?.release_date ? String((d as any).release_date).slice(0, 4) : '',
+              poster: (d as any)?.poster_path
+                ? `https://image.tmdb.org/t/p/w500${(d as any).poster_path}`
+                : null,
+            };
+            cache.set(strId, entry);
+            return entry;
+          });
+        })
       );
       setWatchLater(details);
       setLoading(false);
@@ -175,8 +187,9 @@ export function MyStuffTab() {
           movieId={selectedMovieId}
           onClose={() => {
             setSelectedMovieId(null);
+            // Only refresh the watched list (user may have rated something).
+            // Watch Later details are cached in movieDetailsCacheRef — no re-fetch needed.
             if (activeTab === 'watched') loadWatched();
-            else loadWatchLater();
           }}
         />
       )}

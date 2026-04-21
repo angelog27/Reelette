@@ -9,9 +9,10 @@ import type { WatchedMovie } from '../services/api';
 interface Props {
   movieId: string;
   onClose: () => void;
+  onWatchedChange?: () => void;
 }
 
-export function MovieDetailModal({ movieId, onClose }: Props) {
+export function MovieDetailModal({ movieId, onClose, onWatchedChange }: Props) {
   const [movie, setMovie]                   = useState<any>(null);
   const [loading, setLoading]               = useState(true);
   const [watchEntry, setWatchEntry]         = useState<WatchedMovie | null>(null);
@@ -107,6 +108,7 @@ export function MovieDetailModal({ movieId, onClose }: Props) {
       setWatchEntry({ ...watchEntry, user_rating: rating, comment: commentInput } as WatchedMovie);
       setShowWatchForm(false);
       setSaveSuccess(true);
+      onWatchedChange?.();
     }
   }
 

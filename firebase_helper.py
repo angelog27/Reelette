@@ -352,9 +352,9 @@ def get_user_data(user_id):
         return data
 
     except Exception as e:
-        print(f"Error getting user data: {e}")
-        return None
-    
+        print(f"Error getting user data for {user_id}: {e}")
+        raise   # let the caller (app.py route) handle 503 vs 500 vs 404
+
 def add_to_watchlist(user_id, movie_id):
     #add movies to watchlist.
     try:
@@ -949,23 +949,44 @@ def get_members_streaming_services(group_id):
 # ── Roulette Spin History ─────────────────────────────────────────
 
 def log_roulette_spin(user_id, movie_id, movie_title, poster_url):
-    """Prepend a spin to /users/{user_id}/roulette, keep max 20 entries."""
+    """Prepend a spin to /users/{user_id}/roulette, keep max 20 entries.
+
+    Uses a _meta counter doc so we read 1 doc per spin instead of streaming
+    the entire subcollection. The cleanup query (streaming all docs) only runs
+    when the counter exceeds 20, which is rare after the first fill.
+    Firestore excludes _meta from get_roulette_history automatically because
+    order_by('spun_at') skips documents that lack that field.
+    """
     try:
         roulette_ref = db.collection('users').document(user_id).collection('roulette')
-        new_doc = roulette_ref.document()
-        new_doc.set({
-            'movie_id': str(movie_id),
+        meta_ref = roulette_ref.document('_meta')
+
+        # Write the new spin entry
+        roulette_ref.document().set({
+            'movie_id':    str(movie_id),
             'movie_title': movie_title,
-            'poster_url': poster_url or '',
-            'spun_at': datetime.now()
+            'poster_url':  poster_url or '',
+            'spun_at':     datetime.now()
         })
-        # Enforce a 20-entry cap
-        all_spins = list(
-            roulette_ref.order_by('spun_at', direction=firestore.Query.DESCENDING).stream()
-        )
-        if len(all_spins) > 20:
+
+        # Atomically increment counter (initialises to 1 if _meta doesn't exist yet)
+        meta_ref.set({'count': firestore.Increment(1)}, merge=True)
+
+        # 1 read to decide whether pruning is needed
+        count = (meta_ref.get().to_dict() or {}).get('count', 0)
+
+        if count > 20:
+            # Rare path: stream only the spin docs (order_by excludes _meta),
+            # delete anything beyond position 20, reset counter.
+            all_spins = list(
+                roulette_ref
+                    .order_by('spun_at', direction=firestore.Query.DESCENDING)
+                    .stream()
+            )
             for doc in all_spins[20:]:
                 doc.reference.delete()
+            meta_ref.set({'count': min(count, 20)}, merge=True)
+
         return {'success': True}
     except Exception as e:
         return {'success': False, 'message': str(e)}
