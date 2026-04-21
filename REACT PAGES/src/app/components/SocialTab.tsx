@@ -317,6 +317,83 @@ function WatchModePanel({ groupId }: { groupId: string }) {
 }
 
 // ── Post Card ──────────────────────────────────────────────────
+// ── Movie Search for Post Dialog ───────────────────────────────
+type MovieOption = { id: string; title: string; year: number; poster: string };
+
+function PostMovieSearch({ onSelect, selected }: {
+  onSelect: (movie: MovieOption | null) => void;
+  selected: MovieOption | null;
+}) {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<MovieOption[]>([]);
+  const [searching, setSearching] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!query.trim()) { setResults([]); return; }
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      setSearching(true);
+      const movies = await searchMovies(query.trim());
+      setResults(movies.slice(0, 6).map(m => ({ id: m.id, title: m.title, year: m.year, poster: m.poster })));
+      setSearching(false);
+    }, 400);
+  }, [query]);
+
+  if (selected) {
+    return (
+      <div className="flex items-center gap-3 bg-[#141414] border border-[#C0392B] rounded-lg p-3">
+        {selected.poster
+          ? <img src={selected.poster} alt={selected.title} className="w-10 h-14 object-cover rounded shrink-0" />
+          : <div className="w-10 h-14 bg-[#2A2A2A] rounded shrink-0 flex items-center justify-center"><Film className="w-4 h-4 text-gray-600" /></div>}
+        <div className="flex-1 min-w-0">
+          <p className="text-white font-medium truncate">{selected.title}</p>
+          <p className="text-gray-500 text-xs">{selected.year}</p>
+        </div>
+        <button onClick={() => onSelect(null)} className="text-gray-500 hover:text-red-400 transition-colors p-1">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+        <input
+          type="text"
+          placeholder="Search for a movie…"
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          className="w-full bg-[#141414] border border-[#2A2A2A] rounded-lg pl-10 pr-4 py-3 text-white placeholder:text-gray-600 focus:border-[#C0392B] focus:outline-none"
+        />
+        {searching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 animate-spin" />}
+      </div>
+      {results.length > 0 && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-[#141414] border border-[#2A2A2A] rounded-xl shadow-2xl z-20 overflow-hidden max-h-64 overflow-y-auto">
+          {results.map(m => (
+            <button
+              key={m.id}
+              onClick={() => { onSelect(m); setQuery(''); setResults([]); }}
+              className="w-full flex items-center gap-3 p-3 hover:bg-[#1C1C1C] transition-colors text-left border-b border-[#2A2A2A] last:border-0"
+            >
+              {m.poster
+                ? <img src={m.poster} alt={m.title} className="w-8 h-12 object-cover rounded shrink-0" />
+                : <div className="w-8 h-12 bg-[#2A2A2A] rounded shrink-0 flex items-center justify-center"><Film className="w-4 h-4 text-gray-600" /></div>}
+              <div className="flex-1 min-w-0">
+                <p className="text-white font-medium truncate">{m.title}</p>
+                <p className="text-gray-500 text-xs">{m.year}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Post Card ──────────────────────────────────────────────────
 function PostCard({ post, currentUserId, currentUsername, onLike, onDelete, onOpenProfile }: {
   post: FeedPost; currentUserId: string; currentUsername: string;
   onLike: (id: string) => void;
@@ -384,15 +461,35 @@ function PostCard({ post, currentUserId, currentUsername, onLike, onDelete, onOp
             </div>
           </div>
           <p className="text-gray-400 mb-3">{post.message}</p>
-          <div className="bg-[#141414] rounded-lg p-3 mb-4 border border-[#2A2A2A]">
-            <div className="flex items-center justify-between">
-              <span className="text-white font-medium truncate">{post.movie_title}</span>
-              <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                <Star className="w-4 h-4 fill-yellow-500 text-yellow-500" />
-                <span className="text-white font-medium">{post.rating}/10</span>
+          {post.movie_id ? (
+            <a
+              href={`https://www.themoviedb.org/movie/${post.movie_id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block bg-[#141414] rounded-lg mb-4 border border-[#2A2A2A] overflow-hidden hover:border-[#C0392B] transition-colors group"
+            >
+              {post.movie_poster && (
+                <img src={post.movie_poster} alt={post.movie_title} className="w-full h-40 object-cover" />
+              )}
+              <div className="p-3 flex items-center justify-between">
+                <span className="text-white font-medium truncate group-hover:text-[#E74C3C] transition-colors">{post.movie_title}</span>
+                <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                  <Star className="w-4 h-4 fill-yellow-500 text-yellow-500" />
+                  <span className="text-white font-medium">{post.rating}/10</span>
+                </div>
+              </div>
+            </a>
+          ) : (
+            <div className="bg-[#141414] rounded-lg p-3 mb-4 border border-[#2A2A2A]">
+              <div className="flex items-center justify-between">
+                <span className="text-white font-medium truncate">{post.movie_title}</span>
+                <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                  <Star className="w-4 h-4 fill-yellow-500 text-yellow-500" />
+                  <span className="text-white font-medium">{post.rating}/10</span>
+                </div>
               </div>
             </div>
-          </div>
+          )}
           <div className="flex items-center gap-6">
             <button onClick={() => onLike(post.post_id)}
               className={`flex items-center gap-2 transition-colors ${isLiked ? 'text-[#C0392B]' : 'text-gray-500 hover:text-[#C0392B]'}`}>
@@ -1040,11 +1137,15 @@ function GroupsPanel({ onOpenProfile }: { onOpenProfile: (uid: string) => void }
 // ── Main SocialTab ─────────────────────────────────────────────
 export function SocialTab() {
   type Tab = 'feed' | 'friends' | 'groups';
+  type FeedMode = 'all' | 'friends';
   const [activeTab, setActiveTab] = useState<Tab>('feed');
+  const [feedMode, setFeedMode] = useState<FeedMode>('all');
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [friendIds, setFriendIds] = useState<Set<string>>(new Set());
+  const [friendsLoaded, setFriendsLoaded] = useState(false);
   const [showNewPostDialog, setShowNewPostDialog] = useState(false);
-  const [newMovieTitle, setNewMovieTitle] = useState('');
+  const [selectedMovie, setSelectedMovie] = useState<{ id: string; title: string; year: number; poster: string } | null>(null);
   const [newRating, setNewRating] = useState('');
   const [newMessage, setNewMessage] = useState('');
   const [posting, setPosting] = useState(false);
@@ -1058,8 +1159,6 @@ export function SocialTab() {
     if (activeTab === 'feed') {
       setLoading(true);
       getFeed().then(async (feedPosts) => {
-        // If backend already returns avatarUrl on posts, nothing extra needed.
-        // Otherwise, batch-fetch avatars for every unique poster.
         const needsAvatars = feedPosts.some(p => !p.avatarUrl);
         if (needsAvatars) {
           const uniqueIds = [...new Set(feedPosts.map(p => p.user_id))];
@@ -1077,6 +1176,19 @@ export function SocialTab() {
       });
     }
   }, [activeTab]);
+
+  // Load friend IDs when friends-only feed is selected
+  useEffect(() => {
+    if (feedMode !== 'friends' || friendsLoaded || !currentUserId) return;
+    getFriends(currentUserId).then(f => {
+      setFriendIds(new Set(f.map(fr => fr.friend_id)));
+      setFriendsLoaded(true);
+    });
+  }, [feedMode, friendsLoaded, currentUserId]);
+
+  const displayedPosts = feedMode === 'friends'
+    ? posts.filter(p => p.user_id === currentUserId || friendIds.has(p.user_id))
+    : posts;
 
   const handleLike = async (post_id: string) => {
     if (!currentUserId) return;
@@ -1098,11 +1210,20 @@ export function SocialTab() {
 
   const handleCreatePost = async () => {
     if (!currentUser) { setPostError('You must be logged in to post.'); return; }
-    if (!newMovieTitle.trim() || !newMessage.trim()) { setPostError('Movie title and message are required.'); return; }
+    if (!selectedMovie) { setPostError('Please search and select a movie.'); return; }
+    if (!newMessage.trim()) { setPostError('Message is required.'); return; }
     const rating = parseFloat(newRating);
     if (isNaN(rating) || rating < 0 || rating > 10) { setPostError('Rating must be 0–10.'); return; }
     setPosting(true); setPostError('');
-    const result = await createPost({ user_id: currentUser.user_id, username: currentUser.username, message: newMessage.trim(), movie_title: newMovieTitle.trim(), rating });
+    const result = await createPost({
+      user_id: currentUser.user_id,
+      username: currentUser.username,
+      message: newMessage.trim(),
+      movie_title: selectedMovie.title,
+      movie_id: selectedMovie.id,
+      movie_poster: selectedMovie.poster,
+      rating,
+    });
     if (result.success) {
       const updated = await getFeed();
       const needsAvatars = updated.some(p => !p.avatarUrl);
@@ -1115,7 +1236,7 @@ export function SocialTab() {
       } else {
         setPosts(updated);
       }
-      setNewMovieTitle(''); setNewRating(''); setNewMessage('');
+      setSelectedMovie(null); setNewRating(''); setNewMessage('');
       setShowNewPostDialog(false);
     } else setPostError(result.message || 'Failed to create post.');
     setPosting(false);
@@ -1136,7 +1257,7 @@ export function SocialTab() {
         <div className="absolute -bottom-2 left-0 right-0 h-[2px] bg-gradient-to-r from-red-600 via-red-500 to-transparent" />
       </div>
 
-      {/* Sub-tabs */}
+      {/* Top-level tabs */}
       <div className="flex gap-1 mb-8 bg-[#141414] border border-[#2A2A2A] rounded-xl p-1 w-fit">
         {tabs.map(t => (
           <button key={t.id} onClick={() => setActiveTab(t.id)}
@@ -1148,14 +1269,35 @@ export function SocialTab() {
 
       {/* Feed */}
       {activeTab === 'feed' && (
-        <div className="max-w-3xl mx-auto space-y-6 relative pb-20">
-          {loading ? <p className="text-gray-500 text-center py-16">Loading feed…</p>
-            : posts.length === 0 ? <p className="text-gray-500 text-center py-16">No posts yet. Be the first to share!</p>
-            : posts.map(post => (
-              <PostCard key={post.post_id} post={post} currentUserId={currentUserId} currentUsername={currentUser?.username ?? ''}
-                onLike={handleLike} onDelete={handleDelete}
-                onOpenProfile={setProfileUserId} />
-            ))}
+        <div className="max-w-3xl mx-auto relative pb-20">
+          {/* All / Friends sub-tabs */}
+          <div className="flex gap-1 mb-6 bg-[#141414] border border-[#2A2A2A] rounded-xl p-1 w-fit">
+            <button
+              onClick={() => setFeedMode('all')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${feedMode === 'all' ? 'bg-[#2A2A2A] text-white' : 'text-gray-500 hover:text-white'}`}>
+              <Sparkles className="w-3.5 h-3.5" /> General
+            </button>
+            <button
+              onClick={() => setFeedMode('friends')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${feedMode === 'friends' ? 'bg-[#2A2A2A] text-white' : 'text-gray-500 hover:text-white'}`}>
+              <Users className="w-3.5 h-3.5" /> Friends
+            </button>
+          </div>
+
+          <div className="space-y-6">
+            {loading
+              ? <p className="text-gray-500 text-center py-16">Loading feed…</p>
+              : displayedPosts.length === 0
+                ? <p className="text-gray-500 text-center py-16">
+                    {feedMode === 'friends' ? 'No posts from friends yet. Add some friends!' : 'No posts yet. Be the first to share!'}
+                  </p>
+                : displayedPosts.map(post => (
+                    <PostCard key={post.post_id} post={post} currentUserId={currentUserId} currentUsername={currentUser?.username ?? ''}
+                      onLike={handleLike} onDelete={handleDelete}
+                      onOpenProfile={setProfileUserId} />
+                  ))}
+          </div>
+
           <button onClick={() => setShowNewPostDialog(true)}
             className="fixed bottom-8 right-8 bg-gradient-to-r from-[#C0392B] to-[#E74C3C] hover:from-[#A93226] hover:to-[#C0392B] text-white w-16 h-16 rounded-full flex items-center justify-center shadow-2xl shadow-[#C0392B]/30 transition-all hover:scale-110">
             <Plus className="w-8 h-8" />
@@ -1172,15 +1314,17 @@ export function SocialTab() {
           <div className="bg-[#1C1C1C] rounded-2xl border border-[#2A2A2A] p-6 max-w-lg w-full">
             <h2 className="text-2xl text-white font-semibold mb-4">Create New Post</h2>
             <div className="space-y-4">
-              <input type="text" placeholder="Movie title…" value={newMovieTitle} onChange={e => setNewMovieTitle(e.target.value)}
-                className="w-full bg-[#141414] border border-[#2A2A2A] rounded-lg px-4 py-3 text-white placeholder:text-gray-600 focus:border-[#C0392B] focus:outline-none" />
+              <div>
+                <label className="text-xs text-gray-500 uppercase tracking-wide mb-1.5 block">Movie</label>
+                <PostMovieSearch onSelect={setSelectedMovie} selected={selectedMovie} />
+              </div>
               <input type="number" placeholder="Your rating (0–10)" min="0" max="10" step="0.5" value={newRating} onChange={e => setNewRating(e.target.value)}
                 className="w-full bg-[#141414] border border-[#2A2A2A] rounded-lg px-4 py-3 text-white placeholder:text-gray-600 focus:border-[#C0392B] focus:outline-none" />
               <textarea placeholder="Share your thoughts…" rows={4} value={newMessage} onChange={e => setNewMessage(e.target.value)}
                 className="w-full bg-[#141414] border border-[#2A2A2A] rounded-lg px-4 py-3 text-white placeholder:text-gray-600 focus:border-[#C0392B] focus:outline-none resize-none" />
               {postError && <p className="text-red-400 text-sm">{postError}</p>}
               <div className="flex gap-3">
-                <button onClick={() => { setShowNewPostDialog(false); setPostError(''); }}
+                <button onClick={() => { setShowNewPostDialog(false); setPostError(''); setSelectedMovie(null); setNewRating(''); setNewMessage(''); }}
                   className="flex-1 bg-[#2A2A2A] hover:bg-[#333333] text-white px-6 py-3 rounded-lg transition-colors font-medium">Cancel</button>
                 <button onClick={handleCreatePost} disabled={posting}
                   className="flex-1 bg-gradient-to-r from-[#C0392B] to-[#E74C3C] hover:from-[#A93226] hover:to-[#C0392B] text-white px-6 py-3 rounded-lg transition-all font-medium disabled:opacity-50">
