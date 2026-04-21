@@ -179,3 +179,116 @@
     line-height: 1.5;
   }
 }
+
+/* ─────────────────────────────────────────────────────────────
+   App-wide theme tokens
+   dark  → the app's existing palette (hardcoded hex values)
+   light → clean, neutral light theme
+──────────────────────────────────────────────────────────────*/
+html.dark {
+  --reel-bg:       #0A0A0A;
+  --reel-surface:  #141414;
+  --reel-card:     #1C1C1C;
+  --reel-raised:   #2A2A2A;
+  --reel-hover:    #333333;
+  --reel-border:   #2A2A2A;
+  --reel-t1:       #FFFFFF;
+  --reel-t2:       #9CA3AF;
+  --reel-t3:       #6B7280;
+  --reel-t4:       #4B5563;
+  --reel-input-bg: #050505;
+}
+
+html.light {
+  --reel-bg:       #F4F4F6;
+  --reel-surface:  #EAEAED;
+  --reel-card:     #FFFFFF;
+  --reel-raised:   #F0F0F3;
+  --reel-hover:    #E5E5E8;
+  --reel-border:   rgba(0,0,0,0.09);
+  --reel-t1:       #0F0F12;
+  --reel-t2:       #444455;
+  --reel-t3:       #6B6B7A;
+  --reel-t4:       #9090A0;
+  --reel-input-bg: #FFFFFF;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Light-mode overrides — NO component code needs to change.
+   These selectors mirror the exact Tailwind class names used
+   across the app and override them only when .light is active.
+──────────────────────────────────────────────────────────────*/
+
+/* ── Page backgrounds ──────────────────────────────────────── */
+html.light .bg-\[#0A0A0A\]          { background-color: var(--reel-bg)      !important; }
+html.light .min-h-screen.bg-black   { background-color: var(--reel-bg)      !important; }
+html.light .bg-\[#141414\]          { background-color: var(--reel-surface) !important; }
+html.light .bg-\[#1C1C1C\]          { background-color: var(--reel-card)    !important; }
+html.light .bg-\[#2A2A2A\]          { background-color: var(--reel-raised)  !important; }
+html.light .bg-\[#333333\]          { background-color: var(--reel-hover)   !important; }
+html.light .bg-\[#333\]             { background-color: var(--reel-hover)   !important; }
+html.light .bg-\[#222\]             { background-color: var(--reel-surface) !important; }
+
+/* Zinc (ProfileTab) */
+html.light .bg-zinc-950             { background-color: var(--reel-surface) !important; }
+html.light .bg-zinc-950\/50         { background-color: color-mix(in srgb, var(--reel-surface) 50%, transparent) !important; }
+html.light .bg-zinc-950\/30         { background-color: color-mix(in srgb, var(--reel-surface) 30%, transparent) !important; }
+html.light .bg-zinc-900             { background-color: var(--reel-card)    !important; }
+html.light .bg-zinc-900\/50         { background-color: color-mix(in srgb, var(--reel-card) 60%, transparent) !important; }
+html.light .bg-zinc-800             { background-color: var(--reel-raised)  !important; }
+html.light .bg-zinc-700             { background-color: var(--reel-hover)   !important; }
+
+/* Hover states */
+html.light .hover\:bg-\[#1C1C1C\]:hover  { background-color: var(--reel-card)   !important; }
+html.light .hover\:bg-\[#2A2A2A\]:hover  { background-color: var(--reel-raised) !important; }
+html.light .hover\:bg-\[#333\]:hover      { background-color: var(--reel-hover)  !important; }
+html.light .hover\:bg-\[#333333\]:hover   { background-color: var(--reel-hover)  !important; }
+html.light .hover\:bg-zinc-900:hover      { background-color: var(--reel-raised) !important; }
+html.light .hover\:bg-zinc-700:hover      { background-color: var(--reel-hover)  !important; }
+
+/* Nav bar */
+html.light nav.bg-black {
+  background-color: var(--reel-card) !important;
+  border-bottom-color: rgba(192, 57, 43, 0.3) !important;
+}
+
+/* ── Borders ───────────────────────────────────────────────── */
+html.light .border-\[#2A2A2A\]       { border-color: var(--reel-border) !important; }
+html.light .border-\[#333333\]       { border-color: var(--reel-border) !important; }
+html.light .border-\[#333\]          { border-color: var(--reel-border) !important; }
+html.light .border-zinc-800          { border-color: var(--reel-border) !important; }
+html.light .border-zinc-800\/50      { border-color: var(--reel-border) !important; }
+html.light .border-zinc-700          { border-color: var(--reel-border) !important; }
+
+/* ── Text ──────────────────────────────────────────────────── */
+html.light .text-white               { color: var(--reel-t1) !important; }
+html.light .text-gray-400            { color: var(--reel-t2) !important; }
+html.light .text-gray-500            { color: var(--reel-t3) !important; }
+html.light .text-gray-600            { color: var(--reel-t4) !important; }
+html.light .text-zinc-300            { color: var(--reel-t1) !important; }
+html.light .text-zinc-400            { color: var(--reel-t2) !important; }
+html.light .text-zinc-500            { color: var(--reel-t3) !important; }
+html.light .text-zinc-600            { color: var(--reel-t4) !important; }
+
+/* Hover text */
+html.light .hover\:text-white:hover  { color: var(--reel-t1) !important; }
+html.light .group:hover .group-hover\:text-white { color: var(--reel-t1) !important; }
+
+/* ── Inputs & form controls ────────────────────────────────── */
+html.light input:not([type="checkbox"]):not([type="radio"]),
+html.light textarea,
+html.light select {
+  background-color: var(--reel-input-bg) !important;
+  color: var(--reel-t1) !important;
+  border-color: var(--reel-border) !important;
+}
+
+html.light input::placeholder,
+html.light textarea::placeholder {
+  color: var(--reel-t4) !important;
+}
+
+/* ── Scrollbars ────────────────────────────────────────────── */
+html.light ::-webkit-scrollbar-track  { background: var(--reel-surface); }
+html.light ::-webkit-scrollbar-thumb  { background: var(--reel-raised); border-radius: 4px; }
+html.light ::-webkit-scrollbar-thumb:hover { background: var(--reel-hover); }

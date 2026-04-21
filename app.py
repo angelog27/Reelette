@@ -26,7 +26,7 @@ from firebase_helper import (
     add_to_group_watchlist, remove_from_group_watchlist, spin_group_reelette,
     update_user_avatar, update_user_last_seen,
     get_user_public_profile, get_group_member_profiles, get_members_streaming_services,
-    log_roulette_spin, get_roulette_history
+    log_roulette_spin, get_roulette_history, get_friends_roulette_history, save_quiz_result
 )
 from tmdb_api import (
     search_movies, discover_movies, get_popular_movies, get_movie_details,
@@ -128,9 +128,15 @@ _PROVIDER_TTL     = 6  * 60 * 60   # 6 h  — streaming availability
 
 # We want to refresh the main movie lists more often since they change frequently, but individual movie details can be cached longer since they don't change as often and are more expensive to fetch.
 _MOVIE_LIST_TTL   = 20 * 60         # 20 min — popular/trending/top-rated lists
-
-# Movie details (credits, overview, etc.) can be cached longer since they don't change often and are more expensive to fetch. We want to avoid hammering the TMDB API for details on every movie in the popular/trending lists, so we cache them separately with a longer TTL.
 _MOVIE_DETAIL_TTL = 12 * 60 * 60   # 12 h  — credits, overview, etc.
+_USER_PROFILE_TTL    = 60   # 60 s  — user profile (GET /api/user/<uid>)
+_FEED_TTL            = 30   # 30 s  — social feed (GET /api/feed)
+_PUBLIC_PROFILE_TTL  = 60   # 60 s  — public profile (GET /api/user/<uid>/public)
+_MEMBER_PROFILES_TTL = 120  # 2 min — group member profiles (GET /api/groups/<gid>/members/profiles)
+_USER_GROUPS_TTL     = 60   # 60 s  — user groups (GET /api/user/<uid>/groups)
+_MEMBER_SERVICES_TTL = 60   # 60 s  — member streaming services (GET /api/groups/<gid>/members/services)
+_FRIENDS_TTL         = 60   # 60 s  — friends list (GET /api/friends/<uid>)
+_FRIENDS_HISTORY_TTL = 60   # 60 s  — friends roulette history (GET /api/roulette/<uid>/friends-history)
 
 # In-memory provider cache: movie_id → (service_name, expiry_timestamp)
 _provider_cache: dict[int, tuple[str, float]] = {}
@@ -361,15 +367,31 @@ def genres():
 
 @app.route('/api/user/<user_id>', methods=['GET'])
 def user_data(user_id):
-    data = get_user_data(user_id)
-    if not data:
+    cache_key = f'user:{user_id}'
+    cached = _cache_get(cache_key)
+    if cached:
+        return jsonify(cached)
+    try:
+        data = get_user_data(user_id)
+    except Exception as e:
+        err_str = str(e)
+        app.logger.error(f"GET /api/user/{user_id} error: {err_str}")
+        if '429' in err_str or 'RESOURCE_EXHAUSTED' in err_str or 'quota' in err_str.lower():
+            return jsonify({'error': 'Service temporarily unavailable'}), 503
+        return jsonify({'error': 'Failed to load user profile'}), 500
+    if data is None:
         return jsonify({'error': 'User not found'}), 404
-    return jsonify(serialize_timestamps(data))
+    result = serialize_timestamps(data)
+    _cache_set(cache_key, result, _USER_PROFILE_TTL)
+    return jsonify(result)
 
 @app.route('/api/user/<user_id>', methods=['PUT'])
 def update_user(user_id):
     data = request.get_json() or {}
     result = update_user_profile(user_id, data)
+    if result.get('success'):
+        # Bust the profile cache so the next GET reflects the saved changes
+        _cache.pop(f'user:{user_id}', None)
     status_code = 200 if result.get('success') else 400
     return jsonify(result), status_code
 
@@ -382,6 +404,12 @@ def get_streaming(user_id):
 def update_streaming(user_id):
     services = request.get_json() or {}
     result = update_streaming_services(user_id, services)
+    if result.get('success'):
+        # Streaming prefs changed — bust user profile cache and any group services caches
+        # that include this user (we don't know which groups, so bust all services:* entries)
+        _cache.pop(f'user:{user_id}', None)
+        for key in [k for k in _cache if k.startswith('services:')]:
+            _cache.pop(key, None)
     return jsonify(result)
 
 @app.route('/api/user/<user_id>/movie-preferences', methods=['GET'])
@@ -452,8 +480,14 @@ def update_user_watched_rating(user_id, movie_id):
 @app.route('/api/feed', methods=['GET'])
 def social_feed():
     limit = request.args.get('limit', 20, type=int)
+    cache_key = f'feed:{limit}'
+    cached = _cache_get(cache_key)
+    if cached:
+        return jsonify({'posts': cached})
     posts = get_feed(limit=limit)
-    return jsonify({'posts': serialize_timestamps(posts)})
+    serialized = serialize_timestamps(posts)
+    _cache_set(cache_key, serialized, _FEED_TTL)
+    return jsonify({'posts': serialized})
 
 @app.route('/api/feed', methods=['POST'])
 def create_feed_post():
@@ -462,11 +496,17 @@ def create_feed_post():
     username   = data.get('username', '').strip()
     message    = data.get('message', '').strip()
     movie_title = data.get('movie_title', '').strip()
-    movie_id   = data.get('movie_id', '')
-    rating     = data.get('rating', 0)
+    movie_id     = data.get('movie_id', '')
+    movie_poster = data.get('movie_poster', '')
+    rating       = data.get('rating', 0)
     if not all([user_id, username, message, movie_title]):
         return jsonify({'success': False, 'message': 'user_id, username, message, and movie_title are required'}), 400
-    return jsonify(create_post(user_id, username, message, movie_title, movie_id, rating))
+    result = create_post(user_id, username, message, movie_title, movie_id, movie_poster, rating)
+    if result.get('success'):
+        # Bust feed caches so the new post is visible immediately
+        for key in [k for k in _cache if k.startswith('feed:')]:
+            _cache.pop(key, None)
+    return jsonify(result)
 
 @app.route('/api/feed/<post_id>/like', methods=['POST'])
 def like_feed_post(post_id):
@@ -506,6 +546,36 @@ def update_profile(user_id):
     result = update_user_profile(user_id, data)
     return jsonify(result)
 
+# ── Quiz Routes ──────────────────────────────────────────────────
+
+@app.route('/api/user/<uid>/profile', methods=['GET'])
+def get_user_profile(uid):
+    # Check the shared 60 s user cache before going to Firestore
+    cached = _cache_get(f'user:{uid}')
+    if cached:
+        return jsonify({'quizCompleted': cached.get('quizCompleted', True)})
+    try:
+        data = get_user_data(uid)
+    except Exception:
+        return jsonify({'quizCompleted': False})
+    if not data:
+        return jsonify({'quizCompleted': False})
+    result = serialize_timestamps(data)
+    _cache_set(f'user:{uid}', result, _USER_PROFILE_TTL)
+    return jsonify({'quizCompleted': result.get('quizCompleted', True)})
+
+@app.route('/api/quiz/complete', methods=['POST'])
+def complete_quiz():
+    data = request.get_json() or {}
+    uid = data.get('uid', '').strip()
+    top_genre = data.get('topGenre')
+    answers = data.get('answers', {})
+    if not uid:
+        return jsonify({'success': False, 'message': 'uid required'}), 400
+    from firebase_helper import save_quiz_result
+    save_quiz_result(uid, top_genre, answers)
+    return jsonify({'success': True})
+
 @app.route('/api/user/<user_id>/avatar', methods=['PUT'])
 def update_avatar_route(user_id):
     data = request.get_json() or {}
@@ -520,10 +590,16 @@ def update_lastseen_route(user_id):
 
 @app.route('/api/user/<user_id>/public', methods=['GET'])
 def get_public_profile(user_id):
+    cache_key = f'public:{user_id}'
+    cached = _cache_get(cache_key)
+    if cached:
+        return jsonify(cached)
     profile = get_user_public_profile(user_id)
     if not profile:
         return jsonify({'error': 'User not found'}), 404
-    return jsonify(serialize_timestamps(profile))
+    result = serialize_timestamps(profile)
+    _cache_set(cache_key, result, _PUBLIC_PROFILE_TTL)
+    return jsonify(result)
 
 # ── User Search ──────────────────────────────────────────────────
 
@@ -540,8 +616,14 @@ def search_users_route():
 
 @app.route('/api/friends/<user_id>', methods=['GET'])
 def get_user_friends(user_id):
+    cache_key = f'friends:{user_id}'
+    cached = _cache_get(cache_key)
+    if cached:
+        return jsonify({'friends': cached})
     friends = get_friends(user_id)
-    return jsonify({'friends': serialize_timestamps(friends)})
+    result = serialize_timestamps(friends)
+    _cache_set(cache_key, result, _FRIENDS_TTL)
+    return jsonify({'friends': result})
 
 @app.route('/api/friends/<user_id>/requests', methods=['GET'])
 def get_user_friend_requests(user_id):
@@ -562,7 +644,11 @@ def accept_request(user_id, from_id):
     data = request.get_json() or {}
     user_username = data.get('user_username', '').strip()
     from_username = data.get('from_username', '').strip()
-    return jsonify(accept_friend_request(user_id, user_username, from_id, from_username))
+    result = accept_friend_request(user_id, user_username, from_id, from_username)
+    if result.get('success'):
+        _cache.pop(f'friends:{user_id}', None)
+        _cache.pop(f'friends:{from_id}', None)
+    return jsonify(result)
 
 @app.route('/api/friends/<user_id>/request/<from_id>/reject', methods=['POST'])
 def reject_request(user_id, from_id):
@@ -570,7 +656,11 @@ def reject_request(user_id, from_id):
 
 @app.route('/api/friends/<user_id>/<friend_id>', methods=['DELETE'])
 def delete_friend(user_id, friend_id):
-    return jsonify(remove_friend(user_id, friend_id))
+    result = remove_friend(user_id, friend_id)
+    if result.get('success'):
+        _cache.pop(f'friends:{user_id}', None)
+        _cache.pop(f'friends:{friend_id}', None)
+    return jsonify(result)
 
 # ── Groups ───────────────────────────────────────────────────────
 
@@ -583,7 +673,10 @@ def create_new_group():
     creator_username = data.get('creator_username', '').strip()
     if not all([name, creator_id, creator_username]):
         return jsonify({'success': False, 'message': 'name, creator_id, and creator_username are required'}), 400
-    return jsonify(create_group(name, description, creator_id, creator_username))
+    result = create_group(name, description, creator_id, creator_username)
+    if result.get('success'):
+        _cache.pop(f'groups:{creator_id}', None)
+    return jsonify(result)
 
 @app.route('/api/groups/<group_id>', methods=['GET'])
 def get_group_route(group_id):
@@ -602,8 +695,14 @@ def delete_group_route(group_id):
 
 @app.route('/api/user/<user_id>/groups', methods=['GET'])
 def get_user_groups_route(user_id):
+    cache_key = f'groups:{user_id}'
+    cached = _cache_get(cache_key)
+    if cached:
+        return jsonify({'groups': cached})
     groups = get_user_groups(user_id)
-    return jsonify({'groups': serialize_timestamps(groups)})
+    result = serialize_timestamps(groups)
+    _cache_set(cache_key, result, _USER_GROUPS_TTL)
+    return jsonify({'groups': result})
 
 @app.route('/api/groups/<group_id>/members', methods=['POST'])
 def add_member(group_id):
@@ -612,11 +711,21 @@ def add_member(group_id):
     new_member_username = data.get('username', '').strip()
     if not new_member_id or not new_member_username:
         return jsonify({'success': False, 'message': 'user_id and username are required'}), 400
-    return jsonify(add_group_member(group_id, new_member_id, new_member_username))
+    result = add_group_member(group_id, new_member_id, new_member_username)
+    if result.get('success'):
+        _cache.pop(f'groups:{new_member_id}', None)
+        _cache.pop(f'member_profiles:{group_id}', None)
+        _cache.pop(f'services:{group_id}', None)
+    return jsonify(result)
 
 @app.route('/api/groups/<group_id>/members/<member_id>', methods=['DELETE'])
 def remove_member(group_id, member_id):
-    return jsonify(remove_group_member(group_id, member_id))
+    result = remove_group_member(group_id, member_id)
+    if result.get('success'):
+        _cache.pop(f'groups:{member_id}', None)
+        _cache.pop(f'member_profiles:{group_id}', None)
+        _cache.pop(f'services:{group_id}', None)
+    return jsonify(result)
 
 @app.route('/api/groups/<group_id>/watchlist', methods=['POST'])
 def add_to_group_watchlist_route(group_id):
@@ -640,12 +749,23 @@ def spin_reelette(group_id):
 
 @app.route('/api/groups/<group_id>/members/profiles', methods=['GET'])
 def group_member_profiles(group_id):
+    cache_key = f'member_profiles:{group_id}'
+    cached = _cache_get(cache_key)
+    if cached:
+        return jsonify({'profiles': cached})
     profiles = get_group_member_profiles(group_id)
-    return jsonify({'profiles': serialize_timestamps(profiles)})
+    result = serialize_timestamps(profiles)
+    _cache_set(cache_key, result, _MEMBER_PROFILES_TTL)
+    return jsonify({'profiles': result})
 
 @app.route('/api/groups/<group_id>/members/services', methods=['GET'])
 def group_member_services(group_id):
+    cache_key = f'services:{group_id}'
+    cached = _cache_get(cache_key)
+    if cached:
+        return jsonify({'services': cached})
     services = get_members_streaming_services(group_id)
+    _cache_set(cache_key, services, _MEMBER_SERVICES_TTL)
     return jsonify({'services': services})
 
 
@@ -666,6 +786,18 @@ def roulette_history_route(user_id):
     limit = request.args.get('limit', 10, type=int)
     spins = get_roulette_history(user_id, limit=limit)
     return jsonify({'spins': serialize_timestamps(spins)})
+
+@app.route('/api/roulette/<user_id>/friends-history', methods=['GET'])
+def friends_roulette_history_route(user_id):
+    limit = request.args.get('limit', 1, type=int)
+    cache_key = f'friends_history:{user_id}:{limit}'
+    cached = _cache_get(cache_key)
+    if cached:
+        return jsonify({'friendsHistory': cached})
+    friends_history = get_friends_roulette_history(user_id, limit=limit)
+    result = serialize_timestamps(friends_history)
+    _cache_set(cache_key, result, _FRIENDS_HISTORY_TTL)
+    return jsonify({'friendsHistory': result})
 
 
 if __name__ == '__main__':

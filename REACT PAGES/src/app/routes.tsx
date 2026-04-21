@@ -1,19 +1,37 @@
+import { lazy, Suspense } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { HomePage } from './components/HomePage';
 import { LoginPage } from './components/LoginPage';
-import { DiscoverTab } from './components/DiscoverTab';
-import { RouletteTab } from './components/RouletteTab';
-import { SocialTab } from './components/SocialTab';
-import { ProfileTab } from './components/ProfileTab';
-import { SettingsTab } from './components/SettingsTab';
-import { MyStuffTab } from './components/MyStuffTab';
-import { ProfileandSettingsTab } from './components/ProfileandSettingsTab';
+import QuizGate from './components/QuizGate';
+import Landing from '../pages/Landing';
 
+// Tab components are code-split: their JS is only downloaded when the user
+// navigates to that tab for the first time, keeping the initial bundle small.
+const DiscoverTab          = lazy(() => import('./components/DiscoverTab').then(m => ({ default: m.DiscoverTab })));
+const RouletteTab          = lazy(() => import('./components/RouletteTab').then(m => ({ default: m.RouletteTab })));
+const SocialTab            = lazy(() => import('./components/SocialTab').then(m => ({ default: m.SocialTab })));
+const ProfileandSettingsTab = lazy(() => import('./components/ProfileandSettingsTab').then(m => ({ default: m.ProfileandSettingsTab })));
+const MyStuffTab           = lazy(() => import('./components/MyStuffTab').then(m => ({ default: m.MyStuffTab })));
+
+function LandingGuard() {
+  if (localStorage.getItem('user_id')) {
+    return <Navigate to="/home/roulette" replace />;
+  }
+  return <Landing />;
+}
 
 export const router = createBrowserRouter([
   {
     path: '/',
+    element: <LandingGuard />,
+  },
+  {
+    path: '/login',
     Component: LoginPage,
+  },
+  {
+    path: '/quiz',
+    element: <QuizGate />,
   },
   {
     path: '/home',

@@ -103,8 +103,8 @@ export function SettingsTab() {
   const [settings, setSettings] = useState({
     newMovieAlerts: true,
     friendActivity: false,
-    recommendations: true,
     groupChat: true,
+    newPost: false
   });
 
 
@@ -167,17 +167,18 @@ export function SettingsTab() {
               onToggle={() => toggleSetting('friendActivity')}
             />
             <SettingItem
-              icon={<Sparkles size={20} />}
-              label="Recommendation Updates"
-              enabled={settings.recommendations}
-              onToggle={() => toggleSetting('recommendations')}
-            />
-            <SettingItem
               icon={<MessageSquare size={20} />}
               label="Group Chat Notifications"
               enabled={settings.groupChat}
               onToggle={() => toggleSetting('groupChat')}
             />
+            <SettingItem
+              icon={<Sparkles size={20} />}
+              label= "New Post in the Community"
+              enabled={settings.newPost}
+              onToggle={() => toggleSetting('newPost')}
+            />
+
           </SettingsSection>
 
 
@@ -194,18 +195,6 @@ export function SettingsTab() {
               label="Update Email Address"
               type="action"
               onClick={() => alert('Email update functionality')}
-            />
-            <SettingItem
-              icon={<RotateCcw size={20} />}
-              label="Clear Search History"
-              type="action"
-              onClick={() => alert('Search history cleared')}
-            />
-            <SettingItem
-              icon={<Eye size={20} />}
-              label="Clear Watch History"
-              type="action"
-              onClick={() => alert('Watch history cleared')}
             />
             <SettingItem
               icon={<LogOut size={20} />}

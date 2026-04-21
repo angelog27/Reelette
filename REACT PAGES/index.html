@@ -6,6 +6,13 @@
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <link rel="icon" type="image/png" href="/Reelette_LOGO_upscaled.png" />
       <title>Reelette</title>
+      <!-- Apply saved theme before React mounts to prevent flash -->
+      <script>
+        (function () {
+          var t = localStorage.getItem('reel-theme') || 'dark';
+          document.documentElement.classList.add(t);
+        })();
+      </script>
     </head>
 
     <body>

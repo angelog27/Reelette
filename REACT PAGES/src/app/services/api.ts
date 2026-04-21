@@ -1,4 +1,30 @@
-const BASE_URL = (import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000') + '/api';
+export const BASE_URL = (import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000') + '/api';
+
+
+// ── Simple in-memory TTL cache ───────────────────────────────────
+// Caches stable/global data (movie catalogs, movie details) to avoid
+// redundant network hits on every tab visit.
+
+const _cache = new Map<string, { data: unknown; expires: number }>();
+
+function fromCache<T>(key: string, ttlMs: number, fn: () => Promise<T>): Promise<T> {
+  const hit = _cache.get(key);
+  if (hit && hit.expires > Date.now()) return Promise.resolve(hit.data as T);
+  return fn().then((data) => {
+    _cache.set(key, { data, expires: Date.now() + ttlMs });
+    return data;
+  });
+}
+
+/** Manually bust a cache key (call after user mutations that affect cached data). */
+export function bustCache(key: string) {
+  _cache.delete(key);
+}
+
+const TTL = {
+  CATALOG: 5 * 60 * 1000,   // 5 min — popular / trending / top-rated
+  MOVIE:   10 * 60 * 1000,  // 10 min — individual movie details (TMDB data)
+};
 
 
 // ── Types ────────────────────────────────────────────────────────
@@ -23,6 +49,7 @@ export interface FeedPost {
   message: string;
   movie_title: string;
   movie_id: string;
+  movie_poster?: string;
   rating: number;
   likes: number;
   liked_by: string[];
@@ -149,24 +176,30 @@ export async function updateUserStreaming(user_id: string, services: Record<stri
 // ── Movies ───────────────────────────────────────────────────────
 
 
-export async function getPopularMovies(page = 1): Promise<Movie[]> {
-  const res = await fetch(`${BASE_URL}/movies/popular?page=${page}`);
-  const data = await res.json();
-  return data.movies ?? [];
+export function getPopularMovies(page = 1): Promise<Movie[]> {
+  return fromCache(`popular:${page}`, TTL.CATALOG, async () => {
+    const res = await fetch(`${BASE_URL}/movies/popular?page=${page}`);
+    const data = await res.json();
+    return data.movies ?? [];
+  });
 }
 
 
-export async function getTrendingMovies(window = 'week'): Promise<Movie[]> {
-  const res = await fetch(`${BASE_URL}/movies/trending?window=${window}`);
-  const data = await res.json();
-  return data.movies ?? [];
+export function getTrendingMovies(window = 'week'): Promise<Movie[]> {
+  return fromCache(`trending:${window}`, TTL.CATALOG, async () => {
+    const res = await fetch(`${BASE_URL}/movies/trending?window=${window}`);
+    const data = await res.json();
+    return data.movies ?? [];
+  });
 }
 
 
-export async function getTopRatedMovies(page = 1): Promise<Movie[]> {
-  const res = await fetch(`${BASE_URL}/movies/top_rated?page=${page}`);
-  const data = await res.json();
-  return data.movies ?? [];
+export function getTopRatedMovies(page = 1): Promise<Movie[]> {
+  return fromCache(`toprated:${page}`, TTL.CATALOG, async () => {
+    const res = await fetch(`${BASE_URL}/movies/top_rated?page=${page}`);
+    const data = await res.json();
+    return data.movies ?? [];
+  });
 }
 
 
@@ -177,7 +210,7 @@ export async function searchMovies(query: string, page = 1): Promise<Movie[]> {
 }
 
 
-export async function discoverMovies(filters: {
+export function discoverMovies(filters: {
   genre_id?: string;
   year_from?: string;
   year_to?: string;
@@ -188,19 +221,46 @@ export async function discoverMovies(filters: {
   services_filter?: Record<string, boolean>;
   page?: number;
 }): Promise<Movie[]> {
-  const res = await fetch(`${BASE_URL}/movies/discover`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(filters),
+  // Stable cache key regardless of property insertion order
+  const key = `discover:${JSON.stringify(Object.fromEntries(Object.entries(filters).sort()))}`;
+  return fromCache(key, TTL.CATALOG, async () => {
+    const res = await fetch(`${BASE_URL}/movies/discover`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(filters),
+    });
+    const data = await res.json();
+    return data.movies ?? [];
   });
-  const data = await res.json();
-  return data.movies ?? [];
 }
 
 
-export async function getMovieDetails(movie_id: string) {
-  const res = await fetch(`${BASE_URL}/movies/${movie_id}`);
-  return res.json();
+export function getMovieDetails(movie_id: string): Promise<Record<string, unknown>> {
+  return fromCache(`movie:${movie_id}`, TTL.MOVIE, async () => {
+    const res = await fetch(`${BASE_URL}/movies/${movie_id}`);
+    return res.json();
+  });
+}
+
+// Returns the first flatrate streaming service name for a movie, or '' if none.
+// Cached for 6 hours to match the backend provider TTL.
+export function getMovieProvider(movie_id: string): Promise<string> {
+  return fromCache(`provider:${movie_id}`, 6 * 60 * 60 * 1000, async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/movies/${movie_id}/providers`);
+      const data = await res.json();
+      const flatrate: { provider_id: number; provider_name: string }[] = data?.flatrate ?? [];
+      const NAMES: Record<number, string> = {
+        8: 'Netflix', 15: 'Hulu', 337: 'Disney+', 1899: 'Max',
+        9: 'Prime Video', 350: 'Apple TV+', 531: 'Paramount+', 386: 'Peacock',
+      };
+      for (const p of flatrate) {
+        const name = NAMES[p.provider_id];
+        if (name) return name;
+      }
+    } catch { /* ignore */ }
+    return '';
+  });
 }
 
 
@@ -231,10 +291,12 @@ export async function getWatchedMovies(user_id: string): Promise<WatchedMovie[]>
 }
 
 
-export async function getWatchedMovie(user_id: string, movie_id: string): Promise<(WatchedMovie & { watched: boolean }) | null> {
-  const res = await fetch(`${BASE_URL}/watched/${user_id}/${movie_id}`);
-  const data = await res.json();
-  return data.watched ? data : null;
+export function getWatchedMovie(user_id: string, movie_id: string): Promise<(WatchedMovie & { watched: boolean }) | null> {
+  return fromCache(`watched_check:${user_id}:${movie_id}`, 5 * 60 * 1000, async () => {
+    const res = await fetch(`${BASE_URL}/watched/${user_id}/${movie_id}`);
+    const data = await res.json();
+    return data.watched ? data : null;
+  });
 }
 
 
@@ -248,6 +310,7 @@ export async function addWatchedMovie(
   user_rating: number,
   comment: string
 ) {
+  bustCache(`watched_check:${user_id}:${movie.movie_id}`);
   const res = await fetch(`${BASE_URL}/watched/${user_id}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -258,6 +321,7 @@ export async function addWatchedMovie(
 
 
 export async function updateWatchedMovie(user_id: string, movie_id: string, rating: number, comment: string) {
+  bustCache(`watched_check:${user_id}:${movie_id}`);
   const res = await fetch(`${BASE_URL}/watched/${user_id}/${movie_id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -266,13 +330,16 @@ export async function updateWatchedMovie(user_id: string, movie_id: string, rati
   return res.json();
 }
 
-export async function getWatchLater(user_id: string): Promise<string[]> {
-  const res = await fetch(`${BASE_URL}/watchlist/${user_id}`);
-  const data = await res.json();
-  return data.movies ?? [];
+export function getWatchLater(user_id: string): Promise<string[]> {
+  return fromCache(`watchlist:${user_id}`, 5 * 60 * 1000, async () => {
+    const res = await fetch(`${BASE_URL}/watchlist/${user_id}`);
+    const data = await res.json();
+    return data.movies ?? [];
+  });
 }
 
 export async function watchMovieLater(user_id: string, movie_id: string) {
+  bustCache(`watchlist:${user_id}`);
   const res = await fetch(`${BASE_URL}/watchlist/${user_id}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -282,6 +349,7 @@ export async function watchMovieLater(user_id: string, movie_id: string) {
 }
 
 export async function removeFromWatchLater(user_id: string, movie_id: string) {
+  bustCache(`watchlist:${user_id}`);
   const res = await fetch(`${BASE_URL}/watchlist/${user_id}/${movie_id}`, {
     method: 'DELETE',
   });
@@ -305,6 +373,7 @@ export async function createPost(payload: {
   message: string;
   movie_title: string;
   movie_id?: string;
+  movie_poster?: string;
   rating?: number;
 }) {
   const res = await fetch(`${BASE_URL}/feed`, {
@@ -400,9 +469,12 @@ export interface UserPublicProfile {
   bio?: string;
   avatarUrl?: string;
   createdAt?: string;
+  lastSeen?: string;
   watchedCount: number;
   watchlistCount: number;
   friendsCount: number;
+  showMyStuffPublicly: boolean;
+  showOnlineStatus: boolean;
 }
 
 export async function getUserPublicProfile(user_id: string): Promise<UserPublicProfile | null> {
@@ -434,6 +506,15 @@ export async function getGroupMemberServices(group_id: string): Promise<Record<s
   const res = await fetch(`${BASE_URL}/groups/${group_id}/members/services`);
   const data = await res.json();
   return data.services ?? {};
+}
+
+export async function saveSocialSettings(user_id: string, settings: { showOnlineStatus: boolean; showMyStuffPublicly: boolean }) {
+  const res = await fetch(`${BASE_URL}/user/${user_id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ socialSettings: settings }),
+  });
+  return res.json();
 }
 
 export async function updateUserProfile(user_id: string, data: Partial<Pick<UserProfile, 'displayName' | 'bio' | 'username'>>) {
@@ -585,7 +666,7 @@ export async function addToGroupWatchlist(group_id: string, movie_id: string, mo
   return res.json();
 }
 
-export async function removeFromGroupWatchlist(group_id: string, movie_id: string, movie_poster?: string) {
+export async function removeFromGroupWatchlist(group_id: string, movie_id: string) {
   const res = await fetch(`${BASE_URL}/groups/${group_id}/watchlist/${movie_id}`, {
     method: 'DELETE',
   });
@@ -621,6 +702,7 @@ export interface RouletteSpin {
 
 export async function logRouletteSpin(
   user_id: string,
+  avatarUrl: string | undefined,
   movie_id: string,
   movie_title: string,
   poster_url: string
@@ -636,6 +718,12 @@ export async function getRouletteHistory(user_id: string, limit = 10): Promise<R
   const res = await fetch(`${BASE_URL}/roulette/${user_id}/history?limit=${limit}`);
   const data = await res.json();
   return data.spins ?? [];
+}
+
+  export async function getfriendsRouletteHistory(user_id: string, limit = 1): Promise<{ friend_id: string; friend_username: string; avatarUrl?: string; spins: RouletteSpin[] }[]> {
+    const res = await fetch(`${BASE_URL}/roulette/${user_id}/friends-history?limit=${limit}`);
+    const data = await res.json();
+    return data.friendsHistory ?? [];
 }
 
 

@@ -55,6 +55,7 @@ def create_user(email, password, username):
             'displayName': username,
             'bio': '',
             'phone': '',
+            'quizCompleted': False,
             'createdAt': datetime.now(),
             'streamingServices': {
                 'netflix': False,
@@ -260,41 +261,99 @@ def get_user_movie_preferences(user_id):
         }    
 
 def get_user_data(user_id):
-    #get all user data.
+    """Return Firestore profile, optionally enriched with Firebase Auth metadata.
+
+    Firestore is always the primary source. Auth data is layered on top as
+    fallbacks (avatar, display name, provider list). If the Auth call fails
+    for any reason the Firestore data is still returned intact.
+    """
+    import datetime as dt
+    from datetime import timezone
+
     try:
+        # ── 1. Firestore document (primary source) ──
         user_ref = db.collection('users').document(user_id)
         user_doc = user_ref.get()
-        
+
         if user_doc.exists:
-            return user_doc.to_dict()
+            data = user_doc.to_dict()
         else:
-            return None
+            data = None  # will try to seed from Auth below
+
+        # ── 2. Firebase Auth record (enrichment / fallback) ──
+        auth_user = None
+        provider_data = []
+        provider_photo = ''
+        joined_at = ''
+
+        try:
+            auth_user = auth.get_user(user_id)
+            provider_data = [
+                {
+                    'providerId': p.provider_id,
+                    'email': p.email or '',
+                    'displayName': p.display_name or '',
+                    'photoUrl': p.photo_url or '',
+                }
+                for p in (auth_user.provider_data or [])
+            ]
+            provider_photo = next(
+                (p['photoUrl'] for p in provider_data if p['photoUrl']), ''
+            )
+            if auth_user.user_metadata and auth_user.user_metadata.creation_timestamp:
+                joined_at = dt.datetime.fromtimestamp(
+                    auth_user.user_metadata.creation_timestamp / 1000, tz=timezone.utc
+                ).isoformat()
+        except Exception as auth_err:
+            print(f"Warning: Auth enrichment skipped for {user_id}: {auth_err}")
+
+        # ── 3. Seed Firestore doc for OAuth users who bypassed /register ──
+        if data is None:
+            if auth_user is None:
+                # No Firestore doc and no Auth record — user truly doesn't exist
+                return None
+            seed = {
+                'username': (auth_user.display_name or '').lower().replace(' ', '') or user_id[:8],
+                'displayName': auth_user.display_name or '',
+                'email': auth_user.email or '',
+                'bio': '',
+                'phone': '',
+                'avatarUrl': provider_photo,
+                'profileBannerBg': 'default',
+                'createdAt': datetime.now(),
+                'streamingServices': {
+                    'netflix': False, 'hulu': False, 'disneyPlus': False,
+                    'hboMax': False, 'amazonPrime': False, 'appleTV': False,
+                    'paramount': False, 'peacock': False,
+                },
+                'moviePreferences': {
+                    'favoriteGenres': [], 'favoritePeople': [],
+                    'contentRating': 'All Ratings',
+                    'watchlistSettings': {'autoSortByReleaseDate': False, 'hideWatchedContent': True},
+                },
+            }
+            user_ref.set(seed)
+            data = seed
+
+        # ── 4. Fill gaps from Auth (only when Auth call succeeded) ──
+        if auth_user is not None:
+            if not data.get('email') and auth_user.email:
+                data['email'] = auth_user.email
+            if not data.get('displayName') and auth_user.display_name:
+                data['displayName'] = auth_user.display_name
+            if not data.get('avatarUrl') and provider_photo:
+                data['avatarUrl'] = provider_photo
+
+        # ── 5. Attach Auth metadata (empty defaults when Auth unavailable) ──
+        data['emailVerified'] = auth_user.email_verified if auth_user else False
+        data['providerData'] = provider_data
+        data['joinedAt'] = joined_at
+
+        return data
+
     except Exception as e:
-        print(f"Error getting user data: {e}")
-        return None
-    
-def update_user_profile(user_id, profile_data):
-    try:
-        user_ref = db.collection('users').document(user_id)
-
-        update_data = {
-            'displayName': profile_data.get('displayName', '').strip(),
-            'username': profile_data.get('username', '').strip(),
-            'bio': profile_data.get('bio', '').strip(),
-            'phone': profile_data.get('phone', '').strip(),
-        }
-
-        user_ref.update(update_data)
-
-        return {
-            'success': True,
-            'message': 'Profile updated successfully'
-        }
-    except Exception as e:
-        return {
-            'success': False,
-            'message': str(e)
-        }    
+        print(f"Error getting user data for {user_id}: {e}")
+        raise   # let the caller (app.py route) handle 503 vs 500 vs 404
 
 def add_to_watchlist(user_id, movie_id):
     #add movies to watchlist.
@@ -406,7 +465,7 @@ def update_watched_rating(user_id, movie_id, new_rating, comment=None):
 # ── Social Feed ───────────────────────────────────────────────
 
 # creates a new post in the global feed with the movie info and user's message
-def create_post(user_id, username, message, movie_title, movie_id, rating):
+def create_post(user_id, username, message, movie_title, movie_id, movie_poster, rating):
     try:
         post_ref = db.collection('posts').document()
         post_ref.set({
@@ -416,6 +475,7 @@ def create_post(user_id, username, message, movie_title, movie_id, rating):
             'message': message,
             'movie_title': movie_title,
             'movie_id': str(movie_id),
+            'movie_poster': movie_poster or '',
             'rating': rating,
             'likes': 0,
             'liked_by': [],
@@ -512,9 +572,9 @@ def delete_post(post_id, user_id):
 # ── User Profile ──────────────────────────────────────────────────
 
 def update_user_profile(user_id, data):
-    """Update editable profile fields: displayName, bio, username"""
+    """Update editable profile fields: displayName, bio, username, phone, socialSettings"""
     try:
-        allowed = {'displayName', 'bio', 'username'}
+        allowed = {'displayName', 'bio', 'username', 'phone', 'profileBannerBg', 'socialSettings'}
         update_data = {k: v for k, v in data.items() if k in allowed}
         if not update_data:
             return {'success': False, 'message': 'No valid fields to update'}
@@ -817,16 +877,20 @@ def get_user_public_profile(user_id):
         watched_docs  = db.collection('users').document(user_id).collection('watched_movies').stream()
         watchlist_doc = db.collection('users').document(user_id).collection('lists').document('watchlist').get()
         friends_docs  = db.collection('users').document(user_id).collection('friends').stream()
+        social = d.get('socialSettings', {})
         return {
-            'user_id':        user_id,
-            'username':       d.get('username', ''),
-            'displayName':    d.get('displayName', d.get('username', '')),
-            'bio':            d.get('bio', ''),
-            'avatarUrl':      d.get('avatarUrl'),
-            'createdAt':      d.get('createdAt'),
-            'watchedCount':   sum(1 for _ in watched_docs),
-            'watchlistCount': len(watchlist_doc.to_dict().get('movies', [])) if watchlist_doc.exists else 0,
-            'friendsCount':   sum(1 for _ in friends_docs),
+            'user_id':             user_id,
+            'username':            d.get('username', ''),
+            'displayName':         d.get('displayName', d.get('username', '')),
+            'bio':                 d.get('bio', ''),
+            'avatarUrl':           d.get('avatarUrl'),
+            'createdAt':           d.get('createdAt'),
+            'lastSeen':            d.get('lastSeen'),
+            'watchedCount':        sum(1 for _ in watched_docs),
+            'watchlistCount':      len(watchlist_doc.to_dict().get('movies', [])) if watchlist_doc.exists else 0,
+            'friendsCount':        sum(1 for _ in friends_docs),
+            'showMyStuffPublicly': social.get('showMyStuffPublicly', False),
+            'showOnlineStatus':    social.get('showOnlineStatus', True),
         }
     except Exception as e:
         print(f"Error getting public profile: {e}")
@@ -885,23 +949,44 @@ def get_members_streaming_services(group_id):
 # ── Roulette Spin History ─────────────────────────────────────────
 
 def log_roulette_spin(user_id, movie_id, movie_title, poster_url):
-    """Prepend a spin to /users/{user_id}/roulette, keep max 20 entries."""
+    """Prepend a spin to /users/{user_id}/roulette, keep max 20 entries.
+
+    Uses a _meta counter doc so we read 1 doc per spin instead of streaming
+    the entire subcollection. The cleanup query (streaming all docs) only runs
+    when the counter exceeds 20, which is rare after the first fill.
+    Firestore excludes _meta from get_roulette_history automatically because
+    order_by('spun_at') skips documents that lack that field.
+    """
     try:
         roulette_ref = db.collection('users').document(user_id).collection('roulette')
-        new_doc = roulette_ref.document()
-        new_doc.set({
-            'movie_id': str(movie_id),
+        meta_ref = roulette_ref.document('_meta')
+
+        # Write the new spin entry
+        roulette_ref.document().set({
+            'movie_id':    str(movie_id),
             'movie_title': movie_title,
-            'poster_url': poster_url or '',
-            'spun_at': datetime.now()
+            'poster_url':  poster_url or '',
+            'spun_at':     datetime.now()
         })
-        # Enforce a 20-entry cap
-        all_spins = list(
-            roulette_ref.order_by('spun_at', direction=firestore.Query.DESCENDING).stream()
-        )
-        if len(all_spins) > 20:
+
+        # Atomically increment counter (initialises to 1 if _meta doesn't exist yet)
+        meta_ref.set({'count': firestore.Increment(1)}, merge=True)
+
+        # 1 read to decide whether pruning is needed
+        count = (meta_ref.get().to_dict() or {}).get('count', 0)
+
+        if count > 20:
+            # Rare path: stream only the spin docs (order_by excludes _meta),
+            # delete anything beyond position 20, reset counter.
+            all_spins = list(
+                roulette_ref
+                    .order_by('spun_at', direction=firestore.Query.DESCENDING)
+                    .stream()
+            )
             for doc in all_spins[20:]:
                 doc.reference.delete()
+            meta_ref.set({'count': min(count, 20)}, merge=True)
+
         return {'success': True}
     except Exception as e:
         return {'success': False, 'message': str(e)}
@@ -921,3 +1006,44 @@ def get_roulette_history(user_id, limit=10):
     except Exception as e:
         print(f"Error getting roulette history: {e}")
         return []
+
+
+def get_friends_roulette_history(user_id, limit=1):
+    """Return the most recent `limit` spins for each of the user's friends."""
+    try:
+        friends = get_friends(user_id)
+        result = []
+        for friend in friends:
+            friend_id = friend.get('friend_id')
+            if not friend_id:
+                continue
+            spins = get_roulette_history(friend_id, limit=limit)
+            if spins:
+                # Look up the friend's avatar from their user document directly
+                try:
+                    user_doc = db.collection('users').document(friend_id).get()
+                    avatar_url = user_doc.to_dict().get('avatarUrl') if user_doc.exists else None
+                except Exception:
+                    avatar_url = None
+                result.append({
+                    'friend_id': friend_id,
+                    'friend_username': friend.get('friend_username', ''),
+                    'avatarUrl': avatar_url,
+                    'spins': spins,
+                })
+        return result
+    except Exception as e:
+        print(f"Error getting friends roulette history: {e}")
+        return []
+    
+# ── Quiz ──────────────────────────────────────────────────────────
+def save_quiz_result(uid, top_genre, answers):
+    """Save quiz completion status and top genre to the user's Firestore document"""
+    try:
+        db.collection('users').document(uid).set({
+            'quizCompleted': True,
+            'topGenre': top_genre,
+        }, merge=True)
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
