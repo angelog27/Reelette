@@ -814,10 +814,10 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
     setMemberProfiles(profiles);
   }, [group.group_id, onUpdate]);
 
-  // Load member profiles on mount and poll every 60s for online status
+  // Load member profiles on mount and poll every 5 min for online status
   useEffect(() => {
     refresh();
-    const interval = setInterval(() => getGroupMemberProfiles(group.group_id).then(setMemberProfiles), 60_000);
+    const interval = setInterval(() => getGroupMemberProfiles(group.group_id).then(setMemberProfiles), 300_000);
     return () => clearInterval(interval);
   }, [group.group_id, refresh]);
 

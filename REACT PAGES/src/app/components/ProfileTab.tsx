@@ -953,12 +953,6 @@ export function ProfileTab() {
           throw new Error(profileRes.error);
         }
 
-        // Streaming + preferences are best-effort — silently fall back to empty on failure
-        const [streamingRes, prefsRes] = await Promise.all([
-          fetch(`${BASE_URL}/user/${userId}/streaming`).then(r => r.json()).catch(() => ({})),
-          fetch(`${BASE_URL}/user/${userId}/movie-preferences`).then(r => r.json()).catch(() => ({})),
-        ]);
-
         // ── Profile fields ──
         const loadedProfile = {
           displayName: profileRes.displayName || '',
@@ -979,18 +973,14 @@ export function ProfileTab() {
           showMyStuffPublicly: profileRes.socialSettings?.showMyStuffPublicly ?? false,
         });
 
-        // ── Streaming services ──
-        // Primary source: dedicated /streaming endpoint.
-        // Fallback: streamingServices field embedded in the main profile doc
-        //           (present for OAuth users seeded on first load).
-        const streaming = Object.keys(streamingRes).length > 0
-          ? streamingRes
-          : (profileRes.streamingServices || {});
+        // ── Streaming services + movie preferences ──
+        // Both are embedded in the main user doc — no extra API calls needed.
+        const streaming = profileRes.streamingServices || {};
+        const prefs     = profileRes.moviePreferences  || {};
 
-        // ── Movie preferences ──
         setMoviePreferences({
-          favoriteGenres: prefsRes.favoriteGenres || [],
-          favoritePeople: prefsRes.favoritePeople || [],
+          favoriteGenres: prefs.favoriteGenres || [],
+          favoritePeople: prefs.favoritePeople || [],
           streamingServices: {
             netflix:      !!streaming.netflix,
             appleTV:      !!streaming.appleTV,
@@ -1001,10 +991,10 @@ export function ProfileTab() {
             paramount:    !!streaming.paramount,
             peacock:      !!streaming.peacock,
           },
-          contentRating: prefsRes.contentRating || 'All Ratings',
+          contentRating: prefs.contentRating || 'All Ratings',
           watchlistSettings: {
-            autoSortByReleaseDate: prefsRes.watchlistSettings?.autoSortByReleaseDate || false,
-            hideWatchedContent:    prefsRes.watchlistSettings?.hideWatchedContent    ?? true,
+            autoSortByReleaseDate: prefs.watchlistSettings?.autoSortByReleaseDate || false,
+            hideWatchedContent:    prefs.watchlistSettings?.hideWatchedContent    ?? true,
           },
         });
       } catch (error) {
