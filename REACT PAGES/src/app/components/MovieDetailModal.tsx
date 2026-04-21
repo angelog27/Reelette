@@ -97,7 +97,13 @@ export function MovieDetailModal({ movieId, onClose, onWatchedChange }: Props) {
           director: director?.name ?? '',
           actors,
           genres: genres.map((g) => g.name),
-          services: providers.map((p: any) => p.provider_name),
+          services: providers.map((p: any) => {
+            const ID_TO_NAME: Record<number, string> = {
+              8: 'Netflix', 15: 'Hulu', 337: 'Disney+', 1899: 'Max',
+              9: 'Prime Video', 350: 'Apple TV+', 531: 'Paramount+', 386: 'Peacock',
+            };
+            return ID_TO_NAME[p.provider_id] ?? p.provider_name;
+          }),
         },
         rating,
         commentInput

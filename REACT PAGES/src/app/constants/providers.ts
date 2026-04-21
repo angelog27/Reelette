@@ -17,4 +17,10 @@ export const PROVIDER_LOGOS: Record<string, string> = {
   'Paramount+':   paramountLogo,
   'Peacock':      peacockLogo,
   'Hulu':         'https://image.tmdb.org/t/p/original/zxrVdFjIjLqkfnwyghnfywTn3Lh.jpg',
+  // TMDB raw name aliases — for movies stored before the ID-based normalization
+  'Disney Plus':        disneyLogo,
+  'HBO Max':            hboMaxLogo,
+  'Amazon Prime Video': primeLogo,
+  'Apple TV Plus':      appleLogo,
+  'Paramount Plus':     paramountLogo,
 };
