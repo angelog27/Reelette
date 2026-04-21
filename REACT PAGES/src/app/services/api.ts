@@ -49,6 +49,7 @@ export interface FeedPost {
   message: string;
   movie_title: string;
   movie_id: string;
+  movie_poster?: string;
   rating: number;
   likes: number;
   liked_by: string[];
@@ -339,6 +340,7 @@ export async function createPost(payload: {
   message: string;
   movie_title: string;
   movie_id?: string;
+  movie_poster?: string;
   rating?: number;
 }) {
   const res = await fetch(`${BASE_URL}/feed`, {

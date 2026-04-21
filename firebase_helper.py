@@ -465,7 +465,7 @@ def update_watched_rating(user_id, movie_id, new_rating, comment=None):
 # ── Social Feed ───────────────────────────────────────────────
 
 # creates a new post in the global feed with the movie info and user's message
-def create_post(user_id, username, message, movie_title, movie_id, rating):
+def create_post(user_id, username, message, movie_title, movie_id, movie_poster, rating):
     try:
         post_ref = db.collection('posts').document()
         post_ref.set({
@@ -475,6 +475,7 @@ def create_post(user_id, username, message, movie_title, movie_id, rating):
             'message': message,
             'movie_title': movie_title,
             'movie_id': str(movie_id),
+            'movie_poster': movie_poster or '',
             'rating': rating,
             'likes': 0,
             'liked_by': [],
