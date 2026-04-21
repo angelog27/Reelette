@@ -1,6 +1,20 @@
 # tmdb_api.py
 import requests
 import os
+import time
+
+# ── In-memory TTL cache ───────────────────────────────────────────
+_tmdb_cache: dict = {}
+
+def _cache_get(key: str):
+    entry = _tmdb_cache.get(key)
+    if entry and time.time() < entry['expires']:
+        return entry['value']
+    return None
+
+def _cache_set(key: str, value, ttl: int):
+    _tmdb_cache[key] = {'value': value, 'expires': time.time() + ttl}
+# ─────────────────────────────────────────────────────────────────
 
 try:
     from config import TMDB_API_KEY, TMDB_BASE_URL, TMDB_IMAGE_BASE
@@ -12,6 +26,11 @@ except ImportError:
 
 #Query TMDB API for movies, genres, actors, etc. and return results as JSON
 def search_movies(query, page=1):
+    cache_key = f"search:{query}:{page}"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
+
     url = f"{TMDB_BASE_URL}/search/movie"
     params = {
         "api_key": TMDB_API_KEY,
@@ -20,11 +39,13 @@ def search_movies(query, page=1):
         "page": page,
         "include_adult": False
     }
-    
+
     try:
         response = requests.get(url, params=params)
         response.raise_for_status()
-        return response.json()
+        result = response.json()
+        _cache_set(cache_key, result, 300)  # 5 min
+        return result
     except requests.exceptions.RequestException as e:
         print(f"Error searching movies: {e}")
         return None
@@ -85,6 +106,11 @@ def get_popular_movies(page=1):
 
 #Searches for a person (actor or director) by name, returns list of results. This can be used to allow users to search for movies by actor or director.
 def search_person(name):
+    cache_key = f"person:{name}"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
+
     url = f"{TMDB_BASE_URL}/search/person"
     params = {
         "api_key": TMDB_API_KEY,
@@ -94,7 +120,9 @@ def search_person(name):
     try:
         response = requests.get(url, params=params)
         response.raise_for_status()
-        return response.json()
+        result = response.json()
+        _cache_set(cache_key, result, 3600)  # 1 hour
+        return result
     except requests.exceptions.RequestException as e:
         print(f"Error searching person: {e}")
         return None
@@ -106,6 +134,13 @@ def discover_movies(genre_id=None, year=None, year_from=None, year_to=None,
                     with_cast=None, with_crew=None,
                     with_watch_providers=None, watch_region="US",
                     sort_by="popularity.desc", page=1):
+    cache_key = (f"discover:{genre_id}:{year}:{year_from}:{year_to}:{min_rating}:"
+                 f"{min_vote_count}:{with_cast}:{with_crew}:{with_watch_providers}:"
+                 f"{watch_region}:{sort_by}:{page}")
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
+
     url = f"{TMDB_BASE_URL}/discover/movie"
     params = {
         "api_key": TMDB_API_KEY,
@@ -138,7 +173,9 @@ def discover_movies(genre_id=None, year=None, year_from=None, year_to=None,
     try:
         response = requests.get(url, params=params)
         response.raise_for_status()
-        return response.json()
+        result = response.json()
+        _cache_set(cache_key, result, 300)  # 5 min
+        return result
     except requests.exceptions.RequestException as e:
         print(f"Error discovering movies: {e}")
         return None

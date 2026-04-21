@@ -5,62 +5,51 @@ import { MovieDetailModal } from './MovieDetailModal';
 import { Input } from './ui/input';
 import { Switch } from './ui/switch';
 import { Slider } from './ui/slider';
-import {
-  getPopularMovies, getTrendingMovies, getTopRatedMovies,
-  searchMovies, discoverMovies, getServices, SERVICE_DISPLAY,
-} from '../services/api';
+import { getPopularMovies, getTrendingMovies, getTopRatedMovies, searchMovies, discoverMovies } from '../services/api';
 import type { Movie } from '../services/api';
+import { GENRES } from '../constants/genres';
+import { useMovieFilters, defaultFilterState } from '../hooks/useMovieFilters';
+import type { FilterState } from '../hooks/useMovieFilters';
 
-const GENRES = [
-  { label: 'Action',          value: '28' },
-  { label: 'Adventure',       value: '12' },
-  { label: 'Animation',       value: '16' },
-  { label: 'Comedy',          value: '35' },
-  { label: 'Crime',           value: '80' },
-  { label: 'Documentary',     value: '99' },
-  { label: 'Drama',           value: '18' },
-  { label: 'Family',          value: '10751' },
-  { label: 'Fantasy',         value: '14' },
-  { label: 'History',         value: '36' },
-  { label: 'Horror',          value: '27' },
-  { label: 'Music',           value: '10402' },
-  { label: 'Mystery',         value: '9648' },
-  { label: 'Romance',         value: '10749' },
-  { label: 'Science Fiction', value: '878' },
-  { label: 'Thriller',        value: '53' },
-  { label: 'War',             value: '10752' },
-  { label: 'Western',         value: '37' },
-];
+// Module-level store — survives React Router remounts so users return to
+// exactly the tab state they left (filters, results, catalog mode).
+type DiscoverStore = FilterState & {
+  catalogMode: 'popular' | 'trending' | 'allTime';
+  searchQuery: string;
+  filtersOpen: boolean;
+  movies: Movie[];
+  loading: boolean;
+};
+const _store: DiscoverStore = {
+  ...defaultFilterState(),
+  catalogMode: 'popular',
+  searchQuery: '',
+  filtersOpen: false,
+  movies: [],
+  loading: true,
+};
 
 export function DiscoverTab() {
-  // Catalog mode (no search/filters active)
-  const [catalogMode, setCatalogMode] = useState<'popular' | 'trending' | 'allTime'>('popular');
+  const f = useMovieFilters(_store);
 
-  // Search & filter state
-  const [searchQuery, setSearchQuery]   = useState('');
-  const [filtersOpen, setFiltersOpen]   = useState(false);
-  const [filterStreaming, setFilterStreaming] = useState(false);
-  const [minRating, setMinRating]       = useState([0]);
-  const [actor, setActor]               = useState('');
-  const [director, setDirector]         = useState('');
-  const [yearFrom, setYearFrom]         = useState('');
-  const [yearTo, setYearTo]             = useState('');
-  const [genre, setGenre]               = useState('');
-  const [sortBy, setSortBy]             = useState('popularity');
-
-  const [movies, setMovies]                   = useState<Movie[]>([]);
-  const [loading, setLoading]                 = useState(true);
+  // Local UI state initialised from the persistent store
+  const [catalogMode, _setCatalogMode] = useState(_store.catalogMode);
+  const [searchQuery, _setSearchQuery] = useState(_store.searchQuery);
+  const [filtersOpen, _setFiltersOpen] = useState(_store.filtersOpen);
+  const [movies,      _setMovies]      = useState<Movie[]>(_store.movies);
+  const [loading,     _setLoading]     = useState(_store.loading);
   const [selectedMovieId, setSelectedMovieId] = useState<string | null>(null);
+
+  // Write-through setters keep the module store in sync
+  const setCatalogMode = (m: DiscoverStore['catalogMode']) => { _store.catalogMode = m; _setCatalogMode(m); };
+  const setSearchQuery = (q: string)  => { _store.searchQuery = q; _setSearchQuery(q); };
+  const setFiltersOpen = (v: boolean) => { _store.filtersOpen = v; _setFiltersOpen(v); };
+  const setMovies      = (m: Movie[]) => { _store.movies = m;      _setMovies(m); };
+  const setLoading     = (v: boolean) => { _store.loading = v;     _setLoading(v); };
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const userServices      = getServices();
-  const hasServices       = Object.values(userServices).some(Boolean);
-  const activeServiceNames = Object.entries(userServices)
-    .filter(([, on]) => on)
-    .map(([key]) => SERVICE_DISPLAY[key]);
-
-  const hasFilters   = !!(actor || director || yearFrom || yearTo || genre || minRating[0] > 0 || filterStreaming);
+  const hasFilters   = !!(f.actor || f.director || f.yearFrom || f.yearTo || f.genre || f.minRating[0] > 0 || f.filterStreaming);
   const isSearchMode = !!searchQuery || hasFilters;
 
   // Unified fetch effect
@@ -85,30 +74,25 @@ export function DiscoverTab() {
         searchMovies(searchQuery).then((m) => { setMovies(m); setLoading(false); });
       } else {
         discoverMovies({
-          genre_id:   genre     || undefined,
-          year_from:  yearFrom  || undefined,
-          year_to:    yearTo    || undefined,
-          min_rating: minRating[0] > 0 ? minRating[0] : undefined,
-          actor:      actor     || undefined,
-          director:   director  || undefined,
-          sort_by:    sortBy,
-          services_filter: filterStreaming && hasServices ? userServices : undefined,
+          genre_id:   f.genre     || undefined,
+          year_from:  f.yearFrom  || undefined,
+          year_to:    f.yearTo    || undefined,
+          min_rating: f.minRating[0] > 0 ? f.minRating[0] : undefined,
+          actor:      f.actor     || undefined,
+          director:   f.director  || undefined,
+          sort_by:    f.sortBy,
+          services_filter: f.filterStreaming && f.hasServices ? f.userServices : undefined,
         }).then((m) => { setMovies(m); setLoading(false); });
       }
     }, 500);
 
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [catalogMode, searchQuery, actor, director, yearFrom, yearTo, genre, minRating, sortBy, filterStreaming]);
+  }, [catalogMode, searchQuery, f.actor, f.director, f.yearFrom, f.yearTo, f.genre, f.minRating, f.sortBy, f.filterStreaming]);
 
   const displayedMovies =
-    filterStreaming && activeServiceNames.length > 0 && searchQuery
-      ? movies.filter((m) => activeServiceNames.includes(m.streamingService))
+    f.filterStreaming && f.activeServiceNames.length > 0 && searchQuery
+      ? movies.filter((m) => f.activeServiceNames.includes(m.streamingService))
       : movies;
-
-  function clearFilters() {
-    setActor(''); setDirector(''); setYearFrom(''); setYearTo('');
-    setGenre(''); setSortBy('popularity'); setMinRating([0]); setFilterStreaming(false);
-  }
 
   return (
     <div className="space-y-5">
@@ -160,28 +144,28 @@ export function DiscoverTab() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-xs text-gray-500 uppercase tracking-wide">Actor</label>
-              <Input value={actor} onChange={(e) => setActor(e.target.value)} placeholder="e.g. Tom Hanks" className="bg-[#1C1C1C] border-[#2A2A2A] text-white rounded-xl" />
+              <Input value={f.actor} onChange={(e) => f.setActor(e.target.value)} placeholder="e.g. Tom Hanks" className="bg-[#1C1C1C] border-[#2A2A2A] text-white rounded-xl" />
             </div>
             <div className="space-y-2">
               <label className="text-xs text-gray-500 uppercase tracking-wide">Director</label>
-              <Input value={director} onChange={(e) => setDirector(e.target.value)} placeholder="e.g. Christopher Nolan" className="bg-[#1C1C1C] border-[#2A2A2A] text-white rounded-xl" />
+              <Input value={f.director} onChange={(e) => f.setDirector(e.target.value)} placeholder="e.g. Christopher Nolan" className="bg-[#1C1C1C] border-[#2A2A2A] text-white rounded-xl" />
             </div>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="space-y-2">
               <label className="text-xs text-gray-500 uppercase tracking-wide">Year From</label>
-              <Input value={yearFrom} onChange={(e) => setYearFrom(e.target.value)} placeholder="1990" className="bg-[#1C1C1C] border-[#2A2A2A] text-white rounded-xl" />
+              <Input value={f.yearFrom} onChange={(e) => f.setYearFrom(e.target.value)} placeholder="1990" className="bg-[#1C1C1C] border-[#2A2A2A] text-white rounded-xl" />
             </div>
             <div className="space-y-2">
               <label className="text-xs text-gray-500 uppercase tracking-wide">Year To</label>
-              <Input value={yearTo} onChange={(e) => setYearTo(e.target.value)} placeholder="2024" className="bg-[#1C1C1C] border-[#2A2A2A] text-white rounded-xl" />
+              <Input value={f.yearTo} onChange={(e) => f.setYearTo(e.target.value)} placeholder="2024" className="bg-[#1C1C1C] border-[#2A2A2A] text-white rounded-xl" />
             </div>
             <div className="space-y-2">
               <label className="text-xs text-gray-500 uppercase tracking-wide">Genre</label>
               <select
-                value={genre}
-                onChange={(e) => setGenre(e.target.value)}
+                value={f.genre}
+                onChange={(e) => f.setGenre(e.target.value)}
                 className="w-full bg-[#1C1C1C] border border-[#2A2A2A] text-white rounded-xl px-3 py-2 focus:border-[#C0392B] focus:outline-none text-sm"
               >
                 <option value="">All Genres</option>
@@ -191,8 +175,8 @@ export function DiscoverTab() {
             <div className="space-y-2">
               <label className="text-xs text-gray-500 uppercase tracking-wide">Sort By</label>
               <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
+                value={f.sortBy}
+                onChange={(e) => f.setSortBy(e.target.value)}
                 className="w-full bg-[#1C1C1C] border border-[#2A2A2A] text-white rounded-xl px-3 py-2 focus:border-[#C0392B] focus:outline-none text-sm"
               >
                 <option value="popularity">Popularity</option>
@@ -206,17 +190,17 @@ export function DiscoverTab() {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <label className="text-xs text-gray-500 uppercase tracking-wide">Minimum Rating</label>
-              <span className="text-white text-sm font-medium">{minRating[0] > 0 ? `${minRating[0]} / 10` : 'Any'}</span>
+              <span className="text-white text-sm font-medium">{f.minRating[0] > 0 ? `${f.minRating[0]} / 10` : 'Any'}</span>
             </div>
-            <Slider value={minRating} onValueChange={setMinRating} max={10} step={0.5} className="w-full" />
+            <Slider value={f.minRating} onValueChange={f.setMinRating} max={10} step={0.5} className="w-full" />
           </div>
 
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3 bg-[#1C1C1C] rounded-full px-5 py-3 border border-[#2A2A2A]">
-              <Switch checked={filterStreaming} onCheckedChange={setFilterStreaming} className="data-[state=checked]:bg-[#C0392B]" />
-              <label className="text-gray-300 cursor-pointer text-sm" onClick={() => setFilterStreaming(!filterStreaming)}>
+              <Switch checked={f.filterStreaming} onCheckedChange={f.setFilterStreaming} className="data-[state=checked]:bg-[#C0392B]" />
+              <label className="text-gray-300 cursor-pointer text-sm" onClick={() => f.setFilterStreaming(!f.filterStreaming)}>
                 My streaming services only
-                {filterStreaming && !hasServices && (
+                {f.filterStreaming && !f.hasServices && (
                   <span className="text-yellow-500 ml-2 text-xs">(no services set)</span>
                 )}
               </label>
@@ -224,7 +208,7 @@ export function DiscoverTab() {
 
             {hasFilters && (
               <button
-                onClick={clearFilters}
+                onClick={f.clearFilters}
                 className="text-sm text-gray-500 hover:text-white transition-colors underline underline-offset-2"
               >
                 Clear filters

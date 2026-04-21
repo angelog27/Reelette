@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Star } from 'lucide-react';
 import { getWatchedMovies, getUser } from '../services/api';
 import type { WatchedMovie } from '../services/api';
@@ -8,6 +8,7 @@ export function LibraryTab() {
   const [movies, setMovies] = useState<WatchedMovie[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMovieId, setSelectedMovieId] = useState<string | null>(null);
+  const hasChangedRef = useRef(false);
 
   const user = getUser();
 
@@ -86,9 +87,13 @@ export function LibraryTab() {
       {selectedMovieId && (
         <MovieDetailModal
           movieId={selectedMovieId}
+          onWatchedChange={() => { hasChangedRef.current = true; }}
           onClose={() => {
             setSelectedMovieId(null);
-            loadLibrary();
+            if (hasChangedRef.current) {
+              hasChangedRef.current = false;
+              loadLibrary();
+            }
           }}
         />
       )}

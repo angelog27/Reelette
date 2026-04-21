@@ -210,7 +210,7 @@ export async function searchMovies(query: string, page = 1): Promise<Movie[]> {
 }
 
 
-export async function discoverMovies(filters: {
+export function discoverMovies(filters: {
   genre_id?: string;
   year_from?: string;
   year_to?: string;
@@ -221,13 +221,17 @@ export async function discoverMovies(filters: {
   services_filter?: Record<string, boolean>;
   page?: number;
 }): Promise<Movie[]> {
-  const res = await fetch(`${BASE_URL}/movies/discover`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(filters),
+  // Stable cache key regardless of property insertion order
+  const key = `discover:${JSON.stringify(Object.fromEntries(Object.entries(filters).sort()))}`;
+  return fromCache(key, TTL.CATALOG, async () => {
+    const res = await fetch(`${BASE_URL}/movies/discover`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(filters),
+    });
+    const data = await res.json();
+    return data.movies ?? [];
   });
-  const data = await res.json();
-  return data.movies ?? [];
 }
 
 
@@ -266,10 +270,12 @@ export async function getWatchedMovies(user_id: string): Promise<WatchedMovie[]>
 }
 
 
-export async function getWatchedMovie(user_id: string, movie_id: string): Promise<(WatchedMovie & { watched: boolean }) | null> {
-  const res = await fetch(`${BASE_URL}/watched/${user_id}/${movie_id}`);
-  const data = await res.json();
-  return data.watched ? data : null;
+export function getWatchedMovie(user_id: string, movie_id: string): Promise<(WatchedMovie & { watched: boolean }) | null> {
+  return fromCache(`watched_check:${user_id}:${movie_id}`, 5 * 60 * 1000, async () => {
+    const res = await fetch(`${BASE_URL}/watched/${user_id}/${movie_id}`);
+    const data = await res.json();
+    return data.watched ? data : null;
+  });
 }
 
 
@@ -283,6 +289,7 @@ export async function addWatchedMovie(
   user_rating: number,
   comment: string
 ) {
+  bustCache(`watched_check:${user_id}:${movie.movie_id}`);
   const res = await fetch(`${BASE_URL}/watched/${user_id}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -293,6 +300,7 @@ export async function addWatchedMovie(
 
 
 export async function updateWatchedMovie(user_id: string, movie_id: string, rating: number, comment: string) {
+  bustCache(`watched_check:${user_id}:${movie_id}`);
   const res = await fetch(`${BASE_URL}/watched/${user_id}/${movie_id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -301,13 +309,16 @@ export async function updateWatchedMovie(user_id: string, movie_id: string, rati
   return res.json();
 }
 
-export async function getWatchLater(user_id: string): Promise<string[]> {
-  const res = await fetch(`${BASE_URL}/watchlist/${user_id}`);
-  const data = await res.json();
-  return data.movies ?? [];
+export function getWatchLater(user_id: string): Promise<string[]> {
+  return fromCache(`watchlist:${user_id}`, 5 * 60 * 1000, async () => {
+    const res = await fetch(`${BASE_URL}/watchlist/${user_id}`);
+    const data = await res.json();
+    return data.movies ?? [];
+  });
 }
 
 export async function watchMovieLater(user_id: string, movie_id: string) {
+  bustCache(`watchlist:${user_id}`);
   const res = await fetch(`${BASE_URL}/watchlist/${user_id}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -317,6 +328,7 @@ export async function watchMovieLater(user_id: string, movie_id: string) {
 }
 
 export async function removeFromWatchLater(user_id: string, movie_id: string) {
+  bustCache(`watchlist:${user_id}`);
   const res = await fetch(`${BASE_URL}/watchlist/${user_id}/${movie_id}`, {
     method: 'DELETE',
   });
