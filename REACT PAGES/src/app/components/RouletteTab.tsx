@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Shuffle, ChevronDown, ChevronUp } from "lucide-react";
 import { MovieDetailModal } from "./MovieDetailModal";
 import { RouletteWheelModal } from "./RouletteWheelModal";
@@ -61,7 +61,7 @@ export function RouletteTab() {
   const [minRating, setMinRating] = useState([0]);
   const [spinning, setSpinning] = useState(false);
   const [showWheel, setShowWheel] = useState(false);
-  const [pendingMovieId, setPendingMovieId] = useState<string | null>(null);
+  const pendingMovieIdRef = useRef<string | null>(null);
   const [selectedMovieId, setSelectedMovieId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [activeMood, setActiveMood] = useState("");
@@ -121,7 +121,7 @@ export function RouletteTab() {
     setSpinning(true);
     setShowWheel(true);
     setSelectedMovieId(null);
-    setPendingMovieId(null);
+    pendingMovieIdRef.current = null;
     setError("");
 
     const randomPage = Math.floor(Math.random() * 5) + 1;
@@ -147,7 +147,7 @@ export function RouletteTab() {
         setShowWheel(false);
       } else {
         const pick = movies[Math.floor(Math.random() * movies.length)];
-        setPendingMovieId(pick.id);
+        pendingMovieIdRef.current = pick.id;
         if (user) {
           logRouletteSpin(
             user.user_id,
@@ -169,12 +169,12 @@ export function RouletteTab() {
 
   const handleWheelFinished = () => {
     setShowWheel(false);
-    if (pendingMovieId) setSelectedMovieId(pendingMovieId);
+    if (pendingMovieIdRef.current) setSelectedMovieId(pendingMovieIdRef.current);
   };
 
   const handleWheelClose = () => {
     setShowWheel(false);
-    if (pendingMovieId) setSelectedMovieId(pendingMovieId);
+    if (pendingMovieIdRef.current) setSelectedMovieId(pendingMovieIdRef.current);
   };
 
   return (

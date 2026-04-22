@@ -7,14 +7,21 @@ interface Props {
 }
 
 const GENRE_COLORS: Record<string, string> = {
-  "28": "#FF6B35",   // Action - orange
-  "35": "#FFD700",   // Comedy - yellow
-  "27": "#2ECC71",   // Horror - green
-  "878": "#00CED1",  // Sci-Fi - cyan
-  "18": "#9B59B6",   // Drama - purple
-  "16": "#FF69B4",   // Animation - pink
-  "10752": "#6B8E23",// War - olive
+  "28": "#FF6B35",    // Action - orange
+  "35": "#FFD700",    // Comedy - yellow
+  "27": "#2ECC71",    // Horror - green
+  "878": "#00CED1",   // Sci-Fi - cyan
+  "18": "#9B59B6",    // Drama - purple
+  "16": "#FF69B4",    // Animation - pink
+  "10752": "#6B8E23", // War - olive
 };
+
+const SEGMENT_LABELS = [
+  "ACTION", "DRAMA", "COMEDY", "HORROR",
+  "SCI-FI", "THRILLER", "ROMANCE", "MYSTERY",
+  "FANTASY", "WESTERN", "WAR", "CRIME",
+  "HISTORY", "MUSIC", "FAMILY", "ANIMATION",
+];
 
 function getWheelColor(genre: string): string {
   return GENRE_COLORS[genre] ?? "#C0392B";
@@ -27,6 +34,12 @@ function hexToRgb(hex: string): [number, number, number] {
   return [r, g, b];
 }
 
+function darken(hex: string, amount: number): string {
+  const [r, g, b] = hexToRgb(hex);
+  const d = (v: number) => Math.max(0, Math.floor(v * (1 - amount)));
+  return `#${d(r).toString(16).padStart(2, "0")}${d(g).toString(16).padStart(2, "0")}${d(b).toString(16).padStart(2, "0")}`;
+}
+
 export function RouletteWheelModal({ genre, onFinished, onClose }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<number>(0);
@@ -34,6 +47,7 @@ export function RouletteWheelModal({ genre, onFinished, onClose }: Props) {
   const finishedRef = useRef(false);
 
   const DURATION = 4200;
+  const SEGMENTS = 16;
 
   const draw = useCallback((timestamp: number) => {
     const canvas = canvasRef.current;
@@ -49,6 +63,7 @@ export function RouletteWheelModal({ genre, onFinished, onClose }: Props) {
     const t = Math.min(elapsed / DURATION, 1);
 
     const accentColor = getWheelColor(genre);
+    const accentDark = darken(accentColor, 0.45);
     const [ar, ag, ab] = hexToRgb(accentColor);
 
     // ── Background ──────────────────────────────────────────────
@@ -59,94 +74,166 @@ export function RouletteWheelModal({ genre, onFinished, onClose }: Props) {
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, W, H);
 
-    // ── Wheel geometry ───────────────────────────────────────────
-    const SEGMENTS = 16;
+    // ── Radial glow behind wheel ─────────────────────────────────
     const outerR = Math.min(W, H) * 0.38;
     const innerR = outerR * 0.22;
+    const trackR = outerR * 0.88;   // ball groove radius
+    const stripeR = outerR * 0.92;  // colored stripe just inside rim
 
-    // Wheel spin: fast at start, decelerates with easeOut
+    const glowGrad = ctx.createRadialGradient(cx, cy, outerR * 0.3, cx, cy, outerR * 1.4);
+    glowGrad.addColorStop(0, `rgba(${ar},${ag},${ab},0.18)`);
+    glowGrad.addColorStop(0.6, `rgba(${ar},${ag},${ab},0.07)`);
+    glowGrad.addColorStop(1, "transparent");
+    ctx.beginPath();
+    ctx.arc(cx, cy, outerR * 1.4, 0, Math.PI * 2);
+    ctx.fillStyle = glowGrad;
+    ctx.fill();
+
+    // ── Wheel spin ───────────────────────────────────────────────
     const easeOut = (x: number) => 1 - Math.pow(1 - x, 3);
     const spinAngle = easeOut(t) * Math.PI * 14 + timestamp * 0.0003 * (1 - t);
 
-    // Draw segments
+    // ── Segments ─────────────────────────────────────────────────
     for (let i = 0; i < SEGMENTS; i++) {
       const angle = (i / SEGMENTS) * Math.PI * 2 + spinAngle;
       const nextAngle = ((i + 1) / SEGMENTS) * Math.PI * 2 + spinAngle;
       const isAccent = i % 2 === 0;
 
+      // Main wedge
       ctx.beginPath();
       ctx.moveTo(cx, cy);
       ctx.arc(cx, cy, outerR, angle, nextAngle);
       ctx.closePath();
-
-      if (isAccent) {
-        ctx.fillStyle = `rgba(${ar},${ag},${ab},0.85)`;
-      } else {
-        ctx.fillStyle = "#1e1e1e";
-      }
+      ctx.fillStyle = isAccent ? `rgba(${ar},${ag},${ab},0.82)` : "#1e1e1e";
       ctx.fill();
-
       ctx.strokeStyle = "#111";
       ctx.lineWidth = 1.5;
       ctx.stroke();
+
+      // Colored stripe arc just inside rim
+      const stripeVariation = isAccent ? 1 : 0.5;
+      ctx.beginPath();
+      ctx.arc(cx, cy, stripeR, angle + 0.03, nextAngle - 0.03);
+      ctx.arc(cx, cy, outerR - 3, nextAngle - 0.03, angle + 0.03, true);
+      ctx.closePath();
+      ctx.fillStyle = isAccent
+        ? `rgba(${ar},${ag},${ab},${stripeVariation})`
+        : `rgba(${ar},${ag},${ab},0.18)`;
+      ctx.fill();
+
+      // Segment label
+      const midAngle = angle + (nextAngle - angle) / 2;
+      const labelR = outerR * 0.62;
+      const lx = cx + Math.cos(midAngle) * labelR;
+      const ly = cy + Math.sin(midAngle) * labelR;
+
+      ctx.save();
+      ctx.translate(lx, ly);
+      ctx.rotate(midAngle + Math.PI / 2);
+      ctx.font = "bold 7px system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.shadowColor = "rgba(0,0,0,0.9)";
+      ctx.shadowBlur = 4;
+      ctx.fillStyle = "#ffffff";
+      ctx.fillText(SEGMENT_LABELS[i] ?? "", 0, 0);
+      ctx.restore();
     }
 
-    // Outer ring glow
-    const glow = ctx.createRadialGradient(cx, cy, outerR * 0.9, cx, cy, outerR * 1.08);
-    glow.addColorStop(0, `rgba(${ar},${ag},${ab},0.4)`);
-    glow.addColorStop(1, "transparent");
+    // ── Ball track groove ────────────────────────────────────────
     ctx.beginPath();
-    ctx.arc(cx, cy, outerR * 1.05, 0, Math.PI * 2);
-    ctx.fillStyle = glow;
-    ctx.fill();
-
-    // Outer border
+    ctx.arc(cx, cy, trackR, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(0,0,0,0.7)";
+    ctx.lineWidth = 10;
+    ctx.stroke();
     ctx.beginPath();
-    ctx.arc(cx, cy, outerR, 0, Math.PI * 2);
-    ctx.strokeStyle = `rgba(${ar},${ag},${ab},0.8)`;
-    ctx.lineWidth = 3;
+    ctx.arc(cx, cy, trackR, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(255,255,255,0.04)";
+    ctx.lineWidth = 8;
     ctx.stroke();
 
-    // Pin bumpers on rim
-    for (let i = 0; i < SEGMENTS; i++) {
-      const angle = (i / SEGMENTS) * Math.PI * 2 + spinAngle;
-      const bx = cx + Math.cos(angle) * outerR;
-      const by = cy + Math.sin(angle) * outerR;
-      ctx.beginPath();
-      ctx.arc(bx, by, 4, 0, Math.PI * 2);
-      ctx.fillStyle = "#fff";
-      ctx.fill();
-    }
-
-    // Hub cap
-    const hub = ctx.createRadialGradient(cx, cy, 0, cx, cy, innerR);
-    hub.addColorStop(0, "#333");
-    hub.addColorStop(1, "#111");
+    // ── Outer rim ───────────────────────────────────────────────
+    // Metallic gradient ring
+    const rimGrad = ctx.createLinearGradient(cx - outerR, cy, cx + outerR, cy);
+    rimGrad.addColorStop(0, "#555");
+    rimGrad.addColorStop(0.3, "#aaa");
+    rimGrad.addColorStop(0.5, "#ddd");
+    rimGrad.addColorStop(0.7, "#aaa");
+    rimGrad.addColorStop(1, "#555");
     ctx.beginPath();
-    ctx.arc(cx, cy, innerR, 0, Math.PI * 2);
-    ctx.fillStyle = hub;
-    ctx.fill();
-    ctx.strokeStyle = `rgba(${ar},${ag},${ab},0.6)`;
+    ctx.arc(cx, cy, outerR, 0, Math.PI * 2);
+    ctx.strokeStyle = rimGrad;
+    ctx.lineWidth = 6;
+    ctx.stroke();
+
+    // Outer glow ring
+    ctx.beginPath();
+    ctx.arc(cx, cy, outerR + 3, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(${ar},${ag},${ab},0.5)`;
     ctx.lineWidth = 2;
     ctx.stroke();
 
+    // ── Metallic studs on rim ────────────────────────────────────
+    const STUDS = 32;
+    for (let i = 0; i < STUDS; i++) {
+      const angle = (i / STUDS) * Math.PI * 2 + spinAngle;
+      const sx = cx + Math.cos(angle) * outerR;
+      const sy = cy + Math.sin(angle) * outerR;
+      const studGrad = ctx.createRadialGradient(sx - 1, sy - 1, 0.5, sx, sy, 4);
+      studGrad.addColorStop(0, "#fff");
+      studGrad.addColorStop(0.5, "#bbb");
+      studGrad.addColorStop(1, "#555");
+      ctx.beginPath();
+      ctx.arc(sx, sy, 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = studGrad;
+      ctx.fill();
+      ctx.strokeStyle = "#222";
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+    }
+
+    // ── Hub cap — film reel style ────────────────────────────────
+    const hubGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, innerR);
+    hubGrad.addColorStop(0, accentColor);
+    hubGrad.addColorStop(0.6, accentDark);
+    hubGrad.addColorStop(1, "#0a0a0a");
+    ctx.beginPath();
+    ctx.arc(cx, cy, innerR, 0, Math.PI * 2);
+    ctx.fillStyle = hubGrad;
+    ctx.fill();
+    ctx.strokeStyle = `rgba(${ar},${ag},${ab},0.7)`;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Hub holes (film reel — 4 around center)
+    const holeR = innerR * 0.28;
+    const holeDist = innerR * 0.55;
+    for (let i = 0; i < 4; i++) {
+      const angle = (i / 4) * Math.PI * 2 + spinAngle * 0.5;
+      const hx = cx + Math.cos(angle) * holeDist;
+      const hy = cy + Math.sin(angle) * holeDist;
+      ctx.beginPath();
+      ctx.arc(hx, hy, holeR, 0, Math.PI * 2);
+      ctx.fillStyle = "#050505";
+      ctx.fill();
+      ctx.strokeStyle = `rgba(${ar},${ag},${ab},0.4)`;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+
+    // Center dot
+    ctx.beginPath();
+    ctx.arc(cx, cy, innerR * 0.15, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(${ar},${ag},${ab},0.9)`;
+    ctx.fill();
+
     // ── Ball physics ─────────────────────────────────────────────
-    // Phase 1 (0–0.6): orbiting at full outerR, fast angular speed
-    // Phase 2 (0.6–1): spiraling inward, decelerating
-    const orbitPhase = Math.min(t / 0.6, 1);
     const spiralPhase = Math.max((t - 0.6) / 0.4, 0);
-
-    // Angular velocity: starts fast, slows
-    const angularSpeed = 8 * (1 - easeOut(t));
     const ballAngle = -Math.PI / 2 + elapsed * 0.004 * (1 - t * 0.7) * 8;
-
-    // Radius: orbit near rim, then spiral toward center-ish
-    const orbitR = outerR * 1.02;
+    const orbitR = trackR;
     const landR = outerR * 0.55;
     const spiralEase = easeOut(spiralPhase);
     const ballR = orbitR - (orbitR - landR) * spiralEase;
-
-    // Add wobble / bounce as it spirals in
     const wobble = Math.sin(elapsed * 0.04) * (1 - spiralPhase) * outerR * 0.04;
     const finalBallR = ballR + wobble;
 
@@ -175,27 +262,25 @@ export function RouletteWheelModal({ genre, onFinished, onClose }: Props) {
     ctx.fillStyle = "rgba(255,255,255,0.8)";
     ctx.fill();
 
-    // ── Pointer (top) ────────────────────────────────────────────
-    const pTip = cy - outerR - 4;
+    // ── Needle (top, SVG-style triangle pointing inward) ─────────
+    const needleTip = cy - outerR + 4;
+    const needleBase = cy - outerR - 14;
     ctx.beginPath();
-    ctx.moveTo(cx, pTip + 18);
-    ctx.lineTo(cx - 8, pTip + 4);
-    ctx.lineTo(cx + 8, pTip + 4);
+    ctx.moveTo(cx, needleTip);
+    ctx.lineTo(cx - 9, needleBase);
+    ctx.lineTo(cx + 9, needleBase);
     ctx.closePath();
-    ctx.fillStyle = `rgb(${ar},${ag},${ab})`;
+    ctx.fillStyle = accentColor;
     ctx.fill();
     ctx.strokeStyle = "#fff";
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 1.5;
     ctx.stroke();
 
-    // ── Center label ─────────────────────────────────────────────
-    ctx.save();
-    ctx.font = "bold 11px system-ui, sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillStyle = `rgba(${ar},${ag},${ab},0.9)`;
-    ctx.fillText("REELETTE", cx, cy);
-    ctx.restore();
+    // Needle base dot
+    ctx.beginPath();
+    ctx.arc(cx, needleBase, 4, 0, Math.PI * 2);
+    ctx.fillStyle = "#fff";
+    ctx.fill();
 
     // ── Done? ────────────────────────────────────────────────────
     if (t >= 1 && !finishedRef.current) {
