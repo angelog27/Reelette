@@ -346,7 +346,7 @@ function MoviePersonalizationSection({
                   />
                 </div>
 
-                <span className="text-lg text-muted-foreground group-hover:text-foreground transition-all text-center leading-tight">
+                <span className="text-lg text-foreground group-hover:text-foreground transition-all text-center leading-tight">
                   {platform.name}
                 </span>
               </button>
