@@ -11,7 +11,6 @@ import {
   User,
   Mail,
   Film,
-  Star,
   Moon,
   Sun,
   Palette,
@@ -35,8 +34,6 @@ function GoogleIcon({ size = 20 }: { size?: number }) {
   );
 }
 
-// ─── Banner presets ───────────────────────────────────────────
-
 const BANNER_PRESETS = [
   { id: 'default', label: 'Cinematic', swatch: '#27272a', gradient: 'linear-gradient(135deg,#18181b 0%,#09090b 60%,#000 100%)' },
   { id: 'crimson', label: 'Crimson', swatch: '#7f1d1d', gradient: 'linear-gradient(135deg,#450a0a 0%,#0d0d0d 60%,#000 100%)' },
@@ -49,10 +46,8 @@ const BANNER_PRESETS = [
 ];
 
 function getBannerGradient(id: string) {
-  return (BANNER_PRESETS.find(p => p.id === id) ?? BANNER_PRESETS[0]).gradient;
+  return (BANNER_PRESETS.find((p) => p.id === id) ?? BANNER_PRESETS[0]).gradient;
 }
-
-// ─── ProfileHeader ───────────────────────────────────────────
 
 function ProfileHeader({
   profile,
@@ -84,25 +79,20 @@ function ProfileHeader({
   return (
     <div className="relative">
       <div className="px-8 pt-12 pb-8">
-        <h1 className="text-2xl tracking-tight text-white relative inline-block">
+        <h1 className="text-2xl tracking-tight text-foreground relative inline-block">
           Profile
           <div className="absolute -bottom-2 left-0 right-0 h-[2px] bg-gradient-to-r from-red-600 via-red-500 to-transparent shadow-[0_0_15px_rgba(220,38,38,0.4)]"></div>
         </h1>
       </div>
 
-      {/* Banner */}
-      <div
-        className="h-48 relative"
-        style={{ background: getBannerGradient(bannerBg) }}
-      >
+      <div className="h-48 relative" style={{ background: getBannerGradient(bannerBg) }}>
         <div className="absolute inset-0 bg-gradient-to-r from-red-950/20 to-transparent pointer-events-none" />
         <div className="absolute inset-0 opacity-10 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] pointer-events-none" />
 
-        {/* Banner colour swatches — visible only in edit mode */}
         {isEditing && (
-          <div className="absolute bottom-3 right-4 flex items-center gap-1.5 bg-black/50 backdrop-blur-sm rounded-full px-3 py-1.5">
-            <span className="text-zinc-400 text-[10px] mr-1 uppercase tracking-wider">Banner</span>
-            {BANNER_PRESETS.map(p => (
+          <div className="absolute bottom-3 right-4 flex items-center gap-1.5 bg-background/60 backdrop-blur-sm rounded-full px-3 py-1.5 border border-border">
+            <span className="text-muted-foreground text-[10px] mr-1 uppercase tracking-wider">Banner</span>
+            {BANNER_PRESETS.map((p) => (
               <button
                 key={p.id}
                 title={p.label}
@@ -118,42 +108,44 @@ function ProfileHeader({
         )}
       </div>
 
-      {/* Avatar + name row — sits below the banner, avatar overlaps upward */}
       <div className="px-8 pb-6">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6" style={{ marginTop: '-40px' }}>
           <div className="flex flex-col md:flex-row items-start md:items-end gap-6">
-
-            {/* Avatar */}
             <div className="relative group flex-shrink-0 z-10">
-              <div className="w-32 h-32 rounded-full bg-gradient-to-br from-zinc-800 to-zinc-900 border-4 border-zinc-950 overflow-hidden shadow-2xl">
+              <div className="w-32 h-32 rounded-full bg-card border-4 border-border overflow-hidden shadow-2xl">
                 {avatarUrl ? (
                   <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-zinc-600">
+                  <div className="w-full h-full flex items-center justify-center text-muted-foreground">
                     <Camera size={40} />
                   </div>
                 )}
               </div>
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="absolute bottom-0 right-0 w-10 h-10 bg-red-600 hover:bg-red-700 rounded-full flex items-center justify-center shadow-lg transition-all group-hover:scale-110"
-                title="Change photo"
-              >
-                <Camera size={18} className="text-white" />
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleFileChange}
-              />
+
+              {isEditing && (
+                <>
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="absolute bottom-0 right-0 w-10 h-10 bg-red-600 hover:bg-red-700 rounded-full flex items-center justify-center shadow-lg transition-all group-hover:scale-110"
+                    title="Change photo"
+                  >
+                    <Camera size={18} className="text-white" />
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleFileChange}
+                  />
+                </>
+              )}
             </div>
 
             <div className="space-y-1 pb-1">
-              <h1 className="text-white tracking-tight">{profile.displayName}</h1>
-              <p className="text-zinc-400">@{profile.username}</p>
-              <p className="text-zinc-500 max-w-md">{profile.bio}</p>
+              <h1 className="text-foreground tracking-tight">{profile.displayName}</h1>
+              <p className="text-muted-foreground">@{profile.username}</p>
+              <p className="text-muted-foreground max-w-md">{profile.bio}</p>
             </div>
           </div>
 
@@ -169,8 +161,6 @@ function ProfileHeader({
     </div>
   );
 }
-
-// ─── ProfileInfoSection ──────────────────────────────────────
 
 function ProfileInfoSection({
   profile,
@@ -195,74 +185,70 @@ function ProfileInfoSection({
     email: string;
   };
   isEditing: boolean;
-  onChange: (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => void;
+  onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   onSave: () => void;
   onCancel: () => void;
 }) {
   const data = isEditing ? draftProfile : profile;
 
   return (
-    <div className="bg-zinc-900/50 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-zinc-800/50">
+    <div className="bg-card/80 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-border">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="w-1 h-6 bg-red-600 rounded-full"></div>
-          <h2 className="text-white uppercase tracking-wider">Basic Information</h2>
+          <h2 className="text-foreground uppercase tracking-wider">Basic Information</h2>
         </div>
-        <User size={20} className="text-zinc-600" />
+        <User size={20} className="text-muted-foreground" />
       </div>
 
       <div className="space-y-4">
         <div>
-          <label className="block text-zinc-400 mb-2">Display Name</label>
+          <label className="block text-muted-foreground mb-2">Display Name</label>
           <input
             type="text"
             name="displayName"
             value={data.displayName}
             onChange={onChange}
             disabled={!isEditing}
-            className="w-full bg-zinc-950/50 border border-zinc-800 rounded-lg px-4 py-2.5 text-white placeholder-zinc-600 focus:border-red-600 focus:ring-2 focus:ring-red-600/20 focus:outline-none transition-all disabled:opacity-80"
+            className="w-full bg-background/80 border border-border rounded-lg px-4 py-2.5 text-foreground placeholder:text-muted-foreground focus:border-red-600 focus:ring-2 focus:ring-red-600/20 focus:outline-none transition-all disabled:opacity-80"
           />
         </div>
 
         <div>
-          <label className="block text-zinc-400 mb-2">Username</label>
+          <label className="block text-muted-foreground mb-2">Username</label>
           <input
             type="text"
             name="username"
             value={data.username}
             onChange={onChange}
             disabled={!isEditing}
-            className="w-full bg-zinc-950/50 border border-zinc-800 rounded-lg px-4 py-2.5 text-white placeholder-zinc-600 focus:border-red-600 focus:ring-2 focus:ring-red-600/20 focus:outline-none transition-all disabled:opacity-80"
+            className="w-full bg-background/80 border border-border rounded-lg px-4 py-2.5 text-foreground placeholder:text-muted-foreground focus:border-red-600 focus:ring-2 focus:ring-red-600/20 focus:outline-none transition-all disabled:opacity-80"
           />
         </div>
 
         <div>
-          <label className="block text-zinc-400 mb-2">Bio</label>
+          <label className="block text-muted-foreground mb-2">Bio</label>
           <textarea
             rows={3}
             name="bio"
             value={data.bio}
             onChange={onChange}
             disabled={!isEditing}
-            className="w-full bg-zinc-950/50 border border-zinc-800 rounded-lg px-4 py-2.5 text-white placeholder-zinc-600 focus:border-red-600 focus:ring-2 focus:ring-red-600/20 focus:outline-none transition-all resize-none disabled:opacity-80"
+            className="w-full bg-background/80 border border-border rounded-lg px-4 py-2.5 text-foreground placeholder:text-muted-foreground focus:border-red-600 focus:ring-2 focus:ring-red-600/20 focus:outline-none transition-all resize-none disabled:opacity-80"
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-zinc-400 mb-2">Email Address</label>
-            <div className="relative">
-              <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
-              <input
-                type="email"
-                name="email"
-                value={data.email}
-                disabled
-                className="w-full bg-zinc-950/50 border border-zinc-800 rounded-lg pl-10 pr-4 py-2.5 text-zinc-400 placeholder-zinc-600 focus:outline-none cursor-not-allowed disabled:opacity-80"
-              />
-            </div>
+        <div>
+          <label className="block text-muted-foreground mb-2">Email Address</label>
+          <div className="relative">
+            <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="email"
+              name="email"
+              value={data.email}
+              disabled
+              className="w-full bg-background/80 border border-border rounded-lg pl-10 pr-4 py-2.5 text-muted-foreground focus:outline-none cursor-not-allowed disabled:opacity-80"
+            />
           </div>
         </div>
       </div>
@@ -271,7 +257,7 @@ function ProfileInfoSection({
         {isEditing && (
           <button
             onClick={onCancel}
-            className="px-5 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg transition-all border border-zinc-700"
+            className="px-5 py-2 bg-muted hover:bg-accent text-foreground rounded-lg transition-all border border-border"
           >
             Cancel
           </button>
@@ -280,11 +266,11 @@ function ProfileInfoSection({
         <button
           onClick={onSave}
           disabled={!isEditing}
-          className={`px-5 py-2 rounded-lg transition-all border flex items-center gap-2
-    ${isEditing
+          className={`px-5 py-2 rounded-lg transition-all border flex items-center gap-2 ${
+            isEditing
               ? 'bg-red-600 hover:bg-red-700 text-white border-red-600 shadow-lg shadow-red-600/20 hover:shadow-red-600/40'
-              : 'bg-zinc-800 text-zinc-500 border-zinc-700 cursor-not-allowed'
-            }`}
+              : 'bg-muted text-muted-foreground border-border cursor-not-allowed'
+          }`}
         >
           <Edit3 size={16} />
           Save Changes
@@ -293,8 +279,6 @@ function ProfileInfoSection({
     </div>
   );
 }
-
-// ─── MoviePersonalizationSection ─────────────────────────────
 
 function MoviePersonalizationSection({
   moviePreferences,
@@ -321,17 +305,17 @@ function MoviePersonalizationSection({
   ];
 
   return (
-    <div className="bg-zinc-900/50 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-zinc-800/50">
+    <div className="bg-card/80 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-border">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="w-1 h-6 bg-red-600 rounded-full"></div>
-          <h2 className="text-white uppercase tracking-wider">Streaming Services</h2>
+          <h2 className="text-foreground uppercase tracking-wider">Streaming Services</h2>
         </div>
-        <Film size={20} className="text-zinc-600" />
+        <Film size={20} className="text-muted-foreground" />
       </div>
 
       <div>
-        <label className="block text-zinc-400 mb-3">Preferred Streaming Platforms</label>
+        <label className="block text-muted-foreground mb-3">Preferred Streaming Platforms</label>
         <div className="grid grid-cols-4 md:grid-cols-8 gap-3">
           {platforms.map((platform) => {
             const isSelected = !!moviePreferences.streamingServices[platform.key];
@@ -350,11 +334,11 @@ function MoviePersonalizationSection({
                       ? 'linear-gradient(90deg, yellow, red, green, blue, purple)'
                       : isSelected
                       ? platform.color
-                      : 'black',
-                  borderColor: isSelected ? 'white' : 'dimgray',
+                      : 'var(--background)',
+                  borderColor: isSelected ? 'white' : 'var(--border)',
                 }}
               >
-                <div className="w-14 h-14 flex items-center justify-center bg-white rounded-md p-1">
+                <div className="w-14 h-14 flex items-center justify-center bg-card rounded-md p-1 border border-border">
                   <img
                     src={platform.logo}
                     alt={platform.name}
@@ -362,7 +346,7 @@ function MoviePersonalizationSection({
                   />
                 </div>
 
-                <span className="text-lg text-zinc-400 group-hover:text-white transition-all text-center leading-tight">
+                <span className="text-lg text-muted-foreground group-hover:text-foreground transition-all text-center leading-tight">
                   {platform.name}
                 </span>
               </button>
@@ -378,7 +362,7 @@ function MoviePersonalizationSection({
           disabled={isSavingPreferences}
           className={`px-5 py-2 rounded-lg transition-all border flex items-center gap-2 ${
             isSavingPreferences
-              ? 'bg-zinc-800 text-zinc-500 border-zinc-700 cursor-not-allowed'
+              ? 'bg-muted text-muted-foreground border-border cursor-not-allowed'
               : 'bg-red-600 hover:bg-red-700 text-white border-red-600 shadow-lg shadow-red-600/20 hover:shadow-red-600/40'
           }`}
         >
@@ -389,58 +373,57 @@ function MoviePersonalizationSection({
     </div>
   );
 }
-// ─── AppearanceSection ───────────────────────────────────────
 
 function AppearanceSection() {
   const { theme, setTheme } = useTheme();
 
   return (
-    <div className="bg-zinc-900/50 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-zinc-800/50">
+    <div className="bg-card/80 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-border">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="w-1 h-6 bg-red-600 rounded-full"></div>
-          <h2 className="text-white uppercase tracking-wider">Appearance</h2>
+          <h2 className="text-foreground uppercase tracking-wider">Appearance</h2>
         </div>
-        <Palette size={20} className="text-zinc-600" />
+        <Palette size={20} className="text-muted-foreground" />
       </div>
 
-      <label className="block text-zinc-400 mb-3">Style</label>
+      <label className="block text-muted-foreground mb-3">Style</label>
 
       <div className="space-y-3">
-        {/* Dark */}
         <button
           onClick={() => setTheme('dark')}
-          className={`w-full p-14 border-2 rounded-xl flex flex-col items-center text-center gap-1 transition-all ${theme === 'dark'
+          className={`w-full p-14 border-2 rounded-xl flex flex-col items-center text-center gap-1 transition-all ${
+            theme === 'dark'
               ? 'bg-red-600 border-red-600'
-              : 'bg-zinc-950/50 hover:bg-zinc-900 border-zinc-800 hover:border-red-600'
-            }`}
+              : 'bg-card/60 hover:bg-accent border-border hover:border-red-600'
+          }`}
         >
           <div className="flex items-center gap-3">
-            <Moon size={22} className={theme === 'dark' ? 'text-white' : 'text-zinc-400'} />
-            <span className={`font-semibold text-3xl ${theme === 'dark' ? 'text-white' : 'text-zinc-300'}`}>
+            <Moon size={22} className={theme === 'dark' ? 'text-white' : 'text-muted-foreground'} />
+            <span className={`font-semibold text-3xl ${theme === 'dark' ? 'text-white' : 'text-foreground'}`}>
               Dark
             </span>
           </div>
-          <p className={`text-sm ${theme === 'dark' ? 'text-red-100' : 'text-zinc-500'}`}>
+          <p className={`text-sm ${theme === 'dark' ? 'text-red-100' : 'text-muted-foreground'}`}>
             Dark, cinematic, and premium. Deep blacks, glowing reds, smooth gradients, and a sleek movie theater vibe.
           </p>
         </button>
 
-        {/* Light */}
         <button
           onClick={() => setTheme('light')}
-          className={`w-full p-14 border-2 rounded-xl flex flex-col items-center text-center gap-1 transition-all ${theme === 'light'
+          className={`w-full p-14 border-2 rounded-xl flex flex-col items-center text-center gap-1 transition-all ${
+            theme === 'light'
               ? 'bg-red-600 border-red-600'
-              : 'bg-zinc-950/50 hover:bg-zinc-900 border-zinc-800 hover:border-red-600'
-            }`}
+              : 'bg-card/60 hover:bg-accent border-border hover:border-red-600'
+          }`}
         >
           <div className="flex items-center gap-3">
-            <Sun size={22} className={theme === 'light' ? 'text-white' : 'text-zinc-400'} />
-            <span className={`font-semibold text-3xl ${theme === 'light' ? 'text-white' : 'text-zinc-300'}`}>
+            <Sun size={22} className={theme === 'light' ? 'text-white' : 'text-muted-foreground'} />
+            <span className={`font-semibold text-3xl ${theme === 'light' ? 'text-white' : 'text-foreground'}`}>
               Light
             </span>
           </div>
-          <p className={`text-sm ${theme === 'light' ? 'text-red-100' : 'text-zinc-500'}`}>
+          <p className={`text-sm ${theme === 'light' ? 'text-red-100' : 'text-muted-foreground'}`}>
             A bright and airy theme with a modern look and feel. Slick tabs that maintain that theatre-like feel.
           </p>
         </button>
@@ -448,9 +431,6 @@ function AppearanceSection() {
     </div>
   );
 }
-
-
-// ─── SocialSection ───────────────────────────────────────────
 
 interface SocialFriend extends Friend {
   avatarUrl?: string;
@@ -478,9 +458,7 @@ function SocialSection({
     if (!userId) return;
     setLoadingFriends(true);
     getFriends(userId).then(async (rawFriends) => {
-      const profiles = await Promise.all(
-        rawFriends.map((f) => getUserPublicProfile(f.friend_id))
-      );
+      const profiles = await Promise.all(rawFriends.map((f) => getUserPublicProfile(f.friend_id)));
       setFriends(
         rawFriends.map((f, i) => ({
           ...f,
@@ -496,29 +474,28 @@ function SocialSection({
   const remaining = friends.length - PREVIEW_COUNT;
 
   return (
-    <div className="bg-zinc-900/50 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-zinc-800/50">
+    <div className="bg-card/80 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-border">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="w-1 h-6 bg-red-600 rounded-full"></div>
-          <h2 className="text-white uppercase tracking-wider">Social</h2>
+          <h2 className="text-foreground uppercase tracking-wider">Social</h2>
         </div>
-        <Users size={20} className="text-zinc-600" />
+        <Users size={20} className="text-muted-foreground" />
       </div>
 
       <div className="space-y-6">
-        {/* Friends List */}
         <div>
-          <label className="block text-zinc-400 mb-3">
+          <label className="block text-muted-foreground mb-3">
             Friends List {!loadingFriends && `(${friends.length})`}
           </label>
 
           {loadingFriends ? (
-            <div className="flex items-center gap-2 text-zinc-500 py-2">
+            <div className="flex items-center gap-2 text-muted-foreground py-2">
               <Loader2 size={16} className="animate-spin" />
               <span className="text-sm">Loading friends…</span>
             </div>
           ) : friends.length === 0 ? (
-            <p className="text-zinc-500 text-sm py-2">No friends yet — head to Social to connect!</p>
+            <p className="text-muted-foreground text-sm py-2">No friends yet — head to Social to connect!</p>
           ) : (
             <>
               <div className="flex flex-wrap items-center gap-3 mb-3">
@@ -529,7 +506,7 @@ function SocialSection({
                     onClick={() => onOpenProfile(friend.friend_id)}
                     className="group relative flex flex-col items-center gap-1"
                   >
-                    <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-zinc-700 group-hover:border-red-500 transition-all shadow-lg">
+                    <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-border group-hover:border-red-500 transition-all shadow-lg">
                       {friend.avatarUrl ? (
                         <img
                           src={friend.avatarUrl}
@@ -537,12 +514,12 @@ function SocialSection({
                           className="w-full h-full object-cover object-top"
                         />
                       ) : (
-                        <div className="w-full h-full bg-zinc-800 flex items-center justify-center text-zinc-400 text-sm font-semibold">
+                        <div className="w-full h-full bg-muted flex items-center justify-center text-muted-foreground text-sm font-semibold">
                           {(friend.displayName || friend.friend_username).slice(0, 2).toUpperCase()}
                         </div>
                       )}
                     </div>
-                    <span className="text-zinc-500 text-[10px] group-hover:text-zinc-300 transition-colors max-w-[48px] truncate">
+                    <span className="text-muted-foreground text-[10px] group-hover:text-foreground transition-colors max-w-[48px] truncate">
                       {friend.friend_username}
                     </span>
                   </button>
@@ -551,7 +528,7 @@ function SocialSection({
                 {!showAll && remaining > 0 && (
                   <button
                     onClick={() => setShowAll(true)}
-                    className="w-12 h-12 rounded-full bg-zinc-800 hover:bg-zinc-700 border-2 border-dashed border-zinc-600 flex items-center justify-center text-zinc-400 hover:text-white text-xs font-medium transition-all"
+                    className="w-12 h-12 rounded-full bg-muted hover:bg-accent border-2 border-dashed border-border flex items-center justify-center text-muted-foreground hover:text-foreground text-xs font-medium transition-all"
                   >
                     +{remaining}
                   </button>
@@ -561,7 +538,7 @@ function SocialSection({
               {showAll && friends.length > PREVIEW_COUNT && (
                 <button
                   onClick={() => setShowAll(false)}
-                  className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors mb-1"
+                  className="text-muted-foreground hover:text-foreground text-sm transition-colors mb-1"
                 >
                   Show less
                 </button>
@@ -570,32 +547,31 @@ function SocialSection({
           )}
         </div>
 
-        {/* Social Settings */}
         <div>
-          <label className="block text-zinc-400 mb-3">Social Settings</label>
+          <label className="block text-muted-foreground mb-3">Social Settings</label>
           <div className="space-y-3">
-            <label className="flex items-center justify-between p-3 bg-zinc-950/30 rounded-lg border border-zinc-800/50 hover:border-zinc-700 transition-all cursor-pointer group">
+            <label className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border border-border hover:border-red-500/40 transition-all cursor-pointer group">
               <div className="flex items-center gap-3">
-                <Eye size={18} className="text-zinc-500 group-hover:text-red-400" />
-                <span className="text-zinc-300">Show Online Status</span>
+                <Eye size={18} className="text-muted-foreground group-hover:text-red-400" />
+                <span className="text-foreground">Show Online Status</span>
               </div>
               <input
                 type="checkbox"
                 checked={socialSettings.showOnlineStatus}
                 onChange={(e) => onSocialSettingToggle('showOnlineStatus', e.target.checked)}
-                className="w-5 h-5 rounded bg-zinc-800 border-zinc-700 text-red-600 focus:ring-red-600 focus:ring-offset-0"
+                className="w-5 h-5 rounded bg-background border-border text-red-600 focus:ring-red-600 focus:ring-offset-0"
               />
             </label>
-            <label className="flex items-center justify-between p-3 bg-zinc-950/30 rounded-lg border border-zinc-800/50 hover:border-zinc-700 transition-all cursor-pointer group">
+            <label className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border border-border hover:border-red-500/40 transition-all cursor-pointer group">
               <div className="flex items-center gap-3">
-                <Lock size={18} className="text-zinc-500 group-hover:text-red-400" />
-                <span className="text-zinc-300">Show MyStuff Publicly</span>
+                <Lock size={18} className="text-muted-foreground group-hover:text-red-400" />
+                <span className="text-foreground">Show MyStuff Publicly</span>
               </div>
               <input
                 type="checkbox"
                 checked={socialSettings.showMyStuffPublicly}
                 onChange={(e) => onSocialSettingToggle('showMyStuffPublicly', e.target.checked)}
-                className="w-5 h-5 rounded bg-zinc-800 border-zinc-700 text-red-600 focus:ring-red-600 focus:ring-offset-0"
+                className="w-5 h-5 rounded bg-background border-border text-red-600 focus:ring-red-600 focus:ring-offset-0"
               />
             </label>
           </div>
@@ -604,8 +580,6 @@ function SocialSection({
     </div>
   );
 }
-
-// ─── AccountDetailsSection ───────────────────────────────────
 
 function AccountDetailsSection({
   providers,
@@ -621,73 +595,73 @@ function AccountDetailsSection({
   const PROVIDER_CONFIG: Record<string, { label: string; icon: React.ReactNode }> = {
     'google.com': { label: 'Google', icon: <GoogleIcon size={20} /> },
     'apple.com': { label: 'Apple', icon: <Apple size={20} className="text-zinc-200" /> },
-    'password': { label: 'Email / Password', icon: <Mail size={20} className="text-zinc-400" /> },
+    password: { label: 'Email / Password', icon: <Mail size={20} className="text-muted-foreground" /> },
   };
 
-  // All providers we display (connected + not connected)
   const ALL_PROVIDERS = ['google.com', 'apple.com', 'password'];
-
-  const connectedIds = new Set(providers.map(p => p.providerId));
+  const connectedIds = new Set(providers.map((p) => p.providerId));
 
   const joinedFormatted = joinedAt
     ? new Date(joinedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
     : '';
 
   return (
-    <div className="bg-zinc-900/50 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-zinc-800/50">
+    <div className="bg-card/80 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-border">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="w-1 h-6 bg-red-600 rounded-full"></div>
-          <h2 className="text-white uppercase tracking-wider">Account Details</h2>
+          <h2 className="text-foreground uppercase tracking-wider">Account Details</h2>
         </div>
-        <Settings size={20} className="text-zinc-600" />
+        <Settings size={20} className="text-muted-foreground" />
       </div>
 
       <div className="space-y-6">
-
-        {/* Email + verified badge */}
         <div>
-          <label className="block text-zinc-400 mb-2">Email Address</label>
-          <div className="flex items-center gap-3 px-4 py-2.5 bg-zinc-950/50 border border-zinc-800 rounded-lg">
-            <Mail size={16} className="text-zinc-600 shrink-0" />
-            <span className="text-zinc-300 flex-1">{email || '—'}</span>
+          <label className="block text-muted-foreground mb-2">Email Address</label>
+          <div className="flex items-center gap-3 px-4 py-2.5 bg-background/60 border border-border rounded-lg">
+            <Mail size={16} className="text-muted-foreground shrink-0" />
+            <span className="text-foreground flex-1">{email || '—'}</span>
             {email && (
-              <span className={`text-xs px-2 py-0.5 rounded-full border ${emailVerified ? 'text-green-400 border-green-800 bg-green-950/50' : 'text-yellow-400 border-yellow-800 bg-yellow-950/50'}`}>
+              <span
+                className={`text-xs px-2 py-0.5 rounded-full border ${
+                  emailVerified
+                    ? 'text-green-400 border-green-800 bg-green-950/50'
+                    : 'text-yellow-400 border-yellow-800 bg-yellow-950/50'
+                }`}
+              >
                 {emailVerified ? 'Verified' : 'Unverified'}
               </span>
             )}
           </div>
         </div>
 
-        {/* Joined date */}
         {joinedFormatted && (
           <div>
-            <label className="block text-zinc-400 mb-2">Member Since</label>
-            <div className="flex items-center gap-3 px-4 py-2.5 bg-zinc-950/50 border border-zinc-800 rounded-lg">
-              <Globe size={16} className="text-zinc-600 shrink-0" />
-              <span className="text-zinc-300">{joinedFormatted}</span>
+            <label className="block text-muted-foreground mb-2">Member Since</label>
+            <div className="flex items-center gap-3 px-4 py-2.5 bg-background/60 border border-border rounded-lg">
+              <Globe size={16} className="text-muted-foreground shrink-0" />
+              <span className="text-foreground">{joinedFormatted}</span>
             </div>
           </div>
         )}
 
-        {/* Sign-in providers */}
         <div>
-          <label className="block text-zinc-400 mb-3">Sign-in Methods</label>
+          <label className="block text-muted-foreground mb-3">Sign-in Methods</label>
           <div className="space-y-3">
-            {ALL_PROVIDERS.map(id => {
+            {ALL_PROVIDERS.map((id) => {
               const cfg = PROVIDER_CONFIG[id];
               const connected = connectedIds.has(id);
-              const providerEmail = providers.find(p => p.providerId === id)?.email || '';
+              const providerEmail = providers.find((p) => p.providerId === id)?.email || '';
               return (
-                <div key={id} className="flex items-center justify-between p-3 bg-zinc-950/50 rounded-lg border border-zinc-800">
+                <div key={id} className="flex items-center justify-between p-3 bg-background/60 rounded-lg border border-border">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center">
+                    <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center border border-border">
                       {cfg?.icon}
                     </div>
                     <div>
-                      <p className="text-zinc-300">{cfg?.label ?? id}</p>
-                      <p className="text-xs text-zinc-500">
-                        {connected ? (providerEmail || 'Connected') : 'Not connected'}
+                      <p className="text-foreground">{cfg?.label ?? id}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {connected ? providerEmail || 'Connected' : 'Not connected'}
                       </p>
                     </div>
                   </div>
@@ -696,7 +670,7 @@ function AccountDetailsSection({
                       Connected
                     </span>
                   ) : (
-                    <span className="px-3 py-1 text-xs text-zinc-500 border border-zinc-700 rounded-full">
+                    <span className="px-3 py-1 text-xs text-muted-foreground border border-border rounded-full">
                       Not linked
                     </span>
                   )}
@@ -705,13 +679,15 @@ function AccountDetailsSection({
             })}
           </div>
         </div>
-
       </div>
     </div>
   );
 }
 
-// ─── ProfileTab (Main Component) ─────────────────────────────
+interface SocialFriend extends Friend {
+  avatarUrl?: string;
+  displayName?: string;
+}
 
 export function ProfileTab() {
   const [profile, setProfile] = useState({
@@ -773,7 +749,6 @@ export function ProfileTab() {
       }
 
       try {
-        // Profile is required — let it throw so the error screen shows if the backend is down
         const profileFetch = await fetch(`${BASE_URL}/user/${userId}`);
         if (!profileFetch.ok) {
           throw new Error(`Server returned ${profileFetch.status} for user profile`);
@@ -783,7 +758,6 @@ export function ProfileTab() {
           throw new Error(profileRes.error);
         }
 
-        // ── Profile fields ──
         const loadedProfile = {
           displayName: profileRes.displayName || '',
           username: profileRes.username || '',
@@ -792,6 +766,7 @@ export function ProfileTab() {
           avatarUrl: profileRes.avatarUrl || '',
           profileBannerBg: profileRes.profileBannerBg || 'default',
         };
+
         setProfile(loadedProfile);
         setDraftProfile(loadedProfile);
         setProviders(profileRes.providerData || []);
@@ -802,10 +777,7 @@ export function ProfileTab() {
           showMyStuffPublicly: profileRes.socialSettings?.showMyStuffPublicly ?? false,
         });
 
-        // ── Streaming services + movie preferences ──
-        // Both are embedded in the main user doc — no extra API calls needed.
         const streaming = profileRes.streamingServices || {};
-        const prefs = profileRes.moviePreferences || {};
 
         setMoviePreferences({
           streamingServices: {
@@ -835,9 +807,7 @@ export function ProfileTab() {
     setIsEditingProfile(true);
   }
 
-  function handleProfileChange(
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) {
+  function handleProfileChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
     const { name, value } = e.target;
     setDraftProfile((prev) => ({
       ...prev,
@@ -893,15 +863,15 @@ export function ProfileTab() {
     try {
       const { updateUserAvatar } = await import('../services/api');
       await updateUserAvatar(userId, dataUrl);
-      setProfile(prev => ({ ...prev, avatarUrl: dataUrl }));
-      setDraftProfile(prev => ({ ...prev, avatarUrl: dataUrl }));
+      setProfile((prev) => ({ ...prev, avatarUrl: dataUrl }));
+      setDraftProfile((prev) => ({ ...prev, avatarUrl: dataUrl }));
     } catch (err) {
       console.error('Failed to update avatar:', err);
     }
   }
 
   function handleBannerChange(presetId: string) {
-    setDraftProfile(prev => ({ ...prev, profileBannerBg: presetId }));
+    setDraftProfile((prev) => ({ ...prev, profileBannerBg: presetId }));
   }
 
   function handleToggleStreamingService(serviceKey: string) {
@@ -961,7 +931,7 @@ export function ProfileTab() {
 
   if (isLoadingProfile) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center text-zinc-400">
+      <div className="min-h-screen bg-background flex items-center justify-center text-muted-foreground">
         Loading profile...
       </div>
     );
@@ -969,10 +939,13 @@ export function ProfileTab() {
 
   if (loadError) {
     return (
-      <div className="min-h-screen bg-black flex flex-col items-center justify-center gap-3">
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-3">
         <p className="text-red-400 font-medium">{loadError}</p>
         <button
-          onClick={() => { setIsLoadingProfile(true); setRetryCount(c => c + 1); }}
+          onClick={() => {
+            setIsLoadingProfile(true);
+            setRetryCount((c) => c + 1);
+          }}
           className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm transition-all"
         >
           Retry
@@ -984,20 +957,20 @@ export function ProfileTab() {
   const userId = localStorage.getItem('user_id') ?? '';
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-background text-foreground">
       {viewingProfileId && (
         <UserProfileModal userId={viewingProfileId} onClose={() => setViewingProfileId(null)} />
       )}
 
-      <div className="absolute inset-0 bg-gradient-to-br from-black via-zinc-950 to-zinc-900 -z-10"></div>
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-red-950/10 via-transparent to-transparent -z-10"></div>
+      <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-muted/40 -z-10"></div>
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-red-500/10 via-transparent to-transparent -z-10"></div>
       <div className="absolute inset-0 opacity-[0.02] bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZmlsdGVyIGlkPSJub2lzZSI+PGZlVHVyYnVsZW5jZSB0eXBlPSJmcmFjdGFsTm9pc2UiIGJhc2VGcmVxdWVuY3k9IjAuOSIgbnVtT2N0YXZlcz0iNCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNub2lzZSkiIG9wYWNpdHk9IjEiLz48L3N2Zz4=')] -z-10"></div>
 
       <div className="max-w-6xl mx-auto">
         <ProfileHeader
           profile={profile}
           avatarUrl={profile.avatarUrl}
-          bannerBg={draftProfile.profileBannerBg || profile.profileBannerBg || 'default'}
+          bannerBg={isEditingProfile ? draftProfile.profileBannerBg : profile.profileBannerBg}
           isEditing={isEditingProfile}
           onEdit={handleStartEditing}
           onAvatarChange={handleAvatarChange}
