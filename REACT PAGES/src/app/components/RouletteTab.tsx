@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Shuffle, ChevronDown, ChevronUp } from "lucide-react";
 import { MovieDetailModal } from "./MovieDetailModal";
+import { RouletteWheelModal } from "./RouletteWheelModal";
 import { Switch } from "./ui/switch";
 import { Slider } from "./ui/slider";
 import { Input } from "./ui/input";
@@ -59,6 +60,8 @@ export function RouletteTab() {
   const [yearTo, setYearTo] = useState("");
   const [minRating, setMinRating] = useState([0]);
   const [spinning, setSpinning] = useState(false);
+  const [showWheel, setShowWheel] = useState(false);
+  const [pendingMovieId, setPendingMovieId] = useState<string | null>(null);
   const [selectedMovieId, setSelectedMovieId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [activeMood, setActiveMood] = useState("");
@@ -116,7 +119,9 @@ export function RouletteTab() {
 
   const spin = async () => {
     setSpinning(true);
+    setShowWheel(true);
     setSelectedMovieId(null);
+    setPendingMovieId(null);
     setError("");
 
     const randomPage = Math.floor(Math.random() * 5) + 1;
@@ -139,9 +144,10 @@ export function RouletteTab() {
         setError(
           "No movies found with these filters. Try adjusting your criteria."
         );
+        setShowWheel(false);
       } else {
         const pick = movies[Math.floor(Math.random() * movies.length)];
-        setSelectedMovieId(pick.id);
+        setPendingMovieId(pick.id);
         if (user) {
           logRouletteSpin(
             user.user_id,
@@ -155,9 +161,20 @@ export function RouletteTab() {
       }
     } catch {
       setError("Something went wrong. Please try again.");
+      setShowWheel(false);
     } finally {
       setSpinning(false);
     }
+  };
+
+  const handleWheelFinished = () => {
+    setShowWheel(false);
+    if (pendingMovieId) setSelectedMovieId(pendingMovieId);
+  };
+
+  const handleWheelClose = () => {
+    setShowWheel(false);
+    if (pendingMovieId) setSelectedMovieId(pendingMovieId);
   };
 
   return (
@@ -420,18 +437,16 @@ export function RouletteTab() {
           <div className="relative w-full max-w-sm mx-auto">
             <div
               className={`absolute -inset-1 rounded-full bg-[#C0392B]/25 blur-md transition-opacity ${
-                spinning ? "opacity-0" : "animate-pulse"
+                spinning || showWheel ? "opacity-0" : "animate-pulse"
               }`}
             />
             <button
               onClick={spin}
-              disabled={spinning}
+              disabled={spinning || showWheel}
               className="relative w-full py-5 flex items-center justify-center gap-3 bg-[#C0392B] hover:bg-[#A93226] disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold text-xl rounded-full transition-colors shadow-lg shadow-[#C0392B]/30"
             >
-              <Shuffle
-                className={`w-6 h-6 ${spinning ? "animate-spin" : ""}`}
-              />
-              {spinning ? "Finding your movie..." : "Spin the Roulette"}
+              <Shuffle className="w-6 h-6" />
+              Spin the Roulette
             </button>
           </div>
 
@@ -483,6 +498,14 @@ export function RouletteTab() {
           )}
         </aside>
       </div>
+
+      {showWheel && (
+        <RouletteWheelModal
+          genre={genre}
+          onFinished={handleWheelFinished}
+          onClose={handleWheelClose}
+        />
+      )}
 
       {selectedMovieId && (
         <MovieDetailModal
