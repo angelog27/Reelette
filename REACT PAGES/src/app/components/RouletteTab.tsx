@@ -60,7 +60,7 @@ export function RouletteTab() {
   const [yearTo, setYearTo] = useState("");
   const [minRating, setMinRating] = useState([0]);
   const [spinning, setSpinning] = useState(false);
-  const [showWheel, setShowWheel] = useState(false);
+  const [canFinish, setCanFinish] = useState(false);
   const pendingMovieIdRef = useRef<string | null>(null);
   const [selectedMovieId, setSelectedMovieId] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -119,7 +119,7 @@ export function RouletteTab() {
 
   const spin = async () => {
     setSpinning(true);
-    setShowWheel(true);
+    setCanFinish(false);
     setSelectedMovieId(null);
     pendingMovieIdRef.current = null;
     setError("");
@@ -141,13 +141,13 @@ export function RouletteTab() {
         movies = await discoverMovies({ ...filters, page: 1 });
       }
       if (movies.length === 0) {
-        setError(
-          "No movies found with these filters. Try adjusting your criteria."
-        );
-        setShowWheel(false);
+        setError("No movies found with these filters. Try adjusting your criteria.");
+        setSpinning(false);
+        setCanFinish(false);
       } else {
         const pick = movies[Math.floor(Math.random() * movies.length)];
         pendingMovieIdRef.current = pick.id;
+        setCanFinish(true); // signal wheel it can wrap up
         if (user) {
           logRouletteSpin(
             user.user_id,
@@ -161,14 +161,14 @@ export function RouletteTab() {
       }
     } catch {
       setError("Something went wrong. Please try again.");
-      setShowWheel(false);
-    } finally {
       setSpinning(false);
+      setCanFinish(false);
     }
   };
 
   const handleWheelFinished = () => {
-    setShowWheel(false);
+    setSpinning(false);
+    setCanFinish(false);
     if (pendingMovieIdRef.current) setSelectedMovieId(pendingMovieIdRef.current);
   };
 
@@ -432,16 +432,16 @@ export function RouletteTab() {
           <div className="relative w-full max-w-sm mx-auto">
             <div
               className={`absolute -inset-1 rounded-full bg-[#C0392B]/25 blur-md transition-opacity ${
-                spinning || showWheel ? "opacity-0" : "animate-pulse"
+                spinning ? "opacity-0" : "animate-pulse"
               }`}
             />
             <button
               onClick={spin}
-              disabled={spinning || showWheel}
+              disabled={spinning}
               className="relative w-full py-5 flex items-center justify-center gap-3 bg-[#C0392B] hover:bg-[#A93226] disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold text-xl rounded-full transition-colors shadow-lg shadow-[#C0392B]/30"
             >
-              <Shuffle className="w-6 h-6" />
-              Spin the Roulette
+              <Shuffle className={`w-6 h-6 ${spinning ? "animate-spin" : ""}`} />
+              {spinning ? "Spinning…" : "Spin the Roulette"}
             </button>
           </div>
 
@@ -449,12 +449,13 @@ export function RouletteTab() {
             <p className="text-center text-yellow-500 text-sm">{error}</p>
           )}
 
-          {showWheel && (
-            <RouletteWheelModal
-              genre={genre}
-              onFinished={handleWheelFinished}
-            />
-          )}
+          {/* Wheel — always visible */}
+          <RouletteWheelModal
+            genre={genre}
+            isSpinning={spinning}
+            canFinish={canFinish}
+            onFinished={handleWheelFinished}
+          />
         </div>
 
         {/* Right — Friends' Spins */}
