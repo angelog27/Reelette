@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import { Star, Bookmark } from 'lucide-react';
+import { Star, Bookmark, BarChart2 } from 'lucide-react';
 import { getWatchedMovies, getWatchLater, getMovieDetails, getMovieProvider, getUser } from '../services/api';
 import type { WatchedMovie } from '../services/api';
 import { MovieDetailModal } from './MovieDetailModal';
 import { PROVIDER_LOGOS } from '../constants/providers';
+import { StatsTab } from './StatsTab';
 
-type Tab = 'watched' | 'watchlater';
+type Tab = 'watched' | 'watchlater' | 'stats';
 
 interface WatchLaterMovie {
   movie_id: string;
@@ -66,7 +67,7 @@ export function MyStuffTab() {
   }
 
   useEffect(() => {
-    if (activeTab === 'watched') loadWatched();
+    if (activeTab === 'watched' || activeTab === 'stats') loadWatched();
     else loadWatchLater();
   }, [activeTab]);
 
@@ -109,10 +110,24 @@ export function MyStuffTab() {
           <Bookmark className="w-3.5 h-3.5" />
           Watch Later
         </button>
+        <button
+          onClick={() => setActiveTab('stats')}
+          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+            activeTab === 'stats'
+              ? 'text-white'
+              : 'text-gray-400 hover:text-white'
+          }`}
+          style={activeTab === 'stats' ? { backgroundColor: '#f97316' } : {}}
+        >
+          <BarChart2 className="w-3.5 h-3.5" />
+          Stats
+        </button>
       </div>
 
       {loading ? (
         <div className="text-gray-500 text-center py-16">Loading...</div>
+      ) : activeTab === 'stats' ? (
+        <StatsTab movies={movies} />
       ) : activeTab === 'watched' ? (
         movies.length === 0 ? (
           <div className="text-gray-500 text-center py-16">
