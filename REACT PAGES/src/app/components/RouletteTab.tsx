@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Shuffle, ChevronDown, ChevronUp } from "lucide-react";
 import { MovieDetailModal } from "./MovieDetailModal";
-import { RouletteWheelModal } from "./RouletteWheelModal";
+import { RouletteWheelModal, getWheelColor } from "./RouletteWheelModal";
 import { Switch } from "./ui/switch";
 import { Slider } from "./ui/slider";
 import { Input } from "./ui/input";
@@ -429,21 +429,29 @@ export function RouletteTab() {
           </div>
 
           {/* Big Spin Button */}
-          <div className="relative w-full max-w-sm mx-auto">
-            <div
-              className={`absolute -inset-1 rounded-full bg-[#C0392B]/25 blur-md transition-opacity ${
-                spinning ? "opacity-0" : "animate-pulse"
-              }`}
-            />
-            <button
-              onClick={spin}
-              disabled={spinning}
-              className="relative w-full py-5 flex items-center justify-center gap-3 bg-[#C0392B] hover:bg-[#A93226] disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold text-xl rounded-full transition-colors shadow-lg shadow-[#C0392B]/30"
-            >
-              <Shuffle className={`w-6 h-6 ${spinning ? "animate-spin" : ""}`} />
-              {spinning ? "Spinning…" : "Spin the Roulette"}
-            </button>
-          </div>
+          {(() => {
+            const btnColor = getWheelColor(genre);
+            return (
+              <div className="relative w-full max-w-sm mx-auto">
+                <div
+                  className={`absolute -inset-1 rounded-full blur-md transition-opacity ${spinning ? "opacity-0" : "animate-pulse"}`}
+                  style={{ backgroundColor: `${btnColor}40` }}
+                />
+                <button
+                  onClick={spin}
+                  disabled={spinning}
+                  className="relative w-full py-5 flex items-center justify-center gap-3 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold text-xl rounded-full transition-all shadow-lg"
+                  style={{
+                    backgroundColor: btnColor,
+                    boxShadow: `0 10px 30px ${btnColor}40`,
+                  }}
+                >
+                  <Shuffle className={`w-6 h-6 ${spinning ? "animate-spin" : ""}`} />
+                  {spinning ? "Spinning…" : "Spin the Roulette"}
+                </button>
+              </div>
+            );
+          })()}
 
           {error && (
             <p className="text-center text-yellow-500 text-sm">{error}</p>
