@@ -34,7 +34,7 @@ const moviePosters = [
   'https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg', // The Dark Knight          Y
 ];
 
-type View = 'login' | 'register' | 'forgot-password' | 'ask-streaming' | 'setup-streaming';
+type View = 'login' | 'register' | 'forgot-password' | 'ask-streaming' | 'setup-streaming' | 'social';
 
 interface ScrollingRowProps {
   images: string[];
@@ -95,6 +95,8 @@ export function LoginPage() {
   const [regLoading, setRegLoading] = useState(false);
 
   const interBubbleRef = useRef<HTMLDivElement>(null);
+
+  const [socialMode, setSocialMode] = useState<'login' | 'register'>('login');
 
   useEffect(() => {
     const interBubble = interBubbleRef.current;
@@ -549,34 +551,49 @@ const handleFacebookSignIn = async () => {
                     disabled={loginLoading}
                     className="w-full bg-gradient-to-r from-[#ff5722] to-[#dc2626] hover:from-[#ff6d3a] hover:to-[#ef4444] text-white h-12 rounded-lg transition-all duration-200 disabled:opacity-50"
                   >
-                    {loginLoading ? 'Signing in...' : 'Login'}
+                  {loginLoading ? 'Signing in...' : 'Login'}
                   </Button>
-                  <div className="text-center pt-4 border-t border-[rgba(255,87,34,0.15)]">
+
+                  <div className="text-center pt-4 border-t border-[rgba(255,87,34,0.15)] space-y-2">
+
+                    {/* Sign up */}
                     <p className="text-sm text-gray-400">
                       Don't have an account?{' '}
                       <button
                         type="button"
                         onClick={() => setView('register')}
-                        className="text-[#fbbf24] hover:text-[#ff5722] transition-colors"
+                        className="text-yellow-400 hover:text-[#ff5722] transition-colors"
                       >
                         Sign up
                       </button>
                     </p>
 
-                    <div className="mt-3">
+                    {/* Login with credentials */}
+                    <p className="text-sm text-gray-400 text-center">
+                      Login with credentials?{' '}
                       <button
                         type="button"
-                        onClick={() => {
-                          setForgotEmail(email);
-                          setForgotError('');
-                          setForgotMessage('');
-                          setView('forgot-password');
-                        }}
-                        className="text-sm text-[#fbbf24] hover:text-[#ff5722] transition-colors"
+                        onClick={() => setView('social')}
+                        className="text-[#fbbf24] hover:text-[#ff5722] transition-colors"
                       >
-                        Forgot your password?
+                        Click here
                       </button>
-                    </div>
+                    </p>
+
+                    {/* Forgot password */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setForgotEmail(email);
+                        setForgotError('');
+                        setForgotMessage('');
+                        setView('forgot-password');
+                      }}
+                      className="block w-full text-sm text-yellow-400 font-normal hover:text-[#ff5722] transition-colors"
+                    >
+                      Forgot your password?
+                    </button>
+
                   </div>
                 </form>
               </div>
@@ -633,43 +650,26 @@ const handleFacebookSignIn = async () => {
                     <div className="border-t border-gray-800" />
                   </div>
 
-                  <div className="flex justify-center items-center gap-4 py-2">
-                    {/* Google */}
-                    <button
-                      type="button"
-                      onClick={handleGoogleSignIn}  // 🔥 ADD THIS
-                      className="w-10 h-10 rounded-full border border-gray-700 bg-gray-900/60 hover:border-red-500 hover:bg-gray-900 text-gray-300 flex items-center justify-center transition-all duration-200"
-                      aria-label="Continue with Google"
-                      title="Continue with Google"
-                    >
-                      <Mail size={18} />
-                    </button>
+                  {/* --- Social Login Section --- */}
+                  <div className="mt-6 flex flex-col items-center gap-4">
 
-                    {/* Apple */}
-                    <button
-                      type="button"
-                      onClick={handleAppleUnavailable}  // 🔥 ADD THIS
-                      className="w-10 h-10 rounded-full border border-gray-700 bg-gray-900/60 hover:border-red-500 hover:bg-gray-900 text-gray-300 flex items-center justify-center transition-all duration-200"
-                      aria-label="Continue with Apple"
-                      title="Continue with Apple"
-                    >
-                      <Apple size={18} />
-                    </button>
+                    {/* Login / Sign up with credentials link */}
+                    <p className="text-sm text-gray-400 text-center">
+                      {view === 'register'
+                        ? 'Sign up with credentials? '
+                        : 'Login with credentials? '}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSocialMode('register');
+                          setView('social');
+                        }}
+                        className="text-[#fbbf24] hover:text-[#ff5722] transition-colors"
+                      >
+                        Click here
+                      </button>
+                    </p>
 
-                    {/* Facebook */}
-                    <button
-                      type="button"
-                      onClick={handleFacebookSignIn}  // 🔥 ADD THIS
-                      className="w-10 h-10 rounded-full border border-gray-700 bg-gray-900/60 hover:border-red-500 hover:bg-gray-900 text-gray-300 flex items-center justify-center transition-all duration-200"
-                      aria-label="Continue with Facebook"
-                      title="Continue with Facebook"
-                    >
-                      <Facebook size={18} />
-                    </button>
-                  </div>
-
-                  <div className="pt-1">
-                    <div className="border-t border-gray-800" />
                   </div>
 
                   <div className="text-center pt-1">
@@ -685,6 +685,68 @@ const handleFacebookSignIn = async () => {
                     </p>
                   </div>
                 </form>
+              </div>
+            )}
+
+            {/* ── Social Login Page ── */}
+            {view === 'social' && (
+              <div className="w-full bg-[rgba(15,15,15,0.75)] backdrop-blur-[12px] border border-[rgba(255,87,34,0.2)] rounded-2xl p-8 shadow-2xl flex flex-col items-center gap-6">
+
+                <h2 className="text-white text-xl font-semibold text-center">
+                  {socialMode === 'login'
+                    ? 'Login with Social Accounts'
+                    : 'Sign up with Social Accounts'}
+                </h2>
+
+                {/* ONE LINE ICONS */}
+                <div className="flex justify-center items-center gap-6">
+
+                  {/* Google */}
+                  <button
+                    type="button"
+                    onClick={handleGoogleSignIn}
+                    className="w-12 h-12 rounded-full border border-gray-700 bg-gray-900/60 hover:border-red-500 flex items-center justify-center transition-all"
+                  >
+                    <img
+                      src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/google/google-original.svg"
+                      alt="Google"
+                      className="w-6 h-6"
+                    />
+                  </button>
+
+                  {/* Apple */}
+                  <button
+                    type="button"
+                    onClick={handleAppleUnavailable}
+                    className="w-12 h-12 rounded-full border border-gray-700 bg-gray-900/60 hover:border-red-500 flex items-center justify-center transition-all"
+                  >
+                    <Apple size={22} />
+                  </button>
+
+                  {/* Facebook */}
+                  <button
+                    type="button"
+                    onClick={handleFacebookSignIn}
+                    className="w-12 h-12 rounded-full border border-gray-700 bg-gray-900/60 hover:border-red-500 flex items-center justify-center transition-all"
+                  >
+                    <img
+                      src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/facebook/facebook-original.svg"
+                      alt="Facebook"
+                      className="w-6 h-6"
+                    />
+                  </button>
+
+                </div>
+
+                {/* Back button */}
+                <button
+                  type="button"
+                  onClick={() => setView(socialMode)}
+                  className="text-sm text-gray-400 hover:text-white transition"
+                >
+                  ← Back
+                </button>
+
               </div>
             )}
 
