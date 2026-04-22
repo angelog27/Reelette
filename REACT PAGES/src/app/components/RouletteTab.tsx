@@ -172,11 +172,6 @@ export function RouletteTab() {
     if (pendingMovieIdRef.current) setSelectedMovieId(pendingMovieIdRef.current);
   };
 
-  const handleWheelClose = () => {
-    setShowWheel(false);
-    if (pendingMovieIdRef.current) setSelectedMovieId(pendingMovieIdRef.current);
-  };
-
   return (
     <div className="space-y-0">
 
@@ -453,6 +448,13 @@ export function RouletteTab() {
           {error && (
             <p className="text-center text-yellow-500 text-sm">{error}</p>
           )}
+
+          {showWheel && (
+            <RouletteWheelModal
+              genre={genre}
+              onFinished={handleWheelFinished}
+            />
+          )}
         </div>
 
         {/* Right — Friends' Spins */}
@@ -499,13 +501,6 @@ export function RouletteTab() {
         </aside>
       </div>
 
-      {showWheel && (
-        <RouletteWheelModal
-          genre={genre}
-          onFinished={handleWheelFinished}
-          onClose={handleWheelClose}
-        />
-      )}
 
       {selectedMovieId && (
         <MovieDetailModal
