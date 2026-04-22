@@ -10,7 +10,6 @@ import {
   Edit3,
   User,
   Mail,
-  Phone,
   Film,
   Star,
   Moon,
@@ -28,10 +27,10 @@ import {
 function GoogleIcon({ size = 20 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
-      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05" />
+      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
     </svg>
   );
 }
@@ -39,14 +38,14 @@ function GoogleIcon({ size = 20 }: { size?: number }) {
 // ─── Banner presets ───────────────────────────────────────────
 
 const BANNER_PRESETS = [
-  { id: 'default', label: 'Cinematic',  swatch: '#27272a', gradient: 'linear-gradient(135deg,#18181b 0%,#09090b 60%,#000 100%)' },
-  { id: 'crimson', label: 'Crimson',    swatch: '#7f1d1d', gradient: 'linear-gradient(135deg,#450a0a 0%,#0d0d0d 60%,#000 100%)' },
-  { id: 'midnight',label: 'Midnight',   swatch: '#1e3a8a', gradient: 'linear-gradient(135deg,#0c1a3d 0%,#0d0d0d 60%,#000 100%)' },
-  { id: 'dusk',    label: 'Dusk',       swatch: '#4c1d95', gradient: 'linear-gradient(135deg,#2e1065 0%,#0d0d0d 60%,#000 100%)' },
-  { id: 'forest',  label: 'Forest',     swatch: '#14532d', gradient: 'linear-gradient(135deg,#052e16 0%,#0d0d0d 60%,#000 100%)' },
-  { id: 'ember',   label: 'Ember',      swatch: '#92400e', gradient: 'linear-gradient(135deg,#451a03 0%,#0d0d0d 60%,#000 100%)' },
-  { id: 'ocean',   label: 'Ocean',      swatch: '#134e4a', gradient: 'linear-gradient(135deg,#042f2e 0%,#0d0d0d 60%,#000 100%)' },
-  { id: 'rose',    label: 'Rose',       swatch: '#9f1239', gradient: 'linear-gradient(135deg,#500724 0%,#0d0d0d 60%,#000 100%)' },
+  { id: 'default', label: 'Cinematic', swatch: '#27272a', gradient: 'linear-gradient(135deg,#18181b 0%,#09090b 60%,#000 100%)' },
+  { id: 'crimson', label: 'Crimson', swatch: '#7f1d1d', gradient: 'linear-gradient(135deg,#450a0a 0%,#0d0d0d 60%,#000 100%)' },
+  { id: 'midnight', label: 'Midnight', swatch: '#1e3a8a', gradient: 'linear-gradient(135deg,#0c1a3d 0%,#0d0d0d 60%,#000 100%)' },
+  { id: 'dusk', label: 'Dusk', swatch: '#4c1d95', gradient: 'linear-gradient(135deg,#2e1065 0%,#0d0d0d 60%,#000 100%)' },
+  { id: 'forest', label: 'Forest', swatch: '#14532d', gradient: 'linear-gradient(135deg,#052e16 0%,#0d0d0d 60%,#000 100%)' },
+  { id: 'ember', label: 'Ember', swatch: '#92400e', gradient: 'linear-gradient(135deg,#451a03 0%,#0d0d0d 60%,#000 100%)' },
+  { id: 'ocean', label: 'Ocean', swatch: '#134e4a', gradient: 'linear-gradient(135deg,#042f2e 0%,#0d0d0d 60%,#000 100%)' },
+  { id: 'rose', label: 'Rose', swatch: '#9f1239', gradient: 'linear-gradient(135deg,#500724 0%,#0d0d0d 60%,#000 100%)' },
 ];
 
 function getBannerGradient(id: string) {
@@ -331,45 +330,44 @@ function MoviePersonalizationSection({
         <Film size={20} className="text-zinc-600" />
       </div>
 
-      <div className="space-y-6">
-        <div>
-          <label className="block text-zinc-400 mb-3">Preferred Streaming Platforms</label>
-          <div className="grid grid-cols-4 md:grid-cols-8 gap-3">
-            {platforms.map((platform) => {
-              const isSelected = !!moviePreferences.streamingServices[platform.key];
+      <div>
+        <label className="block text-zinc-400 mb-3">Preferred Streaming Platforms</label>
+        <div className="grid grid-cols-4 md:grid-cols-8 gap-3">
+          {platforms.map((platform) => {
+            const isSelected = !!moviePreferences.streamingServices[platform.key];
 
-              return (
-                <button
-                  key={platform.name}
-                  type="button"
-                  onClick={() => onToggleStreamingService(platform.key)}
-                  className={`aspect-square border rounded-xl flex flex-col items-center justify-center gap-2 transition-all group ${isSelected ? 'ring-2 ring-red-500' : ''
-                    }`}
-                  style={{
-                    background:
-                      isSelected && platform.color === 'multicolor'
-                        ? 'linear-gradient(90deg, yellow, red, green, blue, purple)'
-                        : isSelected
-                          ? platform.color
-                          : 'black',
-                    borderColor: isSelected ? 'white' : 'dimgray',
-                  }}
-                >
-                  <div className="w-14 h-14 flex items-center justify-center bg-white rounded-md p-1">
-                    <img
-                      src={platform.logo}
-                      alt={platform.name}
-                      className="w-12 h-12 object-contain brightness-75 group-hover:brightness-100 transition-all"
-                    />
-                  </div>
+            return (
+              <button
+                key={platform.name}
+                type="button"
+                onClick={() => onToggleStreamingService(platform.key)}
+                className={`aspect-square border rounded-xl flex flex-col items-center justify-center gap-2 transition-all group ${
+                  isSelected ? 'ring-2 ring-red-500' : ''
+                }`}
+                style={{
+                  background:
+                    isSelected && platform.color === 'multicolor'
+                      ? 'linear-gradient(90deg, yellow, red, green, blue, purple)'
+                      : isSelected
+                      ? platform.color
+                      : 'black',
+                  borderColor: isSelected ? 'white' : 'dimgray',
+                }}
+              >
+                <div className="w-14 h-14 flex items-center justify-center bg-white rounded-md p-1">
+                  <img
+                    src={platform.logo}
+                    alt={platform.name}
+                    className="w-12 h-12 object-contain brightness-75 group-hover:brightness-100 transition-all"
+                  />
+                </div>
 
-                  <span className="text-lg text-zinc-400 group-hover:text-white transition-all text-center leading-tight">
-                    {platform.name}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+                <span className="text-lg text-zinc-400 group-hover:text-white transition-all text-center leading-tight">
+                  {platform.name}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -378,10 +376,11 @@ function MoviePersonalizationSection({
           type="button"
           onClick={onSavePreferences}
           disabled={isSavingPreferences}
-          className={`px-5 py-2 rounded-lg transition-all border flex items-center gap-2 ${isSavingPreferences
+          className={`px-5 py-2 rounded-lg transition-all border flex items-center gap-2 ${
+            isSavingPreferences
               ? 'bg-zinc-800 text-zinc-500 border-zinc-700 cursor-not-allowed'
               : 'bg-red-600 hover:bg-red-700 text-white border-red-600 shadow-lg shadow-red-600/20 hover:shadow-red-600/40'
-            }`}
+          }`}
         >
           <Edit3 size={16} />
           {isSavingPreferences ? 'Saving...' : 'Save Services'}
@@ -411,11 +410,10 @@ function AppearanceSection() {
         {/* Dark */}
         <button
           onClick={() => setTheme('dark')}
-          className={`w-full p-14 border-2 rounded-xl flex flex-col items-center text-center gap-1 transition-all ${
-            theme === 'dark'
+          className={`w-full p-14 border-2 rounded-xl flex flex-col items-center text-center gap-1 transition-all ${theme === 'dark'
               ? 'bg-red-600 border-red-600'
               : 'bg-zinc-950/50 hover:bg-zinc-900 border-zinc-800 hover:border-red-600'
-          }`}
+            }`}
         >
           <div className="flex items-center gap-3">
             <Moon size={22} className={theme === 'dark' ? 'text-white' : 'text-zinc-400'} />
@@ -431,11 +429,10 @@ function AppearanceSection() {
         {/* Light */}
         <button
           onClick={() => setTheme('light')}
-          className={`w-full p-14 border-2 rounded-xl flex flex-col items-center text-center gap-1 transition-all ${
-            theme === 'light'
+          className={`w-full p-14 border-2 rounded-xl flex flex-col items-center text-center gap-1 transition-all ${theme === 'light'
               ? 'bg-red-600 border-red-600'
               : 'bg-zinc-950/50 hover:bg-zinc-900 border-zinc-800 hover:border-red-600'
-          }`}
+            }`}
         >
           <div className="flex items-center gap-3">
             <Sun size={22} className={theme === 'light' ? 'text-white' : 'text-zinc-400'} />
@@ -622,10 +619,9 @@ function AccountDetailsSection({
   joinedAt: string;
 }) {
   const PROVIDER_CONFIG: Record<string, { label: string; icon: React.ReactNode }> = {
-    'google.com':  { label: 'Google', icon: <GoogleIcon size={20} /> },
-    'apple.com':   { label: 'Apple',  icon: <Apple  size={20} className="text-zinc-200" /> },
-    'password':    { label: 'Email / Password', icon: <Mail size={20} className="text-zinc-400" /> },
-    'phone':       { label: 'Phone',  icon: <Phone  size={20} className="text-zinc-400" /> },
+    'google.com': { label: 'Google', icon: <GoogleIcon size={20} /> },
+    'apple.com': { label: 'Apple', icon: <Apple size={20} className="text-zinc-200" /> },
+    'password': { label: 'Email / Password', icon: <Mail size={20} className="text-zinc-400" /> },
   };
 
   // All providers we display (connected + not connected)
@@ -744,8 +740,6 @@ export function ProfileTab() {
   const [viewingProfileId, setViewingProfileId] = useState<string | null>(null);
 
   const [moviePreferences, setMoviePreferences] = useState({
-    favoriteGenres: [] as string[],
-    favoritePeople: [] as string[],
     streamingServices: {
       netflix: false,
       appleTV: false,
@@ -764,64 +758,18 @@ export function ProfileTab() {
 
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [retryCount, setRetryCount] = useState(0);
   const [isSavingPreferences, setIsSavingPreferences] = useState(false);
 
   useEffect(() => {
     async function loadProfile() {
-      try {
-        const userId = localStorage.getItem('user_id');
-        console.log('userId from localStorage:', userId);
-
-        if (!userId) {
-          setIsLoadingProfile(false);
-          return;
-        }
-
-        const response = await fetch(`http://localhost:5000/api/user/${userId}`);
-        const data = await response.json();
-
-        console.log('profile API response:', data);
-
-        const loadedProfile = {
-          displayName: data.displayName || '',
-          username: data.username || '',
-          bio: data.bio || '',
-          email: data.email || '',
-        };
-
-        console.log('loadedProfile:', loadedProfile);
-
-        setProfile(loadedProfile);
-        setDraftProfile(loadedProfile);
-
-        const streamingResponse = await fetch(`http://localhost:5000/api/user/${userId}/streaming`);
-        const streamingData = await streamingResponse.json();
-
-        const moviePreferencesResponse = await fetch(
-          `http://localhost:5000/api/user/${userId}/movie-preferences`
-        );
-        const moviePreferencesData = await moviePreferencesResponse.json();
-
-        console.log('streaming API response:', streamingData);
-
-        setMoviePreferences({
-          favoriteGenres: moviePreferencesData.favoriteGenres || [],
-          favoritePeople: moviePreferencesData.favoritePeople || [],
-          streamingServices: {
-            netflix: streamingData.netflix || false,
-            appleTV: streamingData.appleTV || false,
-            hboMax: streamingData.hboMax || false,
-            disneyPlus: streamingData.disneyPlus || false,
-            hulu: streamingData.hulu || false,
-            amazonPrime: streamingData.amazonPrime || false,
-            paramount: streamingData.paramount || false,
-            peacock: streamingData.peacock || false,
-          },
-        });
-      } catch (error) {
-        console.error('Failed to load profile:', error);
-      } finally {
+      setLoadError('');
+      const userId = localStorage.getItem('user_id');
+      if (!userId) {
+        setLoadError('No user session found. Please log in again.');
         setIsLoadingProfile(false);
+        return;
       }
 
       try {
@@ -838,45 +786,37 @@ export function ProfileTab() {
         // ── Profile fields ──
         const loadedProfile = {
           displayName: profileRes.displayName || '',
-          username:    profileRes.username    || '',
-          bio:         profileRes.bio         || '',
-          email:       profileRes.email       || '',
-          phone:       profileRes.phone       || '',
-          avatarUrl:   profileRes.avatarUrl   || '',
+          username: profileRes.username || '',
+          bio: profileRes.bio || '',
+          email: profileRes.email || '',
+          avatarUrl: profileRes.avatarUrl || '',
           profileBannerBg: profileRes.profileBannerBg || 'default',
         };
         setProfile(loadedProfile);
         setDraftProfile(loadedProfile);
-        setProviders(profileRes.providerData  || []);
+        setProviders(profileRes.providerData || []);
         setEmailVerified(profileRes.emailVerified || false);
         setJoinedAt(profileRes.joinedAt || '');
         setSocialSettings({
-          showOnlineStatus:    profileRes.socialSettings?.showOnlineStatus    ?? true,
+          showOnlineStatus: profileRes.socialSettings?.showOnlineStatus ?? true,
           showMyStuffPublicly: profileRes.socialSettings?.showMyStuffPublicly ?? false,
         });
 
         // ── Streaming services + movie preferences ──
         // Both are embedded in the main user doc — no extra API calls needed.
         const streaming = profileRes.streamingServices || {};
-        const prefs     = profileRes.moviePreferences  || {};
+        const prefs = profileRes.moviePreferences || {};
 
         setMoviePreferences({
-          favoriteGenres: prefs.favoriteGenres || [],
-          favoritePeople: prefs.favoritePeople || [],
           streamingServices: {
-            netflix:      !!streaming.netflix,
-            appleTV:      !!streaming.appleTV,
-            hboMax:       !!streaming.hboMax,
-            disneyPlus:   !!streaming.disneyPlus,
-            hulu:         !!streaming.hulu,
-            amazonPrime:  !!streaming.amazonPrime,
-            paramount:    !!streaming.paramount,
-            peacock:      !!streaming.peacock,
-          },
-          contentRating: prefs.contentRating || 'All Ratings',
-          watchlistSettings: {
-            autoSortByReleaseDate: prefs.watchlistSettings?.autoSortByReleaseDate || false,
-            hideWatchedContent:    prefs.watchlistSettings?.hideWatchedContent    ?? true,
+            netflix: !!streaming.netflix,
+            appleTV: !!streaming.appleTV,
+            hboMax: !!streaming.hboMax,
+            disneyPlus: !!streaming.disneyPlus,
+            hulu: !!streaming.hulu,
+            amazonPrime: !!streaming.amazonPrime,
+            paramount: !!streaming.paramount,
+            peacock: !!streaming.peacock,
           },
         });
       } catch (error) {
@@ -964,15 +904,6 @@ export function ProfileTab() {
     setDraftProfile(prev => ({ ...prev, profileBannerBg: presetId }));
   }
 
-  function handleToggleGenre(genre: string) {
-    setMoviePreferences((prev) => ({
-      ...prev,
-      favoriteGenres: prev.favoriteGenres.includes(genre)
-        ? prev.favoriteGenres.filter((item) => item !== genre)
-        : [...prev.favoriteGenres, genre],
-    }));
-  }
-
   function handleToggleStreamingService(serviceKey: string) {
     setMoviePreferences((prev) => ({
       ...prev,
@@ -981,6 +912,21 @@ export function ProfileTab() {
         [serviceKey]: !prev.streamingServices[serviceKey],
       },
     }));
+  }
+
+  async function handleSocialSettingToggle(
+    key: 'showOnlineStatus' | 'showMyStuffPublicly',
+    value: boolean
+  ) {
+    const updated = { ...socialSettings, [key]: value };
+    setSocialSettings(updated);
+    const userId = localStorage.getItem('user_id');
+    if (!userId) return;
+    try {
+      await saveSocialSettings(userId, updated);
+    } catch (err) {
+      console.error('Failed to save social settings:', err);
+    }
   }
 
   async function handleSaveMoviePreferences() {
@@ -993,8 +939,7 @@ export function ProfileTab() {
 
       setIsSavingPreferences(true);
 
-    const [streamingResponse, moviePreferencesResponse] = await Promise.all([
-      fetch(`${BASE_URL}/user/${userId}/streaming`, {
+      const response = await fetch(`${BASE_URL}/user/${userId}/streaming`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
