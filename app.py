@@ -363,6 +363,17 @@ def genres():
     data = get_genres()
     return jsonify(data or {'genres': []})
 
+@app.route('/api/person/search', methods=['GET'])
+def person_search_route():
+    name = request.args.get('name', '').strip()
+    if not name:
+        return jsonify({'profile_path': None})
+    res = search_person(name)
+    if res and res.get('results'):
+        profile_path = res['results'][0].get('profile_path')
+        return jsonify({'profile_path': profile_path})
+    return jsonify({'profile_path': None})
+
 # ── User Routes ──────────────────────────────────────────────────
 
 @app.route('/api/user/<user_id>', methods=['GET'])
