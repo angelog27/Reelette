@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Star, Bookmark, BarChart2 } from 'lucide-react';
-import { getWatchedMovies, getWatchLater, getMovieDetails, getMovieProvider, getUser } from '../services/api';
-import type { WatchedMovie } from '../services/api';
+import { getWatchedMovies, getWatchLater, getMovieDetails, getMovieProvider, getUser, getRouletteHistory } from '../services/api';
+import type { WatchedMovie, RouletteSpin } from '../services/api';
 import { MovieDetailModal } from './MovieDetailModal';
 import { PROVIDER_LOGOS } from '../constants/providers';
 import { StatsTab } from './StatsTab';
@@ -20,6 +20,7 @@ export function MyStuffTab() {
   const [activeTab, setActiveTab] = useState<Tab>('watched');
   const [movies, setMovies] = useState<WatchedMovie[]>([]);
   const [watchLater, setWatchLater] = useState<WatchLaterMovie[]>([]);
+  const [recentSpins, setRecentSpins] = useState<RouletteSpin[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMovieId, setSelectedMovieId] = useState<string | null>(null);
 
@@ -31,8 +32,12 @@ export function MyStuffTab() {
   function loadWatched() {
     if (!user) { setLoading(false); return; }
     setLoading(true);
-    getWatchedMovies(user.user_id).then((m) => {
+    Promise.all([
+      getWatchedMovies(user.user_id),
+      getRouletteHistory(user.user_id, 20),
+    ]).then(([m, spins]) => {
       setMovies(m);
+      setRecentSpins(spins);
       setLoading(false);
     });
   }
@@ -127,7 +132,7 @@ export function MyStuffTab() {
       {loading ? (
         <div className="text-gray-500 text-center py-16">Loading...</div>
       ) : activeTab === 'stats' ? (
-        <StatsTab movies={movies} onMovieClick={setSelectedMovieId} />
+        <StatsTab movies={movies} recentSpins={recentSpins} onMovieClick={setSelectedMovieId} />
       ) : activeTab === 'watched' ? (
         movies.length === 0 ? (
           <div className="text-gray-500 text-center py-16">
