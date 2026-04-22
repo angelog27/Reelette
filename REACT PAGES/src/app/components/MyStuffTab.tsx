@@ -127,7 +127,7 @@ export function MyStuffTab() {
       {loading ? (
         <div className="text-gray-500 text-center py-16">Loading...</div>
       ) : activeTab === 'stats' ? (
-        <StatsTab movies={movies} />
+        <StatsTab movies={movies} onMovieClick={setSelectedMovieId} />
       ) : activeTab === 'watched' ? (
         movies.length === 0 ? (
           <div className="text-gray-500 text-center py-16">
