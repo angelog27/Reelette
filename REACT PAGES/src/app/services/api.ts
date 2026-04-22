@@ -264,6 +264,20 @@ export function getMovieProvider(movie_id: string): Promise<string> {
 }
 
 
+// Returns the TMDB profile photo URL for an actor/director by name, or null.
+export function getPersonPhoto(name: string): Promise<string | null> {
+  return fromCache(`person:${name}`, 24 * 60 * 60 * 1000, async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/person/search?name=${encodeURIComponent(name)}`);
+      const data = await res.json();
+      return data.profile_path
+        ? `https://image.tmdb.org/t/p/w185${data.profile_path}`
+        : null;
+    } catch { return null; }
+  });
+}
+
+
 // ── Watched Movies ───────────────────────────────────────────────
 
 
