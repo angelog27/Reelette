@@ -2,7 +2,7 @@ import { Suspense, useState, useEffect, useRef } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { Bell, Heart, MessageCircle, Film, Users, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
-import logoImage from '../../assets/Reelette_NAME_upscaled.png';
+import logoImage from '../../assets/Reelette_White.png';
 import reeletteLogo from '../../assets/Reelette_LOGO_upscaled.png';
 import {
   getNotifications, markNotificationRead, markAllNotificationsRead, getUser, timeAgo,
@@ -120,9 +120,7 @@ export function HomePage() {
           <div className="flex items-center">
             {/* Left — logo */}
             <div className="flex items-center" style={{ flex: 1 }}>
-              <div className="relative flex items-center" style={{ height: '4rem' }}>
-                <img src={logoImage} alt="Reelette" className="absolute h-10 w-auto" style={{ top: '60%', transform: 'translateY(-50%)', left: -10 }} />
-              </div>
+              <img src={logoImage} alt="Reelette" className="h-8 w-auto" />
             </div>
 
             {/* Center — nav links */}
