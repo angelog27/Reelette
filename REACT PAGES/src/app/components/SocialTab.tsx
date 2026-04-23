@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, type ChangeEvent } from 'react';
 import {
   Heart, MessageCircle, Plus, Star, Trash2, Users, UserPlus, UserMinus,
   Search, Check, X, Film, ChevronRight, Shuffle, Popcorn, Crown, LogOut,
@@ -398,6 +398,31 @@ function PostMovieSearch({ onSelect, selected }: {
   );
 }
 
+// ── Mention-aware message renderer ────────────────────────────
+function renderMessage(message: string, onOpenProfile: (userId: string) => void) {
+  const parts = message.split(/(@\w+)/g);
+  return parts.map((part, i) => {
+    if (/^@\w+$/.test(part)) {
+      const uname = part.slice(1);
+      return (
+        <button
+          key={i}
+          onClick={async () => {
+            const results = await searchUsers(uname, '');
+            const match = results.find((r: { username: string; user_id: string }) => r.username.toLowerCase() === uname.toLowerCase());
+            if (match) onOpenProfile(match.user_id);
+          }}
+          className="text-[#C0392B] font-semibold hover:underline cursor-pointer"
+          style={{ background: 'none', border: 'none', padding: 0 }}
+        >
+          {part}
+        </button>
+      );
+    }
+    return <span key={i}>{part}</span>;
+  });
+}
+
 // ── Post Card ──────────────────────────────────────────────────
 function PostCard({ post, currentUserId, currentUsername, onLike, onDelete, onOpenProfile }: {
   post: FeedPost; currentUserId: string; currentUsername: string;
@@ -411,6 +436,7 @@ function PostCard({ post, currentUserId, currentUsername, onLike, onDelete, onOp
   const [loadingReplies, setLoadingReplies] = useState(false);
   const [replyText, setReplyText] = useState('');
   const [submittingReply, setSubmittingReply] = useState(false);
+  const [localReplyCount, setLocalReplyCount] = useState(post.reply_count ?? 0);
 
   const loadReplies = useCallback(async () => {
     setLoadingReplies(true);
@@ -434,6 +460,7 @@ function PostCard({ post, currentUserId, currentUsername, onLike, onDelete, onOp
     const result = await addReply(post.post_id, currentUserId, currentUsername, replyText.trim());
     if (result.success) {
       setReplyText('');
+      setLocalReplyCount((c: number) => c + 1);
       loadReplies();
     }
     setSubmittingReply(false);
@@ -465,7 +492,7 @@ function PostCard({ post, currentUserId, currentUsername, onLike, onDelete, onOp
               )}
             </div>
           </div>
-          <p className="text-gray-400 mb-3">{post.message}</p>
+          <p className="text-gray-400 mb-3">{renderMessage(post.message, onOpenProfile)}</p>
           {post.movie_id ? (
             <a
               href={`https://www.themoviedb.org/movie/${post.movie_id}`}
@@ -513,7 +540,9 @@ function PostCard({ post, currentUserId, currentUsername, onLike, onDelete, onOp
             <button onClick={toggleReplies}
               className={`flex items-center gap-2 transition-colors ${showReplies ? 'text-white' : 'text-gray-500 hover:text-gray-400'}`}>
               <MessageCircle className="w-5 h-5" />
-              {replies.length > 0 && <span className="text-sm">{replies.length}</span>}
+              {(showReplies ? replies.length : localReplyCount) > 0 && (
+                <span className="text-sm">{showReplies ? replies.length : localReplyCount}</span>
+              )}
             </button>
           </div>
 
@@ -1269,6 +1298,10 @@ export function SocialTab() {
   const [posting, setPosting] = useState(false);
   const [postError, setPostError] = useState('');
   const [profileUserId, setProfileUserId] = useState<string | null>(null);
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionResults, setMentionResults] = useState<{ user_id: string; username: string; displayName: string }[]>([]);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const mentionDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const currentUser = getUser();
   const currentUserId = currentUser?.user_id ?? '';
@@ -1324,6 +1357,46 @@ export function SocialTab() {
     if (!currentUserId) return;
     const result = await deletePost(post_id, currentUserId);
     if (result.success) setPosts(prev => prev.filter(p => p.post_id !== post_id));
+  };
+
+  const handleMessageChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    setNewMessage(val);
+    const cursor = e.target.selectionStart ?? val.length;
+    const before = val.slice(0, cursor);
+    const match = before.match(/@(\w*)$/);
+    if (match) {
+      const q = match[1];
+      setMentionQuery(q);
+      if (mentionDebounceRef.current) clearTimeout(mentionDebounceRef.current);
+      mentionDebounceRef.current = setTimeout(async () => {
+        if (!q) { setMentionResults([]); return; }
+        const results = await searchUsers(q, currentUserId);
+        setMentionResults(results.slice(0, 5));
+      }, 300);
+    } else {
+      setMentionQuery(null);
+      setMentionResults([]);
+    }
+  };
+
+  const handleMentionSelect = (username: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    const cursor = textarea.selectionStart ?? newMessage.length;
+    const before = newMessage.slice(0, cursor);
+    const match = before.match(/@(\w*)$/);
+    if (!match) return;
+    const start = cursor - match[0].length;
+    const newText = newMessage.slice(0, start) + `@${username} ` + newMessage.slice(cursor);
+    setNewMessage(newText);
+    setMentionQuery(null);
+    setMentionResults([]);
+    setTimeout(() => {
+      textarea.focus();
+      const pos = start + username.length + 2;
+      textarea.setSelectionRange(pos, pos);
+    }, 0);
   };
 
   const handleCreatePost = async () => {
@@ -1438,11 +1511,34 @@ export function SocialTab() {
               </div>
               <input type="number" placeholder="Your rating (0–10)" min="0" max="10" step="0.5" value={newRating} onChange={e => setNewRating(e.target.value)}
                 className="w-full bg-[#141414] border border-[#2A2A2A] rounded-lg px-4 py-3 text-white placeholder:text-gray-600 focus:border-[#C0392B] focus:outline-none" />
-              <textarea placeholder="Share your thoughts…" rows={4} value={newMessage} onChange={e => setNewMessage(e.target.value)}
-                className="w-full bg-[#141414] border border-[#2A2A2A] rounded-lg px-4 py-3 text-white placeholder:text-gray-600 focus:border-[#C0392B] focus:outline-none resize-none" />
+              <div className="relative">
+                <textarea
+                  ref={textareaRef}
+                  placeholder="Share your thoughts… use @ to mention someone"
+                  rows={4}
+                  value={newMessage}
+                  onChange={handleMessageChange}
+                  onKeyDown={e => { if (e.key === 'Escape') { setMentionQuery(null); setMentionResults([]); } }}
+                  className="w-full bg-[#141414] border border-[#2A2A2A] rounded-lg px-4 py-3 text-white placeholder:text-gray-600 focus:border-[#C0392B] focus:outline-none resize-none"
+                />
+                {mentionQuery !== null && mentionResults.length > 0 && (
+                  <div className="absolute bottom-full left-0 right-0 mb-1 bg-[#141414] border border-[#2A2A2A] rounded-xl shadow-2xl z-10 overflow-hidden">
+                    {mentionResults.map(u => (
+                      <button
+                        key={u.user_id}
+                        onMouseDown={e => { e.preventDefault(); handleMentionSelect(u.username); }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-[#1C1C1C] transition-colors text-left border-b border-[#2A2A2A] last:border-0"
+                      >
+                        <span className="text-white text-sm font-medium">@{u.username}</span>
+                        {u.displayName !== u.username && <span className="text-gray-500 text-xs">{u.displayName}</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               {postError && <p className="text-red-400 text-sm">{postError}</p>}
               <div className="flex gap-3">
-                <button onClick={() => { setShowNewPostDialog(false); setPostError(''); setSelectedMovie(null); setNewRating(''); setNewMessage(''); }}
+                <button onClick={() => { setShowNewPostDialog(false); setPostError(''); setSelectedMovie(null); setNewRating(''); setNewMessage(''); setMentionQuery(null); setMentionResults([]); }}
                   className="flex-1 bg-[#2A2A2A] hover:bg-[#333333] text-white px-6 py-3 rounded-lg transition-colors font-medium">Cancel</button>
                 <button onClick={handleCreatePost} disabled={posting}
                   className="flex-1 bg-gradient-to-r from-[#C0392B] to-[#E74C3C] hover:from-[#A93226] hover:to-[#C0392B] text-white px-6 py-3 rounded-lg transition-all font-medium disabled:opacity-50">
