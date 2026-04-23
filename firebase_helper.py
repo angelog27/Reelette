@@ -595,6 +595,7 @@ def search_users(query, exclude_user_id=None, limit=10):
         docs = (db.collection('users')
                   .where('username', '>=', query_lower)
                   .where('username', '<=', query_lower + '\uf8ff')
+                  .select(['username', 'displayName', 'avatarUrl'])
                   .limit(limit)
                   .stream())
         users = []
@@ -871,14 +872,16 @@ def update_user_last_seen(user_id):
 def get_user_public_profile(user_id):
     """Return a user's public profile including computed stats"""
     try:
-        doc = db.collection('users').document(user_id).get()
+        doc = db.collection('users').document(user_id).get(
+            field_paths=['username', 'displayName', 'bio', 'avatarUrl', 'createdAt', 'lastSeen', 'socialSettings']
+        )
         if not doc.exists:
             return None
         d = doc.to_dict()
-        # Compute stats in parallel (lightweight Firestore aggregations)
-        watched_docs  = db.collection('users').document(user_id).collection('watched_movies').stream()
-        watchlist_doc = db.collection('users').document(user_id).collection('lists').document('watchlist').get()
-        friends_docs  = db.collection('users').document(user_id).collection('friends').stream()
+        user_ref = db.collection('users').document(user_id)
+        watched_count = user_ref.collection('watched_movies').count().get()[0][0].value
+        watchlist_doc = user_ref.collection('lists').document('watchlist').get(field_paths=['movies'])
+        friends_count = user_ref.collection('friends').count().get()[0][0].value
         social = d.get('socialSettings', {})
         return {
             'user_id':             user_id,
@@ -888,9 +891,9 @@ def get_user_public_profile(user_id):
             'avatarUrl':           d.get('avatarUrl'),
             'createdAt':           d.get('createdAt'),
             'lastSeen':            d.get('lastSeen'),
-            'watchedCount':        sum(1 for _ in watched_docs),
+            'watchedCount':        watched_count,
             'watchlistCount':      len(watchlist_doc.to_dict().get('movies', [])) if watchlist_doc.exists else 0,
-            'friendsCount':        sum(1 for _ in friends_docs),
+            'friendsCount':        friends_count,
             'showMyStuffPublicly': social.get('showMyStuffPublicly', False),
             'showOnlineStatus':    social.get('showOnlineStatus', True),
         }
@@ -908,13 +911,16 @@ def get_group_member_profiles(group_id):
         if not group_doc.exists:
             return []
         member_ids = group_doc.to_dict().get('members', [])
+        if not member_ids:
+            return []
+        refs = [db.collection('users').document(uid) for uid in member_ids]
+        docs = db.get_all(refs, field_paths=['username', 'displayName', 'avatarUrl', 'lastSeen'])
         profiles = []
-        for uid in member_ids:
-            u = db.collection('users').document(uid).get()
+        for u in docs:
             if u.exists:
                 d = u.to_dict()
                 profiles.append({
-                    'user_id':     uid,
+                    'user_id':     u.id,
                     'username':    d.get('username', ''),
                     'displayName': d.get('displayName', d.get('username', '')),
                     'avatarUrl':   d.get('avatarUrl'),
@@ -933,12 +939,15 @@ def get_members_streaming_services(group_id):
         if not group_doc.exists:
             return {}
         member_ids = group_doc.to_dict().get('members', [])
+        if not member_ids:
+            return {}
+        refs = [db.collection('users').document(uid) for uid in member_ids]
+        docs = db.get_all(refs, field_paths=['username', 'streamingServices'])
         result = {}
-        for uid in member_ids:
-            u = db.collection('users').document(uid).get()
+        for u in docs:
             if u.exists:
                 d = u.to_dict()
-                result[uid] = {
+                result[u.id] = {
                     'username': d.get('username', ''),
                     'services': d.get('streamingServices', {})
                 }
