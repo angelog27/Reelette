@@ -1038,6 +1038,48 @@ def get_friends_roulette_history(user_id, limit=1):
         print(f"Error getting friends roulette history: {e}")
         return []
     
+# ── Notifications ────────────────────────────────────────────────
+def get_notifications(user_id, limit=30):
+    """Return the most recent notifications for a user, newest first."""
+    try:
+        docs = (
+            db.collection('users').document(user_id)
+              .collection('notifications')
+              .order_by('created_at', direction=firestore.Query.DESCENDING)
+              .limit(limit)
+              .stream()
+        )
+        return [doc.to_dict() for doc in docs]
+    except Exception as e:
+        print(f"Error getting notifications: {e}")
+        return []
+
+
+def mark_notification_read(user_id, notification_id):
+    """Mark a single notification as read."""
+    try:
+        db.collection('users').document(user_id) \
+          .collection('notifications').document(notification_id) \
+          .update({'read': True})
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+
+def mark_all_notifications_read(user_id):
+    """Mark all of a user's notifications as read."""
+    try:
+        notif_ref = db.collection('users').document(user_id).collection('notifications')
+        unread = notif_ref.where('read', '==', False).stream()
+        batch = db.batch()
+        for doc in unread:
+            batch.update(doc.reference, {'read': True})
+        batch.commit()
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+
 # ── Quiz ──────────────────────────────────────────────────────────
 def save_quiz_result(uid, top_genre, answers):
     """Save quiz completion status and top genre to the user's Firestore document"""
