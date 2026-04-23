@@ -2,7 +2,7 @@ import { Suspense, useState, useEffect, useRef } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { Bell, Heart, MessageCircle, Film, Users, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
-import logoImage from '../../assets/Reelette_NAME_upscaled.png';
+import logoImage from '../../assets/Reelette_White.png';
 import reeletteLogo from '../../assets/Reelette_LOGO_upscaled.png';
 import {
   getNotifications, markNotificationRead, markAllNotificationsRead, getUser, timeAgo,
@@ -117,12 +117,14 @@ export function HomePage() {
     <div className="min-h-screen bg-[#0A0A0A] text-white">
       <nav className="bg-black border-b border-[#C0392B]/30 sticky top-0 z-50 overflow-visible">
         <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="relative flex items-center" style={{ height: '4rem', minWidth: '20rem' }}>
-              <img src={logoImage} alt="Reelette" className="absolute h-10 w-auto" style={{ top: '60%', transform: 'translateY(-50%)', left: -10 }} />
+          <div className="flex items-center">
+            {/* Left — logo */}
+            <div className="flex items-center" style={{ flex: 1 }}>
+              <img src={logoImage} alt="Reelette" className="h-8 w-auto" />
             </div>
 
-            <div className="flex items-center gap-12">
+            {/* Center — nav links */}
+            <div className="flex items-center justify-center gap-12" style={{ flex: 1 }}>
               {tabs.map((tab) => (
                 <NavLink
                   key={tab.id}
@@ -148,7 +150,8 @@ export function HomePage() {
               ))}
             </div>
 
-            {/* Notification bell — always visible in top-right nav */}
+            {/* Right — notification bell */}
+            <div className="flex items-center justify-end" style={{ flex: 1 }}>
             <div className="relative" ref={notifPanelRef}>
               <button
                 onClick={() => setNotifOpen(o => !o)}
@@ -207,6 +210,7 @@ export function HomePage() {
                   </div>
                 </div>
               )}
+            </div>
             </div>
           </div>
         </div>
