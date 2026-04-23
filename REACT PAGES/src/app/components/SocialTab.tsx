@@ -241,30 +241,47 @@ function WatchModePanel({ groupId, onModeChange }: {
   const activeServices = SERVICE_KEYS.filter(k => activeFilter[k]);
 
   return (
-    <section className="bg-[#1C1C1C] border border-[#2A2A2A] rounded-xl p-5 space-y-4">
-      <h3 className="text-white font-semibold flex items-center gap-2">
-        <Tv className="w-5 h-5 text-[#C0392B]" /> Movie Night
-      </h3>
+    <section className={`${cardClass} p-5 space-y-4`}>
+  <h3 className="text-foreground font-semibold flex items-center gap-2">
+    <Tv className="w-5 h-5 text-red-600" />
+    Movie Night
+  </h3>
 
-      {/* Mode selector */}
-      <div className="grid grid-cols-2 gap-3">
-        <button onClick={() => handleMode('separately')}
-          className={`p-4 rounded-xl border-2 text-left transition-all ${mode === 'separately' ? 'border-[#C0392B] bg-[#C0392B]/10' : 'border-[#2A2A2A] hover:border-[#444]'}`}>
-          <div className="flex items-center gap-2 mb-1">
-            <WifiOff className="w-4 h-4 text-blue-400" />
-            <span className="text-white font-medium text-sm">Watch Separately</span>
-          </div>
-          <p className="text-gray-500 text-xs">Finds movies everyone can stream on their own device — shows only services all members share.</p>
-        </button>
-        <button onClick={() => handleMode('together')}
-          className={`p-4 rounded-xl border-2 text-left transition-all ${mode === 'together' ? 'border-[#C0392B] bg-[#C0392B]/10' : 'border-[#2A2A2A] hover:border-[#444]'}`}>
-          <div className="flex items-center gap-2 mb-1">
-            <Wifi className="w-4 h-4 text-green-400" />
-            <span className="text-white font-medium text-sm">Watch Together</span>
-          </div>
-          <p className="text-gray-500 text-xs">Shows all movies across everyone's combined services — use anyone's account.</p>
-        </button>
+  <div className="grid grid-cols-2 gap-3">
+    <button
+      onClick={() => handleMode('separately')}
+      className={`p-4 rounded-xl border-2 text-left transition-all ${
+        mode === 'separately'
+          ? 'border-red-600 bg-red-600/10'
+          : 'border-border bg-background/60 hover:border-red-600/40'
+      }`}
+    >
+      <div className="flex items-center gap-2 mb-1">
+        <WifiOff className="w-4 h-4 text-blue-500" />
+        <span className="text-foreground font-medium text-sm">Watch Separately</span>
       </div>
+      <p className="text-muted-foreground text-xs">
+        Finds movies everyone can stream on their own device — shows only services all members share.
+      </p>
+    </button>
+
+    <button
+      onClick={() => handleMode('together')}
+      className={`p-4 rounded-xl border-2 text-left transition-all ${
+        mode === 'together'
+          ? 'border-red-600 bg-red-600/10'
+          : 'border-border bg-background/60 hover:border-red-600/40'
+      }`}
+    >
+      <div className="flex items-center gap-2 mb-1">
+        <Wifi className="w-4 h-4 text-green-500" />
+        <span className="text-foreground font-medium text-sm">Watch Together</span>
+      </div>
+      <p className="text-muted-foreground text-xs">
+        Shows all movies across everyone's combined services — use anyone's account.
+      </p>
+    </button>
+  </div>
 
       {loading && (
         <div className="flex items-center gap-2 text-gray-500 text-sm py-2">
