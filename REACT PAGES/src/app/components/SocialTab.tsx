@@ -29,6 +29,30 @@ const WHEEL_COLORS = [
   '#B7950B', '#6E2F1A', '#2C3E50', '#512E5F',
 ];
 
+const cardClass =
+  'bg-card/80 backdrop-blur-sm rounded-xl border border-border shadow-xl';
+
+const subCardClass =
+  'bg-background/80 border border-border rounded-lg';
+
+const inputClass =
+  'w-full bg-background/80 border border-border rounded-lg px-4 py-2.5 text-foreground placeholder:text-muted-foreground focus:border-red-600 focus:outline-none focus:ring-2 focus:ring-red-600/20 transition-all';
+
+const secondaryButtonClass =
+  'bg-muted hover:bg-accent text-foreground border border-border rounded-lg transition-all';
+
+const dangerButtonClass =
+  'bg-red-600/10 hover:bg-red-600 border border-red-600/30 hover:border-red-600 text-red-500 hover:text-white rounded-lg transition-all';
+
+const accentButtonClass =
+  'bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all shadow-lg shadow-red-600/20 hover:shadow-red-600/30';
+
+const primaryButtonClass =
+  'bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all shadow-lg shadow-red-600/20 hover:shadow-red-600/30';
+
+const successButtonClass =
+  'bg-green-600/10 hover:bg-green-600 text-green-600 hover:text-white border border-green-600/30 hover:border-green-600 rounded-lg transition-all';
+
 // ── Helpers ────────────────────────────────────────────────────
 function dicebear(seed: string) {
   return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(seed)}`;
@@ -42,18 +66,30 @@ function isOnline(lastSeen?: string): boolean {
 function OnlineDot({ online }: { online: boolean }) {
   return (
     <span
-      className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-[#1C1C1C] ${online ? 'bg-green-500' : 'bg-zinc-600'}`}
+      className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-background ${
+        online ? 'bg-green-500' : 'bg-muted-foreground/50'
+      }`}
       title={online ? 'Online' : 'Offline'}
     />
   );
 }
 
-function UserAvatar({ username, avatarUrl, size = 40, lastSeen, onClick }: {
-  username: string; avatarUrl?: string; size?: number;
-  lastSeen?: string; onClick?: () => void;
+function UserAvatar({
+  username,
+  avatarUrl,
+  size = 40,
+  lastSeen,
+  onClick,
+}: {
+  username: string;
+  avatarUrl?: string;
+  size?: number;
+  lastSeen?: string;
+  onClick?: () => void;
 }) {
   const src = avatarUrl || dicebear(username);
   const online = lastSeen !== undefined ? isOnline(lastSeen) : undefined;
+
   return (
     <div
       className={`relative shrink-0 ${onClick ? 'cursor-pointer' : ''}`}
@@ -63,7 +99,7 @@ function UserAvatar({ username, avatarUrl, size = 40, lastSeen, onClick }: {
       <img
         src={src}
         alt={username}
-        className="w-full h-full rounded-full object-cover bg-[#141414]"
+        className="w-full h-full rounded-full object-cover bg-background border border-border"
       />
       {online !== undefined && <OnlineDot online={online} />}
     </div>
@@ -325,7 +361,10 @@ function WatchModePanel({ groupId, onModeChange }: {
 // ── Movie Search for Post Dialog ───────────────────────────────
 type MovieOption = { id: string; title: string; year: number; poster: string };
 
-function PostMovieSearch({ onSelect, selected }: {
+function PostMovieSearch({
+  onSelect,
+  selected,
+}: {
   onSelect: (movie: MovieOption | null) => void;
   selected: MovieOption | null;
 }) {
@@ -335,27 +374,44 @@ function PostMovieSearch({ onSelect, selected }: {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (!query.trim()) { setResults([]); return; }
+    if (!query.trim()) {
+      setResults([]);
+      return;
+    }
+
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
       setSearching(true);
       const movies = await searchMovies(query.trim());
-      setResults(movies.slice(0, 6).map(m => ({ id: m.id, title: m.title, year: m.year, poster: m.poster })));
+      setResults(
+        movies.slice(0, 6).map((m) => ({
+          id: m.id,
+          title: m.title,
+          year: m.year,
+          poster: m.poster,
+        }))
+      );
       setSearching(false);
     }, 400);
   }, [query]);
 
   if (selected) {
     return (
-      <div className="flex items-center gap-3 bg-[#141414] border border-[#C0392B] rounded-lg p-3">
-        {selected.poster
-          ? <img src={selected.poster} alt={selected.title} className="w-10 h-14 object-cover rounded shrink-0" />
-          : <div className="w-10 h-14 bg-[#2A2A2A] rounded shrink-0 flex items-center justify-center"><Film className="w-4 h-4 text-gray-600" /></div>}
+      <div className={`${subCardClass} flex items-center gap-3 p-3 border-red-600/40`}>
+        {selected.poster ? (
+          <img src={selected.poster} alt={selected.title} className="w-10 h-14 object-cover rounded shrink-0" />
+        ) : (
+          <div className="w-10 h-14 bg-muted rounded shrink-0 flex items-center justify-center border border-border">
+            <Film className="w-4 h-4 text-muted-foreground" />
+          </div>
+        )}
+
         <div className="flex-1 min-w-0">
-          <p className="text-white font-medium truncate">{selected.title}</p>
-          <p className="text-gray-500 text-xs">{selected.year}</p>
+          <p className="text-foreground font-medium truncate">{selected.title}</p>
+          <p className="text-muted-foreground text-xs">{selected.year}</p>
         </div>
-        <button onClick={() => onSelect(null)} className="text-gray-500 hover:text-red-400 transition-colors p-1">
+
+        <button onClick={() => onSelect(null)} className="text-muted-foreground hover:text-red-500 transition-colors p-1">
           <X className="w-4 h-4" />
         </button>
       </div>
@@ -365,30 +421,40 @@ function PostMovieSearch({ onSelect, selected }: {
   return (
     <div className="relative">
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
         <input
           type="text"
           placeholder="Search for a movie…"
           value={query}
-          onChange={e => setQuery(e.target.value)}
-          className="w-full bg-[#141414] border border-[#2A2A2A] rounded-lg pl-10 pr-4 py-3 text-white placeholder:text-gray-600 focus:border-[#C0392B] focus:outline-none"
+          onChange={(e) => setQuery(e.target.value)}
+          className={`${inputClass} pl-10 pr-4 py-3`}
         />
-        {searching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 animate-spin" />}
+        {searching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground animate-spin" />}
       </div>
+
       {results.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-[#141414] border border-[#2A2A2A] rounded-xl shadow-2xl z-20 overflow-hidden max-h-64 overflow-y-auto">
-          {results.map(m => (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-popover border border-border rounded-xl shadow-2xl z-20 overflow-hidden max-h-64 overflow-y-auto">
+          {results.map((m) => (
             <button
               key={m.id}
-              onClick={() => { onSelect(m); setQuery(''); setResults([]); }}
-              className="w-full flex items-center gap-3 p-3 hover:bg-[#1C1C1C] transition-colors text-left border-b border-[#2A2A2A] last:border-0"
+              onClick={() => {
+                onSelect(m);
+                setQuery('');
+                setResults([]);
+              }}
+              className="w-full flex items-center gap-3 p-3 hover:bg-accent transition-colors text-left border-b border-border last:border-0"
             >
-              {m.poster
-                ? <img src={m.poster} alt={m.title} className="w-8 h-12 object-cover rounded shrink-0" />
-                : <div className="w-8 h-12 bg-[#2A2A2A] rounded shrink-0 flex items-center justify-center"><Film className="w-4 h-4 text-gray-600" /></div>}
+              {m.poster ? (
+                <img src={m.poster} alt={m.title} className="w-8 h-12 object-cover rounded shrink-0" />
+              ) : (
+                <div className="w-8 h-12 bg-muted rounded shrink-0 flex items-center justify-center">
+                  <Film className="w-4 h-4 text-muted-foreground" />
+                </div>
+              )}
+
               <div className="flex-1 min-w-0">
-                <p className="text-white font-medium truncate">{m.title}</p>
-                <p className="text-gray-500 text-xs">{m.year}</p>
+                <p className="text-foreground font-medium truncate">{m.title}</p>
+                <p className="text-muted-foreground text-xs">{m.year}</p>
               </div>
             </button>
           ))}
@@ -399,8 +465,17 @@ function PostMovieSearch({ onSelect, selected }: {
 }
 
 // ── Post Card ──────────────────────────────────────────────────
-function PostCard({ post, currentUserId, currentUsername, onLike, onDelete, onOpenProfile }: {
-  post: FeedPost; currentUserId: string; currentUsername: string;
+function PostCard({
+  post,
+  currentUserId,
+  currentUsername,
+  onLike,
+  onDelete,
+  onOpenProfile,
+}: {
+  post: FeedPost;
+  currentUserId: string;
+  currentUsername: string;
   onLike: (id: string) => void;
   onDelete: (id: string) => void;
   onOpenProfile: (userId: string) => void;
@@ -415,17 +490,20 @@ function PostCard({ post, currentUserId, currentUsername, onLike, onDelete, onOp
   const loadReplies = useCallback(async () => {
     setLoadingReplies(true);
     const fetched = await getReplies(post.post_id);
-    const uniqueIds = [...new Set(fetched.map(r => r.user_id))];
-    const profiles = await Promise.all(uniqueIds.map(id => getUserPublicProfile(id)));
+    const uniqueIds = [...new Set(fetched.map((r) => r.user_id))];
+    const profiles = await Promise.all(uniqueIds.map((id) => getUserPublicProfile(id)));
     const avatarMap: Record<string, string> = {};
-    uniqueIds.forEach((id, i) => { const url = profiles[i]?.avatarUrl; if (url) avatarMap[id] = url; });
-    setReplies(fetched.map(r => ({ ...r, avatarUrl: avatarMap[r.user_id] })));
+    uniqueIds.forEach((id, i) => {
+      const url = profiles[i]?.avatarUrl;
+      if (url) avatarMap[id] = url;
+    });
+    setReplies(fetched.map((r) => ({ ...r, avatarUrl: avatarMap[r.user_id] })));
     setLoadingReplies(false);
   }, [post.post_id]);
 
   const toggleReplies = () => {
     if (!showReplies) loadReplies();
-    setShowReplies(s => !s);
+    setShowReplies((s) => !s);
   };
 
   const handleSubmitReply = async () => {
@@ -440,7 +518,7 @@ function PostCard({ post, currentUserId, currentUsername, onLike, onDelete, onOp
   };
 
   return (
-    <div className="bg-[#1C1C1C] border border-[#2A2A2A] rounded-xl p-6 hover:border-[#333333] transition-colors">
+    <div className={`${cardClass} p-6 hover:border-red-500/30 transition-colors`}>
       <div className="flex items-start gap-4">
         <UserAvatar
           username={post.username}
@@ -448,30 +526,34 @@ function PostCard({ post, currentUserId, currentUsername, onLike, onDelete, onOp
           size={48}
           onClick={() => onOpenProfile(post.user_id)}
         />
+
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between mb-1">
             <button
               onClick={() => onOpenProfile(post.user_id)}
-              className="text-white font-medium hover:text-[#C0392B] transition-colors"
+              className="text-foreground font-medium hover:text-red-600 transition-colors"
             >
               {post.username}
             </button>
+
             <div className="flex items-center gap-3">
-              <span className="text-sm text-gray-600">{timeAgo(post.created_at)}</span>
+              <span className="text-sm text-muted-foreground">{timeAgo(post.created_at)}</span>
               {post.user_id === currentUserId && (
-                <button onClick={() => onDelete(post.post_id)} className="text-gray-600 hover:text-red-500 transition-colors">
+                <button onClick={() => onDelete(post.post_id)} className="text-muted-foreground hover:text-red-500 transition-colors">
                   <Trash2 className="w-4 h-4" />
                 </button>
               )}
             </div>
           </div>
-          <p className="text-gray-400 mb-3">{post.message}</p>
+
+          <p className="text-foreground/80 mb-3">{post.message}</p>
+
           {post.movie_id ? (
             <a
               href={`https://www.themoviedb.org/movie/${post.movie_id}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex gap-4 bg-[#141414] rounded-xl mb-4 border border-[#2A2A2A] overflow-hidden hover:border-[#C0392B] transition-colors group p-3"
+              className="flex gap-4 bg-background/80 rounded-xl mb-4 border border-border overflow-hidden hover:border-red-500/40 transition-colors group p-3"
             >
               {post.movie_poster ? (
                 <img
@@ -481,80 +563,94 @@ function PostCard({ post, currentUserId, currentUsername, onLike, onDelete, onOp
                   style={{ aspectRatio: '2/3' }}
                 />
               ) : (
-                <div className="w-28 shrink-0 rounded-lg bg-[#2A2A2A] flex items-center justify-center" style={{ aspectRatio: '2/3' }}>
-                  <Film className="w-8 h-8 text-gray-600" />
+                <div className="w-28 shrink-0 rounded-lg bg-muted flex items-center justify-center border border-border" style={{ aspectRatio: '2/3' }}>
+                  <Film className="w-8 h-8 text-muted-foreground" />
                 </div>
               )}
+
               <div className="flex flex-col justify-between py-1 min-w-0">
-                <span className="text-white font-semibold text-base leading-snug group-hover:text-[#E74C3C] transition-colors">{post.movie_title}</span>
+                <span className="text-foreground font-semibold text-base leading-snug group-hover:text-red-600 transition-colors">
+                  {post.movie_title}
+                </span>
                 <div className="flex items-center gap-1.5 mt-2">
                   <Star className="w-4 h-4 fill-yellow-500 text-yellow-500" />
-                  <span className="text-white font-medium">{post.rating}/10</span>
+                  <span className="text-foreground font-medium">{post.rating}/10</span>
                 </div>
               </div>
             </a>
           ) : (
-            <div className="bg-[#141414] rounded-lg p-3 mb-4 border border-[#2A2A2A]">
+            <div className="bg-background/80 rounded-lg p-3 mb-4 border border-border">
               <div className="flex items-center justify-between">
-                <span className="text-white font-medium truncate">{post.movie_title}</span>
+                <span className="text-foreground font-medium truncate">{post.movie_title}</span>
                 <div className="flex items-center gap-1.5 shrink-0 ml-2">
                   <Star className="w-4 h-4 fill-yellow-500 text-yellow-500" />
-                  <span className="text-white font-medium">{post.rating}/10</span>
+                  <span className="text-foreground font-medium">{post.rating}/10</span>
                 </div>
               </div>
             </div>
           )}
+
           <div className="flex items-center gap-6">
-            <button onClick={() => onLike(post.post_id)}
-              className={`flex items-center gap-2 transition-colors ${isLiked ? 'text-[#C0392B]' : 'text-gray-500 hover:text-[#C0392B]'}`}>
-              <Heart className={`w-5 h-5 ${isLiked ? 'fill-[#C0392B]' : ''}`} />
+            <button
+              onClick={() => onLike(post.post_id)}
+              className={`flex items-center gap-2 transition-colors ${
+                isLiked ? 'text-red-600' : 'text-muted-foreground hover:text-red-600'
+              }`}
+            >
+              <Heart className={`w-5 h-5 ${isLiked ? 'fill-red-600' : ''}`} />
               <span>{post.likes}</span>
             </button>
-            <button onClick={toggleReplies}
-              className={`flex items-center gap-2 transition-colors ${showReplies ? 'text-white' : 'text-gray-500 hover:text-gray-400'}`}>
+
+            <button
+              onClick={toggleReplies}
+              className={`flex items-center gap-2 transition-colors ${
+                showReplies ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
               <MessageCircle className="w-5 h-5" />
               {replies.length > 0 && <span className="text-sm">{replies.length}</span>}
             </button>
           </div>
 
           {showReplies && (
-            <div className="mt-4 space-y-3 border-t border-[#2A2A2A] pt-4">
+            <div className="mt-4 space-y-3 border-t border-border pt-4">
               {loadingReplies ? (
-                <div className="flex items-center gap-2 text-gray-500 text-sm">
+                <div className="flex items-center gap-2 text-muted-foreground text-sm">
                   <Loader2 className="w-3 h-3 animate-spin" /> Loading replies…
                 </div>
               ) : replies.length === 0 ? (
-                <p className="text-gray-600 text-sm">No replies yet. Be the first!</p>
+                <p className="text-muted-foreground text-sm">No replies yet. Be the first!</p>
               ) : (
-                replies.map(r => (
+                replies.map((r) => (
                   <div key={r.reply_id} className="flex items-start gap-2">
                     <UserAvatar username={r.username} avatarUrl={r.avatarUrl} size={28} onClick={() => onOpenProfile(r.user_id)} />
-                    <div className="flex-1 bg-[#141414] rounded-lg px-3 py-2 border border-[#2A2A2A]">
+                    <div className="flex-1 bg-background/80 rounded-lg px-3 py-2 border border-border">
                       <div className="flex items-center gap-2 mb-0.5">
-                        <button onClick={() => onOpenProfile(r.user_id)} className="text-white text-xs font-medium hover:text-[#C0392B] transition-colors">
+                        <button onClick={() => onOpenProfile(r.user_id)} className="text-foreground text-xs font-medium hover:text-red-600 transition-colors">
                           {r.username}
                         </button>
-                        <span className="text-gray-600 text-xs">{timeAgo(r.created_at)}</span>
+                        <span className="text-muted-foreground text-xs">{timeAgo(r.created_at)}</span>
                       </div>
-                      <p className="text-gray-400 text-sm">{r.message}</p>
+                      <p className="text-foreground/80 text-sm">{r.message}</p>
                     </div>
                   </div>
                 ))
               )}
+
               {currentUserId && (
                 <div className="flex gap-2 pt-1">
                   <input
                     type="text"
                     placeholder="Write a reply…"
                     value={replyText}
-                    onChange={e => setReplyText(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSubmitReply()}
-                    className="flex-1 bg-[#141414] border border-[#2A2A2A] rounded-lg px-3 py-2 text-white text-sm placeholder:text-gray-600 focus:border-[#C0392B] focus:outline-none"
+                    onChange={(e) => setReplyText(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSubmitReply()}
+                    className="flex-1 bg-background/80 border border-border rounded-lg px-3 py-2 text-foreground text-sm placeholder:text-muted-foreground focus:border-red-600 focus:outline-none"
                   />
                   <button
                     onClick={handleSubmitReply}
                     disabled={submittingReply || !replyText.trim()}
-                    className="p-2 bg-[#C0392B] hover:bg-[#A93226] disabled:opacity-50 text-white rounded-lg transition-colors"
+                    className="p-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-lg transition-colors"
                   >
                     {submittingReply ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                   </button>
@@ -635,92 +731,123 @@ function FriendsPanel({ onOpenProfile }: { onOpenProfile: (uid: string) => void 
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      {/* Pending Requests */}
       {requests.length > 0 && (
-        <section className="bg-[#1C1C1C] border border-[#2A2A2A] rounded-xl p-5">
-          <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
-            <UserPlus className="w-5 h-5 text-[#C0392B]" /> Friend Requests
-            <span className="ml-1 bg-[#C0392B] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">{requests.length}</span>
+        <section className={`${cardClass} p-5`}>
+          <h3 className="text-foreground font-semibold mb-4 flex items-center gap-2">
+            <UserPlus className="w-5 h-5 text-red-600" />
+            Friend Requests
+            <span className="ml-1 bg-red-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+              {requests.length}
+            </span>
           </h3>
+
           <div className="space-y-3">
-            {requests.map(req => (
+            {requests.map((req) => (
               <div key={req.from_user_id} className="flex items-center gap-3">
                 <UserAvatar username={req.from_username} avatarUrl={req.avatarUrl} size={40} onClick={() => onOpenProfile(req.from_user_id)} />
                 <div className="flex-1">
-                  <button onClick={() => onOpenProfile(req.from_user_id)} className="text-white font-medium hover:text-[#C0392B] transition-colors">
+                  <button onClick={() => onOpenProfile(req.from_user_id)} className="text-foreground font-medium hover:text-red-600 transition-colors">
                     @{req.from_username}
                   </button>
-                  <p className="text-xs text-gray-500">{timeAgo(req.created_at)}</p>
+                  <p className="text-xs text-muted-foreground">{timeAgo(req.created_at)}</p>
                 </div>
-                <button onClick={() => handleAccept(req)} className="p-2 bg-green-600/20 hover:bg-green-600 border border-green-600/50 hover:border-green-600 text-green-400 hover:text-white rounded-lg transition-all"><Check className="w-4 h-4" /></button>
-                <button onClick={() => handleReject(req.from_user_id)} className="p-2 bg-red-600/20 hover:bg-red-600 border border-red-600/50 hover:border-red-600 text-red-400 hover:text-white rounded-lg transition-all"><X className="w-4 h-4" /></button>
+                <button onClick={() => handleAccept(req)} className={`p-2 ${successButtonClass}`}>
+                  <Check className="w-4 h-4" />
+                </button>
+                <button onClick={() => handleReject(req.from_user_id)} className={`p-2 ${dangerButtonClass}`}>
+                  <X className="w-4 h-4" />
+                </button>
               </div>
             ))}
           </div>
         </section>
       )}
 
-      {/* Search */}
-      <section className="bg-[#1C1C1C] border border-[#2A2A2A] rounded-xl p-5">
-        <h3 className="text-white font-semibold mb-4 flex items-center gap-2"><Search className="w-5 h-5 text-[#C0392B]" /> Find Friends</h3>
+      <section className={`${cardClass} p-5`}>
+        <h3 className="text-foreground font-semibold mb-4 flex items-center gap-2">
+          <Search className="w-5 h-5 text-red-600" />
+          Find Friends
+        </h3>
+
         <div className="flex gap-2 mb-4">
-          <input type="text" placeholder="Search by username…" value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearch()}
-            className="flex-1 bg-[#141414] border border-[#2A2A2A] rounded-lg px-4 py-2.5 text-white placeholder:text-gray-600 focus:border-[#C0392B] focus:outline-none" />
-          <button onClick={handleSearch} disabled={searching}
-            className="px-4 py-2.5 bg-[#C0392B] hover:bg-[#A93226] text-white rounded-lg transition-colors disabled:opacity-50">
+          <input
+            type="text"
+            placeholder="Search by username…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            className={`flex-1 ${inputClass}`}
+          />
+          <button onClick={handleSearch} disabled={searching} className={`px-4 py-2.5 ${primaryButtonClass} disabled:opacity-50`}>
             {searching ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
           </button>
         </div>
-        {searchResults.map(u => (
-          <div key={u.user_id} className="flex items-center gap-3 p-3 bg-[#141414] rounded-lg border border-[#2A2A2A] mb-2">
+
+        {searchResults.map((u) => (
+          <div key={u.user_id} className={`flex items-center gap-3 p-3 ${subCardClass} mb-2`}>
             <UserAvatar username={u.username} avatarUrl={u.avatarUrl} size={36} onClick={() => onOpenProfile(u.user_id)} />
             <div className="flex-1">
-              <button onClick={() => onOpenProfile(u.user_id)} className="text-white font-medium hover:text-[#C0392B] transition-colors block">{u.displayName}</button>
-              <p className="text-xs text-gray-500">@{u.username}</p>
+              <button onClick={() => onOpenProfile(u.user_id)} className="text-foreground font-medium hover:text-red-600 transition-colors block">
+                {u.displayName}
+              </button>
+              <p className="text-xs text-muted-foreground">@{u.username}</p>
             </div>
-            {sentTo.has(u.user_id)
-              ? <span className="text-xs text-gray-500 flex items-center gap-1"><Check className="w-3 h-3 text-green-500" />Sent</span>
-              : <button onClick={() => handleSendRequest(u.user_id)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#C0392B]/20 hover:bg-[#C0392B] border border-[#C0392B]/50 hover:border-[#C0392B] text-[#C0392B] hover:text-white rounded-lg text-sm transition-all">
-                  <UserPlus className="w-4 h-4" />Add
-                </button>}
+
+            {sentTo.has(u.user_id) ? (
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <Check className="w-3 h-3 text-green-500" />
+                Sent
+              </span>
+            ) : (
+              <button
+                onClick={() => handleSendRequest(u.user_id)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600/10 hover:bg-red-600 border border-red-600/30 hover:border-red-600 text-red-600 hover:text-white rounded-lg text-sm transition-all"
+              >
+                <UserPlus className="w-4 h-4" />
+                Add
+              </button>
+            )}
           </div>
         ))}
+
         {searchResults.length === 0 && searchQuery && !searching && (
-          <p className="text-gray-500 text-sm text-center py-2">No users found for "{searchQuery}"</p>
+          <p className="text-muted-foreground text-sm text-center py-2">No users found for "{searchQuery}"</p>
         )}
       </section>
 
-      {/* Friends List */}
-      <section className="bg-[#1C1C1C] border border-[#2A2A2A] rounded-xl p-5">
-        <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
-          <Users className="w-5 h-5 text-[#C0392B]" /> My Friends
-          {!loading && <span className="text-gray-500 text-sm font-normal">({friends.length})</span>}
+      <section className={`${cardClass} p-5`}>
+        <h3 className="text-foreground font-semibold mb-4 flex items-center gap-2">
+          <Users className="w-5 h-5 text-red-600" />
+          My Friends
+          {!loading && <span className="text-muted-foreground text-sm font-normal">({friends.length})</span>}
         </h3>
-        {loading ? <p className="text-gray-500 text-center py-4">Loading…</p>
-          : friends.length === 0 ? <p className="text-gray-500 text-center py-8">No friends yet — search above to connect!</p>
-          : (
-            <div className="space-y-3">
-              {friends.map(f => (
-                <div key={f.friend_id} className="flex items-center gap-3 p-3 bg-[#141414] rounded-lg border border-[#2A2A2A]">
-                  <UserAvatar username={f.friend_username} avatarUrl={f.avatarUrl} size={40} onClick={() => onOpenProfile(f.friend_id)} />
-                  <div className="flex-1">
-                    <button onClick={() => onOpenProfile(f.friend_id)} className="text-white font-medium hover:text-[#C0392B] transition-colors">@{f.friend_username}</button>
-                    <p className="text-xs text-gray-600">Friends since {timeAgo(f.since)}</p>
-                  </div>
-                  <button onClick={() => handleRemove(f.friend_id)} className="p-2 text-gray-600 hover:text-red-500 transition-colors" title="Remove friend">
-                    <UserMinus className="w-4 h-4" />
+
+        {loading ? (
+          <p className="text-muted-foreground text-center py-4">Loading…</p>
+        ) : friends.length === 0 ? (
+          <p className="text-muted-foreground text-center py-8">No friends yet — search above to connect!</p>
+        ) : (
+          <div className="space-y-3">
+            {friends.map((f) => (
+              <div key={f.friend_id} className={`flex items-center gap-3 p-3 ${subCardClass}`}>
+                <UserAvatar username={f.friend_username} avatarUrl={f.avatarUrl} size={40} onClick={() => onOpenProfile(f.friend_id)} />
+                <div className="flex-1">
+                  <button onClick={() => onOpenProfile(f.friend_id)} className="text-foreground font-medium hover:text-red-600 transition-colors">
+                    @{f.friend_username}
                   </button>
+                  <p className="text-xs text-muted-foreground">Friends since {timeAgo(f.since)}</p>
                 </div>
-              ))}
-            </div>
-          )}
+                <button onClick={() => handleRemove(f.friend_id)} className="p-2 text-muted-foreground hover:text-red-500 transition-colors" title="Remove friend">
+                  <UserMinus className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );
 }
-
 // ── TMDB Movie Search for group watchlist ──────────────────────
 function TMDBMovieSearch({ groupId, onAdded }: { groupId: string; onAdded: () => void }) {
   const currentUser = getUser();
@@ -731,12 +858,23 @@ function TMDBMovieSearch({ groupId, onAdded }: { groupId: string; onAdded: () =>
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (!query.trim()) { setResults([]); return; }
+    if (!query.trim()) {
+      setResults([]);
+      return;
+    }
+
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
       setSearching(true);
       const movies = await searchMovies(query.trim());
-      setResults(movies.slice(0, 8).map(m => ({ id: m.id, title: m.title, year: m.year, poster: m.poster })));
+      setResults(
+        movies.slice(0, 8).map((m) => ({
+          id: m.id,
+          title: m.title,
+          year: m.year,
+          poster: m.poster,
+        }))
+      );
       setSearching(false);
     }, 400);
   }, [query]);
@@ -755,37 +893,47 @@ function TMDBMovieSearch({ groupId, onAdded }: { groupId: string; onAdded: () =>
     <div className="relative">
       <div className="flex gap-2">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
           <input
             type="text"
             placeholder="Search TMDB for a movie to add…"
             value={query}
-            onChange={e => setQuery(e.target.value)}
-            className="w-full bg-[#141414] border border-[#2A2A2A] rounded-lg pl-10 pr-4 py-2.5 text-white placeholder:text-gray-600 focus:border-[#C0392B] focus:outline-none"
+            onChange={(e) => setQuery(e.target.value)}
+            className={`w-full pl-10 pr-4 py-2.5 ${inputClass}`}
           />
-          {searching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 animate-spin" />}
+          {searching && (
+            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground animate-spin" />
+          )}
         </div>
       </div>
 
       {results.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-[#141414] border border-[#2A2A2A] rounded-xl shadow-2xl z-20 overflow-hidden max-h-72 overflow-y-auto">
-          {results.map(m => (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-popover border border-border rounded-xl shadow-2xl z-20 overflow-hidden max-h-72 overflow-y-auto">
+          {results.map((m) => (
             <button
               key={m.id}
               onClick={() => handleAdd(m)}
               disabled={addingId === m.id}
-              className="w-full flex items-center gap-3 p-3 hover:bg-[#1C1C1C] transition-colors text-left border-b border-[#2A2A2A] last:border-0"
+              className="w-full flex items-center gap-3 p-3 hover:bg-accent transition-colors text-left border-b border-border last:border-0"
             >
-              {m.poster
-                ? <img src={m.poster} alt={m.title} className="w-9 h-14 object-cover rounded shrink-0" />
-                : <div className="w-9 h-14 bg-[#2A2A2A] rounded shrink-0 flex items-center justify-center"><Film className="w-4 h-4 text-gray-600" /></div>}
+              {m.poster ? (
+                <img src={m.poster} alt={m.title} className="w-9 h-14 object-cover rounded shrink-0" />
+              ) : (
+                <div className="w-9 h-14 bg-muted rounded shrink-0 flex items-center justify-center">
+                  <Film className="w-4 h-4 text-muted-foreground" />
+                </div>
+              )}
+
               <div className="flex-1 min-w-0">
-                <p className="text-white font-medium truncate">{m.title}</p>
-                <p className="text-gray-500 text-xs">{m.year}</p>
+                <p className="text-foreground font-medium truncate">{m.title}</p>
+                <p className="text-muted-foreground text-xs">{m.year}</p>
               </div>
-              {addingId === m.id
-                ? <Loader2 className="w-4 h-4 text-gray-400 animate-spin shrink-0" />
-                : <Plus className="w-4 h-4 text-[#C0392B] shrink-0" />}
+
+              {addingId === m.id ? (
+                <Loader2 className="w-4 h-4 text-muted-foreground animate-spin shrink-0" />
+              ) : (
+                <Plus className="w-4 h-4 text-red-600 shrink-0" />
+              )}
             </button>
           ))}
         </div>
@@ -794,10 +942,18 @@ function TMDBMovieSearch({ groupId, onAdded }: { groupId: string; onAdded: () =>
   );
 }
 
-// ── Group Detail ───────────────────────────────────────────────
-function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, onUpdate }: {
-  group: MovieGroup; currentUserId: string; currentUsername: string;
-  onBack: () => void; onUpdate: () => void;
+function GroupDetail({
+  group: initial,
+  currentUserId,
+  currentUsername,
+  onBack,
+  onUpdate,
+}: {
+  group: MovieGroup;
+  currentUserId: string;
+  currentUsername: string;
+  onBack: () => void;
+  onUpdate: () => void;
 }) {
   const [group, setGroup] = useState<MovieGroup>(initial);
   const [memberProfiles, setMemberProfiles] = useState<MemberProfile[]>([]);
@@ -821,11 +977,13 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
       getGroup(group.group_id),
       getGroupMemberProfiles(group.group_id),
     ]);
-    if (updated) { setGroup(updated); onUpdate(); }
+    if (updated) {
+      setGroup(updated);
+      onUpdate();
+    }
     setMemberProfiles(profiles);
   }, [group.group_id, onUpdate]);
 
-  // Load member profiles on mount and poll every 5 min for online status
   useEffect(() => {
     refresh();
     const interval = setInterval(() => getGroupMemberProfiles(group.group_id).then(setMemberProfiles), 300_000);
@@ -833,7 +991,7 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
   }, [group.group_id, refresh]);
 
   const profileFor = (member_id: string): MemberProfile | undefined =>
-    memberProfiles.find(p => p.user_id === member_id);
+    memberProfiles.find((p) => p.user_id === member_id);
 
   const handleRemoveMovie = async (movie_id: string) => {
     await removeFromGroupWatchlist(group.group_id, movie_id);
@@ -856,13 +1014,17 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
     if (!friendSearch.trim()) return;
     const results = await searchUsers(friendSearch.trim(), currentUserId);
     const memberSet = new Set(group.members);
-    setFriendResults(results.filter(u => !memberSet.has(u.user_id)));
+    setFriendResults(results.filter((u) => !memberSet.has(u.user_id)));
   };
 
   const handleAddMember = async (u: { user_id: string; username: string }) => {
     setAddingMember(u.user_id);
     const r = await addGroupMember(group.group_id, u.user_id, u.username);
-    if (r.success) { setFriendSearch(''); setFriendResults([]); refresh(); }
+    if (r.success) {
+      setFriendSearch('');
+      setFriendResults([]);
+      refresh();
+    }
     setAddingMember(null);
   };
 
@@ -878,16 +1040,16 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
     setRandomError('');
     const randomPage = Math.floor(Math.random() * 5) + 1;
 
-    // Build streaming filter if a watch mode is active
     const servicesFilter = watchMode
-      ? (watchMode === 'separately'
-          ? computeIntersection(watchMemberServices)
-          : computeUnion(watchMemberServices))
+      ? watchMode === 'separately'
+        ? computeIntersection(watchMemberServices)
+        : computeUnion(watchMemberServices)
       : undefined;
 
     try {
       let movies = await discoverMovies({ services_filter: servicesFilter, page: randomPage });
       if (movies.length === 0) movies = await discoverMovies({ services_filter: servicesFilter, page: 1 });
+
       if (movies.length === 0) {
         setRandomError('Could not find a movie. Try again.');
       } else {
@@ -902,7 +1064,7 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
     }
   };
 
-  const onlineCount = memberProfiles.filter(p => isOnline(p.lastSeen)).length;
+  const onlineCount = memberProfiles.filter((p) => isOnline(p.lastSeen)).length;
 
   return (
     <>
@@ -912,15 +1074,15 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
       )}
 
       <div className="max-w-3xl mx-auto space-y-6">
-        {/* Header */}
         <div className="flex items-center gap-3">
-          <button onClick={onBack} className="text-gray-400 hover:text-white transition-colors p-1">
+          <button onClick={onBack} className="text-muted-foreground hover:text-foreground transition-colors p-1">
             <ChevronRight className="w-5 h-5 rotate-180" />
           </button>
+
           <div className="flex-1">
-            <h2 className="text-white text-xl font-bold">{group.name}</h2>
+            <h2 className="text-foreground text-xl font-bold">{group.name}</h2>
             <div className="flex items-center gap-2 mt-0.5">
-              {group.description && <span className="text-gray-500 text-sm">{group.description}</span>}
+              {group.description && <span className="text-muted-foreground text-sm">{group.description}</span>}
               {onlineCount > 0 && (
                 <span className="flex items-center gap-1 text-xs text-green-500">
                   <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
@@ -929,34 +1091,47 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
               )}
             </div>
           </div>
+
           <div className="flex gap-2">
-            {isCreator
-              ? <button onClick={handleDeleteGroup} className="flex items-center gap-1.5 px-3 py-1.5 bg-red-900/30 hover:bg-red-600 border border-red-800 hover:border-red-600 text-red-400 hover:text-white rounded-lg text-sm transition-all"><Trash2 className="w-4 h-4" />Delete</button>
-              : <button onClick={handleLeave} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1C1C1C] hover:bg-[#2A2A2A] border border-[#2A2A2A] text-gray-400 hover:text-white rounded-lg text-sm transition-all"><LogOut className="w-4 h-4" />Leave</button>}
+            {isCreator ? (
+              <button onClick={handleDeleteGroup} className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium border rounded-lg transition-all bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white border-red-600/30 hover:border-red-600">
+                <Trash2 className="w-4 h-4" />
+                Delete
+              </button>
+            ) : (
+              <button onClick={handleLeave} className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium ${secondaryButtonClass}`}>
+                <LogOut className="w-4 h-4" />
+                Leave
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Movie Night — Watch Together/Separately */}
         <WatchModePanel
           groupId={group.group_id}
-          onModeChange={(m, svcMap) => { setWatchMode(m); setWatchMemberServices(svcMap); }}
+          onModeChange={(m, svcMap) => {
+            setWatchMode(m);
+            setWatchMemberServices(svcMap);
+          }}
         />
 
-        {/* Reelette Wheel */}
-        <section className="bg-[#1C1C1C] border border-[#2A2A2A] rounded-xl p-6">
+        <section className={`${cardClass} p-6`}>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-white font-semibold flex items-center gap-2">
-              <Popcorn className="w-5 h-5 text-[#C0392B]" />Group Reelette
+            <h3 className="text-foreground font-semibold flex items-center gap-2">
+              <Popcorn className="w-5 h-5 text-red-600" />
+              Group Reelette
             </h3>
+
             <div className="flex gap-2">
-              {/* Random Reelette — always available */}
               <button
                 onClick={handleRandomSpin}
                 disabled={randomSpinning}
-                className="flex items-center gap-2 px-4 py-2 bg-[#2A2A2A] hover:bg-[#333] border border-[#3A3A3A] text-gray-300 hover:text-white rounded-lg text-sm font-medium transition-all disabled:opacity-50"
-                title={watchMode
-                  ? `Pick a random movie from ${watchMode === 'separately' ? 'shared' : 'all member'} streaming services`
-                  : 'Pick a totally random movie from all of TMDB'}
+                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium disabled:opacity-50 ${secondaryButtonClass}`}
+                title={
+                  watchMode
+                    ? `Pick a random movie from ${watchMode === 'separately' ? 'shared' : 'all member'} streaming services`
+                    : 'Pick a totally random movie from all of TMDB'
+                }
               >
                 <Shuffle className={`w-4 h-4 ${randomSpinning ? 'animate-spin' : ''}`} />
                 {randomSpinning
@@ -968,126 +1143,153 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
                       : 'Random Movie'}
               </button>
 
-              {/* Watchlist spin — only when watchlist has movies */}
               {group.watchlist.length > 0 && (
                 <button
-                  onClick={() => { setShowWheel(w => !w); setWinner(null); }}
-                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#C0392B] to-[#E74C3C] hover:from-[#A93226] hover:to-[#C0392B] text-white rounded-lg text-sm font-medium transition-all hover:scale-105"
+                  onClick={() => {
+                    setShowWheel((w) => !w);
+                    setWinner(null);
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-all hover:scale-105"
                 >
-                  <Shuffle className="w-4 h-4" />{showWheel ? 'Hide Wheel' : 'Spin the Wheel'}
+                  <Shuffle className="w-4 h-4" />
+                  {showWheel ? 'Hide Wheel' : 'Spin the Wheel'}
                 </button>
               )}
             </div>
           </div>
 
-          {randomError && <p className="text-yellow-500 text-sm text-center mb-3">{randomError}</p>}
+          {randomError && <p className="text-yellow-600 dark:text-yellow-400 text-sm text-center mb-3">{randomError}</p>}
 
-          {/* Random movie result */}
           {randomMovieId && (
-            <div className="mb-4 p-4 bg-[#141414] border border-[#C0392B]/30 rounded-xl flex items-center justify-between gap-4">
+            <div className="mb-4 p-4 bg-background/80 border border-red-600/30 rounded-xl flex items-center justify-between gap-4">
               <div>
-                <p className="text-gray-400 text-xs mb-1">Random pick for the group</p>
+                <p className="text-muted-foreground text-xs mb-1">Random pick for the group</p>
                 <button
                   onClick={() => setRandomMovieOpen(true)}
-                  className="text-white font-semibold hover:text-[#E74C3C] transition-colors text-left"
+                  className="text-foreground font-semibold hover:text-red-600 transition-colors text-left"
                 >
                   Click to view
                 </button>
               </div>
+
               <div className="flex gap-2">
                 <button
                   onClick={() => setRandomMovieOpen(true)}
-                  className="px-3 py-1.5 bg-[#C0392B] hover:bg-[#E74C3C] text-white rounded-lg text-sm transition-colors"
+                  className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm transition-colors"
                 >
                   View Movie
                 </button>
-                <button onClick={() => { setRandomMovieId(null); setRandomMovieOpen(false); }} className="p-1.5 text-gray-500 hover:text-white transition-colors">
+                <button
+                  onClick={() => {
+                    setRandomMovieId(null);
+                    setRandomMovieOpen(false);
+                  }}
+                  className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
+                >
                   <X className="w-4 h-4" />
                 </button>
               </div>
             </div>
           )}
 
-          {/* Watchlist wheel */}
           {showWheel && group.watchlist.length > 0 && (
             <div className="flex flex-col items-center gap-6 py-4">
               {winner ? (
                 <div className="text-center space-y-4 py-4">
                   <div className="text-6xl animate-bounce">🎬</div>
-                  <div className="bg-gradient-to-r from-[#C0392B] to-[#E74C3C] rounded-2xl p-6 shadow-2xl shadow-[#C0392B]/30 max-w-sm mx-auto">
+                  <div className="bg-gradient-to-r from-red-600 to-red-500 rounded-2xl p-6 shadow-2xl shadow-red-600/30 max-w-sm mx-auto">
                     <p className="text-white/80 text-sm mb-1">Tonight you're watching…</p>
                     <h3 className="text-white text-2xl font-bold">{winner.movie_title}</h3>
-                    <p className="text-white/60 text-sm mt-2">Added by @{winner.added_by_username}</p>
+                    <p className="text-white/70 text-sm mt-2">Added by @{winner.added_by_username}</p>
                   </div>
-                  <button onClick={() => setWinner(null)} className="px-6 py-2 bg-[#2A2A2A] hover:bg-[#333] text-gray-300 rounded-lg text-sm transition-colors">Spin Again</button>
+                  <button onClick={() => setWinner(null)} className={`px-6 py-2 text-sm ${secondaryButtonClass}`}>
+                    Spin Again
+                  </button>
                 </div>
-              ) : <SpinWheel items={group.watchlist} onSpinEnd={setWinner} />}
+              ) : (
+                <SpinWheel items={group.watchlist} onSpinEnd={setWinner} />
+              )}
             </div>
           )}
 
           {group.watchlist.length === 0 && !randomMovieId && (
-            <p className="text-gray-600 text-sm text-center py-2">
-              Add movies to the watchlist below to use the wheel, or hit <span className="text-gray-400">Random Movie</span> to discover something new.
+            <p className="text-muted-foreground text-sm text-center py-2">
+              Add movies to the watchlist below to use the wheel, or hit{' '}
+              <span className="text-foreground">Random Movie</span> to discover something new.
             </p>
           )}
         </section>
 
-        {/* Watchlist with TMDB search */}
-        <section className="bg-[#1C1C1C] border border-[#2A2A2A] rounded-xl p-5">
-          <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
-            <Clapperboard className="w-5 h-5 text-[#C0392B]" /> Group Watchlist
-            <span className="text-gray-500 text-sm font-normal">({group.watchlist.length})</span>
+        <section className={`${cardClass} p-5`}>
+          <h3 className="text-foreground font-semibold mb-4 flex items-center gap-2">
+            <Clapperboard className="w-5 h-5 text-red-600" />
+            Group Watchlist
+            <span className="text-muted-foreground text-sm font-normal">({group.watchlist.length})</span>
           </h3>
+
           <div className="mb-4">
             <TMDBMovieSearch groupId={group.group_id} onAdded={refresh} />
           </div>
-          {group.watchlist.length === 0
-            ? <p className="text-gray-500 text-center py-8">No movies yet — search above or use Movie Night to find something!</p>
-            : (
-              <div className="space-y-2">
-                {group.watchlist.map((m, i) => (
-                  <div key={m.movie_id} className="flex items-center gap-3 p-3 bg-[#141414] rounded-lg border border-[#2A2A2A]">
-                    <span className="text-gray-600 text-sm w-5 text-right shrink-0">{i + 1}</span>
-                    {m.movie_poster
-                      ? <img src={m.movie_poster} alt={m.movie_title} className="w-8 h-12 object-cover rounded shrink-0" />
-                      : <Film className="w-4 h-4 text-gray-600 shrink-0" />}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-white truncate">{m.movie_title}</p>
-                      <p className="text-xs text-gray-600">by @{m.added_by_username}</p>
-                    </div>
-                    <button onClick={() => handleRemoveMovie(m.movie_id)} className="text-gray-600 hover:text-red-500 transition-colors shrink-0">
-                      <X className="w-4 h-4" />
-                    </button>
+
+          {group.watchlist.length === 0 ? (
+            <p className="text-muted-foreground text-center py-8">No movies yet — search above or use Movie Night to find something!</p>
+          ) : (
+            <div className="space-y-2">
+              {group.watchlist.map((m, i) => (
+                <div key={m.movie_id} className={`flex items-center gap-3 p-3 ${subCardClass}`}>
+                  <span className="text-muted-foreground text-sm w-5 text-right shrink-0">{i + 1}</span>
+                  {m.movie_poster ? (
+                    <img src={m.movie_poster} alt={m.movie_title} className="w-8 h-12 object-cover rounded shrink-0" />
+                  ) : (
+                    <Film className="w-4 h-4 text-muted-foreground shrink-0" />
+                  )}
+
+                  <div className="flex-1 min-w-0">
+                    <p className="text-foreground truncate">{m.movie_title}</p>
+                    <p className="text-xs text-muted-foreground">by @{m.added_by_username}</p>
                   </div>
-                ))}
-              </div>
-            )}
+
+                  <button onClick={() => handleRemoveMovie(m.movie_id)} className="text-muted-foreground hover:text-red-500 transition-colors shrink-0">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
 
-        {/* Members with online status */}
-        <section className="bg-[#1C1C1C] border border-[#2A2A2A] rounded-xl p-5">
-          <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
-            <Users className="w-5 h-5 text-[#C0392B]" /> Members
-            <span className="text-gray-500 text-sm font-normal">({group.members.length})</span>
+        <section className={`${cardClass} p-5`}>
+          <h3 className="text-foreground font-semibold mb-4 flex items-center gap-2">
+            <Users className="w-5 h-5 text-red-600" />
+            Members
+            <span className="text-muted-foreground text-sm font-normal">({group.members.length})</span>
             {onlineCount > 0 && <span className="text-green-500 text-xs">• {onlineCount} online</span>}
           </h3>
 
-          {/* Invite search */}
           <div className="flex gap-2 mb-4">
-            <input type="text" placeholder="Search username to invite…" value={friendSearch}
-              onChange={e => setFriendSearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleFriendSearch()}
-              className="flex-1 bg-[#141414] border border-[#2A2A2A] rounded-lg px-4 py-2.5 text-white placeholder:text-gray-600 focus:border-[#C0392B] focus:outline-none" />
-            <button onClick={handleFriendSearch} className="px-4 py-2.5 bg-[#2A2A2A] hover:bg-[#333] text-gray-300 rounded-lg transition-colors">
+            <input
+              type="text"
+              placeholder="Search username to invite…"
+              value={friendSearch}
+              onChange={(e) => setFriendSearch(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleFriendSearch()}
+              className={`flex-1 ${inputClass}`}
+            />
+            <button onClick={handleFriendSearch} className={`px-4 py-2.5 ${secondaryButtonClass}`}>
               <Search className="w-5 h-5" />
             </button>
           </div>
+
           {friendResults.length > 0 && (
-            <div className="mb-4 space-y-2 border border-[#2A2A2A] rounded-lg p-3 bg-[#141414]">
-              {friendResults.map(u => (
+            <div className="mb-4 space-y-2 border border-border rounded-lg p-3 bg-background/80">
+              {friendResults.map((u) => (
                 <div key={u.user_id} className="flex items-center gap-2">
-                  <p className="flex-1 text-white text-sm">@{u.username}</p>
-                  <button onClick={() => handleAddMember(u)} disabled={addingMember === u.user_id}
-                    className="text-sm px-3 py-1 bg-[#C0392B]/20 hover:bg-[#C0392B] border border-[#C0392B]/50 text-[#C0392B] hover:text-white rounded-lg transition-all disabled:opacity-50">
+                  <p className="flex-1 text-foreground text-sm">@{u.username}</p>
+                  <button
+                    onClick={() => handleAddMember(u)}
+                    disabled={addingMember === u.user_id}
+                    className="text-sm px-3 py-1 bg-red-600/10 hover:bg-red-600 border border-red-600/30 hover:border-red-600 text-red-600 hover:text-white rounded-lg transition-all disabled:opacity-50"
+                  >
                     {addingMember === u.user_id ? '…' : 'Invite'}
                   </button>
                 </div>
@@ -1096,13 +1298,14 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
           )}
 
           <div className="space-y-2">
-            {group.members.map(member_id => {
+            {group.members.map((member_id) => {
               const prof = profileFor(member_id);
               const uname = prof?.username || group.member_usernames[member_id] || member_id;
               const online = prof ? isOnline(prof.lastSeen) : false;
               const isOwner = member_id === group.created_by;
+
               return (
-                <div key={member_id} className="flex items-center gap-3 p-3 bg-[#141414] rounded-lg border border-[#2A2A2A]">
+                <div key={member_id} className={`flex items-center gap-3 p-3 ${subCardClass}`}>
                   <UserAvatar
                     username={uname}
                     avatarUrl={prof?.avatarUrl}
@@ -1110,13 +1313,20 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
                     lastSeen={prof?.lastSeen}
                     onClick={() => setProfileUserId(member_id)}
                   />
+
                   <div className="flex-1">
-                    <button onClick={() => setProfileUserId(member_id)} className="text-white text-sm hover:text-[#C0392B] transition-colors">@{uname}</button>
-                    <p className="text-xs text-gray-600">{online ? 'Online now' : prof?.lastSeen ? `Last seen ${timeAgo(prof.lastSeen)}` : 'Offline'}</p>
+                    <button onClick={() => setProfileUserId(member_id)} className="text-foreground text-sm hover:text-red-600 transition-colors">
+                      @{uname}
+                    </button>
+                    <p className="text-xs text-muted-foreground">
+                      {online ? 'Online now' : prof?.lastSeen ? `Last seen ${timeAgo(prof.lastSeen)}` : 'Offline'}
+                    </p>
                   </div>
+
                   {isOwner && <Crown className="w-4 h-4 text-yellow-500 shrink-0" title="Creator" />}
+
                   {isCreator && !isOwner && (
-                    <button onClick={() => handleRemoveMember(member_id)} className="text-gray-600 hover:text-red-500 transition-colors shrink-0">
+                    <button onClick={() => handleRemoveMember(member_id)} className="text-muted-foreground hover:text-red-500 transition-colors shrink-0">
                       <UserMinus className="w-4 h-4" />
                     </button>
                   )}
@@ -1130,7 +1340,6 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
   );
 }
 
-// ── Groups Panel ───────────────────────────────────────────────
 function GroupsPanel({ onOpenProfile }: { onOpenProfile: (uid: string) => void }) {
   const currentUser = getUser();
   const uid = currentUser?.user_id ?? '';
@@ -1144,7 +1353,6 @@ function GroupsPanel({ onOpenProfile }: { onOpenProfile: (uid: string) => void }
   const [newDesc, setNewDesc] = useState('');
   const [creating, setCreating] = useState(false);
 
-  // Heartbeat — update lastSeen while user is in groups panel
   useEffect(() => {
     if (!uid) return;
     updateLastSeen(uid);
@@ -1159,13 +1367,20 @@ function GroupsPanel({ onOpenProfile }: { onOpenProfile: (uid: string) => void }
     setLoading(false);
   }, [uid]);
 
-  useEffect(() => { loadGroups(); }, [loadGroups]);
+  useEffect(() => {
+    loadGroups();
+  }, [loadGroups]);
 
   const handleCreateGroup = async () => {
     if (!newName.trim()) return;
     setCreating(true);
     const r = await createGroup(newName.trim(), newDesc.trim(), uid, uname);
-    if (r.success) { setNewName(''); setNewDesc(''); setShowCreate(false); await loadGroups(); }
+    if (r.success) {
+      setNewName('');
+      setNewDesc('');
+      setShowCreate(false);
+      await loadGroups();
+    }
     setCreating(false);
   };
 
@@ -1180,7 +1395,10 @@ function GroupsPanel({ onOpenProfile }: { onOpenProfile: (uid: string) => void }
         group={activeGroup}
         currentUserId={uid}
         currentUsername={uname}
-        onBack={() => { setActiveGroup(null); loadGroups(); }}
+        onBack={() => {
+          setActiveGroup(null);
+          loadGroups();
+        }}
         onUpdate={async () => {
           const updated = await getGroup(activeGroup.group_id);
           if (updated) setActiveGroup(updated);
@@ -1191,24 +1409,44 @@ function GroupsPanel({ onOpenProfile }: { onOpenProfile: (uid: string) => void }
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <section className="bg-[#1C1C1C] border border-[#2A2A2A] rounded-xl p-5">
+      <section className={`${cardClass} p-5`}>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-white font-semibold flex items-center gap-2"><Users className="w-5 h-5 text-[#C0392B]" />Movie Groups</h3>
-          <button onClick={() => setShowCreate(v => !v)}
-            className="flex items-center gap-2 px-4 py-2 bg-[#C0392B] hover:bg-[#A93226] text-white rounded-lg text-sm transition-colors">
-            <Plus className="w-4 h-4" />New Group
+          <h3 className="text-foreground font-semibold flex items-center gap-2">
+            <Users className="w-5 h-5 text-red-600" />
+            Movie Groups
+          </h3>
+
+          <button onClick={() => setShowCreate((v) => !v)} className={`flex items-center gap-2 px-4 py-2 text-sm ${primaryButtonClass}`}>
+            <Plus className="w-4 h-4" />
+            New Group
           </button>
         </div>
+
         {showCreate && (
           <div className="space-y-3 mb-2">
-            <input type="text" placeholder="Group name…" value={newName} onChange={e => setNewName(e.target.value)}
-              className="w-full bg-[#141414] border border-[#2A2A2A] rounded-lg px-4 py-2.5 text-white placeholder:text-gray-600 focus:border-[#C0392B] focus:outline-none" />
-            <input type="text" placeholder="Description (optional)…" value={newDesc} onChange={e => setNewDesc(e.target.value)}
-              className="w-full bg-[#141414] border border-[#2A2A2A] rounded-lg px-4 py-2.5 text-white placeholder:text-gray-600 focus:border-[#C0392B] focus:outline-none" />
+            <input
+              type="text"
+              placeholder="Group name…"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              className={inputClass}
+            />
+            <input
+              type="text"
+              placeholder="Description (optional)…"
+              value={newDesc}
+              onChange={(e) => setNewDesc(e.target.value)}
+              className={inputClass}
+            />
             <div className="flex gap-2">
-              <button onClick={() => setShowCreate(false)} className="flex-1 bg-[#2A2A2A] hover:bg-[#333] text-gray-300 px-4 py-2.5 rounded-lg transition-colors">Cancel</button>
-              <button onClick={handleCreateGroup} disabled={creating || !newName.trim()}
-                className="flex-1 bg-[#C0392B] hover:bg-[#A93226] text-white px-4 py-2.5 rounded-lg transition-colors disabled:opacity-50">
+              <button onClick={() => setShowCreate(false)} className={`flex-1 px-4 py-2.5 ${secondaryButtonClass}`}>
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateGroup}
+                disabled={creating || !newName.trim()}
+                className={`flex-1 px-4 py-2.5 ${primaryButtonClass} disabled:opacity-50`}
+              >
                 {creating ? 'Creating…' : 'Create'}
               </button>
             </div>
@@ -1216,46 +1454,56 @@ function GroupsPanel({ onOpenProfile }: { onOpenProfile: (uid: string) => void }
         )}
       </section>
 
-      {loading ? <p className="text-gray-500 text-center py-16">Loading groups…</p>
-        : groups.length === 0 ? (
-          <div className="text-center py-16 space-y-3">
-            <Popcorn className="w-12 h-12 text-gray-700 mx-auto" />
-            <p className="text-gray-500">No groups yet — create one and invite friends!</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {groups.map(g => {
-              const onlineMembers = 0; // refreshed inside GroupDetail
-              return (
-                <button key={g.group_id} onClick={() => handleOpenGroup(g)}
-                  className="w-full bg-[#1C1C1C] border border-[#2A2A2A] hover:border-[#C0392B]/50 rounded-xl p-5 text-left transition-all hover:bg-[#222]">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <h4 className="text-white font-semibold">{g.name}</h4>
-                        {g.created_by === uid && <Crown className="w-4 h-4 text-yellow-500" />}
-                      </div>
-                      {g.description && <p className="text-gray-500 text-sm">{g.description}</p>}
-                      <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
-                        <span className="flex items-center gap-1"><Users className="w-4 h-4" />{g.members.length} member{g.members.length !== 1 ? 's' : ''}</span>
-                        <span className="flex items-center gap-1"><Film className="w-4 h-4" />{g.watchlist.length} movie{g.watchlist.length !== 1 ? 's' : ''}</span>
-                      </div>
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-gray-600" />
+      {loading ? (
+        <p className="text-muted-foreground text-center py-16">Loading groups…</p>
+      ) : groups.length === 0 ? (
+        <div className="text-center py-16 space-y-3">
+          <Popcorn className="w-12 h-12 text-muted-foreground mx-auto" />
+          <p className="text-muted-foreground">No groups yet — create one and invite friends!</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {groups.map((g) => (
+            <button
+              key={g.group_id}
+              onClick={() => handleOpenGroup(g)}
+              className={`w-full ${cardClass} hover:border-red-600/40 p-5 text-left transition-all`}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h4 className="text-foreground font-semibold">{g.name}</h4>
+                    {g.created_by === uid && <Crown className="w-4 h-4 text-yellow-500" />}
                   </div>
-                </button>
-              );
-            })}
-          </div>
-        )}
+
+                  {g.description && <p className="text-muted-foreground text-sm">{g.description}</p>}
+
+                  <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <Users className="w-4 h-4" />
+                      {g.members.length} member{g.members.length !== 1 ? 's' : ''}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Film className="w-4 h-4" />
+                      {g.watchlist.length} movie{g.watchlist.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                </div>
+
+                <ChevronRight className="w-5 h-5 text-muted-foreground" />
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-// ── Main SocialTab ─────────────────────────────────────────────
 export function SocialTab() {
   type Tab = 'feed' | 'friends' | 'groups';
   type FeedMode = 'all' | 'friends';
+
   const [activeTab, setActiveTab] = useState<Tab>('feed');
   const [feedMode, setFeedMode] = useState<FeedMode>('all');
   const [posts, setPosts] = useState<FeedPost[]>([]);
@@ -1277,16 +1525,18 @@ export function SocialTab() {
     if (activeTab === 'feed') {
       setLoading(true);
       getFeed().then(async (feedPosts) => {
-        const needsAvatars = feedPosts.some(p => !p.avatarUrl);
+        const needsAvatars = feedPosts.some((p) => !p.avatarUrl);
         if (needsAvatars) {
-          const uniqueIds = [...new Set(feedPosts.map(p => p.user_id))];
-          const profiles = await Promise.all(uniqueIds.map(id => getUserPublicProfile(id)));
+          const uniqueIds = [...new Set(feedPosts.map((p) => p.user_id))];
+          const profiles = await Promise.all(uniqueIds.map((id) => getUserPublicProfile(id)));
           const avatarMap: Record<string, string> = {};
+
           uniqueIds.forEach((id, i) => {
             const url = profiles[i]?.avatarUrl;
             if (url) avatarMap[id] = url;
           });
-          setPosts(feedPosts.map(p => ({ ...p, avatarUrl: p.avatarUrl ?? avatarMap[p.user_id] })));
+
+          setPosts(feedPosts.map((p) => ({ ...p, avatarUrl: p.avatarUrl ?? avatarMap[p.user_id] })));
         } else {
           setPosts(feedPosts);
         }
@@ -1295,44 +1545,68 @@ export function SocialTab() {
     }
   }, [activeTab]);
 
-  // Load friend IDs when friends-only feed is selected
   useEffect(() => {
     if (feedMode !== 'friends' || friendsLoaded || !currentUserId) return;
-    getFriends(currentUserId).then(f => {
-      setFriendIds(new Set(f.map(fr => fr.friend_id)));
+    getFriends(currentUserId).then((f) => {
+      setFriendIds(new Set(f.map((fr) => fr.friend_id)));
       setFriendsLoaded(true);
     });
   }, [feedMode, friendsLoaded, currentUserId]);
 
-  const displayedPosts = feedMode === 'friends'
-    ? posts.filter(p => p.user_id === currentUserId || friendIds.has(p.user_id))
-    : posts;
+  const displayedPosts =
+    feedMode === 'friends'
+      ? posts.filter((p) => p.user_id === currentUserId || friendIds.has(p.user_id))
+      : posts;
 
   const handleLike = async (post_id: string) => {
     if (!currentUserId) return;
     const result = await likePost(post_id, currentUserId);
     if (result.success) {
-      setPosts(prev => prev.map(p => {
-        if (p.post_id !== post_id) return p;
-        const liked = p.liked_by.includes(currentUserId);
-        return { ...p, likes: liked ? p.likes - 1 : p.likes + 1, liked_by: liked ? p.liked_by.filter(id => id !== currentUserId) : [...p.liked_by, currentUserId] };
-      }));
+      setPosts((prev) =>
+        prev.map((p) => {
+          if (p.post_id !== post_id) return p;
+          const liked = p.liked_by.includes(currentUserId);
+          return {
+            ...p,
+            likes: liked ? p.likes - 1 : p.likes + 1,
+            liked_by: liked
+              ? p.liked_by.filter((id) => id !== currentUserId)
+              : [...p.liked_by, currentUserId],
+          };
+        })
+      );
     }
   };
 
   const handleDelete = async (post_id: string) => {
     if (!currentUserId) return;
     const result = await deletePost(post_id, currentUserId);
-    if (result.success) setPosts(prev => prev.filter(p => p.post_id !== post_id));
+    if (result.success) setPosts((prev) => prev.filter((p) => p.post_id !== post_id));
   };
 
   const handleCreatePost = async () => {
-    if (!currentUser) { setPostError('You must be logged in to post.'); return; }
-    if (!selectedMovie) { setPostError('Please search and select a movie.'); return; }
-    if (!newMessage.trim()) { setPostError('Message is required.'); return; }
+    if (!currentUser) {
+      setPostError('You must be logged in to post.');
+      return;
+    }
+    if (!selectedMovie) {
+      setPostError('Please search and select a movie.');
+      return;
+    }
+    if (!newMessage.trim()) {
+      setPostError('Message is required.');
+      return;
+    }
+
     const rating = parseFloat(newRating);
-    if (isNaN(rating) || rating < 0 || rating > 10) { setPostError('Rating must be 0–10.'); return; }
-    setPosting(true); setPostError('');
+    if (isNaN(rating) || rating < 0 || rating > 10) {
+      setPostError('Rating must be 0–10.');
+      return;
+    }
+
+    setPosting(true);
+    setPostError('');
+
     const result = await createPost({
       user_id: currentUser.user_id,
       username: currentUser.username,
@@ -1342,110 +1616,189 @@ export function SocialTab() {
       movie_poster: selectedMovie.poster,
       rating,
     });
+
     if (result.success) {
       const updated = await getFeed();
-      const needsAvatars = updated.some(p => !p.avatarUrl);
+      const needsAvatars = updated.some((p) => !p.avatarUrl);
+
       if (needsAvatars) {
-        const uniqueIds = [...new Set(updated.map(p => p.user_id))];
-        const profiles = await Promise.all(uniqueIds.map(id => getUserPublicProfile(id)));
+        const uniqueIds = [...new Set(updated.map((p) => p.user_id))];
+        const profiles = await Promise.all(uniqueIds.map((id) => getUserPublicProfile(id)));
         const avatarMap: Record<string, string> = {};
-        uniqueIds.forEach((id, i) => { const url = profiles[i]?.avatarUrl; if (url) avatarMap[id] = url; });
-        setPosts(updated.map(p => ({ ...p, avatarUrl: p.avatarUrl ?? avatarMap[p.user_id] })));
+        uniqueIds.forEach((id, i) => {
+          const url = profiles[i]?.avatarUrl;
+          if (url) avatarMap[id] = url;
+        });
+        setPosts(updated.map((p) => ({ ...p, avatarUrl: p.avatarUrl ?? avatarMap[p.user_id] })));
       } else {
         setPosts(updated);
       }
-      setSelectedMovie(null); setNewRating(''); setNewMessage('');
+
+      setSelectedMovie(null);
+      setNewRating('');
+      setNewMessage('');
       setShowNewPostDialog(false);
-    } else setPostError(result.message || 'Failed to create post.');
+    } else {
+      setPostError(result.message || 'Failed to create post.');
+    }
+
     setPosting(false);
   };
 
   const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
-    { id: 'feed',    label: 'Feed',    icon: <MessageCircle className="w-4 h-4" /> },
+    { id: 'feed', label: 'Feed', icon: <MessageCircle className="w-4 h-4" /> },
     { id: 'friends', label: 'Friends', icon: <UserPlus className="w-4 h-4" /> },
-    { id: 'groups',  label: 'Groups',  icon: <Users className="w-4 h-4" /> },
+    { id: 'groups', label: 'Groups', icon: <Users className="w-4 h-4" /> },
   ];
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-white">
+    <div className="min-h-screen bg-background text-foreground relative">
       {profileUserId && <UserProfileModal userId={profileUserId} onClose={() => setProfileUserId(null)} />}
 
-      <div className="text-2xl font-bold text-white mb-6 relative inline-block">
-        Social
-        <div className="absolute -bottom-2 left-0 right-0 h-[2px] bg-gradient-to-r from-red-600 via-red-500 to-transparent" />
-      </div>
+      <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-muted/40 -z-10"></div>
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-red-500/10 via-transparent to-transparent -z-10"></div>
 
-      {/* Top-level tabs */}
-      <div className="flex gap-1 mb-8 bg-[#141414] border border-[#2A2A2A] rounded-xl p-1 w-fit">
-        {tabs.map(t => (
-          <button key={t.id} onClick={() => setActiveTab(t.id)}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${activeTab === t.id ? 'bg-gradient-to-r from-[#C0392B] to-[#E74C3C] text-white shadow-lg shadow-[#C0392B]/20' : 'text-gray-400 hover:text-white hover:bg-[#1C1C1C]'}`}>
-            {t.icon}{t.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Feed */}
-      {activeTab === 'feed' && (
-        <div className="max-w-3xl mx-auto relative pb-20">
-          {/* All / Friends sub-tabs */}
-          <div className="flex gap-1 mb-6 bg-[#141414] border border-[#2A2A2A] rounded-xl p-1 w-fit">
-            <button
-              onClick={() => setFeedMode('all')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${feedMode === 'all' ? 'bg-[#2A2A2A] text-white' : 'text-gray-500 hover:text-white'}`}>
-              <Sparkles className="w-3.5 h-3.5" /> General
-            </button>
-            <button
-              onClick={() => setFeedMode('friends')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${feedMode === 'friends' ? 'bg-[#2A2A2A] text-white' : 'text-gray-500 hover:text-white'}`}>
-              <Users className="w-3.5 h-3.5" /> Friends
-            </button>
-          </div>
-
-          <div className="space-y-6">
-            {loading
-              ? <p className="text-gray-500 text-center py-16">Loading feed…</p>
-              : displayedPosts.length === 0
-                ? <p className="text-gray-500 text-center py-16">
-                    {feedMode === 'friends' ? 'No posts from friends yet. Add some friends!' : 'No posts yet. Be the first to share!'}
-                  </p>
-                : displayedPosts.map(post => (
-                    <PostCard key={post.post_id} post={post} currentUserId={currentUserId} currentUsername={currentUser?.username ?? ''}
-                      onLike={handleLike} onDelete={handleDelete}
-                      onOpenProfile={setProfileUserId} />
-                  ))}
-          </div>
-
-          <button onClick={() => setShowNewPostDialog(true)}
-            className="fixed bottom-8 right-8 bg-gradient-to-r from-[#C0392B] to-[#E74C3C] hover:from-[#A93226] hover:to-[#C0392B] text-white w-16 h-16 rounded-full flex items-center justify-center shadow-2xl shadow-[#C0392B]/30 transition-all hover:scale-110">
-            <Plus className="w-8 h-8" />
-          </button>
+      <div className="max-w-6xl mx-auto px-8 pt-12 pb-16">
+        <div className="mb-12">
+          <h1 className="text-2xl font-bold text-foreground relative inline-block">
+            Social
+            <div className="absolute -bottom-2 left-0 right-0 h-[2px] bg-gradient-to-r from-red-600 via-red-500 to-transparent shadow-[0_0_15px_rgba(220,38,38,0.4)]"></div>
+          </h1>
         </div>
-      )}
 
-      {activeTab === 'friends' && <FriendsPanel onOpenProfile={setProfileUserId} />}
-      {activeTab === 'groups' && <GroupsPanel onOpenProfile={setProfileUserId} />}
+        <div className="flex gap-1 mb-8 bg-card/80 border border-border rounded-xl p-1 w-fit">
+          {tabs.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setActiveTab(t.id)}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                activeTab === t.id
+                  ? 'bg-red-600 text-white shadow-lg shadow-red-600/20'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+              }`}
+            >
+              {t.icon}
+              {t.label}
+            </button>
+          ))}
+        </div>
 
-      {/* New Post Dialog */}
+        {activeTab === 'feed' && (
+          <div className="max-w-3xl mx-auto relative pb-20">
+            <div className="flex gap-1 mb-6 bg-card/80 border border-border rounded-xl p-1 w-fit">
+              <button
+                onClick={() => setFeedMode('all')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  feedMode === 'all'
+                    ? 'bg-muted text-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                General
+              </button>
+              <button
+                onClick={() => setFeedMode('friends')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  feedMode === 'friends'
+                    ? 'bg-muted text-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <Users className="w-3.5 h-3.5" />
+                Friends
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              {loading ? (
+                <p className="text-muted-foreground text-center py-16">Loading feed…</p>
+              ) : displayedPosts.length === 0 ? (
+                <p className="text-muted-foreground text-center py-16">
+                  {feedMode === 'friends'
+                    ? 'No posts from friends yet. Add some friends!'
+                    : 'No posts yet. Be the first to share!'}
+                </p>
+              ) : (
+                displayedPosts.map((post) => (
+                  <PostCard
+                    key={post.post_id}
+                    post={post}
+                    currentUserId={currentUserId}
+                    currentUsername={currentUser?.username ?? ''}
+                    onLike={handleLike}
+                    onDelete={handleDelete}
+                    onOpenProfile={setProfileUserId}
+                  />
+                ))
+              )}
+            </div>
+
+            <button
+              onClick={() => setShowNewPostDialog(true)}
+              className="fixed bottom-8 right-8 bg-red-600 hover:bg-red-700 text-white w-16 h-16 rounded-full flex items-center justify-center shadow-2xl shadow-red-600/30 transition-all hover:scale-110"
+            >
+              <Plus className="w-8 h-8" />
+            </button>
+          </div>
+        )}
+
+        {activeTab === 'friends' && <FriendsPanel onOpenProfile={setProfileUserId} />}
+        {activeTab === 'groups' && <GroupsPanel onOpenProfile={setProfileUserId} />}
+      </div>
+
       {showNewPostDialog && (
-        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1C1C1C] rounded-2xl border border-[#2A2A2A] p-6 max-w-lg w-full">
-            <h2 className="text-2xl text-white font-semibold mb-4">Create New Post</h2>
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-card/90 backdrop-blur-sm rounded-2xl border border-border p-6 max-w-lg w-full shadow-2xl">
+            <h2 className="text-2xl text-foreground font-semibold mb-4">Create New Post</h2>
+
             <div className="space-y-4">
               <div>
-                <label className="text-xs text-gray-500 uppercase tracking-wide mb-1.5 block">Movie</label>
+                <label className="text-xs text-muted-foreground uppercase tracking-wide mb-1.5 block">
+                  Movie
+                </label>
                 <PostMovieSearch onSelect={setSelectedMovie} selected={selectedMovie} />
               </div>
-              <input type="number" placeholder="Your rating (0–10)" min="0" max="10" step="0.5" value={newRating} onChange={e => setNewRating(e.target.value)}
-                className="w-full bg-[#141414] border border-[#2A2A2A] rounded-lg px-4 py-3 text-white placeholder:text-gray-600 focus:border-[#C0392B] focus:outline-none" />
-              <textarea placeholder="Share your thoughts…" rows={4} value={newMessage} onChange={e => setNewMessage(e.target.value)}
-                className="w-full bg-[#141414] border border-[#2A2A2A] rounded-lg px-4 py-3 text-white placeholder:text-gray-600 focus:border-[#C0392B] focus:outline-none resize-none" />
-              {postError && <p className="text-red-400 text-sm">{postError}</p>}
+
+              <input
+                type="number"
+                placeholder="Your rating (0–10)"
+                min="0"
+                max="10"
+                step="0.5"
+                value={newRating}
+                onChange={(e) => setNewRating(e.target.value)}
+                className={inputClass}
+              />
+
+              <textarea
+                placeholder="Share your thoughts…"
+                rows={4}
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                className={`${inputClass} resize-none py-3`}
+              />
+
+              {postError && <p className="text-red-500 text-sm">{postError}</p>}
+
               <div className="flex gap-3">
-                <button onClick={() => { setShowNewPostDialog(false); setPostError(''); setSelectedMovie(null); setNewRating(''); setNewMessage(''); }}
-                  className="flex-1 bg-[#2A2A2A] hover:bg-[#333333] text-white px-6 py-3 rounded-lg transition-colors font-medium">Cancel</button>
-                <button onClick={handleCreatePost} disabled={posting}
-                  className="flex-1 bg-gradient-to-r from-[#C0392B] to-[#E74C3C] hover:from-[#A93226] hover:to-[#C0392B] text-white px-6 py-3 rounded-lg transition-all font-medium disabled:opacity-50">
+                <button
+                  onClick={() => {
+                    setShowNewPostDialog(false);
+                    setPostError('');
+                    setSelectedMovie(null);
+                    setNewRating('');
+                    setNewMessage('');
+                  }}
+                  className={`flex-1 px-6 py-3 font-medium ${secondaryButtonClass}`}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCreatePost}
+                  disabled={posting}
+                  className={`flex-1 px-6 py-3 font-medium ${primaryButtonClass} disabled:opacity-50`}
+                >
                   {posting ? 'Posting…' : 'Post'}
                 </button>
               </div>
