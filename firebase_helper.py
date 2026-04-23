@@ -410,24 +410,6 @@ def add_watched_movie(user_id, movie, user_rating, comment=''):
         (db.collection('users').document(user_id)
            .collection('watched_movies').document(str(movie['movie_id']))
            .set(movie_doc))
-        # Fan-out: notify all friends that this user watched a movie
-        try:
-            user_doc = db.collection('users').document(user_id).get()
-            watcher_username = user_doc.to_dict().get('username', '') if user_doc.exists else ''
-            friends = get_friends(user_id)
-            notif_data = {
-                'movie_title': movie['title'],
-                'movie_id': str(movie['movie_id']),
-                'movie_poster': movie.get('poster', ''),
-                'user_rating': user_rating,
-            }
-            for friend in friends:
-                friend_id = friend.get('friend_id')
-                if friend_id:
-                    create_notification(friend_id, 'friend_watched', user_id, watcher_username,
-                                        data=notif_data)
-        except Exception as fan_err:
-            print(f"Error fanning out watched notification: {fan_err}")
         return {'success': True}
     except Exception as e:
         return {'success': False, 'message': str(e)}
@@ -538,12 +520,6 @@ def like_post(post_id, user_id):
                 'likes': firestore.Increment(1),
                 'liked_by': firestore.ArrayUnion([user_id])
             })
-            # Notify the post owner (skip self-likes)
-            post_owner = post_doc.to_dict().get('user_id')
-            if post_owner and post_owner != user_id:
-                create_notification(post_owner, 'post_like', user_id, '',
-                                    data={'post_id': post_id,
-                                          'movie_title': post_doc.to_dict().get('movie_title', '')})
             return {'success': True, 'action': 'liked'}
     except Exception as e:
         return {'success': False, 'message': str(e)}
@@ -552,7 +528,6 @@ def like_post(post_id, user_id):
 def add_reply(post_id, user_id, username, message):
     try:
         post_ref = db.collection('posts').document(post_id)
-        post_doc = post_ref.get()
         reply_ref = post_ref.collection('replies').document()
         reply_ref.set({
             'reply_id': reply_ref.id,
@@ -561,13 +536,7 @@ def add_reply(post_id, user_id, username, message):
             'message': message,
             'created_at': datetime.now()
         })
-        # Notify the post owner (skip self-replies)
-        if post_doc.exists:
-            post_owner = post_doc.to_dict().get('user_id')
-            if post_owner and post_owner != user_id:
-                create_notification(post_owner, 'post_reply', user_id, username,
-                                    data={'post_id': post_id,
-                                          'movie_title': post_doc.to_dict().get('movie_title', '')})
+        post_ref.update({'reply_count': firestore.Increment(1)})
         return {'success': True, 'reply_id': reply_ref.id}
     except Exception as e:
         return {'success': False, 'message': str(e)}
@@ -661,7 +630,6 @@ def send_friend_request(from_user_id, from_username, to_user_id):
             'status': 'pending',
             'created_at': datetime.now()
         })
-        create_notification(to_user_id, 'friend_request', from_user_id, from_username)
         return {'success': True}
     except Exception as e:
         return {'success': False, 'message': str(e)}
@@ -698,8 +666,6 @@ def accept_friend_request(user_id, user_username, from_user_id, from_username):
             'since': now
         })
         req_ref.delete()
-        # Notify the original requester that their request was accepted
-        create_notification(from_user_id, 'friend_accept', user_id, user_username)
         return {'success': True}
     except Exception as e:
         return {'success': False, 'message': str(e)}
@@ -782,19 +748,12 @@ def add_group_member(group_id, new_member_id, new_member_username):
     """Add a new member to an existing group"""
     try:
         group_ref = db.collection('groups').document(group_id)
-        group_doc = group_ref.get()
-        if not group_doc.exists:
+        if not group_ref.get().exists:
             return {'success': False, 'message': 'Group not found'}
         group_ref.update({
             'members': firestore.ArrayUnion([new_member_id]),
             f'member_usernames.{new_member_id}': new_member_username
         })
-        group_data = group_doc.to_dict()
-        create_notification(new_member_id, 'group_invite',
-                            group_data.get('created_by', ''),
-                            group_data.get('created_by_username', ''),
-                            data={'group_id': group_id,
-                                  'group_name': group_data.get('name', '')})
         return {'success': True}
     except Exception as e:
         return {'success': False, 'message': str(e)}
@@ -1079,71 +1038,6 @@ def get_friends_roulette_history(user_id, limit=1):
         print(f"Error getting friends roulette history: {e}")
         return []
     
-# ── Quiz ──────────────────────────────────────────────────────────
-# ── Notifications ─────────────────────────────────────────────────
-
-def create_notification(user_id, notif_type, actor_user_id, actor_username, data=None):
-    """Write a single notification document to users/{user_id}/notifications."""
-    try:
-        ref = db.collection('users').document(user_id).collection('notifications').document()
-        ref.set({
-            'notification_id': ref.id,
-            'type': notif_type,
-            'actor_user_id': actor_user_id,
-            'actor_username': actor_username,
-            'data': data or {},
-            'read': False,
-            'created_at': datetime.now(),
-        })
-    except Exception as e:
-        print(f"Error creating notification: {e}")
-
-
-def get_notifications(user_id, limit=40):
-    """Return the most recent notifications for a user, newest first."""
-    try:
-        docs = (
-            db.collection('users').document(user_id)
-              .collection('notifications')
-              .order_by('created_at', direction=firestore.Query.DESCENDING)
-              .limit(limit)
-              .stream()
-        )
-        return [doc.to_dict() for doc in docs]
-    except Exception as e:
-        print(f"Error getting notifications: {e}")
-        return []
-
-
-def mark_notification_read(user_id, notification_id):
-    """Mark a single notification as read."""
-    try:
-        (db.collection('users').document(user_id)
-           .collection('notifications').document(notification_id)
-           .update({'read': True}))
-        return {'success': True}
-    except Exception as e:
-        return {'success': False, 'message': str(e)}
-
-
-def mark_all_notifications_read(user_id):
-    """Mark every unread notification for the user as read."""
-    try:
-        docs = (
-            db.collection('users').document(user_id)
-              .collection('notifications')
-              .where('read', '==', False)
-              .stream()
-        )
-        batch = db.batch()
-        for doc in docs:
-            batch.update(doc.reference, {'read': True})
-        batch.commit()
-        return {'success': True}
-    except Exception as e:
-        return {'success': False, 'message': str(e)}
-
-
 # ── Quiz ──────────────────────────────────────────────────────────
 def save_quiz_result(uid, top_genre, answers):
     """Save quiz completion status and top genre to the user's Firestore document"""
