@@ -54,6 +54,7 @@ export interface FeedPost {
   likes: number;
   liked_by: string[];
   created_at: string;
+  reply_count?: number;
 }
 
 
