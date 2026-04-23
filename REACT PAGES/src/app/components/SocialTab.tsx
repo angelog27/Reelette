@@ -436,6 +436,7 @@ function PostCard({ post, currentUserId, currentUsername, onLike, onDelete, onOp
   const [loadingReplies, setLoadingReplies] = useState(false);
   const [replyText, setReplyText] = useState('');
   const [submittingReply, setSubmittingReply] = useState(false);
+  const [localReplyCount, setLocalReplyCount] = useState(post.reply_count ?? 0);
 
   const loadReplies = useCallback(async () => {
     setLoadingReplies(true);
@@ -459,6 +460,7 @@ function PostCard({ post, currentUserId, currentUsername, onLike, onDelete, onOp
     const result = await addReply(post.post_id, currentUserId, currentUsername, replyText.trim());
     if (result.success) {
       setReplyText('');
+      setLocalReplyCount((c: number) => c + 1);
       loadReplies();
     }
     setSubmittingReply(false);
@@ -538,8 +540,8 @@ function PostCard({ post, currentUserId, currentUsername, onLike, onDelete, onOp
             <button onClick={toggleReplies}
               className={`flex items-center gap-2 transition-colors ${showReplies ? 'text-white' : 'text-gray-500 hover:text-gray-400'}`}>
               <MessageCircle className="w-5 h-5" />
-              {(showReplies ? replies.length : (post.reply_count ?? 0)) > 0 && (
-                <span className="text-sm">{showReplies ? replies.length : post.reply_count}</span>
+              {(showReplies ? replies.length : localReplyCount) > 0 && (
+                <span className="text-sm">{showReplies ? replies.length : localReplyCount}</span>
               )}
             </button>
           </div>
