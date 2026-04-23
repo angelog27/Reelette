@@ -138,6 +138,8 @@ _USER_GROUPS_TTL     = 60   # 60 s  — user groups (GET /api/user/<uid>/groups)
 _MEMBER_SERVICES_TTL = 60   # 60 s  — member streaming services (GET /api/groups/<gid>/members/services)
 _FRIENDS_TTL         = 60   # 60 s  — friends list (GET /api/friends/<uid>)
 _FRIENDS_HISTORY_TTL = 60   # 60 s  — friends roulette history (GET /api/roulette/<uid>/friends-history)
+_NOTIF_TTL           = 30   # 30 s  — notifications (GET /api/user/<uid>/notifications)
+_WATCHED_TTL         = 60   # 60 s  — watched movies list (GET /api/watched/<user_id>)
 
 # In-memory provider cache: movie_id → (service_name, expiry_timestamp)
 _provider_cache: dict[int, tuple[str, float]] = {}
@@ -458,7 +460,13 @@ def remove_from_user_watchlist(user_id, movie_id):
 
 @app.route('/api/watched/<user_id>', methods=['GET'])
 def get_user_watched(user_id):
-    return jsonify({'movies': serialize_timestamps(get_watched_movies(user_id))})
+    cache_key = f'watched:{user_id}'
+    cached = _cache_get(cache_key)
+    if cached:
+        return jsonify({'movies': cached})
+    movies = serialize_timestamps(get_watched_movies(user_id))
+    _cache_set(cache_key, movies, _WATCHED_TTL)
+    return jsonify({'movies': movies})
 
 @app.route('/api/watched/<user_id>/<movie_id>', methods=['GET'])
 def get_user_watched_movie(user_id, movie_id):
@@ -476,7 +484,10 @@ def add_user_watched(user_id):
     comment = data.get('comment', '')
     if not movie or user_rating is None:
         return jsonify({'success': False, 'message': 'movie and user_rating required'}), 400
-    return jsonify(add_watched_movie(user_id, movie, user_rating, comment))
+    result = add_watched_movie(user_id, movie, user_rating, comment)
+    if result.get('success'):
+        _cache.pop(f'watched:{user_id}', None)
+    return jsonify(result)
 
 @app.route('/api/watched/<user_id>/<movie_id>', methods=['PUT'])
 def update_user_watched_rating(user_id, movie_id):
@@ -485,7 +496,10 @@ def update_user_watched_rating(user_id, movie_id):
     comment = data.get('comment')
     if new_rating is None:
         return jsonify({'success': False, 'message': 'rating required'}), 400
-    return jsonify(update_watched_rating(user_id, movie_id, new_rating, comment))
+    result = update_watched_rating(user_id, movie_id, new_rating, comment)
+    if result.get('success'):
+        _cache.pop(f'watched:{user_id}', None)
+    return jsonify(result)
 
 # ── Social Feed Routes ───────────────────────────────────────────
 
@@ -678,8 +692,14 @@ def delete_friend(user_id, friend_id):
 
 @app.route('/api/user/<user_id>/notifications', methods=['GET'])
 def get_user_notifications(user_id):
+    cache_key = f'notifs:{user_id}'
+    cached = _cache_get(cache_key)
+    if cached:
+        return jsonify({'notifications': cached})
     notifs = get_notifications(user_id)
-    return jsonify({'notifications': serialize_timestamps(notifs)})
+    result = serialize_timestamps(notifs)
+    _cache_set(cache_key, result, _NOTIF_TTL)
+    return jsonify({'notifications': result})
 
 @app.route('/api/user/<user_id>/notifications/read-all', methods=['PUT'])
 def read_all_notifications(user_id):
