@@ -26,7 +26,8 @@ from firebase_helper import (
     add_to_group_watchlist, remove_from_group_watchlist, spin_group_reelette,
     update_user_avatar, update_user_last_seen,
     get_user_public_profile, get_group_member_profiles, get_members_streaming_services,
-    log_roulette_spin, get_roulette_history, get_friends_roulette_history, save_quiz_result
+    log_roulette_spin, get_roulette_history, get_friends_roulette_history, save_quiz_result,
+    get_notifications, mark_notification_read, mark_all_notifications_read,
 )
 from tmdb_api import (
     search_movies, discover_movies, get_popular_movies, get_movie_details,
@@ -672,6 +673,21 @@ def delete_friend(user_id, friend_id):
         _cache.pop(f'friends:{user_id}', None)
         _cache.pop(f'friends:{friend_id}', None)
     return jsonify(result)
+
+# ── Notifications ────────────────────────────────────────────────
+
+@app.route('/api/user/<user_id>/notifications', methods=['GET'])
+def get_user_notifications(user_id):
+    notifs = get_notifications(user_id)
+    return jsonify({'notifications': serialize_timestamps(notifs)})
+
+@app.route('/api/user/<user_id>/notifications/read-all', methods=['PUT'])
+def read_all_notifications(user_id):
+    return jsonify(mark_all_notifications_read(user_id))
+
+@app.route('/api/user/<user_id>/notifications/<notification_id>/read', methods=['PUT'])
+def read_one_notification(user_id, notification_id):
+    return jsonify(mark_notification_read(user_id, notification_id))
 
 # ── Groups ───────────────────────────────────────────────────────
 

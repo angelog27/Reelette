@@ -742,6 +742,54 @@ export async function getRouletteHistory(user_id: string, limit = 10): Promise<R
 }
 
 
+// ── Notifications ────────────────────────────────────────────────
+
+export type NotificationType =
+  | 'friend_request'
+  | 'friend_accept'
+  | 'post_like'
+  | 'post_reply'
+  | 'friend_watched'
+  | 'group_invite';
+
+export interface AppNotification {
+  notification_id: string;
+  type: NotificationType;
+  actor_user_id: string;
+  actor_username: string;
+  data: {
+    movie_title?: string;
+    movie_id?: string;
+    movie_poster?: string;
+    user_rating?: number;
+    post_id?: string;
+    group_id?: string;
+    group_name?: string;
+  };
+  read: boolean;
+  created_at: string;
+}
+
+export async function getNotifications(user_id: string): Promise<AppNotification[]> {
+  const res = await fetch(`${BASE_URL}/user/${user_id}/notifications`);
+  const data = await res.json();
+  return data.notifications ?? [];
+}
+
+export async function markNotificationRead(user_id: string, notification_id: string) {
+  const res = await fetch(`${BASE_URL}/user/${user_id}/notifications/${notification_id}/read`, {
+    method: 'PUT',
+  });
+  return res.json();
+}
+
+export async function markAllNotificationsRead(user_id: string) {
+  const res = await fetch(`${BASE_URL}/user/${user_id}/notifications/read-all`, {
+    method: 'PUT',
+  });
+  return res.json();
+}
+
 // ── Helpers ──────────────────────────────────────────────────────
 
 
