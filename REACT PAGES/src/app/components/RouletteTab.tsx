@@ -1,3 +1,4 @@
+import React from "react";
 import { useState, useEffect, useRef } from "react";
 import { Shuffle, ChevronDown } from "lucide-react";
 import { MovieDetailModal } from "./MovieDetailModal";
@@ -17,8 +18,12 @@ import {
   type RouletteSpin,
 } from "../services/api";
 
+
 const HERO_POSTER =
   "https://image.tmdb.org/t/p/original/np0dsehLDdbfyHFRtqCiL1GR0TQ.jpg";
+
+const HERO_META = ["2025", "★ 7.4"];
+const HERO_TAGS = ["Action", "Sci-Fi", "Adventure"];
 
 const GENRES = [
   { label: "Action", value: "28" },
@@ -47,15 +52,6 @@ const MOODS = [
   { label: "Short", genre: "16" },
   { label: "Date night", genre: "10749" },
 ];
-
-const cardClass = "bg-card/80 backdrop-blur-sm rounded-xl border border-border shadow-xl";
-const subCardClass = "bg-background/80 border border-border rounded-lg";
-const inputClass =
-  "w-full bg-background/80 border border-border rounded-lg px-4 py-2.5 text-foreground placeholder:text-muted-foreground focus:border-red-600 focus:outline-none focus:ring-2 focus:ring-red-600/20 transition-all";
-const primaryButtonClass =
-  "bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all shadow-lg shadow-red-600/20 hover:shadow-red-600/30";
-const secondaryButtonClass =
-  "bg-muted hover:bg-accent text-foreground border border-border rounded-lg transition-all";
 
 function dicebearUrl(seed: string) {
   return `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(seed)}`;
@@ -213,51 +209,67 @@ export function RouletteTab() {
           <div className="absolute inset-0 bg-gradient-to-r from-background via-background/75 to-transparent" />
           <div className="absolute inset-0 bg-gradient-to-t from-background/70 via-transparent to-transparent" />
 
-          <div className="relative z-10 h-full flex flex-col justify-center px-8 py-5 max-w-[540px]">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-[9px] font-bold tracking-widest text-red-600 uppercase border border-red-600/60 px-2.5 py-0.5 rounded-full backdrop-blur-sm bg-background/40">
+          <div className="relative z-10 flex h-full max-w-[540px] flex-col justify-center px-8 py-5">
+            <div className="mb-3 flex items-center gap-2">
+              <span className="rounded-full border border-red-600/60 bg-background/40 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-red-600 backdrop-blur-sm">
                 Sponsored Spin
               </span>
-              <span className="text-[9px] font-bold tracking-wide text-white bg-[#0063e5] px-2.5 py-0.5 rounded-full">
+              <span className="rounded-full bg-[#0063e5] px-2.5 py-0.5 text-[9px] font-bold tracking-wide text-white">
                 Only on Disney+
               </span>
             </div>
 
-            <h1 className="text-5xl font-black uppercase text-white tracking-tight leading-none">
+            <h1 className="text-5xl font-black uppercase leading-none tracking-tight text-white">
               TRON: ARES
             </h1>
 
-            <div className="flex items-center gap-2 mt-2 flex-wrap">
-              <span className="text-white/80 text-xs">2025</span>
-              <span className="text-white/50 text-xs">·</span>
-              <span className="text-yellow-400 text-xs font-medium">★ 7.4</span>
-              <span className="text-white/50 text-xs">·</span>
-              {["Action", "Sci-Fi", "Adventure"].map((g) => (
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              {HERO_META.map((item, index) => (
+                <React.Fragment key={item}>
+                  <span
+                    className={`text-xs ${
+                      item.startsWith("★")
+                        ? "font-medium text-yellow-400"
+                        : "text-white/80"
+                    }`}
+                  >
+                    {item}
+                  </span>
+                  {index < HERO_META.length - 1 && (
+                    <span className="text-xs text-white/50">·</span>
+                  )}
+                </React.Fragment>
+              ))}
+
+              <span className="text-xs text-white/50">·</span>
+
+              {HERO_TAGS.map((tag) => (
                 <span
-                  key={g}
-                  className="text-[10px] text-white/85 border border-white/25 px-1.5 py-0.5 rounded"
+                  key={tag}
+                  className="rounded border border-white/25 px-1.5 py-0.5 text-[10px] text-white/85"
                 >
-                  {g}
+                  {tag}
                 </span>
               ))}
             </div>
 
-            <p className="text-white/75 text-xs mt-2 leading-relaxed line-clamp-2 max-w-[380px]">
+            <p className="mt-2 max-w-[380px] line-clamp-2 text-xs leading-relaxed text-white/75">
               A rogue program escapes the digital Grid and enters the real world
               — only Ares, a lethal enforcer built for war, can bring him back.
               Starring Jared Leto &amp; Evan Peters.
             </p>
 
-            <div className="flex items-center gap-2.5 mt-4">
-              <button className="flex items-center gap-1.5 bg-[#0063e5] hover:bg-[#0057cc] text-white font-semibold text-xs px-4 py-2 rounded-full transition-colors">
+            <div className="mt-4 flex items-center gap-2.5">
+              <button className="flex items-center gap-1.5 rounded-full bg-[#0063e5] px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#0057cc]">
                 Watch on Disney+
               </button>
+
               <button
                 onClick={spin}
                 disabled={spinning}
-                className="flex items-center gap-1.5 border border-white/30 bg-white/10 hover:bg-white/15 text-white font-semibold text-xs px-4 py-2 rounded-full transition-colors disabled:opacity-50"
+                className="flex items-center gap-1.5 rounded-full border border-white/30 bg-white/10 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-white/15 disabled:opacity-50"
               >
-                <Shuffle className={`w-3 h-3 ${spinning ? "animate-spin" : ""}`} />
+                <Shuffle className={`h-3 w-3 ${spinning ? "animate-spin" : ""}`} />
                 Re-spin
               </button>
             </div>

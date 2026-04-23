@@ -44,9 +44,6 @@ const secondaryButtonClass =
 const dangerButtonClass =
   'bg-red-600/10 hover:bg-red-600 border border-red-600/30 hover:border-red-600 text-red-500 hover:text-white rounded-lg transition-all';
 
-const accentButtonClass =
-  'bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all shadow-lg shadow-red-600/20 hover:shadow-red-600/30';
-
 const primaryButtonClass =
   'bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all shadow-lg shadow-red-600/20 hover:shadow-red-600/30';
 
