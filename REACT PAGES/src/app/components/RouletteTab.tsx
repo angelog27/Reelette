@@ -48,6 +48,15 @@ const MOODS = [
   { label: "Date night", genre: "10749" },
 ];
 
+const cardClass = "bg-card/80 backdrop-blur-sm rounded-xl border border-border shadow-xl";
+const subCardClass = "bg-background/80 border border-border rounded-lg";
+const inputClass =
+  "w-full bg-background/80 border border-border rounded-lg px-4 py-2.5 text-foreground placeholder:text-muted-foreground focus:border-red-600 focus:outline-none focus:ring-2 focus:ring-red-600/20 transition-all";
+const primaryButtonClass =
+  "bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all shadow-lg shadow-red-600/20 hover:shadow-red-600/30";
+const secondaryButtonClass =
+  "bg-muted hover:bg-accent text-foreground border border-border rounded-lg transition-all";
+
 function dicebearUrl(seed: string) {
   return `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(seed)}`;
 }
@@ -187,11 +196,13 @@ export function RouletteTab() {
   };
 
   return (
-    <div className="space-y-0">
+    <div className="min-h-screen bg-background text-foreground relative">
+      <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-muted/40 -z-10"></div>
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-red-500/10 via-transparent to-transparent -z-10"></div>
 
-      {/* ── Hero ─────────────────────────────────────────────── */}
+      {/* Hero */}
       <div className="px-4 md:px-6 pt-6">
-        <div className="relative overflow-hidden rounded-2xl h-[320px] w-full">
+        <div className="relative overflow-hidden rounded-2xl h-[320px] w-full border border-border">
           <div
             className="absolute inset-0 bg-cover"
             style={{
@@ -199,12 +210,12 @@ export function RouletteTab() {
               backgroundPosition: "right top",
             }}
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#080808] from-0% via-[#080808]/75 via-60% to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0D0D0D]/70 via-transparent to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-background via-background/75 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-background/70 via-transparent to-transparent" />
 
           <div className="relative z-10 h-full flex flex-col justify-center px-8 py-5 max-w-[540px]">
             <div className="flex items-center gap-2 mb-3">
-              <span className="text-[9px] font-bold tracking-widest text-[#C0392B] uppercase border border-[#C0392B]/60 px-2.5 py-0.5 rounded-full backdrop-blur-sm">
+              <span className="text-[9px] font-bold tracking-widest text-red-600 uppercase border border-red-600/60 px-2.5 py-0.5 rounded-full backdrop-blur-sm bg-background/40">
                 Sponsored Spin
               </span>
               <span className="text-[9px] font-bold tracking-wide text-white bg-[#0063e5] px-2.5 py-0.5 rounded-full">
@@ -217,21 +228,21 @@ export function RouletteTab() {
             </h1>
 
             <div className="flex items-center gap-2 mt-2 flex-wrap">
-              <span className="text-gray-400 text-xs">2025</span>
-              <span className="text-gray-600 text-xs">·</span>
+              <span className="text-white/80 text-xs">2025</span>
+              <span className="text-white/50 text-xs">·</span>
               <span className="text-yellow-400 text-xs font-medium">★ 7.4</span>
-              <span className="text-gray-600 text-xs">·</span>
+              <span className="text-white/50 text-xs">·</span>
               {["Action", "Sci-Fi", "Adventure"].map((g) => (
                 <span
                   key={g}
-                  className="text-[10px] text-gray-300 border border-gray-600/70 px-1.5 py-0.5 rounded"
+                  className="text-[10px] text-white/85 border border-white/25 px-1.5 py-0.5 rounded"
                 >
                   {g}
                 </span>
               ))}
             </div>
 
-            <p className="text-gray-400 text-xs mt-2 leading-relaxed line-clamp-2 max-w-[380px]">
+            <p className="text-white/75 text-xs mt-2 leading-relaxed line-clamp-2 max-w-[380px]">
               A rogue program escapes the digital Grid and enters the real world
               — only Ares, a lethal enforcer built for war, can bring him back.
               Starring Jared Leto &amp; Evan Peters.
@@ -244,7 +255,7 @@ export function RouletteTab() {
               <button
                 onClick={spin}
                 disabled={spinning}
-                className="flex items-center gap-1.5 border border-white/30 bg-white/5 hover:bg-white/10 text-white font-semibold text-xs px-4 py-2 rounded-full transition-colors disabled:opacity-50"
+                className="flex items-center gap-1.5 border border-white/30 bg-white/10 hover:bg-white/15 text-white font-semibold text-xs px-4 py-2 rounded-full transition-colors disabled:opacity-50"
               >
                 <Shuffle className={`w-3 h-3 ${spinning ? "animate-spin" : ""}`} />
                 Re-spin
@@ -254,12 +265,11 @@ export function RouletteTab() {
         </div>
       </div>
 
-      {/* ── Three-column grid ────────────────────────────────── */}
+      {/* Three-column grid */}
       <div className="grid grid-cols-1 md:grid-cols-[180px_1fr_180px] gap-5 items-start px-4 md:px-6 py-6">
-
         {/* Left — My Recent Spins */}
         <aside className="hidden md:flex flex-col gap-2">
-          <h3 className="text-white font-semibold text-sm px-1 mb-1">
+          <h3 className="text-foreground font-semibold text-sm px-1 mb-1">
             My Recent Spins
           </h3>
 
@@ -267,10 +277,10 @@ export function RouletteTab() {
             <>
               {[...Array(4)].map((_, i) => (
                 <div key={i} className="flex items-center gap-2 animate-pulse">
-                  <div className="w-9 h-12 rounded bg-[#1C1C1C] flex-shrink-0" />
+                  <div className="w-9 h-12 rounded bg-muted flex-shrink-0" />
                   <div className="flex-1 space-y-1.5">
-                    <div className="h-2.5 bg-[#1C1C1C] rounded w-3/4" />
-                    <div className="h-2 bg-[#1C1C1C] rounded w-1/2" />
+                    <div className="h-2.5 bg-muted rounded w-3/4" />
+                    <div className="h-2 bg-muted rounded w-1/2" />
                   </div>
                 </div>
               ))}
@@ -278,7 +288,7 @@ export function RouletteTab() {
           )}
 
           {spinsLoaded && recentSpins.length === 0 && (
-            <p className="text-gray-600 text-xs px-1 leading-relaxed">
+            <p className="text-muted-foreground text-xs px-1 leading-relaxed">
               {user
                 ? "Your spins will appear here."
                 : "Log in to track your spins."}
@@ -289,7 +299,7 @@ export function RouletteTab() {
             <div className="flex flex-col gap-2.5 max-h-[480px] overflow-y-auto">
               {recentSpins.map((s, i) => (
                 <div key={i} className="flex items-center gap-2">
-                  <div className="w-9 h-12 rounded overflow-hidden bg-[#1C1C1C] flex-shrink-0">
+                  <div className="w-9 h-12 rounded overflow-hidden bg-muted flex-shrink-0 border border-border">
                     {s.poster_url ? (
                       <img
                         src={s.poster_url}
@@ -297,14 +307,14 @@ export function RouletteTab() {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="w-full h-full bg-[#252525]" />
+                      <div className="w-full h-full bg-muted" />
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-white text-[11px] font-medium truncate leading-tight">
+                    <p className="text-foreground text-[11px] font-medium truncate leading-tight">
                       {s.movie_title}
                     </p>
-                    <p className="text-gray-600 text-[10px] mt-0.5">
+                    <p className="text-muted-foreground text-[10px] mt-0.5">
                       {timeAgo(s.spun_at)}
                     </p>
                   </div>
@@ -316,33 +326,30 @@ export function RouletteTab() {
 
         {/* Center — Roulette controls */}
         <div className="flex flex-col items-center gap-4 min-w-0">
-
-          {/* Compact inline controls row */}
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
               <Switch
                 checked={filterStreaming}
                 onCheckedChange={setFilterStreaming}
-                className="data-[state=checked]:bg-[#C0392B]"
+                className="data-[state=checked]:bg-red-600"
               />
               <label
-                className="text-gray-300 text-xs cursor-pointer whitespace-nowrap"
+                className="text-muted-foreground text-xs cursor-pointer whitespace-nowrap"
                 onClick={() => setFilterStreaming(!filterStreaming)}
               >
                 Only show movies I can watch
                 {filterStreaming && !hasServices && (
-                  <span className="text-yellow-500 ml-1.5 text-[10px]">
+                  <span className="text-yellow-600 dark:text-yellow-400 ml-1.5 text-[10px]">
                     (no services set)
                   </span>
                 )}
               </label>
             </div>
 
-            {/* Filters dropdown */}
             <div className="relative" ref={filtersDropdownRef}>
               <button
                 onClick={() => setFiltersExpanded(!filtersExpanded)}
-                className="flex items-center gap-1 text-xs text-gray-400 hover:text-white border border-[#2A2A2A] hover:border-[#444] bg-[#1A1A1A] px-2.5 py-1.5 rounded-md transition-colors"
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground border border-border hover:border-red-600/40 bg-card/80 px-2.5 py-1.5 rounded-md transition-colors"
               >
                 Filters
                 <ChevronDown
@@ -351,10 +358,9 @@ export function RouletteTab() {
               </button>
 
               {filtersExpanded && (
-                <div className="absolute left-0 top-full mt-1.5 w-72 bg-[#1C1C1C] border border-[#2A2A2A] rounded-xl shadow-2xl z-50 p-4 space-y-5">
-                  {/* Vibe chips */}
+                <div className="absolute left-0 top-full mt-1.5 w-72 bg-card/95 backdrop-blur-sm border border-border rounded-xl shadow-2xl z-50 p-4 space-y-5">
                   <div className="space-y-2">
-                    <label className="text-xs text-gray-500">Vibe</label>
+                    <label className="text-xs text-muted-foreground">Vibe</label>
                     <div className="flex flex-wrap gap-1.5">
                       {MOODS.map((mood) => (
                         <button
@@ -362,8 +368,8 @@ export function RouletteTab() {
                           onClick={() => handleMoodClick(mood)}
                           className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors border ${
                             activeMood === mood.label
-                              ? "bg-[#C0392B] border-[#C0392B] text-white"
-                              : "border-[#2A2A2A] text-gray-400 hover:border-[#C0392B]/50 hover:text-white"
+                              ? "bg-red-600 border-red-600 text-white"
+                              : "border-border text-muted-foreground hover:border-red-600/50 hover:text-foreground bg-background/70"
                           }`}
                         >
                           {mood.label}
@@ -372,13 +378,12 @@ export function RouletteTab() {
                     </div>
                   </div>
 
-                  {/* Genre */}
                   <div className="space-y-1.5">
-                    <label className="text-xs text-gray-500">Genre</label>
+                    <label className="text-xs text-muted-foreground">Genre</label>
                     <select
                       value={genre}
                       onChange={(e) => handleGenreChange(e.target.value)}
-                      className="w-full bg-[#141414] border border-[#2A2A2A] text-white text-xs rounded-md px-2.5 py-1.5 focus:border-[#C0392B] focus:outline-none"
+                      className="w-full bg-background/80 border border-border text-foreground text-xs rounded-md px-2.5 py-1.5 focus:border-red-600 focus:outline-none"
                     >
                       <option value="">Any Genre</option>
                       {GENRES.map((g) => (
@@ -389,33 +394,31 @@ export function RouletteTab() {
                     </select>
                   </div>
 
-                  {/* Year range */}
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1.5">
-                      <label className="text-xs text-gray-500">Year From</label>
+                      <label className="text-xs text-muted-foreground">Year From</label>
                       <Input
                         value={yearFrom}
                         onChange={(e) => setYearFrom(e.target.value)}
                         placeholder="1990"
-                        className="bg-[#141414] border-[#2A2A2A] text-white text-xs h-7"
+                        className="bg-background/80 border-border text-foreground placeholder:text-muted-foreground text-xs h-7"
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-xs text-gray-500">Year To</label>
+                      <label className="text-xs text-muted-foreground">Year To</label>
                       <Input
                         value={yearTo}
                         onChange={(e) => setYearTo(e.target.value)}
                         placeholder="2024"
-                        className="bg-[#141414] border-[#2A2A2A] text-white text-xs h-7"
+                        className="bg-background/80 border-border text-foreground placeholder:text-muted-foreground text-xs h-7"
                       />
                     </div>
                   </div>
 
-                  {/* Min Rating */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <label className="text-xs text-gray-500">Min Rating</label>
-                      <span className="text-white text-xs">{minRating[0]}/10</span>
+                      <label className="text-xs text-muted-foreground">Min Rating</label>
+                      <span className="text-foreground text-xs">{minRating[0]}/10</span>
                     </div>
                     <Slider
                       value={minRating}
@@ -430,7 +433,6 @@ export function RouletteTab() {
             </div>
           </div>
 
-          {/* Spin Button */}
           {(() => {
             const btnColor = getWheelColor(genre);
             return (
@@ -456,10 +458,9 @@ export function RouletteTab() {
           })()}
 
           {error && (
-            <p className="text-center text-yellow-500 text-sm">{error}</p>
+            <p className="text-center text-yellow-600 dark:text-yellow-400 text-sm">{error}</p>
           )}
 
-          {/* Wheel */}
           <RouletteWheelModal
             genre={genre}
             isSpinning={spinning}
@@ -470,7 +471,7 @@ export function RouletteTab() {
 
         {/* Right — Friends' Spins */}
         <aside className="hidden md:flex flex-col gap-2">
-          <h3 className="text-white font-semibold text-sm px-1 mb-1">
+          <h3 className="text-foreground font-semibold text-sm px-1 mb-1">
             Friends' Spins
           </h3>
           {friendSpins.slice(0, 6).map((entry) => {
@@ -478,12 +479,12 @@ export function RouletteTab() {
             return (
               <div
                 key={entry.friend_id}
-                className="flex items-start gap-2 bg-[#1A1A1A] rounded-lg p-2.5"
+                className="flex items-start gap-2 bg-card/80 border border-border rounded-lg p-2.5"
               >
                 <img
                   src={entry.avatarUrl || dicebearUrl(entry.friend_username)}
                   alt={entry.friend_username}
-                  className="w-8 h-8 rounded-full object-cover flex-shrink-0 bg-[#2A2A2A]"
+                  className="w-8 h-8 rounded-full object-cover flex-shrink-0 bg-muted border border-border"
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = dicebearUrl(
                       entry.friend_username
@@ -491,13 +492,13 @@ export function RouletteTab() {
                   }}
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="text-white text-xs font-medium truncate">
+                  <p className="text-foreground text-xs font-medium truncate">
                     {spin.movie_title}
                   </p>
-                  <p className="text-gray-500 text-[10px] truncate">
+                  <p className="text-muted-foreground text-[10px] truncate">
                     @{entry.friend_username}
                   </p>
-                  <p className="text-gray-600 text-[10px] mt-0.5">
+                  <p className="text-muted-foreground text-[10px] mt-0.5">
                     {timeAgo(spin.spun_at)}
                   </p>
                 </div>
@@ -505,7 +506,7 @@ export function RouletteTab() {
             );
           })}
           {friendSpins.length === 0 && (
-            <p className="text-gray-600 text-xs px-1">
+            <p className="text-muted-foreground text-xs px-1">
               {user ? "No friend spins yet." : "Log in to see friends' spins."}
             </p>
           )}
