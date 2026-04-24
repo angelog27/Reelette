@@ -41,7 +41,7 @@ const PROVIDER_KEY: Record<string, string> = {
 };
 
 const ROW_LIMIT = 14;
-const CARD_W = 224;
+const CARD_W = 156;
 
 // ── Converters ────────────────────────────────────────────────────
 
@@ -64,23 +64,22 @@ function spinToMovie(s: RouletteSpin): Movie {
 // ── Compact landscape card (Netflix-style rows) ───────────────────
 
 function CompactCard({ movie, onClick }: { movie: Movie; onClick: () => void }) {
-  const img = movie.backdrop || movie.poster;
   return (
     <div
       className="cursor-pointer group flex-shrink-0"
       style={{ width: CARD_W }}
       onClick={onClick}
     >
-      {/* 16:9 thumbnail */}
+      {/* 2:3 portrait poster */}
       <div
         className="relative overflow-hidden rounded-md bg-[#1a1a1a]"
-        style={{ aspectRatio: '16/9' }}
+        style={{ aspectRatio: '2/3' }}
       >
-        {img ? (
+        {movie.poster ? (
           <img
-            src={img}
+            src={movie.poster}
             alt={movie.title}
-            className="w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-110"
+            className="w-full h-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
             loading="lazy"
             decoding="async"
           />
@@ -143,6 +142,11 @@ function MovieRow({ title, movies, onMovieClick }: {
           ref={scrollRef}
           className="hide-scrollbar flex gap-2 overflow-x-auto"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
+          onWheel={(e) => {
+            if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+              window.scrollBy(0, e.deltaY);
+            }
+          }}
         >
           {movies.map(movie => (
             <CompactCard key={movie.id} movie={movie} onClick={() => onMovieClick(movie.id)} />
@@ -469,9 +473,9 @@ export function DiscoverTab() {
       />
 
       {/* ── Provider tab bar ── */}
-      <div className="px-6 md:px-10 mt-14 mb-8" style={{ overflow: 'visible' }}>
+      <div className="mt-14 mb-8" style={{ overflow: 'visible' }}>
         <div
-          className="hide-scrollbar flex gap-6 justify-evenly overflow-x-auto"
+          className="hide-scrollbar flex gap-2 justify-evenly overflow-x-auto"
           style={{ scrollbarWidth: 'none', overflow: 'visible' } as React.CSSProperties}
         >
           {PROVIDER_TABS.map(p => {
@@ -501,16 +505,16 @@ export function DiscoverTab() {
                   <img
                     src={logo}
                     alt={p.label}
-                    className="rounded-xl object-cover"
+                    className="rounded-2xl object-cover"
                     style={{
-                      width:     68,
-                      height:    68,
-                      boxShadow: lit ? `0 0 18px ${color}88` : 'none',
+                      width:     128,
+                      height:    128,
+                      boxShadow: lit ? `0 0 24px ${color}99` : 'none',
                       transition: 'box-shadow 0.25s',
                     }}
                   />
                 ) : (
-                  <Layers style={{ width: 48, height: 48, color: lit ? color : '#6b7280' }} />
+                  <Layers style={{ width: 80, height: 80, color: lit ? color : '#6b7280' }} />
                 )}
                 <span
                   className="text-[11px] font-semibold tracking-wide"
@@ -535,7 +539,7 @@ export function DiscoverTab() {
       </div>
 
       {/* ── Movie rows ── */}
-      <div className="px-6 md:px-10">
+      <div>
 
         {isProviderView ? (
           providerLoading ? (
