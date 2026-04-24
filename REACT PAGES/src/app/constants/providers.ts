@@ -5,6 +5,7 @@ import primeLogo      from '../../assets/prime-video.jpg';
 import appleLogo      from '../../assets/apple-tv.png';
 import paramountLogo  from '../../assets/paramount-plus.jpg';
 import peacockLogo    from '../../assets/peacock.webp';
+import huluLogo       from '../../assets/hulu.webp';
 
 // Map of streaming service display name → local asset URL.
 // Hulu has no local asset so it falls back to the TMDB CDN.
@@ -16,7 +17,7 @@ export const PROVIDER_LOGOS: Record<string, string> = {
   'Apple TV+':    appleLogo,
   'Paramount+':   paramountLogo,
   'Peacock':      peacockLogo,
-  'Hulu':         'https://image.tmdb.org/t/p/original/zxrVdFjIjLqkfnwyghnfywTn3Lh.jpg',
+  'Hulu':         huluLogo,
   // TMDB raw name aliases — for movies stored before the ID-based normalization
   'Disney Plus':        disneyLogo,
   'HBO Max':            hboMaxLogo,

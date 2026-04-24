@@ -321,6 +321,26 @@ function WatchModePanel({ groupId, onModeChange }: {
   );
 }
 
+// ── Mini roulette wheel for feed refresh ───────────────────────
+function WheelRefreshIcon({ spinning }: { spinning: boolean }) {
+  const n = 8;
+  const cols = ['#C0392B','#E74C3C','#8E44AD','#2471A3','#1E8449','#D68910','#6C3483','#1A5276'];
+  const cx = 12, cy = 12, r = 10;
+  const seg = 360 / n;
+  const toRad = (d: number) => d * Math.PI / 180;
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" className={spinning ? 'animate-spin' : ''}>
+      {Array.from({ length: n }, (_, i) => {
+        const s = toRad(i * seg - 90), e = toRad((i + 1) * seg - 90);
+        const x1 = cx + r * Math.cos(s), y1 = cy + r * Math.sin(s);
+        const x2 = cx + r * Math.cos(e), y2 = cy + r * Math.sin(e);
+        return <path key={i} d={`M${cx},${cy}L${x1},${y1}A${r},${r} 0 0,1 ${x2},${y2}Z`} fill={cols[i]} />;
+      })}
+      <circle cx={cx} cy={cy} r={3.5} fill="#0A0A0A" />
+    </svg>
+  );
+}
+
 // ── Post Card ──────────────────────────────────────────────────
 // ── Movie Search for Post Dialog ───────────────────────────────
 type MovieOption = { id: string; title: string; year: number; poster: string };
@@ -467,124 +487,114 @@ function PostCard({ post, currentUserId, currentUsername, onLike, onDelete, onOp
   };
 
   return (
-    <div className="bg-[#1C1C1C] border border-[#2A2A2A] rounded-xl p-6 hover:border-[#333333] transition-colors">
-      <div className="flex items-start gap-4">
-        <UserAvatar
-          username={post.username}
-          avatarUrl={post.avatarUrl}
-          size={48}
-          onClick={() => onOpenProfile(post.user_id)}
-        />
+    <article className="border-b border-[#1A1A1A] px-4 py-4 hover:bg-[#0d0d0d] transition-colors">
+      <div className="flex gap-3">
+        <div className="shrink-0 pt-0.5">
+          <UserAvatar username={post.username} avatarUrl={post.avatarUrl} size={44} onClick={() => onOpenProfile(post.user_id)} />
+        </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between mb-1">
-            <button
-              onClick={() => onOpenProfile(post.user_id)}
-              className="text-white font-medium hover:text-[#C0392B] transition-colors"
-            >
-              {post.username}
-            </button>
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-gray-600">{timeAgo(post.created_at)}</span>
-              {post.user_id === currentUserId && (
-                <button onClick={() => onDelete(post.post_id)} className="text-gray-600 hover:text-red-500 transition-colors">
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              )}
+
+          {/* Header row */}
+          <div className="flex items-start justify-between gap-2 mb-1">
+            <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+              <button onClick={() => onOpenProfile(post.user_id)}
+                className="font-bold text-[15px] text-white hover:underline truncate">
+                {post.username}
+              </button>
+              <span className="text-gray-500 text-sm shrink-0">· {timeAgo(post.created_at)}</span>
             </div>
+            {post.user_id === currentUserId && (
+              <button onClick={() => onDelete(post.post_id)}
+                className="shrink-0 p-1 -mr-1 text-gray-600 hover:text-red-500 transition-colors">
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
           </div>
-          <p className="text-gray-400 mb-3">{renderMessage(post.message, onOpenProfile)}</p>
+
+          {/* Message */}
+          <p className="text-[15px] text-gray-200 leading-relaxed mb-3">
+            {renderMessage(post.message, onOpenProfile)}
+          </p>
+
+          {/* Movie card */}
           {post.movie_id ? (
-            <a
-              href={`https://www.themoviedb.org/movie/${post.movie_id}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex gap-4 bg-[#141414] rounded-xl mb-4 border border-[#2A2A2A] overflow-hidden hover:border-[#C0392B] transition-colors group p-3"
-            >
+            <a href={`https://www.themoviedb.org/movie/${post.movie_id}`} target="_blank" rel="noopener noreferrer"
+              className="flex rounded-2xl border border-[#242424] overflow-hidden hover:border-[#3a3a3a] transition-colors group mb-3">
               {post.movie_poster ? (
-                <img
-                  src={post.movie_poster}
-                  alt={post.movie_title}
-                  className="w-28 shrink-0 rounded-lg object-cover self-stretch"
-                  style={{ aspectRatio: '2/3' }}
-                />
+                <img src={post.movie_poster} alt={post.movie_title}
+                  className="w-20 shrink-0 object-cover" style={{ aspectRatio: '2/3' }} />
               ) : (
-                <div className="w-28 shrink-0 rounded-lg bg-[#2A2A2A] flex items-center justify-center" style={{ aspectRatio: '2/3' }}>
-                  <Film className="w-8 h-8 text-gray-600" />
+                <div className="w-20 shrink-0 bg-[#1a1a1a] flex items-center justify-center" style={{ aspectRatio: '2/3' }}>
+                  <Film className="w-6 h-6 text-gray-600" />
                 </div>
               )}
-              <div className="flex flex-col justify-between py-1 min-w-0">
-                <span className="text-white font-semibold text-base leading-snug group-hover:text-[#E74C3C] transition-colors">{post.movie_title}</span>
-                <div className="flex items-center gap-1.5 mt-2">
-                  <Star className="w-4 h-4 fill-yellow-500 text-yellow-500" />
-                  <span className="text-white font-medium">{post.rating}/10</span>
+              <div className="flex flex-col justify-center px-4 py-3 min-w-0 gap-1.5">
+                <span className="text-white font-semibold text-sm leading-tight line-clamp-2 group-hover:text-[#E74C3C] transition-colors">
+                  {post.movie_title}
+                </span>
+                <div className="flex items-center gap-1">
+                  <Star className="w-3.5 h-3.5 fill-yellow-500 text-yellow-500 shrink-0" />
+                  <span className="text-gray-400 text-sm">{post.rating}/10</span>
                 </div>
               </div>
             </a>
           ) : (
-            <div className="bg-[#141414] rounded-lg p-3 mb-4 border border-[#2A2A2A]">
-              <div className="flex items-center justify-between">
-                <span className="text-white font-medium truncate">{post.movie_title}</span>
-                <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                  <Star className="w-4 h-4 fill-yellow-500 text-yellow-500" />
-                  <span className="text-white font-medium">{post.rating}/10</span>
-                </div>
-              </div>
+            <div className="flex items-center gap-2 text-sm text-gray-500 mb-3">
+              <Film className="w-4 h-4 shrink-0" />
+              <span className="truncate">{post.movie_title}</span>
+              <span className="shrink-0 flex items-center gap-1">
+                <Star className="w-3.5 h-3.5 fill-yellow-500 text-yellow-500" />{post.rating}/10
+              </span>
             </div>
           )}
-          <div className="flex items-center gap-6">
-            <button onClick={() => onLike(post.post_id)}
-              className={`flex items-center gap-2 transition-colors ${isLiked ? 'text-[#C0392B]' : 'text-gray-500 hover:text-[#C0392B]'}`}>
-              <Heart className={`w-5 h-5 ${isLiked ? 'fill-[#C0392B]' : ''}`} />
-              <span>{post.likes}</span>
-            </button>
+
+          {/* Action bar */}
+          <div className="flex items-center gap-1 -ml-2">
             <button onClick={toggleReplies}
-              className={`flex items-center gap-2 transition-colors ${showReplies ? 'text-white' : 'text-gray-500 hover:text-gray-400'}`}>
-              <MessageCircle className="w-5 h-5" />
+              className={`flex items-center gap-1.5 px-2 py-1.5 rounded-full text-sm transition-colors hover:bg-blue-500/10 hover:text-blue-400 ${showReplies ? 'text-blue-400' : 'text-gray-500'}`}>
+              <MessageCircle className="w-[18px] h-[18px]" />
               {(showReplies ? replies.length : localReplyCount) > 0 && (
-                <span className="text-sm">{showReplies ? replies.length : localReplyCount}</span>
+                <span>{showReplies ? replies.length : localReplyCount}</span>
               )}
+            </button>
+            <button onClick={() => onLike(post.post_id)}
+              className={`flex items-center gap-1.5 px-2 py-1.5 rounded-full text-sm transition-colors hover:bg-[#C0392B]/10 hover:text-[#C0392B] ${isLiked ? 'text-[#C0392B]' : 'text-gray-500'}`}>
+              <Heart className={`w-[18px] h-[18px] ${isLiked ? 'fill-[#C0392B]' : ''}`} />
+              {post.likes > 0 && <span>{post.likes}</span>}
             </button>
           </div>
 
+          {/* Replies */}
           {showReplies && (
-            <div className="mt-4 space-y-3 border-t border-[#2A2A2A] pt-4">
+            <div className="mt-3 pt-3 border-t border-[#1A1A1A] space-y-3">
               {loadingReplies ? (
                 <div className="flex items-center gap-2 text-gray-500 text-sm">
                   <Loader2 className="w-3 h-3 animate-spin" /> Loading replies…
                 </div>
               ) : replies.length === 0 ? (
-                <p className="text-gray-600 text-sm">No replies yet. Be the first!</p>
+                <p className="text-gray-600 text-sm">No replies yet.</p>
               ) : (
                 replies.map(r => (
                   <div key={r.reply_id} className="flex items-start gap-2">
-                    <UserAvatar username={r.username} avatarUrl={r.avatarUrl} size={28} onClick={() => onOpenProfile(r.user_id)} />
-                    <div className="flex-1 bg-[#141414] rounded-lg px-3 py-2 border border-[#2A2A2A]">
+                    <UserAvatar username={r.username} avatarUrl={r.avatarUrl} size={30} onClick={() => onOpenProfile(r.user_id)} />
+                    <div className="flex-1 bg-[#111] rounded-2xl px-3 py-2">
                       <div className="flex items-center gap-2 mb-0.5">
-                        <button onClick={() => onOpenProfile(r.user_id)} className="text-white text-xs font-medium hover:text-[#C0392B] transition-colors">
-                          {r.username}
-                        </button>
+                        <button onClick={() => onOpenProfile(r.user_id)} className="text-white text-xs font-bold hover:underline">{r.username}</button>
                         <span className="text-gray-600 text-xs">{timeAgo(r.created_at)}</span>
                       </div>
-                      <p className="text-gray-400 text-sm">{r.message}</p>
+                      <p className="text-gray-300 text-sm">{r.message}</p>
                     </div>
                   </div>
                 ))
               )}
               {currentUserId && (
                 <div className="flex gap-2 pt-1">
-                  <input
-                    type="text"
-                    placeholder="Write a reply…"
-                    value={replyText}
-                    onChange={e => setReplyText(e.target.value)}
+                  <input type="text" placeholder="Reply…"
+                    value={replyText} onChange={e => setReplyText(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSubmitReply()}
-                    className="flex-1 bg-[#141414] border border-[#2A2A2A] rounded-lg px-3 py-2 text-white text-sm placeholder:text-gray-600 focus:border-[#C0392B] focus:outline-none"
-                  />
-                  <button
-                    onClick={handleSubmitReply}
-                    disabled={submittingReply || !replyText.trim()}
-                    className="p-2 bg-[#C0392B] hover:bg-[#A93226] disabled:opacity-50 text-white rounded-lg transition-colors"
-                  >
+                    className="flex-1 bg-[#111] border border-[#242424] rounded-full px-4 py-2 text-white text-sm placeholder:text-gray-600 focus:border-[#C0392B] focus:outline-none" />
+                  <button onClick={handleSubmitReply} disabled={submittingReply || !replyText.trim()}
+                    className="p-2 bg-[#C0392B] hover:bg-[#A93226] disabled:opacity-50 text-white rounded-full transition-colors">
                     {submittingReply ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                   </button>
                 </div>
@@ -593,7 +603,7 @@ function PostCard({ post, currentUserId, currentUsername, onLike, onDelete, onOp
           )}
         </div>
       </div>
-    </div>
+    </article>
   );
 }
 
@@ -1300,6 +1310,7 @@ export function SocialTab() {
   const [profileUserId, setProfileUserId] = useState<string | null>(null);
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [mentionResults, setMentionResults] = useState<{ user_id: string; username: string; displayName: string }[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const mentionDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -1358,6 +1369,18 @@ export function SocialTab() {
     const result = await deletePost(post_id, currentUserId);
     if (result.success) setPosts(prev => prev.filter(p => p.post_id !== post_id));
   };
+
+  const handleRefresh = useCallback(async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    const feedPosts = await getFeed();
+    const uniqueIds = [...new Set(feedPosts.map(p => p.user_id))];
+    const profiles = await Promise.all(uniqueIds.map(id => getUserPublicProfile(id)));
+    const avatarMap: Record<string, string> = {};
+    uniqueIds.forEach((id, i) => { const url = profiles[i]?.avatarUrl; if (url) avatarMap[id] = url; });
+    setPosts(feedPosts.map(p => ({ ...p, avatarUrl: p.avatarUrl ?? avatarMap[p.user_id] })));
+    setRefreshing(false);
+  }, [refreshing]);
 
   const handleMessageChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value;
@@ -1440,65 +1463,99 @@ export function SocialTab() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-white">
+    <div className="text-white -mx-6 -mt-8">
       {profileUserId && <UserProfileModal userId={profileUserId} onClose={() => setProfileUserId(null)} />}
 
-      <div className="text-2xl font-bold text-white mb-6 relative inline-block">
-        Social
-        <div className="absolute -bottom-2 left-0 right-0 h-[2px] bg-gradient-to-r from-red-600 via-red-500 to-transparent" />
-      </div>
+      <div className="max-w-2xl mx-auto">
 
-
-      {/* Top-level tabs */}
-      <div className="flex gap-1 mb-8 bg-[#141414] border border-[#2A2A2A] rounded-xl p-1 w-fit">
-        {tabs.map(t => (
-          <button key={t.id} onClick={() => setActiveTab(t.id)}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${activeTab === t.id ? 'bg-gradient-to-r from-[#C0392B] to-[#E74C3C] text-white shadow-lg shadow-[#C0392B]/20' : 'text-gray-400 hover:text-white hover:bg-[#1C1C1C]'}`}>
-            {t.icon}{t.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Feed */}
-      {activeTab === 'feed' && (
-        <div className="max-w-3xl mx-auto relative pb-20">
-          {/* All / Friends sub-tabs */}
-          <div className="flex gap-1 mb-6 bg-[#141414] border border-[#2A2A2A] rounded-xl p-1 w-fit">
-            <button
-              onClick={() => setFeedMode('all')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${feedMode === 'all' ? 'bg-[#2A2A2A] text-white' : 'text-gray-500 hover:text-white'}`}>
-              <Sparkles className="w-3.5 h-3.5" /> General
+        {/* Primary tab bar */}
+        <div className="flex border-b border-[#1A1A1A]">
+          {tabs.map(t => (
+            <button key={t.id} onClick={() => setActiveTab(t.id)}
+              className={`flex-1 flex items-center justify-center gap-2 py-4 text-[15px] font-semibold transition-colors relative ${
+                activeTab === t.id ? 'text-white' : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.03]'
+              }`}>
+              {t.icon}{t.label}
+              {activeTab === t.id && (
+                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-[3px] bg-[#C0392B] rounded-full" />
+              )}
             </button>
-            <button
-              onClick={() => setFeedMode('friends')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${feedMode === 'friends' ? 'bg-[#2A2A2A] text-white' : 'text-gray-500 hover:text-white'}`}>
-              <Users className="w-3.5 h-3.5" /> Friends
-            </button>
-          </div>
-
-          <div className="space-y-6">
-            {loading
-              ? <p className="text-gray-500 text-center py-16">Loading feed…</p>
-              : displayedPosts.length === 0
-                ? <p className="text-gray-500 text-center py-16">
-                    {feedMode === 'friends' ? 'No posts from friends yet. Add some friends!' : 'No posts yet. Be the first to share!'}
-                  </p>
-                : displayedPosts.map(post => (
-                    <PostCard key={post.post_id} post={post} currentUserId={currentUserId} currentUsername={currentUser?.username ?? ''}
-                      onLike={handleLike} onDelete={handleDelete}
-                      onOpenProfile={setProfileUserId} />
-                  ))}
-          </div>
-
-          <button onClick={() => setShowNewPostDialog(true)}
-            className="fixed bottom-8 right-8 bg-gradient-to-r from-[#C0392B] to-[#E74C3C] hover:from-[#A93226] hover:to-[#C0392B] text-white w-16 h-16 rounded-full flex items-center justify-center shadow-2xl shadow-[#C0392B]/30 transition-all hover:scale-110">
-            <Plus className="w-8 h-8" />
-          </button>
+          ))}
         </div>
-      )}
 
-      {activeTab === 'friends' && <FriendsPanel onOpenProfile={setProfileUserId} />}
-      {activeTab === 'groups' && <GroupsPanel onOpenProfile={setProfileUserId} />}
+        {/* ── Feed ── */}
+        {activeTab === 'feed' && (
+          <>
+            {/* For You / Friends + wheel refresh */}
+            <div className="flex items-center border-b border-[#1A1A1A]">
+              <button onClick={() => setFeedMode('all')}
+                className={`flex-1 py-3.5 text-sm font-semibold relative transition-colors ${
+                  feedMode === 'all' ? 'text-white' : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.03]'
+                }`}>
+                For You
+                {feedMode === 'all' && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-14 h-[3px] bg-[#C0392B] rounded-full" />}
+              </button>
+              <button onClick={() => setFeedMode('friends')}
+                className={`flex-1 py-3.5 text-sm font-semibold relative transition-colors ${
+                  feedMode === 'friends' ? 'text-white' : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.03]'
+                }`}>
+                Friends
+                {feedMode === 'friends' && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-14 h-[3px] bg-[#C0392B] rounded-full" />}
+              </button>
+              <button onClick={handleRefresh} disabled={refreshing} title="Refresh feed"
+                className="px-5 py-3.5 text-gray-500 hover:text-white transition-colors disabled:opacity-40">
+                <WheelRefreshIcon spinning={refreshing} />
+              </button>
+            </div>
+
+            {/* Inline compose */}
+            {currentUser && (
+              <div className="border-b border-[#1A1A1A] px-4 py-3 flex gap-3 cursor-pointer hover:bg-[#0a0a0a] transition-colors"
+                onClick={() => setShowNewPostDialog(true)}>
+                <UserAvatar username={currentUser.username} size={44} />
+                <div className="flex-1 min-w-0 pointer-events-none">
+                  <p className="text-gray-600 text-[17px] py-2">What movie are you watching?</p>
+                  <div className="flex items-center justify-between pt-2 border-t border-[#1A1A1A] mt-1">
+                    <Film className="w-5 h-5 text-[#C0392B]" />
+                    <span className="bg-[#C0392B] text-white font-bold text-sm rounded-full px-5 py-1.5">
+                      Post
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Posts */}
+            <div>
+              {loading
+                ? <p className="text-gray-500 text-center py-16">Loading feed…</p>
+                : displayedPosts.length === 0
+                  ? <p className="text-gray-500 text-center py-16">
+                      {feedMode === 'friends' ? 'No posts from friends yet. Add some friends!' : 'No posts yet. Be the first to share!'}
+                    </p>
+                  : displayedPosts.map(post => (
+                      <PostCard key={post.post_id} post={post} currentUserId={currentUserId}
+                        currentUsername={currentUser?.username ?? ''}
+                        onLike={handleLike} onDelete={handleDelete}
+                        onOpenProfile={setProfileUserId} />
+                    ))
+              }
+            </div>
+          </>
+        )}
+
+        {activeTab === 'friends' && (
+          <div className="py-6 px-4">
+            <FriendsPanel onOpenProfile={setProfileUserId} />
+          </div>
+        )}
+        {activeTab === 'groups' && (
+          <div className="py-6 px-4">
+            <GroupsPanel onOpenProfile={setProfileUserId} />
+          </div>
+        )}
+
+      </div>
 
       {/* New Post Dialog */}
       {showNewPostDialog && (
