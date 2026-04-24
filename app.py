@@ -870,13 +870,23 @@ def roulette_spin_route(user_id):
     poster_url = data.get('poster_url', '').strip()
     if not movie_id or not movie_title:
         return jsonify({'success': False, 'message': 'movie_id and movie_title required'}), 400
-    return jsonify(log_roulette_spin(user_id, movie_id, movie_title, poster_url))
+    result = log_roulette_spin(user_id, movie_id, movie_title, poster_url)
+    # Bust spin history cache so the next read reflects the new spin
+    for limit in (10, 12):
+        _cache.pop(f'spins:{user_id}:{limit}', None)
+    return jsonify(result)
 
 @app.route('/api/roulette/<user_id>/history', methods=['GET'])
 def roulette_history_route(user_id):
     limit = request.args.get('limit', 10, type=int)
+    cache_key = f'spins:{user_id}:{limit}'
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return jsonify({'spins': cached})
     spins = get_roulette_history(user_id, limit=limit)
-    return jsonify({'spins': serialize_timestamps(spins)})
+    serialized = serialize_timestamps(spins)
+    _cache_set(cache_key, serialized, 30)  # 30 s — busted on new spin
+    return jsonify({'spins': serialized})
 
 @app.route('/api/roulette/<user_id>/friends-history', methods=['GET'])
 def friends_roulette_history_route(user_id):

@@ -8,7 +8,6 @@ interface MovieCardProps {
 }
 
 export function MovieCard({ movie, onClick }: MovieCardProps) {
-
   return (
     <div
       onClick={() => onClick?.(movie)}
@@ -32,9 +31,8 @@ export function MovieCard({ movie, onClick }: MovieCardProps) {
           </div>
         )}
 
-        {/* Streaming Badge — official provider logo */}
         {movie.streamingService && PROVIDER_LOGOS[movie.streamingService] && (
-          <div className="absolute top-2 right-2 w-9 h-9 rounded-lg overflow-hidden shadow-lg ring-1 ring-white/10">
+          <div className="absolute top-2 right-2 w-7 h-7 rounded-md overflow-hidden shadow-lg ring-1 ring-white/10">
             <img
               src={PROVIDER_LOGOS[movie.streamingService]}
               alt={movie.streamingService}
@@ -45,28 +43,30 @@ export function MovieCard({ movie, onClick }: MovieCardProps) {
       </div>
 
       {/* Info */}
-      <div className="p-4">
-        <h3 className="text-white font-semibold mb-1 line-clamp-1">{movie.title}</h3>
-        <p className="text-gray-500 text-sm mb-3">{movie.year}</p>
+      <div className="p-2.5">
+        <h3 className="text-white text-xs font-semibold mb-0.5 line-clamp-1">{movie.title}</h3>
 
-        {/* Genres */}
-        <div className="flex flex-wrap gap-1.5 mb-3">
-          {movie.genres.slice(0, 3).map((genre) => (
-            <span
-              key={genre}
-              className="text-xs bg-[#2A2A2A] text-gray-400 px-2.5 py-1 rounded-full"
-            >
-              {genre}
-            </span>
-          ))}
-        </div>
+        {movie.year > 0 && (
+          <p className="text-gray-500 text-[11px] mb-1.5">{movie.year}</p>
+        )}
 
-        {/* Rating */}
-        <div className="flex items-center gap-1.5">
-          <Star className="w-4 h-4 fill-yellow-500 text-yellow-500" />
-          <span className="text-white font-medium">{movie.rating.toFixed(1)}</span>
-          <span className="text-gray-600 text-sm">/10</span>
-        </div>
+        {movie.genres.length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-1.5">
+            {movie.genres.slice(0, 2).map((genre) => (
+              <span key={genre} className="text-[10px] bg-[#2A2A2A] text-gray-400 px-1.5 py-0.5 rounded-full">
+                {genre}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {movie.rating > 0 && (
+          <div className="flex items-center gap-1">
+            <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" />
+            <span className="text-white text-[11px] font-medium">{movie.rating.toFixed(1)}</span>
+            <span className="text-gray-600 text-[10px]">/10</span>
+          </div>
+        )}
       </div>
     </div>
   );

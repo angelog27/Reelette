@@ -337,10 +337,12 @@ export interface WatchedMovie {
 }
 
 
-export async function getWatchedMovies(user_id: string): Promise<WatchedMovie[]> {
-  const res = await fetch(`${BASE_URL}/watched/${user_id}`);
-  const data = await res.json();
-  return data.movies ?? [];
+export function getWatchedMovies(user_id: string): Promise<WatchedMovie[]> {
+  return fromCache(`watched_list:${user_id}`, 60 * 1000, async () => {
+    const res = await fetch(`${BASE_URL}/watched/${user_id}`);
+    const data = await res.json();
+    return data.movies ?? [];
+  });
 }
 
 
@@ -364,6 +366,7 @@ export async function addWatchedMovie(
   comment: string
 ) {
   bustCache(`watched_check:${user_id}:${movie.movie_id}`);
+  bustCache(`watched_list:${user_id}`);
   const res = await fetch(`${BASE_URL}/watched/${user_id}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -375,6 +378,7 @@ export async function addWatchedMovie(
 
 export async function updateWatchedMovie(user_id: string, movie_id: string, rating: number, comment: string) {
   bustCache(`watched_check:${user_id}:${movie_id}`);
+  bustCache(`watched_list:${user_id}`);
   const res = await fetch(`${BASE_URL}/watched/${user_id}/${movie_id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -760,6 +764,9 @@ export async function logRouletteSpin(
   movie_title: string,
   poster_url: string
 ): Promise<void> {
+  // Bust spin cache so DiscoverTab picks up the new spin on next visit
+  bustCache(`spins:${user_id}:10`);
+  bustCache(`spins:${user_id}:12`);
   await fetch(`${BASE_URL}/roulette/${user_id}/spin`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -767,10 +774,12 @@ export async function logRouletteSpin(
   });
 }
 
-export async function getRouletteHistory(user_id: string, limit = 10): Promise<RouletteSpin[]> {
-  const res = await fetch(`${BASE_URL}/roulette/${user_id}/history?limit=${limit}`);
-  const data = await res.json();
-  return data.spins ?? [];
+export function getRouletteHistory(user_id: string, limit = 10): Promise<RouletteSpin[]> {
+  return fromCache(`spins:${user_id}:${limit}`, 60 * 1000, async () => {
+    const res = await fetch(`${BASE_URL}/roulette/${user_id}/history?limit=${limit}`);
+    const data = await res.json();
+    return data.spins ?? [];
+  });
 }
 
   export async function getfriendsRouletteHistory(user_id: string, limit = 1): Promise<{ friend_id: string; friend_username: string; avatarUrl?: string; spins: RouletteSpin[] }[]> {

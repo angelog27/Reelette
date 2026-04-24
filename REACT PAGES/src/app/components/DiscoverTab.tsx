@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Star, Bookmark, BookmarkCheck, Info, Film } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Star, Bookmark, BookmarkCheck, Info, Layers } from 'lucide-react';
 import { MovieCard } from './MovieCard';
 import { MovieDetailModal } from './MovieDetailModal';
 import {
   getTrendingMovies, getTopRatedMovies, getNowPlayingMovies, getUpcomingMovies,
-  discoverMovies, getMovieRecommendations, getWatchedMovies,
+  discoverMovies, getMovieRecommendations, getWatchedMovies, getRouletteHistory,
   watchMovieLater, removeFromWatchLater, getWatchLater, getUser,
 } from '../services/api';
-import type { Movie, WatchedMovie } from '../services/api';
+import type { Movie, WatchedMovie, RouletteSpin } from '../services/api';
 import { PROVIDER_LOGOS } from '../constants/providers';
 
 // ── Constants ─────────────────────────────────────────────────────
@@ -22,6 +22,17 @@ const PROVIDER_TABS = [
   { id: 'Apple TV+',  label: 'Apple TV+' },
 ];
 
+// Brand colours — used for card glow + background
+const PROVIDER_COLOR: Record<string, string> = {
+  'all':        '#f97316',
+  'Netflix':    '#E50914',
+  'Disney+':    '#1A4DB5',
+  'Hulu':       '#1CE783',
+  'Max':        '#6C2BD9',
+  'Paramount+': '#0064FF',
+  'Apple TV+':  '#8E8E93',
+};
+
 // Maps display name → backend services_filter key
 const PROVIDER_KEY: Record<string, string> = {
   'Netflix':    'netflix',
@@ -33,6 +44,8 @@ const PROVIDER_KEY: Record<string, string> = {
 };
 
 const ROW_LIMIT = 12;
+
+// ── Converters ────────────────────────────────────────────────────
 
 function watchedToMovie(w: WatchedMovie): Movie {
   return {
@@ -46,17 +59,27 @@ function watchedToMovie(w: WatchedMovie): Movie {
   };
 }
 
+function spinToMovie(s: RouletteSpin): Movie {
+  return {
+    id: s.movie_id,
+    title: s.movie_title,
+    year: 0,
+    genres: [],
+    rating: 0,
+    poster: s.poster_url ?? '',
+    streamingService: '',
+  };
+}
+
 // ── Hero Section ──────────────────────────────────────────────────
 
-interface HeroProps {
+function HeroSection({ movies, onOpenModal, onToggleWatchlist, watchlistIds, hasUser }: {
   movies: Movie[];
   onOpenModal: (id: string) => void;
   onToggleWatchlist: (movie: Movie) => void;
   watchlistIds: string[];
   hasUser: boolean;
-}
-
-function HeroSection({ movies, onOpenModal, onToggleWatchlist, watchlistIds, hasUser }: HeroProps) {
+}) {
   const [current, setCurrent] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const total = Math.min(movies.length, 5);
@@ -80,15 +103,11 @@ function HeroSection({ movies, onOpenModal, onToggleWatchlist, watchlistIds, has
   return (
     <div className="relative w-full overflow-hidden" style={{ height: '72vh', minHeight: 480 }}>
       {movies.slice(0, 5).map((m, i) => (
-        <div
-          key={m.id}
-          className="absolute inset-0 transition-opacity duration-1000 ease-in-out"
-          style={{ opacity: i === current ? 1 : 0, zIndex: i === current ? 1 : 0 }}
-        >
+        <div key={m.id} className="absolute inset-0 transition-opacity duration-1000 ease-in-out"
+          style={{ opacity: i === current ? 1 : 0, zIndex: i === current ? 1 : 0 }}>
           {m.backdrop
             ? <img src={m.backdrop} alt={m.title} className="w-full h-full object-cover" loading={i === 0 ? 'eager' : 'lazy'} />
-            : <div className="w-full h-full bg-[#141414]" />
-          }
+            : <div className="w-full h-full bg-[#141414]" />}
         </div>
       ))}
 
@@ -106,9 +125,7 @@ function HeroSection({ movies, onOpenModal, onToggleWatchlist, watchlistIds, has
             ))}
           </div>
 
-          <h1 className="text-4xl md:text-6xl font-black text-white mb-3 leading-tight drop-shadow-lg">
-            {movie.title}
-          </h1>
+          <h1 className="text-4xl md:text-6xl font-black text-white mb-3 leading-tight drop-shadow-lg">{movie.title}</h1>
 
           <div className="flex items-center gap-3 mb-4 text-sm text-gray-300">
             <span className="flex items-center gap-1">
@@ -120,26 +137,20 @@ function HeroSection({ movies, onOpenModal, onToggleWatchlist, watchlistIds, has
           </div>
 
           {movie.overview && (
-            <p className="text-gray-300 text-sm md:text-base leading-relaxed mb-6 line-clamp-3">
-              {movie.overview}
-            </p>
+            <p className="text-gray-300 text-sm md:text-base leading-relaxed mb-6 line-clamp-3">{movie.overview}</p>
           )}
 
           <div className="flex flex-wrap gap-3">
-            <button
-              onClick={() => onOpenModal(movie.id)}
-              className="flex items-center gap-2 px-6 py-3 bg-white text-black font-semibold rounded-full hover:bg-gray-200 transition-all duration-200 text-sm"
-            >
+            <button onClick={() => onOpenModal(movie.id)}
+              className="flex items-center gap-2 px-6 py-3 bg-white text-black font-semibold rounded-full hover:bg-gray-200 transition-all duration-200 text-sm">
               <Info className="w-4 h-4" /> More Info
             </button>
             {hasUser && (
-              <button
-                onClick={() => onToggleWatchlist(movie)}
+              <button onClick={() => onToggleWatchlist(movie)}
                 className="flex items-center gap-2 px-6 py-3 font-semibold rounded-full border transition-all duration-200 text-sm"
                 style={isInWatchlist
                   ? { background: '#f97316', borderColor: '#f97316', color: '#fff' }
-                  : { background: 'rgba(255,255,255,0.1)', borderColor: 'rgba(255,255,255,0.3)', color: '#fff' }}
-              >
+                  : { background: 'rgba(255,255,255,0.1)', borderColor: 'rgba(255,255,255,0.3)', color: '#fff' }}>
                 {isInWatchlist
                   ? <><BookmarkCheck className="w-4 h-4" /> In Watchlist</>
                   : <><Bookmark className="w-4 h-4" /> Add to Watchlist</>}
@@ -152,12 +163,9 @@ function HeroSection({ movies, onOpenModal, onToggleWatchlist, watchlistIds, has
       {total > 1 && (
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2" style={{ zIndex: 3 }}>
           {Array.from({ length: total }).map((_, i) => (
-            <button
-              key={i}
-              onClick={() => { setCurrent(i); startInterval(); }}
+            <button key={i} onClick={() => { setCurrent(i); startInterval(); }}
               className="h-2 rounded-full transition-all duration-300"
-              style={{ width: i === current ? 24 : 8, background: i === current ? '#f97316' : 'rgba(255,255,255,0.35)' }}
-            />
+              style={{ width: i === current ? 24 : 8, background: i === current ? '#f97316' : 'rgba(255,255,255,0.35)' }} />
           ))}
         </div>
       )}
@@ -176,37 +184,31 @@ function MovieRow({ title, movies, onMovieClick }: {
   if (!movies.length) return null;
 
   const scroll = (dir: 'left' | 'right') =>
-    scrollRef.current?.scrollBy({ left: dir === 'left' ? -640 : 640, behavior: 'smooth' });
+    scrollRef.current?.scrollBy({ left: dir === 'left' ? -600 : 600, behavior: 'smooth' });
 
   return (
     <div className="mb-10">
       <h2 className="text-lg md:text-xl font-bold text-white mb-4 tracking-tight">{title}</h2>
       <div className="relative group">
-        <button
-          onClick={() => scroll('left')}
+        <button onClick={() => scroll('left')}
           className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 w-9 h-9 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-110"
-          style={{ background: 'rgba(0,0,0,0.85)', border: '1px solid rgba(249,115,22,0.3)' }}
-        >
+          style={{ background: 'rgba(0,0,0,0.85)', border: '1px solid rgba(249,115,22,0.3)' }}>
           <ChevronLeft className="w-5 h-5 text-white" />
         </button>
 
-        <div
-          ref={scrollRef}
-          className="hide-scrollbar flex gap-3 overflow-x-auto pb-2"
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
-        >
+        <div ref={scrollRef}
+          className="hide-scrollbar flex gap-2.5 overflow-x-auto pb-2"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}>
           {movies.map(movie => (
-            <div key={movie.id} className="min-w-[150px] md:min-w-[168px] flex-shrink-0">
+            <div key={movie.id} className="min-w-[110px] md:min-w-[125px] flex-shrink-0">
               <MovieCard movie={movie} onClick={m => onMovieClick(m.id)} />
             </div>
           ))}
         </div>
 
-        <button
-          onClick={() => scroll('right')}
+        <button onClick={() => scroll('right')}
           className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 w-9 h-9 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-110"
-          style={{ background: 'rgba(0,0,0,0.85)', border: '1px solid rgba(249,115,22,0.3)' }}
-        >
+          style={{ background: 'rgba(0,0,0,0.85)', border: '1px solid rgba(249,115,22,0.3)' }}>
           <ChevronRight className="w-5 h-5 text-white" />
         </button>
       </div>
@@ -219,39 +221,41 @@ function MovieRow({ title, movies, onMovieClick }: {
 export function DiscoverTab() {
   const user = getUser();
 
-  const [selectedMovieId, setSelectedMovieId]   = useState<string | null>(null);
-  const [activeProvider,  setActiveProvider]     = useState('all');
+  const [selectedMovieId,   setSelectedMovieId]   = useState<string | null>(null);
+  const [activeProvider,    setActiveProvider]     = useState('all');
+  const [hoveredProvider,   setHoveredProvider]    = useState<string | null>(null);
 
   // General rows
-  const [heroMovies,          setHeroMovies]          = useState<Movie[]>([]);
-  const [trendingMovies,      setTrendingMovies]      = useState<Movie[]>([]);
-  const [newReleases,         setNewReleases]         = useState<Movie[]>([]);
-  const [topRated,            setTopRated]            = useState<Movie[]>([]);
-  const [classics,            setClassics]            = useState<Movie[]>([]);
-  const [actionMovies,        setActionMovies]        = useState<Movie[]>([]);
-  const [comedyMovies,        setComedyMovies]        = useState<Movie[]>([]);
-  const [horrorMovies,        setHorrorMovies]        = useState<Movie[]>([]);
-  const [scifiMovies,         setScifiMovies]         = useState<Movie[]>([]);
-  const [acclaimed,           setAcclaimed]           = useState<Movie[]>([]);
-  const [comingSoon,          setComingSoon]          = useState<Movie[]>([]);
-  const [recommended,         setRecommended]         = useState<Movie[]>([]);
-  const [lastWatchedTitle,    setLastWatchedTitle]    = useState('');
-  const [userWatched,         setUserWatched]         = useState<WatchedMovie[]>([]);
-  const [watchlistIds,        setWatchlistIds]        = useState<string[]>([]);
-  const [loading,             setLoading]             = useState(true);
+  const [heroMovies,        setHeroMovies]         = useState<Movie[]>([]);
+  const [trendingMovies,    setTrendingMovies]      = useState<Movie[]>([]);
+  const [newReleases,       setNewReleases]         = useState<Movie[]>([]);
+  const [topRated,          setTopRated]            = useState<Movie[]>([]);
+  const [classics,          setClassics]            = useState<Movie[]>([]);
+  const [actionMovies,      setActionMovies]        = useState<Movie[]>([]);
+  const [comedyMovies,      setComedyMovies]        = useState<Movie[]>([]);
+  const [horrorMovies,      setHorrorMovies]        = useState<Movie[]>([]);
+  const [scifiMovies,       setScifiMovies]         = useState<Movie[]>([]);
+  const [acclaimed,         setAcclaimed]           = useState<Movie[]>([]);
+  const [comingSoon,        setComingSoon]          = useState<Movie[]>([]);
+  const [recommended,       setRecommended]         = useState<Movie[]>([]);
+
+  // User-specific rows
+  const [userWatched,       setUserWatched]         = useState<WatchedMovie[]>([]);
+  const [recentSpins,       setRecentSpins]         = useState<Movie[]>([]);
+  const [watchlistIds,      setWatchlistIds]        = useState<string[]>([]);
+  const [loading,           setLoading]             = useState(true);
 
   // Provider-specific rows
-  const [providerPopular,   setProviderPopular]   = useState<Movie[]>([]);
-  const [providerTopRated,  setProviderTopRated]  = useState<Movie[]>([]);
-  const [providerNew,       setProviderNew]       = useState<Movie[]>([]);
-  const [providerLoading,   setProviderLoading]   = useState(false);
+  const [providerPopular,   setProviderPopular]     = useState<Movie[]>([]);
+  const [providerTopRated,  setProviderTopRated]    = useState<Movie[]>([]);
+  const [providerNew,       setProviderNew]         = useState<Movie[]>([]);
+  const [providerLoading,   setProviderLoading]     = useState(false);
 
-  // ── Initial data load ──────────────────────────────────────────
+  // ── Initial load ───────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
 
     const load = async () => {
-      // Critical rows first — show the page as soon as these land
       const [trending, nowPlaying, topRatedData, classicsData] = await Promise.all([
         getTrendingMovies('week').catch(() => [] as Movie[]),
         getNowPlayingMovies().catch(() => [] as Movie[]),
@@ -267,7 +271,7 @@ export function DiscoverTab() {
       setClassics(classicsData.slice(0, ROW_LIMIT));
       setLoading(false);
 
-      // Genre rows — load in background after page is visible
+      // Genre + more rows (background)
       Promise.all([
         discoverMovies({ genre_id: '28|12', sort_by: 'popularity' }).catch(() => [] as Movie[]),
         discoverMovies({ genre_id: '35',    sort_by: 'popularity' }).catch(() => [] as Movie[]),
@@ -285,7 +289,7 @@ export function DiscoverTab() {
         setComingSoon(upcoming.slice(0, ROW_LIMIT));
       });
 
-      // User-specific data
+      // User-specific
       if (user) {
         getWatchLater(user.user_id).then(ids => { if (!cancelled) setWatchlistIds(ids); });
 
@@ -293,10 +297,13 @@ export function DiscoverTab() {
           if (cancelled || !watched.length) return;
           setUserWatched(watched);
           const last = watched[0];
-          setLastWatchedTitle(last.title);
           getMovieRecommendations(last.movie_id).then(recs => {
             if (!cancelled) setRecommended(recs.slice(0, ROW_LIMIT));
           });
+        });
+
+        getRouletteHistory(user.user_id, ROW_LIMIT).then(spins => {
+          if (!cancelled) setRecentSpins(spins.map(spinToMovie));
         });
       }
     };
@@ -305,7 +312,7 @@ export function DiscoverTab() {
     return () => { cancelled = true; };
   }, []);
 
-  // ── Provider-specific rows ─────────────────────────────────────
+  // ── Provider rows ──────────────────────────────────────────────
   useEffect(() => {
     if (activeProvider === 'all') return;
     const key = PROVIDER_KEY[activeProvider];
@@ -326,8 +333,15 @@ export function DiscoverTab() {
     });
   }, [activeProvider]);
 
-  // ── Derived state ──────────────────────────────────────────────
-  const providerWatched = useMemo<Movie[]>(() => {
+  // ── Derived ────────────────────────────────────────────────────
+  const top10: Movie[] = useMemo(() =>
+    [...userWatched]
+      .sort((a, b) => (b.user_rating ?? 0) - (a.user_rating ?? 0))
+      .slice(0, 10)
+      .map(watchedToMovie),
+    [userWatched]);
+
+  const providerWatched: Movie[] = useMemo(() => {
     if (activeProvider === 'all' || !user) return [];
     return userWatched
       .filter(w => w.services?.includes(activeProvider))
@@ -366,31 +380,48 @@ export function DiscoverTab() {
       />
 
       {/* ── Provider cards ── */}
-      <div className="px-6 mt-8 mb-8">
-        <div className="flex gap-3 justify-evenly flex-wrap sm:flex-nowrap overflow-x-auto hide-scrollbar pb-1"
-          style={{ scrollbarWidth: 'none' } as React.CSSProperties}>
+      <div className="px-6 mt-10 mb-10">
+        <div
+          className="hide-scrollbar flex gap-4 justify-evenly overflow-x-auto pb-1"
+          style={{ scrollbarWidth: 'none' } as React.CSSProperties}
+        >
           {PROVIDER_TABS.map(p => {
-            const isActive = activeProvider === p.id;
-            const logo = p.id !== 'all' ? PROVIDER_LOGOS[p.id] : null;
+            const color      = PROVIDER_COLOR[p.id] ?? '#f97316';
+            const isActive   = activeProvider === p.id;
+            const isHovered  = hoveredProvider === p.id;
+            const logo       = p.id !== 'all' ? PROVIDER_LOGOS[p.id] : null;
+            const lit        = isActive || isHovered;
+
             return (
               <button
                 key={p.id}
                 onClick={() => setActiveProvider(p.id)}
-                className="flex flex-col items-center justify-center gap-1.5 flex-shrink-0 rounded-xl border-2 transition-all duration-200 hover:scale-105"
+                onMouseEnter={() => setHoveredProvider(p.id)}
+                onMouseLeave={() => setHoveredProvider(null)}
+                className="flex-shrink-0 flex flex-col items-center justify-center gap-2 rounded-2xl transition-all duration-300"
                 style={{
-                  width: 80,
-                  height: 60,
-                  background:   isActive ? 'rgba(249,115,22,0.12)' : '#1C1C1C',
-                  borderColor:  isActive ? '#f97316'               : '#2A2A2A',
-                  boxShadow:    isActive ? '0 0 12px rgba(249,115,22,0.25)' : 'none',
+                  width:      130,
+                  height:     118,
+                  border:     'none',
+                  outline:    'none',
+                  background: lit
+                    ? `radial-gradient(ellipse 90% 70% at 50% 110%, ${color}50 0%, #1C1C1C 65%)`
+                    : `radial-gradient(ellipse 80% 55% at 50% 110%, ${color}22 0%, #141414 70%)`,
+                  boxShadow: lit
+                    ? `0 20px 48px ${color}55, 0 4px 16px ${color}30, inset 0 1px 0 rgba(255,255,255,0.06)`
+                    : 'none',
+                  transform: isHovered ? 'translateY(-10px)' : 'translateY(0)',
                 }}
               >
-                {logo
-                  ? <img src={logo} alt={p.label} className="w-7 h-7 rounded-md object-cover" />
-                  : <Film className="w-6 h-6" style={{ color: isActive ? '#f97316' : '#9ca3af' }} />
-                }
-                <span className="text-[10px] font-medium leading-none"
-                  style={{ color: isActive ? '#f97316' : '#9ca3af' }}>
+                {logo ? (
+                  <img src={logo} alt={p.label} className="rounded-xl object-cover"
+                    style={{ width: 52, height: 52 }} />
+                ) : (
+                  // "All" card — layered icon in app accent colour
+                  <Layers style={{ width: 44, height: 44, color: lit ? color : '#6b7280' }} />
+                )}
+                <span className="text-xs font-medium tracking-wide"
+                  style={{ color: lit ? '#fff' : '#9ca3af' }}>
                   {p.label}
                 </span>
               </button>
@@ -399,11 +430,10 @@ export function DiscoverTab() {
         </div>
       </div>
 
-      {/* ── Rows ── */}
+      {/* ── Movie rows ── */}
       <div className="px-6">
 
         {isProviderView ? (
-          /* Provider-specific rows */
           providerLoading ? (
             <div className="text-gray-500 text-center py-16">Loading {activeProvider}…</div>
           ) : (
@@ -417,8 +447,19 @@ export function DiscoverTab() {
             </>
           )
         ) : (
-          /* General "All" rows */
           <>
+            {/* User-specific rows first when logged in */}
+            {user && top10.length > 0 && (
+              <MovieRow title="Your Top 10" movies={top10} onMovieClick={setSelectedMovieId} />
+            )}
+            {user && recentSpins.length > 0 && (
+              <MovieRow title="Your Recent Spins" movies={recentSpins} onMovieClick={setSelectedMovieId} />
+            )}
+            {user && recommended.length > 0 && (
+              <MovieRow title="Recommended Watches" movies={recommended} onMovieClick={setSelectedMovieId} />
+            )}
+
+            {/* General rows */}
             <MovieRow title="Trending Now"         movies={trendingMovies} onMovieClick={setSelectedMovieId} />
             <MovieRow title="New Releases"         movies={newReleases}    onMovieClick={setSelectedMovieId} />
             <MovieRow title="Top Rated"            movies={topRated}       onMovieClick={setSelectedMovieId} />
@@ -429,9 +470,6 @@ export function DiscoverTab() {
             <MovieRow title="Sci-Fi"               movies={scifiMovies}    onMovieClick={setSelectedMovieId} />
             <MovieRow title="Critically Acclaimed" movies={acclaimed}      onMovieClick={setSelectedMovieId} />
             <MovieRow title="Coming Soon"          movies={comingSoon}     onMovieClick={setSelectedMovieId} />
-            {lastWatchedTitle && recommended.length > 0 && (
-              <MovieRow title={`Because You Watched ${lastWatchedTitle}`} movies={recommended} onMovieClick={setSelectedMovieId} />
-            )}
           </>
         )}
 
