@@ -242,10 +242,12 @@ export function getMovieRecommendations(movie_id: string): Promise<Movie[]> {
 }
 
 
-export async function searchMovies(query: string, page = 1): Promise<Movie[]> {
-  const res = await fetch(`${BASE_URL}/movies/search?q=${encodeURIComponent(query)}&page=${page}`);
-  const data = await res.json();
-  return data.movies ?? [];
+export function searchMovies(query: string, page = 1): Promise<Movie[]> {
+  return fromCache(`search:${query.toLowerCase().trim()}:${page}`, TTL.CATALOG, async () => {
+    const res = await fetch(`${BASE_URL}/movies/search?q=${encodeURIComponent(query)}&page=${page}`);
+    const data = await res.json();
+    return data.movies ?? [];
+  });
 }
 
 

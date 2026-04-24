@@ -1,11 +1,10 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Star, Bookmark, BookmarkCheck, Info, Layers } from 'lucide-react';
 import { MovieDetailModal } from './MovieDetailModal';
 import {
   getTrendingMovies, getTopRatedMovies, getNowPlayingMovies, getUpcomingMovies,
   discoverMovies, getMovieRecommendations, getWatchedMovies, getRouletteHistory,
-  watchMovieLater, removeFromWatchLater, getWatchLater, getUser, getServices, SERVICE_DISPLAY,
+  watchMovieLater, removeFromWatchLater, getWatchLater, getUser, getServices,
 } from '../services/api';
 import type { Movie, WatchedMovie, RouletteSpin } from '../services/api';
 import { PROVIDER_LOGOS } from '../constants/providers';
@@ -13,32 +12,38 @@ import { PROVIDER_LOGOS } from '../constants/providers';
 // ── Constants ─────────────────────────────────────────────────────
 
 const PROVIDER_TABS = [
-  { id: 'all',        label: 'All' },
-  { id: 'Netflix',    label: 'Netflix' },
-  { id: 'Disney+',    label: 'Disney+' },
-  { id: 'Hulu',       label: 'Hulu' },
-  { id: 'Max',        label: 'Max' },
-  { id: 'Paramount+', label: 'Paramount+' },
-  { id: 'Apple TV+',  label: 'Apple TV+' },
+  { id: 'all',           label: 'All' },
+  { id: 'Netflix',       label: 'Netflix' },
+  { id: 'Disney+',       label: 'Disney+' },
+  { id: 'Hulu',          label: 'Hulu' },
+  { id: 'Max',           label: 'Max' },
+  { id: 'Prime Video',   label: 'Prime Video' },
+  { id: 'Paramount+',    label: 'Paramount+' },
+  { id: 'Apple TV+',     label: 'Apple TV+' },
+  { id: 'Peacock',       label: 'Peacock' },
 ];
 
 const PROVIDER_COLOR: Record<string, string> = {
-  'all':        '#C0392B',
-  'Netflix':    '#E50914',
-  'Disney+':    '#1A4DB5',
-  'Hulu':       '#1CE783',
-  'Max':        '#6C2BD9',
-  'Paramount+': '#0064FF',
-  'Apple TV+':  '#8E8E93',
+  'all':          '#C0392B',
+  'Netflix':      '#E50914',
+  'Disney+':      '#1A4DB5',
+  'Hulu':         '#1CE783',
+  'Max':          '#6C2BD9',
+  'Prime Video':  '#00A8E1',
+  'Paramount+':   '#0064FF',
+  'Apple TV+':    '#8E8E93',
+  'Peacock':      '#F5C518',
 };
 
 const PROVIDER_KEY: Record<string, string> = {
-  'Netflix':    'netflix',
-  'Disney+':    'disneyPlus',
-  'Hulu':       'hulu',
-  'Max':        'hboMax',
-  'Paramount+': 'paramount',
-  'Apple TV+':  'appleTV',
+  'Netflix':      'netflix',
+  'Disney+':      'disneyPlus',
+  'Hulu':         'hulu',
+  'Max':          'hboMax',
+  'Prime Video':  'amazonPrime',
+  'Paramount+':   'paramount',
+  'Apple TV+':    'appleTV',
+  'Peacock':      'peacock',
 };
 
 const ROW_LIMIT = 14;
@@ -322,15 +327,14 @@ export function DiscoverTab() {
   const [selectedMovieId,  setSelectedMovieId]  = useState<string | null>(null);
   const [activeProvider,   setActiveProvider]    = useState('all');
   const [hoveredProvider,  setHoveredProvider]   = useState<string | null>(null);
-  const [searchParams] = useSearchParams();
-  const filterMyServices = searchParams.get('myservices') === '1';
+  // Re-read services from localStorage and react to changes (e.g. user updates in Settings)
+  const [userServices, setUserServices] = useState<Record<string, boolean>>(getServices);
 
-  // Derive user's enabled services (localStorage is synchronous, reads are cheap)
-  const userServices = getServices();
-  const userServiceNames: string[] = Object.entries(userServices)
-    .filter(([, enabled]) => enabled)
-    .map(([key]) => SERVICE_DISPLAY[key])
-    .filter(Boolean);
+  useEffect(() => {
+    const handler = () => setUserServices(getServices());
+    window.addEventListener('storage', handler);
+    return () => window.removeEventListener('storage', handler);
+  }, []);
 
   // Only show provider tabs the user actually has (always keep "All")
   const visibleProviderTabs = PROVIDER_TABS.filter(
@@ -338,11 +342,8 @@ export function DiscoverTab() {
       p.id === 'all' || (PROVIDER_KEY[p.id] && userServices[PROVIDER_KEY[p.id]])
   );
 
-  // Client-side service filter for the "All" view
-  const applyServiceFilter = (movies: Movie[]): Movie[] => {
-    if (!filterMyServices || userServiceNames.length === 0) return movies;
-    return movies.filter(m => userServiceNames.includes(m.streamingService));
-  };
+  // Client-side service filter — no longer driven by URL param, just a passthrough
+  const applyServiceFilter = (movies: Movie[]): Movie[] => movies;
 
   // General rows
   const [heroMovies,       setHeroMovies]        = useState<Movie[]>([]);
