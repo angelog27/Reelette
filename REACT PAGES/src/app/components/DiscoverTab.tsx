@@ -41,8 +41,7 @@ const PROVIDER_KEY: Record<string, string> = {
 };
 
 const ROW_LIMIT = 14;
-// Width of each compact landscape card in rows
-const CARD_W = 176;
+const CARD_W = 224;
 
 // ── Converters ────────────────────────────────────────────────────
 
@@ -95,15 +94,15 @@ function CompactCard({ movie, onClick }: { movie: Movie; onClick: () => void }) 
       </div>
 
       {/* Below-card info */}
-      <div className="mt-1.5 px-0.5">
-        <p className="text-white text-[11px] font-medium line-clamp-1 leading-snug">{movie.title}</p>
+      <div className="mt-2 px-0.5">
+        <p className="text-white text-[13px] font-medium line-clamp-1 leading-snug">{movie.title}</p>
         {movie.year > 0 && (
-          <p className="text-gray-500 text-[10px] mt-0.5">{movie.year}</p>
+          <p className="text-gray-500 text-[11px] mt-0.5">{movie.year}</p>
         )}
         {movie.rating > 0 && (
-          <div className="flex items-center gap-0.5 mt-0.5">
-            <Star className="w-2.5 h-2.5 fill-yellow-500 text-yellow-500" />
-            <span className="text-gray-400 text-[10px]">{movie.rating.toFixed(1)}</span>
+          <div className="flex items-center gap-1 mt-0.5">
+            <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" />
+            <span className="text-gray-400 text-[11px]">{movie.rating.toFixed(1)}</span>
           </div>
         )}
       </div>
@@ -469,11 +468,11 @@ export function DiscoverTab() {
         hasUser={!!user}
       />
 
-      {/* ── Provider tiles ── */}
-      <div className="px-6 md:px-10 mt-10 mb-10">
+      {/* ── Provider tab bar ── */}
+      <div className="px-6 md:px-10 mt-14 mb-8" style={{ overflow: 'visible' }}>
         <div
-          className="hide-scrollbar flex gap-4 justify-evenly overflow-x-auto pb-1"
-          style={{ scrollbarWidth: 'none' } as React.CSSProperties}
+          className="hide-scrollbar flex gap-6 justify-evenly overflow-x-auto"
+          style={{ scrollbarWidth: 'none', overflow: 'visible' } as React.CSSProperties}
         >
           {PROVIDER_TABS.map(p => {
             const color     = PROVIDER_COLOR[p.id] ?? '#C0392B';
@@ -488,31 +487,47 @@ export function DiscoverTab() {
                 onClick={() => setActiveProvider(p.id)}
                 onMouseEnter={() => setHoveredProvider(p.id)}
                 onMouseLeave={() => setHoveredProvider(null)}
-                className="flex-shrink-0 flex flex-col items-center justify-center gap-2.5 rounded-2xl transition-all duration-300"
+                className="flex-shrink-0 flex flex-col items-center gap-2 transition-all duration-250"
                 style={{
-                  width:      155,
-                  height:     145,
+                  background: 'none',
                   border:     'none',
                   outline:    'none',
-                  background: lit
-                    ? `radial-gradient(ellipse 90% 70% at 50% 110%, ${color}55 0%, #1C1C1C 60%)`
-                    : `radial-gradient(ellipse 80% 55% at 50% 110%, ${color}20 0%, #141414 70%)`,
-                  boxShadow: lit
-                    ? `0 20px 52px ${color}55, 0 4px 20px ${color}30, inset 0 1px 0 rgba(255,255,255,0.06)`
-                    : 'none',
-                  transform: isHovered ? 'translateY(-10px)' : 'translateY(0)',
+                  padding:    '4px 0 8px',
+                  transform:  isHovered ? 'translateY(-4px) scale(1.08)' : 'translateY(0) scale(1)',
+                  opacity:    lit ? 1 : 0.55,
                 }}
               >
                 {logo ? (
-                  <img src={logo} alt={p.label} className="rounded-2xl object-cover"
-                    style={{ width: 76, height: 76 }} />
+                  <img
+                    src={logo}
+                    alt={p.label}
+                    className="rounded-xl object-cover"
+                    style={{
+                      width:     68,
+                      height:    68,
+                      boxShadow: lit ? `0 0 18px ${color}88` : 'none',
+                      transition: 'box-shadow 0.25s',
+                    }}
+                  />
                 ) : (
-                  <Layers style={{ width: 52, height: 52, color: lit ? color : '#6b7280' }} />
+                  <Layers style={{ width: 48, height: 48, color: lit ? color : '#6b7280' }} />
                 )}
-                <span className="text-xs font-semibold tracking-wide"
-                  style={{ color: lit ? '#fff' : '#9ca3af' }}>
+                <span
+                  className="text-[11px] font-semibold tracking-wide"
+                  style={{ color: lit ? '#fff' : '#9ca3af' }}
+                >
                   {p.label}
                 </span>
+                {/* active underline */}
+                <div
+                  style={{
+                    height:     2,
+                    width:      isActive ? '100%' : 0,
+                    background: color,
+                    borderRadius: 1,
+                    transition: 'width 0.25s',
+                  }}
+                />
               </button>
             );
           })}
