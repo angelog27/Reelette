@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Search, ChevronDown, ChevronUp } from 'lucide-react';
 import { MovieCard } from './MovieCard';
 import { MovieDetailModal } from './MovieDetailModal';
@@ -27,6 +28,7 @@ const _store: SearchStore = {
 
 export function SearchTab() {
   const f = useMovieFilters(_store);
+  const [searchParams] = useSearchParams();
 
   // Local UI state initialised from the persistent store
   const [searchQuery,     _setSearchQuery]     = useState(_store.searchQuery);
@@ -39,6 +41,13 @@ export function SearchTab() {
   const setSearchQuery     = (q: string)    => { _store.searchQuery = q;     _setSearchQuery(q); };
   const setFiltersExpanded = (v: boolean)   => { _store.filtersExpanded = v; _setFiltersExpanded(v); };
   const setMovies          = (m: Movie[])   => { _store.movies = m;          _setMovies(m); };
+
+  // Pre-fill from navbar search (?q=...)
+  useEffect(() => {
+    const q = searchParams.get('q');
+    if (q && q !== searchQuery) setSearchQuery(q);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 

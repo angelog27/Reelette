@@ -12,6 +12,7 @@ const RouletteTab          = lazy(() => import('./components/RouletteTab').then(
 const SocialTab            = lazy(() => import('./components/SocialTab').then(m => ({ default: m.SocialTab })));
 const ProfileandSettingsTab = lazy(() => import('./components/ProfileandSettingsTab').then(m => ({ default: m.ProfileandSettingsTab })));
 const MyStuffTab           = lazy(() => import('./components/MyStuffTab').then(m => ({ default: m.MyStuffTab })));
+const SearchTab            = lazy(() => import('./components/SearchTab').then(m => ({ default: m.SearchTab })));
 
 function hasSeenLanding() {
   return document.cookie.split(';').some(c => c.trim().startsWith('reelette_visited='));
@@ -67,6 +68,10 @@ export const router = createBrowserRouter([
       {
         path: 'mystuff',
         Component: MyStuffTab,
+      },
+      {
+        path: 'search',
+        Component: SearchTab,
       },
     ],
   },

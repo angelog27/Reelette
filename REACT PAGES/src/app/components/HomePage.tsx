@@ -1,6 +1,6 @@
 import { Suspense, useState, useEffect, useRef } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
-import { Bell, Heart, MessageCircle, Film, Users, UserPlus } from 'lucide-react';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { Bell, Heart, MessageCircle, Film, Users, UserPlus, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import logoImage from '../../assets/Reelette_White.png';
 import reeletteLogo from '../../assets/Reelette_LOGO_upscaled.png';
@@ -57,6 +57,9 @@ export function HomePage() {
     { id: 'social', label: 'Social', path: '/home/social' },
     { id: 'profile', label: 'Profile', path: '/home/profile' },
   ];
+
+  const navigate = useNavigate();
+  const [navSearch, setNavSearch] = useState('');
 
   const currentUser = getUser();
   const currentUserId = currentUser?.user_id ?? '';
@@ -117,14 +120,33 @@ export function HomePage() {
     <div className="min-h-screen bg-[#0A0A0A] text-white">
       <nav className="bg-black border-b border-[#C0392B]/30 sticky top-0 z-50 overflow-visible">
         <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center">
+          <div className="flex items-center gap-4">
             {/* Left — logo */}
-            <div className="flex items-center" style={{ flex: 1 }}>
+            <div className="shrink-0">
               <img src={logoImage} alt="Reelette" className="h-8 w-auto" />
             </div>
 
-            {/* Center — nav links */}
-            <div className="flex items-center justify-center gap-12" style={{ flex: 1 }}>
+            {/* Center — search bar */}
+            <div className="flex-1 flex justify-center">
+              <div className="relative" style={{ width: 240 }}>
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-white/40" />
+                <input
+                  type="text"
+                  value={navSearch}
+                  onChange={e => setNavSearch(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && navSearch.trim()) {
+                      navigate(`/home/search?q=${encodeURIComponent(navSearch.trim())}`);
+                    }
+                  }}
+                  placeholder="Search movies, shows..."
+                  className="w-full h-[35px] pl-9 pr-4 rounded-full text-sm text-white placeholder:text-white/35 bg-white/[0.08] border border-white/[0.12] focus:bg-white/[0.13] focus:border-white/[0.38] focus:outline-none transition-all duration-150"
+                />
+              </div>
+            </div>
+
+            {/* Right — nav tabs + bell */}
+            <div className="flex items-center justify-end gap-8 shrink-0">
               {tabs.map((tab) => (
                 <NavLink
                   key={tab.id}
@@ -148,10 +170,6 @@ export function HomePage() {
                   )}
                 </NavLink>
               ))}
-            </div>
-
-            {/* Right — notification bell */}
-            <div className="flex items-center justify-end" style={{ flex: 1 }}>
             <div className="relative" ref={notifPanelRef}>
               <button
                 onClick={() => setNotifOpen(o => !o)}

@@ -4,10 +4,11 @@ import { MovieDetailModal } from './MovieDetailModal';
 import {
   getTrendingMovies, getTopRatedMovies, getNowPlayingMovies, getUpcomingMovies,
   discoverMovies, getMovieRecommendations, getWatchedMovies, getRouletteHistory,
-  watchMovieLater, removeFromWatchLater, getWatchLater, getUser,
+  watchMovieLater, removeFromWatchLater, getWatchLater, getUser, getServices, SERVICE_DISPLAY,
 } from '../services/api';
 import type { Movie, WatchedMovie, RouletteSpin } from '../services/api';
 import { PROVIDER_LOGOS } from '../constants/providers';
+import { Switch } from './ui/switch';
 
 // ── Constants ─────────────────────────────────────────────────────
 
@@ -321,6 +322,26 @@ export function DiscoverTab() {
   const [selectedMovieId,  setSelectedMovieId]  = useState<string | null>(null);
   const [activeProvider,   setActiveProvider]    = useState('all');
   const [hoveredProvider,  setHoveredProvider]   = useState<string | null>(null);
+  const [filterMyServices, setFilterMyServices]  = useState(false);
+
+  // Derive user's enabled services (localStorage is synchronous, reads are cheap)
+  const userServices = getServices();
+  const userServiceNames: string[] = Object.entries(userServices)
+    .filter(([, enabled]) => enabled)
+    .map(([key]) => SERVICE_DISPLAY[key])
+    .filter(Boolean);
+
+  // Only show provider tabs the user actually has (always keep "All")
+  const visibleProviderTabs = PROVIDER_TABS.filter(
+    (p: { id: string; label: string }) =>
+      p.id === 'all' || (PROVIDER_KEY[p.id] && userServices[PROVIDER_KEY[p.id]])
+  );
+
+  // Client-side service filter for the "All" view
+  const applyServiceFilter = (movies: Movie[]): Movie[] => {
+    if (!filterMyServices || userServiceNames.length === 0) return movies;
+    return movies.filter(m => userServiceNames.includes(m.streamingService));
+  };
 
   // General rows
   const [heroMovies,       setHeroMovies]        = useState<Movie[]>([]);
@@ -478,7 +499,7 @@ export function DiscoverTab() {
           className="hide-scrollbar flex gap-2 justify-evenly overflow-x-auto"
           style={{ scrollbarWidth: 'none', overflow: 'visible' } as React.CSSProperties}
         >
-          {PROVIDER_TABS.map(p => {
+          {visibleProviderTabs.map(p => {
             const color     = PROVIDER_COLOR[p.id] ?? '#C0392B';
             const isActive  = activeProvider === p.id;
             const isHovered = hoveredProvider === p.id;
@@ -538,6 +559,23 @@ export function DiscoverTab() {
         </div>
       </div>
 
+      {/* ── "Only my services" toggle (shown in All view when user has services) ── */}
+      {!isProviderView && userServiceNames.length > 0 && (
+        <div className="flex items-center gap-3 mb-6 bg-[#1A1A1A] rounded-full px-5 py-3 w-fit">
+          <Switch
+            checked={filterMyServices}
+            onCheckedChange={setFilterMyServices}
+            className="data-[state=checked]:bg-[#C0392B]"
+          />
+          <span
+            className="text-gray-300 text-sm cursor-pointer select-none"
+            onClick={() => setFilterMyServices((v: boolean) => !v)}
+          >
+            Only show movies I can watch
+          </span>
+        </div>
+      )}
+
       {/* ── Movie rows ── */}
       <div>
 
@@ -557,25 +595,25 @@ export function DiscoverTab() {
         ) : (
           <>
             {user && top10.length > 0 && (
-              <MovieRow title="Your Top 10" movies={top10} onMovieClick={setSelectedMovieId} />
+              <MovieRow title="Your Top 10" movies={applyServiceFilter(top10)} onMovieClick={setSelectedMovieId} />
             )}
             {user && recentSpins.length > 0 && (
-              <MovieRow title="Your Recent Spins" movies={recentSpins} onMovieClick={setSelectedMovieId} />
+              <MovieRow title="Your Recent Spins" movies={applyServiceFilter(recentSpins)} onMovieClick={setSelectedMovieId} />
             )}
             {user && recommended.length > 0 && (
-              <MovieRow title="Recommended Watches" movies={recommended} onMovieClick={setSelectedMovieId} />
+              <MovieRow title="Recommended Watches" movies={applyServiceFilter(recommended)} onMovieClick={setSelectedMovieId} />
             )}
 
-            <MovieRow title="Trending Now"         movies={trendingMovies} onMovieClick={setSelectedMovieId} />
-            <MovieRow title="New Releases"         movies={newReleases}    onMovieClick={setSelectedMovieId} />
-            <MovieRow title="Top Rated"            movies={topRated}       onMovieClick={setSelectedMovieId} />
-            <MovieRow title="Classics"             movies={classics}       onMovieClick={setSelectedMovieId} />
-            <MovieRow title="Action & Adventure"   movies={actionMovies}   onMovieClick={setSelectedMovieId} />
-            <MovieRow title="Comedy"               movies={comedyMovies}   onMovieClick={setSelectedMovieId} />
-            <MovieRow title="Horror"               movies={horrorMovies}   onMovieClick={setSelectedMovieId} />
-            <MovieRow title="Sci-Fi"               movies={scifiMovies}    onMovieClick={setSelectedMovieId} />
-            <MovieRow title="Critically Acclaimed" movies={acclaimed}      onMovieClick={setSelectedMovieId} />
-            <MovieRow title="Coming Soon"          movies={comingSoon}     onMovieClick={setSelectedMovieId} />
+            <MovieRow title="Trending Now"         movies={applyServiceFilter(trendingMovies)} onMovieClick={setSelectedMovieId} />
+            <MovieRow title="New Releases"         movies={applyServiceFilter(newReleases)}    onMovieClick={setSelectedMovieId} />
+            <MovieRow title="Top Rated"            movies={applyServiceFilter(topRated)}       onMovieClick={setSelectedMovieId} />
+            <MovieRow title="Classics"             movies={applyServiceFilter(classics)}       onMovieClick={setSelectedMovieId} />
+            <MovieRow title="Action & Adventure"   movies={applyServiceFilter(actionMovies)}   onMovieClick={setSelectedMovieId} />
+            <MovieRow title="Comedy"               movies={applyServiceFilter(comedyMovies)}   onMovieClick={setSelectedMovieId} />
+            <MovieRow title="Horror"               movies={applyServiceFilter(horrorMovies)}   onMovieClick={setSelectedMovieId} />
+            <MovieRow title="Sci-Fi"               movies={applyServiceFilter(scifiMovies)}    onMovieClick={setSelectedMovieId} />
+            <MovieRow title="Critically Acclaimed" movies={applyServiceFilter(acclaimed)}      onMovieClick={setSelectedMovieId} />
+            <MovieRow title="Coming Soon"          movies={applyServiceFilter(comingSoon)}     onMovieClick={setSelectedMovieId} />
           </>
         )}
 
