@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Star, Bookmark, BookmarkCheck, Info, Layers } from 'lucide-react';
 import { MovieDetailModal } from './MovieDetailModal';
 import {
@@ -8,7 +9,6 @@ import {
 } from '../services/api';
 import type { Movie, WatchedMovie, RouletteSpin } from '../services/api';
 import { PROVIDER_LOGOS } from '../constants/providers';
-import { Switch } from './ui/switch';
 
 // ── Constants ─────────────────────────────────────────────────────
 
@@ -322,7 +322,8 @@ export function DiscoverTab() {
   const [selectedMovieId,  setSelectedMovieId]  = useState<string | null>(null);
   const [activeProvider,   setActiveProvider]    = useState('all');
   const [hoveredProvider,  setHoveredProvider]   = useState<string | null>(null);
-  const [filterMyServices, setFilterMyServices]  = useState(false);
+  const [searchParams] = useSearchParams();
+  const filterMyServices = searchParams.get('myservices') === '1';
 
   // Derive user's enabled services (localStorage is synchronous, reads are cheap)
   const userServices = getServices();
@@ -558,23 +559,6 @@ export function DiscoverTab() {
           })}
         </div>
       </div>
-
-      {/* ── "Only my services" toggle (shown in All view when user has services) ── */}
-      {!isProviderView && userServiceNames.length > 0 && (
-        <div className="flex items-center gap-3 mb-6 bg-[#1A1A1A] rounded-full px-5 py-3 w-fit">
-          <Switch
-            checked={filterMyServices}
-            onCheckedChange={setFilterMyServices}
-            className="data-[state=checked]:bg-[#C0392B]"
-          />
-          <span
-            className="text-gray-300 text-sm cursor-pointer select-none"
-            onClick={() => setFilterMyServices((v: boolean) => !v)}
-          >
-            Only show movies I can watch
-          </span>
-        </div>
-      )}
 
       {/* ── Movie rows ── */}
       <div>

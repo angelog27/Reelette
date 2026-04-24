@@ -1,6 +1,6 @@
 import { Suspense, useState, useEffect, useRef } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { Bell, Heart, MessageCircle, Film, Users, UserPlus, Search } from 'lucide-react';
+import { NavLink, Outlet, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { Bell, Heart, MessageCircle, Film, Users, UserPlus, Search, SlidersHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
 import logoImage from '../../assets/Reelette_White.png';
 import reeletteLogo from '../../assets/Reelette_LOGO_upscaled.png';
@@ -59,7 +59,23 @@ export function HomePage() {
   ];
 
   const navigate = useNavigate();
+  const location = useLocation();
+  const [navSearchParams, setNavSearchParams] = useSearchParams();
   const [navSearch, setNavSearch] = useState('');
+
+  const isOnDiscover = location.pathname === '/home/discover';
+  const filterActive = isOnDiscover && navSearchParams.get('myservices') === '1';
+
+  const handleFilterToggle = () => {
+    if (isOnDiscover) {
+      const next = new URLSearchParams(navSearchParams);
+      if (filterActive) next.delete('myservices');
+      else next.set('myservices', '1');
+      setNavSearchParams(next);
+    } else {
+      navigate('/home/discover?myservices=1');
+    }
+  };
 
   const currentUser = getUser();
   const currentUserId = currentUser?.user_id ?? '';
@@ -126,27 +142,8 @@ export function HomePage() {
               <img src={logoImage} alt="Reelette" className="h-8 w-auto" />
             </div>
 
-            {/* Center — search bar */}
-            <div className="flex-1 flex justify-center">
-              <div className="relative" style={{ width: 240 }}>
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-white/40" />
-                <input
-                  type="text"
-                  value={navSearch}
-                  onChange={e => setNavSearch(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter' && navSearch.trim()) {
-                      navigate(`/home/search?q=${encodeURIComponent(navSearch.trim())}`);
-                    }
-                  }}
-                  placeholder="Search movies, shows..."
-                  className="w-full h-[35px] pl-9 pr-4 rounded-full text-sm text-white placeholder:text-white/35 bg-white/[0.08] border border-white/[0.12] focus:bg-white/[0.13] focus:border-white/[0.38] focus:outline-none transition-all duration-150"
-                />
-              </div>
-            </div>
-
-            {/* Right — nav tabs + bell */}
-            <div className="flex items-center justify-end gap-8 shrink-0">
+            {/* Center — nav tabs */}
+            <div className="flex-1 flex items-center justify-center gap-8">
               {tabs.map((tab) => (
                 <NavLink
                   key={tab.id}
@@ -170,6 +167,40 @@ export function HomePage() {
                   )}
                 </NavLink>
               ))}
+            </div>
+
+            {/* Right — search + filter + bell */}
+            <div className="flex items-center gap-2 shrink-0">
+              {/* Search input */}
+              <div className="relative" style={{ width: 200 }}>
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-white/40" />
+                <input
+                  type="text"
+                  value={navSearch}
+                  onChange={e => setNavSearch(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && navSearch.trim()) {
+                      navigate(`/home/search?q=${encodeURIComponent(navSearch.trim())}`);
+                    }
+                  }}
+                  placeholder="Search movies, shows..."
+                  className="w-full h-[35px] pl-9 pr-4 rounded-full text-sm text-white placeholder:text-white/35 bg-white/[0.08] border border-white/[0.12] focus:bg-white/[0.13] focus:border-white/[0.38] focus:outline-none transition-all duration-150"
+                />
+              </div>
+
+              {/* Filter button */}
+              <button
+                onClick={handleFilterToggle}
+                title="Only show movies I can watch"
+                className="flex items-center justify-center w-[35px] h-[35px] rounded-full border transition-colors"
+                style={filterActive
+                  ? { background: '#C0392B', borderColor: '#C0392B' }
+                  : { background: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.12)' }
+                }
+              >
+                <SlidersHorizontal className="w-4 h-4 text-white" />
+              </button>
+
             <div className="relative" ref={notifPanelRef}>
               <button
                 onClick={() => setNotifOpen(o => !o)}
