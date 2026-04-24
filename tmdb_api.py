@@ -262,6 +262,50 @@ def get_backdrop_url(backdrop_path, size="w1280"):
         return f"{TMDB_IMAGE_BASE}/{size}{backdrop_path}"
     return None
 
+def get_now_playing_movies(page=1):
+    cache_key = f"now_playing:{page}"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
+    url = f"{TMDB_BASE_URL}/movie/now_playing"
+    params = {
+        "api_key": TMDB_API_KEY,
+        "language": "en-US",
+        "page": page
+    }
+    try:
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        result = response.json()
+        _cache_set(cache_key, result, 1200)  # 20 min
+        return result
+    except requests.exceptions.RequestException as e:
+        print(f"Error getting now playing movies: {e}")
+        return None
+
+
+def get_movie_recommendations(movie_id, page=1):
+    cache_key = f"recommendations:{movie_id}:{page}"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
+    url = f"{TMDB_BASE_URL}/movie/{movie_id}/recommendations"
+    params = {
+        "api_key": TMDB_API_KEY,
+        "language": "en-US",
+        "page": page
+    }
+    try:
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        result = response.json()
+        _cache_set(cache_key, result, 1200)  # 20 min
+        return result
+    except requests.exceptions.RequestException as e:
+        print(f"Error getting movie recommendations: {e}")
+        return None
+
+
 #Allow's a user to rate a movie, which is stored in firebase.
 def user_rate_movies(user_id, movie_id, rating, review):
     # Implementation for user rating functionality

@@ -32,7 +32,8 @@ from firebase_helper import (
 from tmdb_api import (
     search_movies, discover_movies, get_popular_movies, get_movie_details,
     get_streaming_providers, get_genres, get_trending_movies, get_top_rated_movies,
-    get_poster_url, search_person
+    get_poster_url, get_backdrop_url, search_person,
+    get_now_playing_movies, get_movie_recommendations,
 )
 
 app = Flask(__name__)
@@ -103,6 +104,8 @@ def format_movie(movie_data, streaming_service=''):
         'genres': [g for g in genres if g],
         'rating': round(movie_data.get('vote_average', 0), 1),
         'poster': get_poster_url(movie_data.get('poster_path')) or '',
+        'backdrop': get_backdrop_url(movie_data.get('backdrop_path')) or '',
+        'overview': movie_data.get('overview', ''),
         'streamingService': streaming_service,
     }
 
@@ -262,6 +265,33 @@ def top_rated_movies():
     if cached:
         return jsonify({'movies': cached})
     data = get_top_rated_movies(page=page)
+    if not data:
+        return jsonify({'movies': []})
+    movies = fetch_movies_with_streaming(data.get('results', []))
+    _cache_set(cache_key, movies, _MOVIE_LIST_TTL)
+    return jsonify({'movies': movies})
+
+@app.route('/api/movies/now_playing', methods=['GET'])
+def now_playing_movies():
+    page = request.args.get('page', 1, type=int)
+    cache_key = f'now_playing:{page}'
+    cached = _cache_get(cache_key)
+    if cached:
+        return jsonify({'movies': cached})
+    data = get_now_playing_movies(page=page)
+    if not data:
+        return jsonify({'movies': []})
+    movies = fetch_movies_with_streaming(data.get('results', []))
+    _cache_set(cache_key, movies, _MOVIE_LIST_TTL)
+    return jsonify({'movies': movies})
+
+@app.route('/api/movies/<int:movie_id>/recommendations', methods=['GET'])
+def movie_recommendations(movie_id):
+    cache_key = f'recommendations:{movie_id}'
+    cached = _cache_get(cache_key)
+    if cached:
+        return jsonify({'movies': cached})
+    data = get_movie_recommendations(movie_id)
     if not data:
         return jsonify({'movies': []})
     movies = fetch_movies_with_streaming(data.get('results', []))

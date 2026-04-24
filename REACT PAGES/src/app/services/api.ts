@@ -37,6 +37,8 @@ export interface Movie {
   genres: string[];
   rating: number;
   poster: string;
+  backdrop?: string;
+  overview?: string;
   streamingService: string;
 }
 
@@ -198,6 +200,24 @@ export function getTrendingMovies(window = 'week'): Promise<Movie[]> {
 export function getTopRatedMovies(page = 1): Promise<Movie[]> {
   return fromCache(`toprated:${page}`, TTL.CATALOG, async () => {
     const res = await fetch(`${BASE_URL}/movies/top_rated?page=${page}`);
+    const data = await res.json();
+    return data.movies ?? [];
+  });
+}
+
+
+export function getNowPlayingMovies(page = 1): Promise<Movie[]> {
+  return fromCache(`nowplaying:${page}`, TTL.CATALOG, async () => {
+    const res = await fetch(`${BASE_URL}/movies/now_playing?page=${page}`);
+    const data = await res.json();
+    return data.movies ?? [];
+  });
+}
+
+
+export function getMovieRecommendations(movie_id: string): Promise<Movie[]> {
+  return fromCache(`recommendations:${movie_id}`, TTL.CATALOG, async () => {
+    const res = await fetch(`${BASE_URL}/movies/${movie_id}/recommendations`);
     const data = await res.json();
     return data.movies ?? [];
   });

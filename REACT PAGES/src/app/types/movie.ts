@@ -5,6 +5,8 @@ export interface Movie {
   genres: string[];
   rating: number;
   poster: string;
+  backdrop?: string;
+  overview?: string;
   streamingService: string;
 }
 

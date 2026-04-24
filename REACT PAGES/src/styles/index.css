@@ -7,6 +7,11 @@ html, body {
     overscroll-behavior-y: none;
 }
 
+/* Hide scrollbar for horizontal movie rows */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 .film-grain::after {
   content: "";
   position: absolute;

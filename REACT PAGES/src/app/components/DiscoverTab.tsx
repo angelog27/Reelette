@@ -1,266 +1,393 @@
-import { useState, useEffect, useRef } from 'react';
-import { Search, SlidersHorizontal, X } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { ChevronLeft, ChevronRight, Star, Bookmark, BookmarkCheck, Info } from 'lucide-react';
 import { MovieCard } from './MovieCard';
 import { MovieDetailModal } from './MovieDetailModal';
-import { Input } from './ui/input';
-import { Switch } from './ui/switch';
-import { Slider } from './ui/slider';
-import { getPopularMovies, getTrendingMovies, getTopRatedMovies, searchMovies, discoverMovies } from '../services/api';
+import {
+  getTrendingMovies, getTopRatedMovies, getNowPlayingMovies,
+  discoverMovies, getMovieRecommendations, getWatchedMovies,
+  watchMovieLater, removeFromWatchLater, getWatchLater, getUser,
+} from '../services/api';
 import type { Movie } from '../services/api';
-import { GENRES } from '../constants/genres';
-import { useMovieFilters, defaultFilterState } from '../hooks/useMovieFilters';
-import type { FilterState } from '../hooks/useMovieFilters';
+import { PROVIDER_LOGOS } from '../constants/providers';
 
-// Module-level store — survives React Router remounts so users return to
-// exactly the tab state they left (filters, results, catalog mode).
-type DiscoverStore = FilterState & {
-  catalogMode: 'popular' | 'trending' | 'allTime';
-  searchQuery: string;
-  filtersOpen: boolean;
+const PROVIDER_TABS = [
+  { id: 'all',         label: 'All' },
+  { id: 'Netflix',     label: 'Netflix' },
+  { id: 'Disney+',     label: 'Disney+' },
+  { id: 'Hulu',        label: 'Hulu' },
+  { id: 'Max',         label: 'Max' },
+  { id: 'Paramount+',  label: 'Paramount+' },
+  { id: 'Apple TV+',   label: 'Apple TV+' },
+];
+
+// ── Hero Section ──────────────────────────────────────────────────
+
+interface HeroProps {
   movies: Movie[];
-  loading: boolean;
-};
-const _store: DiscoverStore = {
-  ...defaultFilterState(),
-  catalogMode: 'popular',
-  searchQuery: '',
-  filtersOpen: false,
-  movies: [],
-  loading: true,
-};
+  onOpenModal: (id: string) => void;
+  onToggleWatchlist: (movie: Movie) => void;
+  watchlistIds: string[];
+  hasUser: boolean;
+}
 
-export function DiscoverTab() {
-  const f = useMovieFilters(_store);
+function HeroSection({ movies, onOpenModal, onToggleWatchlist, watchlistIds, hasUser }: HeroProps) {
+  const [current, setCurrent] = useState(0);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const total = Math.min(movies.length, 5);
 
-  // Local UI state initialised from the persistent store
-  const [catalogMode, _setCatalogMode] = useState(_store.catalogMode);
-  const [searchQuery, _setSearchQuery] = useState(_store.searchQuery);
-  const [filtersOpen, _setFiltersOpen] = useState(_store.filtersOpen);
-  const [movies,      _setMovies]      = useState<Movie[]>(_store.movies);
-  const [loading,     _setLoading]     = useState(_store.loading);
-  const [selectedMovieId, setSelectedMovieId] = useState<string | null>(null);
+  const startInterval = useCallback(() => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    if (total <= 1) return;
+    intervalRef.current = setInterval(() => {
+      setCurrent(c => (c + 1) % total);
+    }, 6000);
+  }, [total]);
 
-  // Write-through setters keep the module store in sync
-  const setCatalogMode = (m: DiscoverStore['catalogMode']) => { _store.catalogMode = m; _setCatalogMode(m); };
-  const setSearchQuery = (q: string)  => { _store.searchQuery = q; _setSearchQuery(q); };
-  const setFiltersOpen = (v: boolean) => { _store.filtersOpen = v; _setFiltersOpen(v); };
-  const setMovies      = (m: Movie[]) => { _store.movies = m;      _setMovies(m); };
-  const setLoading     = (v: boolean) => { _store.loading = v;     _setLoading(v); };
-
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const hasFilters   = !!(f.actor || f.director || f.yearFrom || f.yearTo || f.genre || f.minRating[0] > 0 || f.filterStreaming);
-  const isSearchMode = !!searchQuery || hasFilters;
-
-  // Unified fetch effect
   useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
+    startInterval();
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, [startInterval]);
 
-    if (!isSearchMode) {
-      // Catalog: fetch immediately on mode change
-      setLoading(true);
-      const fetcher =
-        catalogMode === 'popular'  ? getPopularMovies :
-        catalogMode === 'trending' ? () => getTrendingMovies('week') :
-        getTopRatedMovies;
-      fetcher().then((m) => { setMovies(m); setLoading(false); });
-      return;
-    }
+  if (!movies.length) return null;
 
-    // Search/filter: debounced
-    debounceRef.current = setTimeout(() => {
-      setLoading(true);
-      if (searchQuery) {
-        searchMovies(searchQuery).then((m) => { setMovies(m); setLoading(false); });
-      } else {
-        discoverMovies({
-          genre_id:   f.genre     || undefined,
-          year_from:  f.yearFrom  || undefined,
-          year_to:    f.yearTo    || undefined,
-          min_rating: f.minRating[0] > 0 ? f.minRating[0] : undefined,
-          actor:      f.actor     || undefined,
-          director:   f.director  || undefined,
-          sort_by:    f.sortBy,
-          services_filter: f.filterStreaming && f.hasServices ? f.userServices : undefined,
-        }).then((m) => { setMovies(m); setLoading(false); });
-      }
-    }, 500);
-
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [catalogMode, searchQuery, f.actor, f.director, f.yearFrom, f.yearTo, f.genre, f.minRating, f.sortBy, f.filterStreaming]);
-
-  const displayedMovies =
-    f.filterStreaming && f.activeServiceNames.length > 0 && searchQuery
-      ? movies.filter((m) => f.activeServiceNames.includes(m.streamingService))
-      : movies;
+  const movie = movies[current] ?? movies[0];
+  const isInWatchlist = watchlistIds.includes(movie.id);
 
   return (
-    <div className="space-y-5">
-      <h1 className="text-2xl font-bold text-white relative inline-block">
-        Discover
-        <div className="absolute -bottom-2 left-0 right-0 h-[2px] bg-gradient-to-r from-red-600 via-red-500 to-transparent"></div>
-      </h1>
-      {/* ── Search bar + filter circle ── */}
-      <div className="flex gap-3 items-center">
-        <div className="relative flex-1">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 w-5 h-5 pointer-events-none" />
-          <Input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search movies, actors, keywords…"
-            className="w-full bg-[#1C1C1C] border-[#2A2A2A] text-white placeholder:text-gray-600 pl-12 pr-12 h-14 rounded-full focus:border-[#C0392B] transition-colors"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
+    <div className="relative w-full overflow-hidden" style={{ height: '72vh', minHeight: 480 }}>
+      {/* Slides with crossfade */}
+      {movies.slice(0, 5).map((m, i) => (
+        <div
+          key={m.id}
+          className="absolute inset-0 transition-opacity duration-1000 ease-in-out"
+          style={{ opacity: i === current ? 1 : 0, zIndex: i === current ? 1 : 0 }}
+        >
+          {m.backdrop ? (
+            <img
+              src={m.backdrop}
+              alt={m.title}
+              className="w-full h-full object-cover"
+              loading={i === 0 ? 'eager' : 'lazy'}
+            />
+          ) : (
+            <div className="w-full h-full bg-[#141414]" />
           )}
         </div>
+      ))}
 
-        {/* Filter toggle circle */}
-        <button
-          onClick={() => setFiltersOpen(!filtersOpen)}
-          title="Filters"
-          className={`w-14 h-14 rounded-full flex-shrink-0 flex items-center justify-center transition-all duration-200 ${
-            filtersOpen || hasFilters
-              ? 'bg-[#C0392B] text-white shadow-lg shadow-[#C0392B]/30'
-              : 'bg-[#1C1C1C] text-gray-400 hover:bg-[#252525] hover:text-white border border-[#2A2A2A]'
-          }`}
-        >
-          <SlidersHorizontal className="w-5 h-5" />
-        </button>
-      </div>
+      {/* Gradient overlays */}
+      <div className="absolute inset-0 bg-gradient-to-r from-black via-black/55 to-transparent" style={{ zIndex: 2 }} />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20" style={{ zIndex: 2 }} />
 
-      {/* ── Smooth filter panel ── */}
-      <div
-        style={{ transition: 'max-height 0.35s cubic-bezier(0.4,0,0.2,1), opacity 0.25s ease' }}
-        className={`overflow-hidden ${filtersOpen ? 'max-h-[700px] opacity-100' : 'max-h-0 opacity-0'}`}
-      >
-        <div className="bg-[#161616] border border-[#2A2A2A] rounded-2xl p-6 space-y-5">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-xs text-gray-500 uppercase tracking-wide">Actor</label>
-              <Input value={f.actor} onChange={(e) => f.setActor(e.target.value)} placeholder="e.g. Tom Hanks" className="bg-[#1C1C1C] border-[#2A2A2A] text-white rounded-xl" />
-            </div>
-            <div className="space-y-2">
-              <label className="text-xs text-gray-500 uppercase tracking-wide">Director</label>
-              <Input value={f.director} onChange={(e) => f.setDirector(e.target.value)} placeholder="e.g. Christopher Nolan" className="bg-[#1C1C1C] border-[#2A2A2A] text-white rounded-xl" />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="space-y-2">
-              <label className="text-xs text-gray-500 uppercase tracking-wide">Year From</label>
-              <Input value={f.yearFrom} onChange={(e) => f.setYearFrom(e.target.value)} placeholder="1990" className="bg-[#1C1C1C] border-[#2A2A2A] text-white rounded-xl" />
-            </div>
-            <div className="space-y-2">
-              <label className="text-xs text-gray-500 uppercase tracking-wide">Year To</label>
-              <Input value={f.yearTo} onChange={(e) => f.setYearTo(e.target.value)} placeholder="2024" className="bg-[#1C1C1C] border-[#2A2A2A] text-white rounded-xl" />
-            </div>
-            <div className="space-y-2">
-              <label className="text-xs text-gray-500 uppercase tracking-wide">Genre</label>
-              <select
-                value={f.genre}
-                onChange={(e) => f.setGenre(e.target.value)}
-                className="w-full bg-[#1C1C1C] border border-[#2A2A2A] text-white rounded-xl px-3 py-2 focus:border-[#C0392B] focus:outline-none text-sm"
+      {/* Content */}
+      <div className="absolute inset-0 flex items-center px-8 md:px-14" style={{ zIndex: 3 }}>
+        <div className="max-w-xl w-full">
+          {/* Genre badges */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            {movie.genres.slice(0, 3).map(g => (
+              <span
+                key={g}
+                className="text-xs px-3 py-1 rounded-full border"
+                style={{ color: '#f97316', borderColor: 'rgba(249,115,22,0.4)', background: 'rgba(249,115,22,0.12)' }}
               >
-                <option value="">All Genres</option>
-                {GENRES.map((g) => <option key={g.value} value={g.value}>{g.label}</option>)}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-xs text-gray-500 uppercase tracking-wide">Sort By</label>
-              <select
-                value={f.sortBy}
-                onChange={(e) => f.setSortBy(e.target.value)}
-                className="w-full bg-[#1C1C1C] border border-[#2A2A2A] text-white rounded-xl px-3 py-2 focus:border-[#C0392B] focus:outline-none text-sm"
-              >
-                <option value="popularity">Popularity</option>
-                <option value="rating">Rating</option>
-                <option value="newest">Newest</option>
-                <option value="oldest">Oldest</option>
-              </select>
-            </div>
+                {g}
+              </span>
+            ))}
           </div>
 
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <label className="text-xs text-gray-500 uppercase tracking-wide">Minimum Rating</label>
-              <span className="text-white text-sm font-medium">{f.minRating[0] > 0 ? `${f.minRating[0]} / 10` : 'Any'}</span>
-            </div>
-            <Slider value={f.minRating} onValueChange={f.setMinRating} max={10} step={0.5} className="w-full" />
+          {/* Title */}
+          <h1 className="text-4xl md:text-6xl font-black text-white mb-3 leading-tight drop-shadow-lg">
+            {movie.title}
+          </h1>
+
+          {/* Meta */}
+          <div className="flex items-center gap-3 mb-4 text-sm text-gray-300">
+            <span className="flex items-center gap-1">
+              <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+              <span className="text-white font-semibold">{movie.rating.toFixed(1)}</span>
+            </span>
+            <span className="text-gray-600">•</span>
+            <span>{movie.year}</span>
           </div>
 
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3 bg-[#1C1C1C] rounded-full px-5 py-3 border border-[#2A2A2A]">
-              <Switch checked={f.filterStreaming} onCheckedChange={f.setFilterStreaming} className="data-[state=checked]:bg-[#C0392B]" />
-              <label className="text-gray-300 cursor-pointer text-sm" onClick={() => f.setFilterStreaming(!f.filterStreaming)}>
-                My streaming services only
-                {f.filterStreaming && !f.hasServices && (
-                  <span className="text-yellow-500 ml-2 text-xs">(no services set)</span>
-                )}
-              </label>
-            </div>
+          {/* Overview */}
+          {movie.overview && (
+            <p className="text-gray-300 text-sm md:text-base leading-relaxed mb-6 line-clamp-3">
+              {movie.overview}
+            </p>
+          )}
 
-            {hasFilters && (
+          {/* Action buttons */}
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={() => onOpenModal(movie.id)}
+              className="flex items-center gap-2 px-6 py-3 bg-white text-black font-semibold rounded-full hover:bg-gray-200 transition-all duration-200 text-sm"
+            >
+              <Info className="w-4 h-4" />
+              More Info
+            </button>
+            {hasUser && (
               <button
-                onClick={f.clearFilters}
-                className="text-sm text-gray-500 hover:text-white transition-colors underline underline-offset-2"
+                onClick={() => onToggleWatchlist(movie)}
+                className="flex items-center gap-2 px-6 py-3 font-semibold rounded-full border transition-all duration-200 text-sm"
+                style={
+                  isInWatchlist
+                    ? { background: '#f97316', borderColor: '#f97316', color: '#fff' }
+                    : { background: 'rgba(255,255,255,0.1)', borderColor: 'rgba(255,255,255,0.3)', color: '#fff' }
+                }
               >
-                Clear filters
+                {isInWatchlist
+                  ? <><BookmarkCheck className="w-4 h-4" /> In Watchlist</>
+                  : <><Bookmark className="w-4 h-4" /> Add to Watchlist</>
+                }
               </button>
             )}
           </div>
         </div>
       </div>
 
-      {/* ── Catalog mode pills — always visible; clicking one clears active filters ── */}
-      <div className="flex gap-3 flex-wrap">
-        {(['popular', 'trending', 'allTime'] as const).map((mode) => (
-          <button
-            key={mode}
-            onClick={() => {
-              setCatalogMode(mode);
-              // Clear search + filters so the catalog fetch fires
-              setSearchQuery('');
-              f.clearFilters();
-            }}
-            className={`px-6 py-2 rounded-full transition-all font-medium text-sm ${
-              catalogMode === mode && !isSearchMode
-                ? 'bg-[#C0392B] text-white'
-                : 'bg-[#2A2A2A] text-white hover:bg-[#333333]'
-            }`}
-          >
-            {mode === 'popular' ? 'Trending' : mode === 'trending' ? 'New Releases' : 'Classics'}
-          </button>
-        ))}
-      </div>
-
-      {/* ── Result count (search mode) ── */}
-      {isSearchMode && !loading && (
-        <div className="text-sm text-gray-500">
-          {displayedMovies.length} result{displayedMovies.length !== 1 ? 's' : ''}
-        </div>
-      )}
-
-      {/* ── Movie grid ── */}
-      {loading ? (
-        <div className="text-gray-500 text-center py-16">
-          {isSearchMode ? 'Searching…' : 'Loading…'}
-        </div>
-      ) : displayedMovies.length === 0 && isSearchMode ? (
-        <div className="text-gray-500 text-center py-16">No movies found. Try adjusting your search or filters.</div>
-      ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-          {displayedMovies.map((movie) => (
-            <MovieCard key={movie.id} movie={movie} onClick={(m) => setSelectedMovieId(m.id)} />
+      {/* Dot indicators */}
+      {total > 1 && (
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2" style={{ zIndex: 3 }}>
+          {Array.from({ length: total }).map((_, i) => (
+            <button
+              key={i}
+              onClick={() => { setCurrent(i); startInterval(); }}
+              className="h-2 rounded-full transition-all duration-300"
+              style={{
+                width: i === current ? 24 : 8,
+                background: i === current ? '#f97316' : 'rgba(255,255,255,0.35)',
+              }}
+            />
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Movie Row ─────────────────────────────────────────────────────
+
+interface MovieRowProps {
+  title: string;
+  movies: Movie[];
+  activeProvider: string;
+  onMovieClick: (id: string) => void;
+}
+
+function MovieRow({ title, movies, activeProvider, onMovieClick }: MovieRowProps) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const filtered = activeProvider === 'all'
+    ? movies
+    : movies.filter(m => m.streamingService === activeProvider);
+
+  // Show original list when filtered list is empty (provider tab selected but no matches)
+  const displayed = filtered.length > 0 ? filtered : activeProvider === 'all' ? movies : [];
+
+  if (displayed.length === 0) return null;
+
+  const scroll = (dir: 'left' | 'right') => {
+    scrollRef.current?.scrollBy({ left: dir === 'left' ? -640 : 640, behavior: 'smooth' });
+  };
+
+  return (
+    <div className="mb-8">
+      <h2 className="text-lg md:text-xl font-bold text-white mb-4 tracking-tight">{title}</h2>
+      <div className="relative group">
+        {/* Left arrow */}
+        <button
+          onClick={() => scroll('left')}
+          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 w-9 h-9 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-110"
+          style={{ background: 'rgba(0,0,0,0.85)', border: '1px solid rgba(249,115,22,0.3)' }}
+        >
+          <ChevronLeft className="w-5 h-5 text-white" />
+        </button>
+
+        {/* Scroll container */}
+        <div
+          ref={scrollRef}
+          className="hide-scrollbar flex gap-3 overflow-x-auto pb-2"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
+        >
+          {displayed.map(movie => (
+            <div key={movie.id} className="min-w-[150px] md:min-w-[170px] flex-shrink-0">
+              <MovieCard movie={movie} onClick={m => onMovieClick(m.id)} />
+            </div>
+          ))}
+        </div>
+
+        {/* Right arrow */}
+        <button
+          onClick={() => scroll('right')}
+          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 w-9 h-9 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-110"
+          style={{ background: 'rgba(0,0,0,0.85)', border: '1px solid rgba(249,115,22,0.3)' }}
+        >
+          <ChevronRight className="w-5 h-5 text-white" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── DiscoverTab ───────────────────────────────────────────────────
+
+export function DiscoverTab() {
+  const user = getUser();
+
+  const [selectedMovieId, setSelectedMovieId] = useState<string | null>(null);
+  const [activeProvider, setActiveProvider] = useState('all');
+
+  const [heroMovies,      setHeroMovies]      = useState<Movie[]>([]);
+  const [trendingMovies,  setTrendingMovies]  = useState<Movie[]>([]);
+  const [newReleases,     setNewReleases]     = useState<Movie[]>([]);
+  const [topRated,        setTopRated]        = useState<Movie[]>([]);
+  const [classics,        setClassics]        = useState<Movie[]>([]);
+  const [recommended,     setRecommended]     = useState<Movie[]>([]);
+  const [lastWatchedTitle, setLastWatchedTitle] = useState('');
+  const [watchlistIds,    setWatchlistIds]    = useState<string[]>([]);
+  const [loading,         setLoading]         = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      const [trending, nowPlaying, topRatedData, classicsData] = await Promise.all([
+        getTrendingMovies('week'),
+        getNowPlayingMovies(),
+        getTopRatedMovies(),
+        discoverMovies({ year_to: '1994', sort_by: 'rating', min_rating: 7 }),
+      ]);
+
+      if (cancelled) return;
+      setHeroMovies(trending.slice(0, 5));
+      setTrendingMovies(trending);
+      setNewReleases(nowPlaying);
+      setTopRated(topRatedData);
+      setClassics(classicsData);
+      setLoading(false);
+
+      // Load user-specific data separately (non-blocking)
+      if (user) {
+        getWatchLater(user.user_id).then(ids => {
+          if (!cancelled) setWatchlistIds(ids);
+        });
+
+        getWatchedMovies(user.user_id).then(watched => {
+          if (cancelled || !watched.length) return;
+          const last = watched[0];
+          setLastWatchedTitle(last.title);
+          getMovieRecommendations(last.movie_id).then(recs => {
+            if (!cancelled) setRecommended(recs);
+          });
+        });
+      }
+    };
+
+    load();
+    return () => { cancelled = true; };
+  }, []);
+
+  async function handleToggleWatchlist(movie: Movie) {
+    if (!user) return;
+    const isIn = watchlistIds.includes(movie.id);
+    if (isIn) {
+      await removeFromWatchLater(user.user_id, movie.id);
+      setWatchlistIds(prev => prev.filter(id => id !== movie.id));
+    } else {
+      await watchMovieLater(user.user_id, movie.id);
+      setWatchlistIds(prev => [...prev, movie.id]);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-32 text-gray-500">
+        Loading…
+      </div>
+    );
+  }
+
+  return (
+    // Break out of the parent container's px-6 py-8 padding for the hero
+    <div className="-mx-6 -mt-8">
+      {/* ── Hero ── */}
+      <HeroSection
+        movies={heroMovies}
+        onOpenModal={setSelectedMovieId}
+        onToggleWatchlist={handleToggleWatchlist}
+        watchlistIds={watchlistIds}
+        hasUser={!!user}
+      />
+
+      {/* ── Streaming provider tabs ── */}
+      <div className="px-6 mt-6 mb-6">
+        <div
+          className="hide-scrollbar flex gap-2 overflow-x-auto pb-1"
+          style={{ scrollbarWidth: 'none' } as React.CSSProperties}
+        >
+          {PROVIDER_TABS.map(p => {
+            const isActive = activeProvider === p.id;
+            return (
+              <button
+                key={p.id}
+                onClick={() => setActiveProvider(p.id)}
+                className="flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-all duration-200 text-sm font-medium flex-shrink-0 border"
+                style={
+                  isActive
+                    ? { background: '#f97316', borderColor: '#f97316', color: '#fff' }
+                    : { background: '#1C1C1C', borderColor: '#2A2A2A', color: '#ccc' }
+                }
+              >
+                {p.id !== 'all' && PROVIDER_LOGOS[p.id] && (
+                  <img
+                    src={PROVIDER_LOGOS[p.id]}
+                    alt={p.label}
+                    className="w-5 h-5 rounded object-cover flex-shrink-0"
+                  />
+                )}
+                {p.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── Movie rows ── */}
+      <div className="px-6">
+        <MovieRow
+          title="Trending Now"
+          movies={trendingMovies}
+          activeProvider={activeProvider}
+          onMovieClick={setSelectedMovieId}
+        />
+        <MovieRow
+          title="New Releases"
+          movies={newReleases}
+          activeProvider={activeProvider}
+          onMovieClick={setSelectedMovieId}
+        />
+        <MovieRow
+          title="Top Rated"
+          movies={topRated}
+          activeProvider={activeProvider}
+          onMovieClick={setSelectedMovieId}
+        />
+        <MovieRow
+          title="Classics"
+          movies={classics}
+          activeProvider={activeProvider}
+          onMovieClick={setSelectedMovieId}
+        />
+        {lastWatchedTitle && recommended.length > 0 && (
+          <MovieRow
+            title={`Because You Watched ${lastWatchedTitle}`}
+            movies={recommended}
+            activeProvider={activeProvider}
+            onMovieClick={setSelectedMovieId}
+          />
+        )}
+      </div>
 
       {selectedMovieId && (
         <MovieDetailModal movieId={selectedMovieId} onClose={() => setSelectedMovieId(null)} />
