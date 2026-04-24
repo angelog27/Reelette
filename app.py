@@ -33,7 +33,7 @@ from tmdb_api import (
     search_movies, discover_movies, get_popular_movies, get_movie_details,
     get_streaming_providers, get_genres, get_trending_movies, get_top_rated_movies,
     get_poster_url, get_backdrop_url, search_person,
-    get_now_playing_movies, get_movie_recommendations,
+    get_now_playing_movies, get_movie_recommendations, get_upcoming_movies,
 )
 
 app = Flask(__name__)
@@ -265,6 +265,20 @@ def top_rated_movies():
     if cached:
         return jsonify({'movies': cached})
     data = get_top_rated_movies(page=page)
+    if not data:
+        return jsonify({'movies': []})
+    movies = fetch_movies_with_streaming(data.get('results', []))
+    _cache_set(cache_key, movies, _MOVIE_LIST_TTL)
+    return jsonify({'movies': movies})
+
+@app.route('/api/movies/upcoming', methods=['GET'])
+def upcoming_movies():
+    page = request.args.get('page', 1, type=int)
+    cache_key = f'upcoming:{page}'
+    cached = _cache_get(cache_key)
+    if cached:
+        return jsonify({'movies': cached})
+    data = get_upcoming_movies(page=page)
     if not data:
         return jsonify({'movies': []})
     movies = fetch_movies_with_streaming(data.get('results', []))

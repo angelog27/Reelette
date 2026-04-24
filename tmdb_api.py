@@ -262,6 +262,28 @@ def get_backdrop_url(backdrop_path, size="w1280"):
         return f"{TMDB_IMAGE_BASE}/{size}{backdrop_path}"
     return None
 
+def get_upcoming_movies(page=1):
+    cache_key = f"upcoming:{page}"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
+    url = f"{TMDB_BASE_URL}/movie/upcoming"
+    params = {
+        "api_key": TMDB_API_KEY,
+        "language": "en-US",
+        "page": page
+    }
+    try:
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        result = response.json()
+        _cache_set(cache_key, result, 1200)
+        return result
+    except requests.exceptions.RequestException as e:
+        print(f"Error getting upcoming movies: {e}")
+        return None
+
+
 def get_now_playing_movies(page=1):
     cache_key = f"now_playing:{page}"
     cached = _cache_get(cache_key)

@@ -206,20 +206,38 @@ export function getTopRatedMovies(page = 1): Promise<Movie[]> {
 }
 
 
+export function getUpcomingMovies(page = 1): Promise<Movie[]> {
+  return fromCache(`upcoming:${page}`, TTL.CATALOG, async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/movies/upcoming?page=${page}`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.movies ?? [];
+    } catch { return []; }
+  });
+}
+
+
 export function getNowPlayingMovies(page = 1): Promise<Movie[]> {
   return fromCache(`nowplaying:${page}`, TTL.CATALOG, async () => {
-    const res = await fetch(`${BASE_URL}/movies/now_playing?page=${page}`);
-    const data = await res.json();
-    return data.movies ?? [];
+    try {
+      const res = await fetch(`${BASE_URL}/movies/now_playing?page=${page}`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.movies ?? [];
+    } catch { return []; }
   });
 }
 
 
 export function getMovieRecommendations(movie_id: string): Promise<Movie[]> {
   return fromCache(`recommendations:${movie_id}`, TTL.CATALOG, async () => {
-    const res = await fetch(`${BASE_URL}/movies/${movie_id}/recommendations`);
-    const data = await res.json();
-    return data.movies ?? [];
+    try {
+      const res = await fetch(`${BASE_URL}/movies/${movie_id}/recommendations`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.movies ?? [];
+    } catch { return []; }
   });
 }
 
