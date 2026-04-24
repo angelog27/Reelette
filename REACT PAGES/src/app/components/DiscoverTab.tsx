@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, Star, Bookmark, BookmarkCheck, Info, Layers } from 'lucide-react';
-import { MovieCard } from './MovieCard';
 import { MovieDetailModal } from './MovieDetailModal';
 import {
   getTrendingMovies, getTopRatedMovies, getNowPlayingMovies, getUpcomingMovies,
@@ -22,9 +21,8 @@ const PROVIDER_TABS = [
   { id: 'Apple TV+',  label: 'Apple TV+' },
 ];
 
-// Brand colours — used for card glow + background
 const PROVIDER_COLOR: Record<string, string> = {
-  'all':        '#f97316',
+  'all':        '#C0392B',
   'Netflix':    '#E50914',
   'Disney+':    '#1A4DB5',
   'Hulu':       '#1CE783',
@@ -33,7 +31,6 @@ const PROVIDER_COLOR: Record<string, string> = {
   'Apple TV+':  '#8E8E93',
 };
 
-// Maps display name → backend services_filter key
 const PROVIDER_KEY: Record<string, string> = {
   'Netflix':    'netflix',
   'Disney+':    'disneyPlus',
@@ -43,32 +40,127 @@ const PROVIDER_KEY: Record<string, string> = {
   'Apple TV+':  'appleTV',
 };
 
-const ROW_LIMIT = 12;
+const ROW_LIMIT = 14;
+// Width of each compact landscape card in rows
+const CARD_W = 176;
 
 // ── Converters ────────────────────────────────────────────────────
 
 function watchedToMovie(w: WatchedMovie): Movie {
   return {
-    id: w.movie_id,
-    title: w.title,
-    year: w.year,
-    genres: w.genres ?? [],
-    rating: w.tmdb_rating ?? 0,
-    poster: w.poster ?? '',
-    streamingService: w.services?.[0] ?? '',
+    id: w.movie_id, title: w.title, year: w.year,
+    genres: w.genres ?? [], rating: w.tmdb_rating ?? 0,
+    poster: w.poster ?? '', streamingService: w.services?.[0] ?? '',
   };
 }
 
 function spinToMovie(s: RouletteSpin): Movie {
   return {
-    id: s.movie_id,
-    title: s.movie_title,
-    year: 0,
-    genres: [],
-    rating: 0,
-    poster: s.poster_url ?? '',
-    streamingService: '',
+    id: s.movie_id, title: s.movie_title, year: 0,
+    genres: [], rating: 0,
+    poster: s.poster_url ?? '', streamingService: '',
   };
+}
+
+// ── Compact landscape card (Netflix-style rows) ───────────────────
+
+function CompactCard({ movie, onClick }: { movie: Movie; onClick: () => void }) {
+  const img = movie.backdrop || movie.poster;
+  return (
+    <div
+      className="cursor-pointer group flex-shrink-0"
+      style={{ width: CARD_W }}
+      onClick={onClick}
+    >
+      {/* 16:9 thumbnail */}
+      <div
+        className="relative overflow-hidden rounded-md bg-[#1a1a1a]"
+        style={{ aspectRatio: '16/9' }}
+      >
+        {img ? (
+          <img
+            src={img}
+            alt={movie.title}
+            className="w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-110"
+            loading="lazy"
+            decoding="async"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-gray-700 text-[10px] text-center px-2">
+            {movie.title}
+          </div>
+        )}
+        {/* hover tint */}
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-200" />
+      </div>
+
+      {/* Below-card info */}
+      <div className="mt-1.5 px-0.5">
+        <p className="text-white text-[11px] font-medium line-clamp-1 leading-snug">{movie.title}</p>
+        {movie.year > 0 && (
+          <p className="text-gray-500 text-[10px] mt-0.5">{movie.year}</p>
+        )}
+        {movie.rating > 0 && (
+          <div className="flex items-center gap-0.5 mt-0.5">
+            <Star className="w-2.5 h-2.5 fill-yellow-500 text-yellow-500" />
+            <span className="text-gray-400 text-[10px]">{movie.rating.toFixed(1)}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Movie Row ─────────────────────────────────────────────────────
+
+function MovieRow({ title, movies, onMovieClick }: {
+  title: string;
+  movies: Movie[];
+  onMovieClick: (id: string) => void;
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  if (!movies.length) return null;
+
+  const scroll = (dir: 'left' | 'right') =>
+    scrollRef.current?.scrollBy({ left: dir === 'left' ? -(CARD_W * 4) : (CARD_W * 4), behavior: 'smooth' });
+
+  return (
+    <div className="mb-8">
+      <h2 className="text-sm md:text-base font-bold text-white mb-3 tracking-wide uppercase"
+        style={{ color: '#e5e5e5', letterSpacing: '0.04em' }}>
+        {title}
+      </h2>
+      <div className="relative group">
+        {/* Left arrow */}
+        <button
+          onClick={() => scroll('left')}
+          className="absolute left-0 top-0 bottom-0 z-10 w-10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 rounded-l-md"
+          style={{ background: 'linear-gradient(to right, rgba(0,0,0,0.8), transparent)' }}
+        >
+          <ChevronLeft className="w-6 h-6 text-white" />
+        </button>
+
+        <div
+          ref={scrollRef}
+          className="hide-scrollbar flex gap-2 overflow-x-auto"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
+        >
+          {movies.map(movie => (
+            <CompactCard key={movie.id} movie={movie} onClick={() => onMovieClick(movie.id)} />
+          ))}
+        </div>
+
+        {/* Right arrow */}
+        <button
+          onClick={() => scroll('right')}
+          className="absolute right-0 top-0 bottom-0 z-10 w-10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 rounded-r-md"
+          style={{ background: 'linear-gradient(to left, rgba(0,0,0,0.8), transparent)' }}
+        >
+          <ChevronRight className="w-6 h-6 text-white" />
+        </button>
+      </div>
+    </div>
+  );
 }
 
 // ── Hero Section ──────────────────────────────────────────────────
@@ -101,117 +193,119 @@ function HeroSection({ movies, onOpenModal, onToggleWatchlist, watchlistIds, has
   const isInWatchlist = watchlistIds.includes(movie.id);
 
   return (
-    <div className="relative w-full overflow-hidden" style={{ height: '72vh', minHeight: 480 }}>
+    <div
+      className="full-bleed relative overflow-hidden"
+      style={{ height: 540, marginTop: -32 }}
+    >
+      {/* Backdrop slides */}
       {movies.slice(0, 5).map((m, i) => (
-        <div key={m.id} className="absolute inset-0 transition-opacity duration-1000 ease-in-out"
-          style={{ opacity: i === current ? 1 : 0, zIndex: i === current ? 1 : 0 }}>
+        <div
+          key={m.id}
+          className="absolute inset-0 transition-opacity duration-1000 ease-in-out"
+          style={{ opacity: i === current ? 1 : 0, zIndex: i === current ? 1 : 0 }}
+        >
           {m.backdrop
             ? <img src={m.backdrop} alt={m.title} className="w-full h-full object-cover" loading={i === 0 ? 'eager' : 'lazy'} />
-            : <div className="w-full h-full bg-[#141414]" />}
+            : <div className="w-full h-full bg-[#141414]" />
+          }
         </div>
       ))}
 
-      <div className="absolute inset-0 bg-gradient-to-r from-black via-black/55 to-transparent" style={{ zIndex: 2 }} />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20" style={{ zIndex: 2 }} />
+      {/* Netflix-style gradients: dark on left, dark on bottom */}
+      <div className="absolute inset-0" style={{
+        zIndex: 2,
+        background: 'linear-gradient(to right, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.65) 35%, rgba(0,0,0,0.2) 65%, rgba(0,0,0,0) 100%)',
+      }} />
+      <div className="absolute inset-0" style={{
+        zIndex: 2,
+        background: 'linear-gradient(to top, rgba(9,9,9,1) 0%, rgba(9,9,9,0.5) 25%, transparent 60%)',
+      }} />
+      {/* Slight top vignette */}
+      <div className="absolute inset-0" style={{
+        zIndex: 2,
+        background: 'linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, transparent 20%)',
+      }} />
 
-      <div className="absolute inset-0 flex items-center px-8 md:px-14" style={{ zIndex: 3 }}>
-        <div className="max-w-xl w-full">
-          <div className="flex flex-wrap gap-2 mb-4">
-            {movie.genres.slice(0, 3).map(g => (
-              <span key={g} className="text-xs px-3 py-1 rounded-full border"
-                style={{ color: '#f97316', borderColor: 'rgba(249,115,22,0.4)', background: 'rgba(249,115,22,0.12)' }}>
-                {g}
-              </span>
-            ))}
-          </div>
-
-          <h1 className="text-4xl md:text-6xl font-black text-white mb-3 leading-tight drop-shadow-lg">{movie.title}</h1>
-
-          <div className="flex items-center gap-3 mb-4 text-sm text-gray-300">
-            <span className="flex items-center gap-1">
-              <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-              <span className="text-white font-semibold">{movie.rating.toFixed(1)}</span>
+      {/* Content — bottom-left like Netflix */}
+      <div
+        className="absolute left-0 right-0 bottom-0 flex flex-col justify-end pb-14 px-10 md:px-16"
+        style={{ zIndex: 3 }}
+      >
+        {/* Genre tags */}
+        <div className="flex flex-wrap gap-2 mb-3">
+          {movie.genres.slice(0, 3).map(g => (
+            <span key={g} className="text-xs px-2.5 py-0.5 rounded-sm font-medium"
+              style={{ background: 'rgba(192,57,43,0.75)', color: '#fff' }}>
+              {g}
             </span>
-            <span className="text-gray-600">•</span>
-            <span>{movie.year}</span>
-          </div>
+          ))}
+        </div>
 
-          {movie.overview && (
-            <p className="text-gray-300 text-sm md:text-base leading-relaxed mb-6 line-clamp-3">{movie.overview}</p>
-          )}
+        {/* Title */}
+        <h1 className="font-black text-white leading-none drop-shadow-2xl mb-3"
+          style={{ fontSize: 'clamp(2.4rem, 5vw, 4.5rem)', textShadow: '0 2px 20px rgba(0,0,0,0.8)' }}>
+          {movie.title}
+        </h1>
 
-          <div className="flex flex-wrap gap-3">
-            <button onClick={() => onOpenModal(movie.id)}
-              className="flex items-center gap-2 px-6 py-3 bg-white text-black font-semibold rounded-full hover:bg-gray-200 transition-all duration-200 text-sm">
-              <Info className="w-4 h-4" /> More Info
+        {/* Meta row */}
+        <div className="flex items-center gap-3 mb-3 text-sm">
+          <span className="flex items-center gap-1">
+            <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
+            <span className="text-white font-semibold">{movie.rating.toFixed(1)}</span>
+          </span>
+          <span className="text-gray-400">•</span>
+          <span className="text-gray-300">{movie.year}</span>
+        </div>
+
+        {/* Description */}
+        {movie.overview && (
+          <p className="text-gray-300 text-sm leading-relaxed mb-6 line-clamp-2"
+            style={{ maxWidth: '38rem', textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>
+            {movie.overview}
+          </p>
+        )}
+
+        {/* Buttons */}
+        <div className="flex flex-wrap gap-3">
+          <button
+            onClick={() => onOpenModal(movie.id)}
+            className="flex items-center gap-2 px-6 py-2.5 bg-white text-black font-bold rounded text-sm hover:bg-gray-200 transition-colors duration-150"
+          >
+            <Info className="w-4 h-4" /> More Info
+          </button>
+          {hasUser && (
+            <button
+              onClick={() => onToggleWatchlist(movie)}
+              className="flex items-center gap-2 px-5 py-2.5 font-semibold rounded text-sm transition-colors duration-150"
+              style={isInWatchlist
+                ? { background: '#C0392B', color: '#fff' }
+                : { background: 'rgba(109,109,110,0.7)', color: '#fff' }}
+            >
+              {isInWatchlist
+                ? <><BookmarkCheck className="w-4 h-4" /> In Watchlist</>
+                : <><Bookmark className="w-4 h-4" /> Watchlist</>
+              }
             </button>
-            {hasUser && (
-              <button onClick={() => onToggleWatchlist(movie)}
-                className="flex items-center gap-2 px-6 py-3 font-semibold rounded-full border transition-all duration-200 text-sm"
-                style={isInWatchlist
-                  ? { background: '#f97316', borderColor: '#f97316', color: '#fff' }
-                  : { background: 'rgba(255,255,255,0.1)', borderColor: 'rgba(255,255,255,0.3)', color: '#fff' }}>
-                {isInWatchlist
-                  ? <><BookmarkCheck className="w-4 h-4" /> In Watchlist</>
-                  : <><Bookmark className="w-4 h-4" /> Add to Watchlist</>}
-              </button>
-            )}
-          </div>
+          )}
         </div>
       </div>
 
+      {/* Slide dots — bottom-right */}
       {total > 1 && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2" style={{ zIndex: 3 }}>
+        <div className="absolute bottom-5 right-10 flex gap-1.5" style={{ zIndex: 3 }}>
           {Array.from({ length: total }).map((_, i) => (
-            <button key={i} onClick={() => { setCurrent(i); startInterval(); }}
-              className="h-2 rounded-full transition-all duration-300"
-              style={{ width: i === current ? 24 : 8, background: i === current ? '#f97316' : 'rgba(255,255,255,0.35)' }} />
+            <button
+              key={i}
+              onClick={() => { setCurrent(i); startInterval(); }}
+              className="h-[3px] rounded-full transition-all duration-300"
+              style={{
+                width: i === current ? 20 : 8,
+                background: i === current ? '#C0392B' : 'rgba(255,255,255,0.4)',
+              }}
+            />
           ))}
         </div>
       )}
-    </div>
-  );
-}
-
-// ── Movie Row ─────────────────────────────────────────────────────
-
-function MovieRow({ title, movies, onMovieClick }: {
-  title: string;
-  movies: Movie[];
-  onMovieClick: (id: string) => void;
-}) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  if (!movies.length) return null;
-
-  const scroll = (dir: 'left' | 'right') =>
-    scrollRef.current?.scrollBy({ left: dir === 'left' ? -600 : 600, behavior: 'smooth' });
-
-  return (
-    <div className="mb-10">
-      <h2 className="text-lg md:text-xl font-bold text-white mb-4 tracking-tight">{title}</h2>
-      <div className="relative group">
-        <button onClick={() => scroll('left')}
-          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 w-9 h-9 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-110"
-          style={{ background: 'rgba(0,0,0,0.85)', border: '1px solid rgba(249,115,22,0.3)' }}>
-          <ChevronLeft className="w-5 h-5 text-white" />
-        </button>
-
-        <div ref={scrollRef}
-          className="hide-scrollbar flex gap-2.5 overflow-x-auto pb-2"
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}>
-          {movies.map(movie => (
-            <div key={movie.id} className="min-w-[110px] md:min-w-[125px] flex-shrink-0">
-              <MovieCard movie={movie} onClick={m => onMovieClick(m.id)} />
-            </div>
-          ))}
-        </div>
-
-        <button onClick={() => scroll('right')}
-          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 w-9 h-9 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-110"
-          style={{ background: 'rgba(0,0,0,0.85)', border: '1px solid rgba(249,115,22,0.3)' }}>
-          <ChevronRight className="w-5 h-5 text-white" />
-        </button>
-      </div>
     </div>
   );
 }
@@ -221,35 +315,35 @@ function MovieRow({ title, movies, onMovieClick }: {
 export function DiscoverTab() {
   const user = getUser();
 
-  const [selectedMovieId,   setSelectedMovieId]   = useState<string | null>(null);
-  const [activeProvider,    setActiveProvider]     = useState('all');
-  const [hoveredProvider,   setHoveredProvider]    = useState<string | null>(null);
+  const [selectedMovieId,  setSelectedMovieId]  = useState<string | null>(null);
+  const [activeProvider,   setActiveProvider]    = useState('all');
+  const [hoveredProvider,  setHoveredProvider]   = useState<string | null>(null);
 
   // General rows
-  const [heroMovies,        setHeroMovies]         = useState<Movie[]>([]);
-  const [trendingMovies,    setTrendingMovies]      = useState<Movie[]>([]);
-  const [newReleases,       setNewReleases]         = useState<Movie[]>([]);
-  const [topRated,          setTopRated]            = useState<Movie[]>([]);
-  const [classics,          setClassics]            = useState<Movie[]>([]);
-  const [actionMovies,      setActionMovies]        = useState<Movie[]>([]);
-  const [comedyMovies,      setComedyMovies]        = useState<Movie[]>([]);
-  const [horrorMovies,      setHorrorMovies]        = useState<Movie[]>([]);
-  const [scifiMovies,       setScifiMovies]         = useState<Movie[]>([]);
-  const [acclaimed,         setAcclaimed]           = useState<Movie[]>([]);
-  const [comingSoon,        setComingSoon]          = useState<Movie[]>([]);
-  const [recommended,       setRecommended]         = useState<Movie[]>([]);
+  const [heroMovies,       setHeroMovies]        = useState<Movie[]>([]);
+  const [trendingMovies,   setTrendingMovies]    = useState<Movie[]>([]);
+  const [newReleases,      setNewReleases]       = useState<Movie[]>([]);
+  const [topRated,         setTopRated]          = useState<Movie[]>([]);
+  const [classics,         setClassics]          = useState<Movie[]>([]);
+  const [actionMovies,     setActionMovies]      = useState<Movie[]>([]);
+  const [comedyMovies,     setComedyMovies]      = useState<Movie[]>([]);
+  const [horrorMovies,     setHorrorMovies]      = useState<Movie[]>([]);
+  const [scifiMovies,      setScifiMovies]       = useState<Movie[]>([]);
+  const [acclaimed,        setAcclaimed]         = useState<Movie[]>([]);
+  const [comingSoon,       setComingSoon]        = useState<Movie[]>([]);
+  const [recommended,      setRecommended]       = useState<Movie[]>([]);
 
-  // User-specific rows
-  const [userWatched,       setUserWatched]         = useState<WatchedMovie[]>([]);
-  const [recentSpins,       setRecentSpins]         = useState<Movie[]>([]);
-  const [watchlistIds,      setWatchlistIds]        = useState<string[]>([]);
-  const [loading,           setLoading]             = useState(true);
+  // User rows
+  const [userWatched,      setUserWatched]       = useState<WatchedMovie[]>([]);
+  const [recentSpins,      setRecentSpins]       = useState<Movie[]>([]);
+  const [watchlistIds,     setWatchlistIds]      = useState<string[]>([]);
+  const [loading,          setLoading]           = useState(true);
 
-  // Provider-specific rows
-  const [providerPopular,   setProviderPopular]     = useState<Movie[]>([]);
-  const [providerTopRated,  setProviderTopRated]    = useState<Movie[]>([]);
-  const [providerNew,       setProviderNew]         = useState<Movie[]>([]);
-  const [providerLoading,   setProviderLoading]     = useState(false);
+  // Provider rows
+  const [providerPopular,  setProviderPopular]   = useState<Movie[]>([]);
+  const [providerTopRated, setProviderTopRated]  = useState<Movie[]>([]);
+  const [providerNew,      setProviderNew]       = useState<Movie[]>([]);
+  const [providerLoading,  setProviderLoading]   = useState(false);
 
   // ── Initial load ───────────────────────────────────────────────
   useEffect(() => {
@@ -271,7 +365,7 @@ export function DiscoverTab() {
       setClassics(classicsData.slice(0, ROW_LIMIT));
       setLoading(false);
 
-      // Genre + more rows (background)
+      // Genre rows in background
       Promise.all([
         discoverMovies({ genre_id: '28|12', sort_by: 'popularity' }).catch(() => [] as Movie[]),
         discoverMovies({ genre_id: '35',    sort_by: 'popularity' }).catch(() => [] as Movie[]),
@@ -289,15 +383,13 @@ export function DiscoverTab() {
         setComingSoon(upcoming.slice(0, ROW_LIMIT));
       });
 
-      // User-specific
       if (user) {
         getWatchLater(user.user_id).then(ids => { if (!cancelled) setWatchlistIds(ids); });
 
         getWatchedMovies(user.user_id).then(watched => {
           if (cancelled || !watched.length) return;
           setUserWatched(watched);
-          const last = watched[0];
-          getMovieRecommendations(last.movie_id).then(recs => {
+          getMovieRecommendations(watched[0].movie_id).then(recs => {
             if (!cancelled) setRecommended(recs.slice(0, ROW_LIMIT));
           });
         });
@@ -317,10 +409,8 @@ export function DiscoverTab() {
     if (activeProvider === 'all') return;
     const key = PROVIDER_KEY[activeProvider];
     if (!key) return;
-
     setProviderLoading(true);
     const sf = { [key]: true };
-
     Promise.all([
       discoverMovies({ services_filter: sf, sort_by: 'popularity' }).catch(() => [] as Movie[]),
       discoverMovies({ services_filter: sf, sort_by: 'rating'     }).catch(() => [] as Movie[]),
@@ -334,14 +424,14 @@ export function DiscoverTab() {
   }, [activeProvider]);
 
   // ── Derived ────────────────────────────────────────────────────
-  const top10: Movie[] = useMemo(() =>
+  const top10 = useMemo<Movie[]>(() =>
     [...userWatched]
       .sort((a, b) => (b.user_rating ?? 0) - (a.user_rating ?? 0))
       .slice(0, 10)
       .map(watchedToMovie),
     [userWatched]);
 
-  const providerWatched: Movie[] = useMemo(() => {
+  const providerWatched = useMemo<Movie[]>(() => {
     if (activeProvider === 'all' || !user) return [];
     return userWatched
       .filter(w => w.services?.includes(activeProvider))
@@ -368,9 +458,9 @@ export function DiscoverTab() {
   const isProviderView = activeProvider !== 'all';
 
   return (
-    <div className="-mx-6 -mt-8">
+    <div>
 
-      {/* ── Hero ── */}
+      {/* ── Hero: full-bleed, cancels container py-8 ── */}
       <HeroSection
         movies={heroMovies}
         onOpenModal={setSelectedMovieId}
@@ -379,18 +469,18 @@ export function DiscoverTab() {
         hasUser={!!user}
       />
 
-      {/* ── Provider cards ── */}
-      <div className="px-6 mt-10 mb-10">
+      {/* ── Provider tiles ── */}
+      <div className="px-6 md:px-10 mt-10 mb-10">
         <div
           className="hide-scrollbar flex gap-4 justify-evenly overflow-x-auto pb-1"
           style={{ scrollbarWidth: 'none' } as React.CSSProperties}
         >
           {PROVIDER_TABS.map(p => {
-            const color      = PROVIDER_COLOR[p.id] ?? '#f97316';
-            const isActive   = activeProvider === p.id;
-            const isHovered  = hoveredProvider === p.id;
-            const logo       = p.id !== 'all' ? PROVIDER_LOGOS[p.id] : null;
-            const lit        = isActive || isHovered;
+            const color     = PROVIDER_COLOR[p.id] ?? '#C0392B';
+            const isActive  = activeProvider === p.id;
+            const isHovered = hoveredProvider === p.id;
+            const logo      = p.id !== 'all' ? PROVIDER_LOGOS[p.id] : null;
+            const lit       = isActive || isHovered;
 
             return (
               <button
@@ -398,29 +488,28 @@ export function DiscoverTab() {
                 onClick={() => setActiveProvider(p.id)}
                 onMouseEnter={() => setHoveredProvider(p.id)}
                 onMouseLeave={() => setHoveredProvider(null)}
-                className="flex-shrink-0 flex flex-col items-center justify-center gap-2 rounded-2xl transition-all duration-300"
+                className="flex-shrink-0 flex flex-col items-center justify-center gap-2.5 rounded-2xl transition-all duration-300"
                 style={{
-                  width:      130,
-                  height:     118,
+                  width:      155,
+                  height:     145,
                   border:     'none',
                   outline:    'none',
                   background: lit
-                    ? `radial-gradient(ellipse 90% 70% at 50% 110%, ${color}50 0%, #1C1C1C 65%)`
-                    : `radial-gradient(ellipse 80% 55% at 50% 110%, ${color}22 0%, #141414 70%)`,
+                    ? `radial-gradient(ellipse 90% 70% at 50% 110%, ${color}55 0%, #1C1C1C 60%)`
+                    : `radial-gradient(ellipse 80% 55% at 50% 110%, ${color}20 0%, #141414 70%)`,
                   boxShadow: lit
-                    ? `0 20px 48px ${color}55, 0 4px 16px ${color}30, inset 0 1px 0 rgba(255,255,255,0.06)`
+                    ? `0 20px 52px ${color}55, 0 4px 20px ${color}30, inset 0 1px 0 rgba(255,255,255,0.06)`
                     : 'none',
                   transform: isHovered ? 'translateY(-10px)' : 'translateY(0)',
                 }}
               >
                 {logo ? (
-                  <img src={logo} alt={p.label} className="rounded-xl object-cover"
-                    style={{ width: 52, height: 52 }} />
+                  <img src={logo} alt={p.label} className="rounded-2xl object-cover"
+                    style={{ width: 76, height: 76 }} />
                 ) : (
-                  // "All" card — layered icon in app accent colour
-                  <Layers style={{ width: 44, height: 44, color: lit ? color : '#6b7280' }} />
+                  <Layers style={{ width: 52, height: 52, color: lit ? color : '#6b7280' }} />
                 )}
-                <span className="text-xs font-medium tracking-wide"
+                <span className="text-xs font-semibold tracking-wide"
                   style={{ color: lit ? '#fff' : '#9ca3af' }}>
                   {p.label}
                 </span>
@@ -431,24 +520,23 @@ export function DiscoverTab() {
       </div>
 
       {/* ── Movie rows ── */}
-      <div className="px-6">
+      <div className="px-6 md:px-10">
 
         {isProviderView ? (
           providerLoading ? (
-            <div className="text-gray-500 text-center py-16">Loading {activeProvider}…</div>
+            <div className="text-gray-500 text-center py-16 text-sm">Loading {activeProvider}…</div>
           ) : (
             <>
               <MovieRow title={`Popular on ${activeProvider}`}   movies={providerPopular}  onMovieClick={setSelectedMovieId} />
               <MovieRow title={`Top Rated on ${activeProvider}`} movies={providerTopRated} onMovieClick={setSelectedMovieId} />
               <MovieRow title={`New on ${activeProvider}`}       movies={providerNew}      onMovieClick={setSelectedMovieId} />
               {providerWatched.length > 0 && (
-                <MovieRow title={`Your Recent Watches on ${activeProvider}`} movies={providerWatched} onMovieClick={setSelectedMovieId} />
+                <MovieRow title={`Your Watches on ${activeProvider}`} movies={providerWatched} onMovieClick={setSelectedMovieId} />
               )}
             </>
           )
         ) : (
           <>
-            {/* User-specific rows first when logged in */}
             {user && top10.length > 0 && (
               <MovieRow title="Your Top 10" movies={top10} onMovieClick={setSelectedMovieId} />
             )}
@@ -459,7 +547,6 @@ export function DiscoverTab() {
               <MovieRow title="Recommended Watches" movies={recommended} onMovieClick={setSelectedMovieId} />
             )}
 
-            {/* General rows */}
             <MovieRow title="Trending Now"         movies={trendingMovies} onMovieClick={setSelectedMovieId} />
             <MovieRow title="New Releases"         movies={newReleases}    onMovieClick={setSelectedMovieId} />
             <MovieRow title="Top Rated"            movies={topRated}       onMovieClick={setSelectedMovieId} />
@@ -478,6 +565,7 @@ export function DiscoverTab() {
       {selectedMovieId && (
         <MovieDetailModal movieId={selectedMovieId} onClose={() => setSelectedMovieId(null)} />
       )}
+
     </div>
   );
 }

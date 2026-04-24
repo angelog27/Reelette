@@ -5,6 +5,13 @@
 html, body {
     overscroll-behavior-x: none;
     overscroll-behavior-y: none;
+    overflow-x: hidden;
+}
+
+/* Breaks out of any container to span the full viewport width */
+.full-bleed {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
 }
 
 /* Hide scrollbar for horizontal movie rows */
