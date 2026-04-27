@@ -750,6 +750,30 @@ export async function deleteGroup(group_id: string, user_id: string) {
 }
 
 
+// ── Roulette Preferences (local, no API) ────────────────────────
+
+export interface RoulettePrefs {
+  liked: string[];
+  disliked: string[];
+}
+
+function prefsKey(userId: string) { return `roulette_prefs:${userId}`; }
+
+export function getRoulettePrefs(userId: string): RoulettePrefs {
+  const raw = localStorage.getItem(prefsKey(userId));
+  return raw ? JSON.parse(raw) : { liked: [], disliked: [] };
+}
+
+export function setRoulettePref(userId: string, movieId: string, vote: 'like' | 'dislike'): void {
+  const prefs = getRoulettePrefs(userId);
+  prefs.liked    = prefs.liked.filter(id => id !== movieId);
+  prefs.disliked = prefs.disliked.filter(id => id !== movieId);
+  if (vote === 'like') prefs.liked.push(movieId);
+  else prefs.disliked.push(movieId);
+  localStorage.setItem(prefsKey(userId), JSON.stringify(prefs));
+}
+
+
 // ── Roulette Spin History ────────────────────────────────────────
 
 export interface RouletteSpin {
