@@ -489,7 +489,7 @@ export function HomePage() {
             </div>
 
             {/* ── RIGHT: bell ── */}
-            <div className="shrink-0 flex items-center" style={{ minWidth: 320, justifyContent: 'flex-end' }}>
+            <div className="shrink-0 flex items-center" style={{ minWidth: 380, justifyContent: 'flex-end' }}>
               <div className="relative" ref={notifPanelRef}>
                 <button
                   onClick={() => setNotifOpen(o => !o)}

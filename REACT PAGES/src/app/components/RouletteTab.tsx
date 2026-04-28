@@ -50,6 +50,25 @@ const MOODS = [
   { label: "Action",      genre: "28"    },
 ];
 
+// Film strip holes — rendered as a static row
+const FILM_HOLES = Array.from({ length: 48 });
+
+function FilmStrip({ position }: { position: "top" | "bottom" }) {
+  return (
+    <div
+      className={`absolute inset-x-0 z-20 flex items-center h-[22px] bg-[#0c0c0c] ${
+        position === "top" ? "top-0 border-b border-[#1a1a1a]" : "bottom-0 border-t border-[#1a1a1a]"
+      }`}
+    >
+      {FILM_HOLES.map((_, i) => (
+        <div key={i} className="shrink-0 flex-1 px-[3px]">
+          <div className="h-[13px] rounded-[2px] bg-[#050505]" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function dicebearUrl(seed: string) {
   return `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(seed)}`;
 }
@@ -193,52 +212,136 @@ export function RouletteTab() {
   const hasActiveFilters = !!genre || minRating[0] > 0 || !!yearFrom || !!yearTo;
 
   return (
-    <div className="min-h-[calc(100vh-80px)] flex flex-col">
+    <div className="flex flex-col">
 
-      {/* ── Hero header ──────────────────────────────────────────── */}
-      <div className="relative overflow-hidden flex flex-col items-center justify-center pt-12 pb-10 px-6 select-none">
-        {/* Ambient background glow */}
+      {/* ── Cinema Hero — full-bleed, flush with nav ── */}
+      <div
+        className="full-bleed relative overflow-hidden"
+        style={{ marginTop: -32, marginBottom: 0 }}
+      >
+        {/* Film strips top + bottom */}
+        <FilmStrip position="top" />
+        <FilmStrip position="bottom" />
+
+        {/* Dynamic glow that connects directly to the nav tab indicator */}
         <div
-          className="pointer-events-none absolute inset-0 transition-all duration-1000"
+          className="absolute inset-0 pointer-events-none transition-all duration-700"
           style={{
-            background: `radial-gradient(ellipse 70% 55% at 50% 0%, ${btnColor}22 0%, transparent 70%)`,
+            background: `radial-gradient(ellipse 60% 80% at 50% 0%, ${btnColor}30 0%, ${btnColor}08 45%, transparent 75%)`,
           }}
         />
-        {/* Subtle film-strip lines */}
-        <div
-          className="pointer-events-none absolute inset-0 opacity-[0.035]"
-          style={{
-            backgroundImage: "repeating-linear-gradient(90deg, #fff 0px, #fff 2px, transparent 2px, transparent 60px)",
-          }}
-        />
 
-        <img
-          src={reeletteLogo}
-          alt="Reelette"
-          className="relative z-10 h-20 w-auto mb-4 drop-shadow-[0_0_30px_rgba(192,57,43,0.5)]"
-        />
-        <h1 className="relative z-10 text-4xl md:text-5xl font-black text-white tracking-tight text-center leading-tight">
-          Don't know what to watch?
-        </h1>
-        <p className="relative z-10 mt-2 text-lg text-gray-400 font-medium tracking-wide text-center">
-          Let fate decide.
-        </p>
+        {/* Spotlight beams — two faint cones from top center */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <div
+            className="absolute"
+            style={{
+              top: 0, left: "50%", width: 500, height: "110%",
+              transform: "translateX(-80%) rotate(-18deg)",
+              transformOrigin: "top center",
+              background: "linear-gradient(to bottom, rgba(255,255,255,0.032) 0%, transparent 65%)",
+            }}
+          />
+          <div
+            className="absolute"
+            style={{
+              top: 0, left: "50%", width: 500, height: "110%",
+              transform: "translateX(-20%) rotate(18deg)",
+              transformOrigin: "top center",
+              background: "linear-gradient(to bottom, rgba(255,255,255,0.032) 0%, transparent 65%)",
+            }}
+          />
+        </div>
 
-        {/* Pool size badge — shown after a spin */}
-        {poolSize !== null && (
-          <div className="relative z-10 mt-4 flex items-center gap-1.5 bg-white/[0.06] border border-white/[0.1] px-3 py-1.5 rounded-full text-xs text-gray-400">
-            <Film className="w-3 h-3" />
-            Picking from <span className="text-white font-semibold mx-0.5">{poolSize}</span> movies
+        {/* Side curtain gradients */}
+        <div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-black/70 to-transparent pointer-events-none" />
+        <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-black/70 to-transparent pointer-events-none" />
+
+        {/* Content */}
+        <div className="relative z-10 flex flex-col items-center justify-center py-14 px-6 text-center" style={{ paddingTop: 56, paddingBottom: 48 }}>
+
+          {/* "NOW PLAYING" marquee badge */}
+          <div className="flex items-center gap-2 mb-5">
+            <div className="h-px w-12 bg-gradient-to-r from-transparent to-[#C0392B]/60" />
+            <span
+              className="text-[11px] font-bold tracking-[0.25em] text-[#C0392B] uppercase"
+              style={{ fontFamily: "'Courier New', monospace" }}
+            >
+              Now Playing
+            </span>
+            <span className="w-1.5 h-1.5 rounded-full bg-[#C0392B] animate-pulse" />
+            <div className="h-px w-12 bg-gradient-to-l from-transparent to-[#C0392B]/60" />
           </div>
-        )}
+
+          {/* Reelette logo */}
+          <img
+            src={reeletteLogo}
+            alt="Reelette"
+            className="h-20 w-auto mb-5"
+            style={{
+              filter: `drop-shadow(0 0 24px ${btnColor}99) drop-shadow(0 0 60px ${btnColor}44)`,
+              transition: "filter 0.7s ease",
+            }}
+          />
+
+          {/* Main tagline — Playfair Display serif, italic */}
+          <h1
+            style={{
+              fontFamily: "'Playfair Display', Georgia, 'Times New Roman', serif",
+              fontStyle: "italic",
+              fontWeight: 700,
+              fontSize: "clamp(1.8rem, 3.5vw, 3rem)",
+              lineHeight: 1.15,
+              color: "#fff",
+              textShadow: "0 2px 24px rgba(0,0,0,0.8)",
+              letterSpacing: "-0.01em",
+            }}
+          >
+            Don't know what to watch?
+          </h1>
+
+          {/* Subtitle */}
+          <p
+            className="mt-3 text-gray-400 font-medium"
+            style={{
+              fontFamily: "'Playfair Display', Georgia, serif",
+              fontStyle: "italic",
+              fontSize: "1.1rem",
+              letterSpacing: "0.04em",
+            }}
+          >
+            Let fate decide.
+          </p>
+
+          {/* Decorative rule */}
+          <div className="flex items-center gap-3 mt-5">
+            <div className="h-px w-16 bg-gradient-to-r from-transparent to-[#C0392B]/50" />
+            <span className="text-[#C0392B]/60 text-xs tracking-widest">✦</span>
+            <div className="h-px w-16 bg-gradient-to-l from-transparent to-[#C0392B]/50" />
+          </div>
+
+          {/* Pool size badge */}
+          {poolSize !== null && (
+            <div
+              className="mt-4 flex items-center gap-1.5 border px-3 py-1.5 rounded-full text-xs text-gray-400 animate-in fade-in duration-300"
+              style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.09)" }}
+            >
+              <Film className="w-3 h-3" />
+              Picking from <span className="text-white font-semibold mx-0.5">{poolSize}</span> movies
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* ── Main three-column layout ─────────────────────────────── */}
-      <div className="flex-1 grid grid-cols-1 md:grid-cols-[200px_1fr_200px] gap-6 items-start px-4 md:px-8 pb-12">
+      {/* ── Main three-column layout ── */}
+      <div className="grid grid-cols-1 md:grid-cols-[200px_1fr_200px] gap-6 items-start px-2 md:px-4 pt-8 pb-12">
 
         {/* ── Left: My Recent Spins ── */}
-        <aside className="hidden md:flex flex-col gap-1 pt-2">
-          <p className="text-[11px] font-bold tracking-widest text-gray-500 uppercase px-1 mb-2">
+        <aside className="hidden md:flex flex-col gap-1">
+          <p
+            className="text-[10px] font-bold tracking-[0.2em] text-gray-600 uppercase px-1 mb-3"
+            style={{ fontFamily: "'Courier New', monospace" }}
+          >
             My Recent Spins
           </p>
 
@@ -255,7 +358,7 @@ export function RouletteTab() {
           )}
 
           {spinsLoaded && recentSpins.length === 0 && (
-            <p className="text-gray-600 text-xs px-1 leading-relaxed mt-1">
+            <p className="text-gray-600 text-xs px-1 leading-relaxed">
               {user ? "Your spins will appear here." : "Log in to track your spins."}
             </p>
           )}
@@ -279,10 +382,9 @@ export function RouletteTab() {
         {/* ── Center: Wheel + controls ── */}
         <div className="flex flex-col items-center gap-5">
 
-          {/* Filter controls bar */}
+          {/* Filter controls */}
           <div className="flex items-center gap-3 flex-wrap justify-center">
-            {/* Streaming toggle */}
-            <div className="flex items-center gap-2 bg-[#161616] border border-[#222] rounded-full px-3.5 py-2">
+            <div className="flex items-center gap-2 bg-[#111] border border-[#1e1e1e] rounded-full px-3.5 py-2">
               <Switch
                 checked={filterStreaming}
                 onCheckedChange={setFilterStreaming}
@@ -299,14 +401,13 @@ export function RouletteTab() {
               </span>
             </div>
 
-            {/* Filters dropdown */}
             <div className="relative" ref={filtersDropdownRef}>
               <button
                 onClick={() => setFiltersExpanded(v => !v)}
                 className={`flex items-center gap-1.5 text-xs border rounded-full px-3.5 py-2 transition-colors ${
                   hasActiveFilters
                     ? "bg-[#C0392B]/10 border-[#C0392B]/40 text-[#E74C3C]"
-                    : "bg-[#161616] border-[#222] text-gray-400 hover:text-white hover:border-[#444]"
+                    : "bg-[#111] border-[#1e1e1e] text-gray-400 hover:text-white hover:border-[#333]"
                 }`}
               >
                 <SlidersHorizontal className="w-3 h-3" />
@@ -316,10 +417,9 @@ export function RouletteTab() {
               </button>
 
               {filtersExpanded && (
-                <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-72 bg-[#161616] border border-[#252525] rounded-2xl shadow-2xl z-50 p-5 space-y-5">
-                  {/* Vibe chips */}
+                <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-72 bg-[#111] border border-[#1e1e1e] rounded-2xl shadow-2xl z-50 p-5 space-y-5">
                   <div className="space-y-2">
-                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Vibe</p>
+                    <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Vibe</p>
                     <div className="flex flex-wrap gap-1.5">
                       {MOODS.map(mood => (
                         <button
@@ -331,7 +431,7 @@ export function RouletteTab() {
                           className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors border ${
                             activeMood === mood.label
                               ? "bg-[#C0392B] border-[#C0392B] text-white"
-                              : "border-[#2A2A2A] text-gray-400 hover:border-[#C0392B]/50 hover:text-white"
+                              : "border-[#252525] text-gray-400 hover:border-[#C0392B]/50 hover:text-white"
                           }`}
                         >
                           {mood.label}
@@ -340,37 +440,34 @@ export function RouletteTab() {
                     </div>
                   </div>
 
-                  {/* Genre */}
                   <div className="space-y-1.5">
-                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Genre</p>
+                    <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Genre</p>
                     <select
                       value={genre}
                       onChange={e => { setGenre(e.target.value); setActiveMood(""); }}
-                      className="w-full bg-[#111] border border-[#2A2A2A] text-white text-xs rounded-lg px-2.5 py-2 focus:border-[#C0392B] focus:outline-none"
+                      className="w-full bg-[#0a0a0a] border border-[#252525] text-white text-xs rounded-lg px-2.5 py-2 focus:border-[#C0392B] focus:outline-none"
                     >
                       <option value="">Any Genre</option>
                       {GENRES.map(g => <option key={g.value} value={g.value}>{g.label}</option>)}
                     </select>
                   </div>
 
-                  {/* Year */}
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1.5">
-                      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">From</p>
+                      <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">From</p>
                       <Input value={yearFrom} onChange={e => setYearFrom(e.target.value)} placeholder="1990"
-                        className="bg-[#111] border-[#2A2A2A] text-white text-xs h-8 rounded-lg" />
+                        className="bg-[#0a0a0a] border-[#252525] text-white text-xs h-8 rounded-lg" />
                     </div>
                     <div className="space-y-1.5">
-                      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">To</p>
+                      <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">To</p>
                       <Input value={yearTo} onChange={e => setYearTo(e.target.value)} placeholder="2025"
-                        className="bg-[#111] border-[#2A2A2A] text-white text-xs h-8 rounded-lg" />
+                        className="bg-[#0a0a0a] border-[#252525] text-white text-xs h-8 rounded-lg" />
                     </div>
                   </div>
 
-                  {/* Rating */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Min Rating</p>
+                      <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Min Rating</p>
                       <span className="text-white text-xs font-semibold">
                         {minRating[0] > 0 ? `${minRating[0]}+` : "Any"}
                       </span>
@@ -391,11 +488,10 @@ export function RouletteTab() {
             </div>
           </div>
 
-          {/* Wheel — always rendered, it's the star */}
+          {/* Wheel */}
           <div
-            className="relative"
             style={{
-              filter: awaitingVote ? "brightness(0.45) blur(1px)" : "none",
+              filter: awaitingVote ? "brightness(0.35) blur(2px)" : "none",
               transition: "filter 0.4s ease",
               pointerEvents: awaitingVote ? "none" : "auto",
             }}
@@ -408,23 +504,27 @@ export function RouletteTab() {
             />
           </div>
 
-          {/* Error */}
           {error && <p className="text-yellow-500 text-sm text-center">{error}</p>}
 
-          {/* Vote card — slides up over the wheel area */}
+          {/* Vote card */}
           {awaitingVote && pendingMovie && (
-            <div className="w-full max-w-[380px] -mt-4 bg-[#161616] border border-[#2A2A2A] rounded-2xl overflow-hidden shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
+            <div className="w-full max-w-[380px] -mt-6 bg-[#111] border border-[#222] rounded-2xl overflow-hidden shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
               <div className="flex gap-4 p-4">
                 {pendingMovie.poster ? (
                   <img src={pendingMovie.poster} alt={pendingMovie.title}
                     className="w-16 h-24 rounded-xl object-cover shrink-0 shadow-lg" />
                 ) : (
-                  <div className="w-16 h-24 rounded-xl bg-[#222] shrink-0 flex items-center justify-center">
+                  <div className="w-16 h-24 rounded-xl bg-[#1a1a1a] shrink-0 flex items-center justify-center">
                     <Film className="w-5 h-5 text-gray-600" />
                   </div>
                 )}
                 <div className="flex-1 min-w-0 flex flex-col justify-center">
-                  <p className="text-white font-bold text-sm line-clamp-2 leading-snug">{pendingMovie.title}</p>
+                  <p
+                    className="text-white font-bold text-sm line-clamp-2 leading-snug"
+                    style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
+                  >
+                    {pendingMovie.title}
+                  </p>
                   <div className="flex items-center gap-2 mt-1.5 text-xs">
                     {pendingMovie.year > 0 && <span className="text-gray-500">{pendingMovie.year}</span>}
                     {pendingMovie.rating > 0 && <span className="text-yellow-400 font-semibold">★ {pendingMovie.rating.toFixed(1)}</span>}
@@ -432,7 +532,7 @@ export function RouletteTab() {
                   {pendingMovie.genres.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-2">
                       {pendingMovie.genres.slice(0, 3).map(g => (
-                        <span key={g} className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.06] text-gray-400 border border-white/[0.08]">{g}</span>
+                        <span key={g} className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.05] text-gray-500 border border-white/[0.07]">{g}</span>
                       ))}
                     </div>
                   )}
@@ -440,19 +540,24 @@ export function RouletteTab() {
               </div>
 
               <div className="px-4 pb-4 space-y-3">
-                <p className="text-xs text-gray-500 text-center">Fate has spoken — what do you think?</p>
+                <p
+                  className="text-xs text-gray-600 text-center italic"
+                  style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
+                >
+                  Fate has spoken — what's your verdict?
+                </p>
                 <div className="grid grid-cols-2 gap-2.5">
                   <button
                     onClick={() => handleVote("dislike")}
                     disabled={userVote !== null}
-                    className="flex items-center justify-center gap-2 py-3 rounded-xl border border-[#2A2A2A] bg-white/[0.03] hover:bg-red-500/10 hover:border-red-500/50 transition-all text-sm font-semibold text-gray-300 hover:text-red-400 disabled:opacity-40"
+                    className="flex items-center justify-center gap-2 py-3 rounded-xl border border-[#222] bg-white/[0.02] hover:bg-red-500/10 hover:border-red-500/40 transition-all text-sm font-semibold text-gray-400 hover:text-red-400 disabled:opacity-40"
                   >
                     <ThumbsDown className="w-4 h-4" /> Nope
                   </button>
                   <button
                     onClick={() => handleVote("like")}
                     disabled={userVote !== null}
-                    className="flex items-center justify-center gap-2 py-3 rounded-xl border border-[#2A2A2A] bg-white/[0.03] hover:bg-green-500/10 hover:border-green-500/50 transition-all text-sm font-semibold text-gray-300 hover:text-green-400 disabled:opacity-40"
+                    className="flex items-center justify-center gap-2 py-3 rounded-xl border border-[#222] bg-white/[0.02] hover:bg-green-500/10 hover:border-green-500/40 transition-all text-sm font-semibold text-gray-400 hover:text-green-400 disabled:opacity-40"
                   >
                     <ThumbsUp className="w-4 h-4" /> I'm in
                   </button>
@@ -475,24 +580,28 @@ export function RouletteTab() {
             </div>
           )}
 
-          {/* Spin button — hidden while vote card is up */}
+          {/* Spin button */}
           {!awaitingVote && (
             <div className="relative w-full max-w-[340px]">
               <div
-                className={`absolute -inset-1.5 rounded-full blur-xl transition-opacity duration-500 ${spinning ? "opacity-0" : "opacity-70 animate-pulse"}`}
-                style={{ backgroundColor: `${btnColor}55` }}
+                className={`absolute -inset-2 rounded-full blur-xl transition-opacity duration-500 ${spinning ? "opacity-0" : "opacity-60 animate-pulse"}`}
+                style={{ backgroundColor: `${btnColor}60` }}
               />
               <button
                 onClick={spin}
                 disabled={spinning}
-                className="relative w-full py-5 flex items-center justify-center gap-3 disabled:opacity-60 disabled:cursor-not-allowed text-white font-black text-xl rounded-full tracking-wide transition-all shadow-xl active:scale-[0.97]"
+                className="relative w-full py-5 flex items-center justify-center gap-3 disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-full transition-all shadow-xl active:scale-[0.97]"
                 style={{
                   backgroundColor: btnColor,
-                  boxShadow: `0 8px 32px ${btnColor}55`,
-                  letterSpacing: "0.06em",
+                  boxShadow: `0 8px 40px ${btnColor}60`,
+                  fontFamily: "'Playfair Display', Georgia, serif",
+                  fontStyle: "italic",
+                  fontWeight: 700,
+                  fontSize: "1.3rem",
+                  letterSpacing: "0.01em",
                 }}
               >
-                <Shuffle className={`w-6 h-6 ${spinning ? "animate-spin" : ""}`} />
+                <Shuffle className={`w-6 h-6 ${spinning ? "animate-spin" : ""} shrink-0`} style={{ fontStyle: "normal" }} />
                 {spinning ? "Spinning…" : "Spin the Reel"}
               </button>
             </div>
@@ -500,8 +609,11 @@ export function RouletteTab() {
         </div>
 
         {/* ── Right: Friends' Spins ── */}
-        <aside className="hidden md:flex flex-col gap-1 pt-2">
-          <p className="text-[11px] font-bold tracking-widest text-gray-500 uppercase px-1 mb-2">
+        <aside className="hidden md:flex flex-col gap-1">
+          <p
+            className="text-[10px] font-bold tracking-[0.2em] text-gray-600 uppercase px-1 mb-3"
+            style={{ fontFamily: "'Courier New', monospace" }}
+          >
             Friends' Spins
           </p>
           {friendSpins.length === 0 && (
@@ -512,11 +624,11 @@ export function RouletteTab() {
           {friendSpins.slice(0, 7).map(entry => {
             const s = entry.spins[0];
             return (
-              <div key={entry.friend_id} className="flex items-start gap-2.5 py-1.5 group">
+              <div key={entry.friend_id} className="flex items-start gap-2.5 py-1.5">
                 <img
                   src={entry.avatarUrl || dicebearUrl(entry.friend_username)}
                   alt={entry.friend_username}
-                  className="w-8 h-8 rounded-full object-cover shrink-0 bg-[#2A2A2A] ring-1 ring-white/10"
+                  className="w-8 h-8 rounded-full object-cover shrink-0 bg-[#1a1a1a] ring-1 ring-white/10"
                   onError={e => { (e.target as HTMLImageElement).src = dicebearUrl(entry.friend_username); }}
                 />
                 <div className="min-w-0 flex-1">
