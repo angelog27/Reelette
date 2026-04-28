@@ -3,7 +3,7 @@ import { MessageCircle, Send, ArrowLeft, Search, X } from 'lucide-react';
 import {
   getConversations, openConversation, getDirectMessages, sendDirectMessage,
   markConversationRead, searchUsers, timeAgo, getUser,
-  type Conversation, type DirectMessage, type Friend,
+  type Conversation, type DirectMessage,
 } from '../services/api';
 import { db, signInFirebase } from '../lib/firebase';
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
@@ -14,7 +14,7 @@ function dicebear(seed: string) {
 
 interface NewDMUser { user_id: string; username: string; displayName: string; }
 
-export function MessagesPanel({ friends }: { friends: Friend[] }) {
+export function MessagesPanel() {
   const me = getUser();
   const [open, setOpen] = useState(false);
   const [conversations, setConversations] = useState<Conversation[]>([]);

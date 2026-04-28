@@ -667,8 +667,8 @@ function FriendsPanel({ onOpenProfile }: { onOpenProfile: (uid: string) => void 
     if (r.success) load();
   };
 
-  const handleReject = async (from_id: string) => {
-    const r = await rejectFriendRequest(uid, from_id);
+  const handleReject = async (req: FriendRequest) => {
+    const r = await rejectFriendRequest(uid, req.from_user_id, req.from_username);
     if (r.success) load();
   };
 
@@ -698,7 +698,7 @@ function FriendsPanel({ onOpenProfile }: { onOpenProfile: (uid: string) => void 
                   <p className="text-xs text-gray-500">{timeAgo(req.created_at)}</p>
                 </div>
                 <button onClick={() => handleAccept(req)} className="p-2 bg-green-600/20 hover:bg-green-600 border border-green-600/50 hover:border-green-600 text-green-400 hover:text-white rounded-lg transition-all"><Check className="w-4 h-4" /></button>
-                <button onClick={() => handleReject(req.from_user_id)} className="p-2 bg-red-600/20 hover:bg-red-600 border border-red-600/50 hover:border-red-600 text-red-400 hover:text-white rounded-lg transition-all"><X className="w-4 h-4" /></button>
+                <button onClick={() => handleReject(req)} className="p-2 bg-red-600/20 hover:bg-red-600 border border-red-600/50 hover:border-red-600 text-red-400 hover:text-white rounded-lg transition-all"><X className="w-4 h-4" /></button>
               </div>
             ))}
           </div>
@@ -1159,7 +1159,7 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
                     <button onClick={() => setProfileUserId(member_id)} className="text-white text-sm hover:text-[#C0392B] transition-colors">@{uname}</button>
                     <p className="text-xs text-gray-600">{online ? 'Online now' : prof?.lastSeen ? `Last seen ${timeAgo(prof.lastSeen)}` : 'Offline'}</p>
                   </div>
-                  {isOwner && <Crown className="w-4 h-4 text-yellow-500 shrink-0" title="Creator" />}
+                  {isOwner && <span title="Creator"><Crown className="w-4 h-4 text-yellow-500 shrink-0" /></span>}
                   {isCreator && !isOwner && (
                     <button onClick={() => handleRemoveMember(member_id)} className="text-gray-600 hover:text-red-500 transition-colors shrink-0">
                       <UserMinus className="w-4 h-4" />
@@ -1628,7 +1628,7 @@ export function SocialTab() {
 
         {/* Messages sidebar */}
         <div className="w-72 shrink-0">
-          <MessagesPanel friends={friends} />
+          <MessagesPanel />
         </div>
       </div>
 
