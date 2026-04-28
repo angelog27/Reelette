@@ -92,14 +92,33 @@ export function MyStuffTab() {
     if (!user) { setLoading(false); return; }
     setLoading(true);
     setCursor(undefined);
+    setHasMore(false);
     Promise.all([
       getWatchedMovies(user.user_id, 20),
       getRouletteHistory(user.user_id, 20),
     ]).then(([m, spins]) => {
       setMovies(m);
       setRecentSpins(spins);
-      setHasMore(m.length === 20);
-      setCursor(m.length === 20 ? m[m.length - 1].watched_at : undefined);
+      // Guard against movies with no watched_at — cursor must be a real value
+      const lastWatchedAt = m.length === 20 ? (m[m.length - 1]?.watched_at || null) : null;
+      setHasMore(!!lastWatchedAt);
+      setCursor(lastWatchedAt ?? undefined);
+      setLoading(false);
+    });
+  }
+
+  // Stats tab needs all movies for accurate top-10 / charts — fetches up to 500
+  function loadAllForStats() {
+    if (!user) { setLoading(false); return; }
+    setLoading(true);
+    Promise.all([
+      getWatchedMovies(user.user_id, 500),
+      getRouletteHistory(user.user_id, 20),
+    ]).then(([m, spins]) => {
+      setMovies(m);
+      setRecentSpins(spins);
+      setHasMore(false);
+      setCursor(undefined);
       setLoading(false);
     });
   }
@@ -110,8 +129,9 @@ export function MyStuffTab() {
     try {
       const more = await getWatchedMovies(user.user_id, 20, cursor);
       setMovies(prev => [...prev, ...more]);
-      setHasMore(more.length === 20);
-      setCursor(more.length > 0 ? more[more.length - 1].watched_at : undefined);
+      const lastWatchedAt = more.length === 20 ? (more[more.length - 1]?.watched_at || null) : null;
+      setHasMore(!!lastWatchedAt);
+      setCursor(lastWatchedAt ?? undefined);
     } finally {
       setLoadingMore(false);
     }
@@ -145,7 +165,8 @@ export function MyStuffTab() {
   }
 
   useEffect(() => {
-    if (activeTab === 'watched' || activeTab === 'stats') loadWatched();
+    if (activeTab === 'watched') loadWatched();
+    else if (activeTab === 'stats') loadAllForStats();
     else loadWatchLater();
   }, [activeTab]);
 
