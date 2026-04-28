@@ -21,6 +21,13 @@ export function bustCache(key: string) {
   _cache.delete(key);
 }
 
+/** Bust all cache keys that start with the given prefix. */
+export function bustCachePrefix(prefix: string) {
+  for (const key of _cache.keys()) {
+    if (key.startsWith(prefix)) _cache.delete(key);
+  }
+}
+
 const TTL = {
   CATALOG: 5 * 60 * 1000,   // 5 min — popular / trending / top-rated
   MOVIE:   10 * 60 * 1000,  // 10 min — individual movie details (TMDB data)
@@ -97,6 +104,8 @@ export function getUser(): CurrentUser | null {
 
 export function clearUser() {
   localStorage.removeItem('reelette_user');
+  localStorage.removeItem('reelette_firebase_token');
+  import('../lib/firebase').then(({ signOutFirebase }) => signOutFirebase()).catch(() => {});
 }
 
 
@@ -132,7 +141,16 @@ export async function login(email: string, password: string) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
   });
-  return res.json();
+  const data = await res.json();
+  if (data.success && data.customToken) {
+    // Sign in to Firebase client SDK so onSnapshot listeners can authenticate.
+    // Import lazily to avoid loading the Firebase bundle until it's actually needed.
+    import('../lib/firebase').then(({ storeCustomToken, signInFirebase }) => {
+      storeCustomToken(data.customToken);
+      signInFirebase().catch(() => {});
+    });
+  }
+  return data;
 }
 
 
@@ -339,12 +357,18 @@ export interface WatchedMovie {
 }
 
 
-export function getWatchedMovies(user_id: string): Promise<WatchedMovie[]> {
-  return fromCache(`watched_list:${user_id}`, 60 * 1000, async () => {
-    const res = await fetch(`${BASE_URL}/watched/${user_id}`);
-    const data = await res.json();
-    return data.movies ?? [];
-  });
+export function getWatchedMovies(user_id: string, limit = 20, cursor?: string): Promise<WatchedMovie[]> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (cursor) params.set('cursor', cursor);
+  return fromCache(
+    `watched_list:${user_id}:${limit}:${cursor ?? ''}`,
+    60 * 1000,
+    async () => {
+      const res = await fetch(`${BASE_URL}/watched/${user_id}?${params}`);
+      const data = await res.json();
+      return data.movies ?? [];
+    }
+  );
 }
 
 
@@ -368,7 +392,7 @@ export async function addWatchedMovie(
   comment: string
 ) {
   bustCache(`watched_check:${user_id}:${movie.movie_id}`);
-  bustCache(`watched_list:${user_id}`);
+  bustCachePrefix(`watched_list:${user_id}`);
   const res = await fetch(`${BASE_URL}/watched/${user_id}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -380,7 +404,7 @@ export async function addWatchedMovie(
 
 export async function updateWatchedMovie(user_id: string, movie_id: string, rating: number, comment: string) {
   bustCache(`watched_check:${user_id}:${movie_id}`);
-  bustCache(`watched_list:${user_id}`);
+  bustCachePrefix(`watched_list:${user_id}`);
   const res = await fetch(`${BASE_URL}/watched/${user_id}/${movie_id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },

@@ -68,6 +68,9 @@ export function MyStuffTab() {
   const [watchLater, setWatchLater]         = useState<WatchLaterMovie[]>([]);
   const [recentSpins, setRecentSpins]       = useState<RouletteSpin[]>([]);
   const [loading, setLoading]               = useState(true);
+  const [hasMore, setHasMore]               = useState(false);
+  const [cursor, setCursor]                 = useState<string | undefined>(undefined);
+  const [loadingMore, setLoadingMore]       = useState(false);
   const [selectedMovieId, setSelectedMovieId] = useState<string | null>(null);
   const [sortMode, setSortMode]             = useState<SortMode>('rating-desc');
   const [sortOpen, setSortOpen]             = useState(false);
@@ -88,14 +91,30 @@ export function MyStuffTab() {
   function loadWatched() {
     if (!user) { setLoading(false); return; }
     setLoading(true);
+    setCursor(undefined);
     Promise.all([
-      getWatchedMovies(user.user_id),
+      getWatchedMovies(user.user_id, 20),
       getRouletteHistory(user.user_id, 20),
     ]).then(([m, spins]) => {
       setMovies(m);
       setRecentSpins(spins);
+      setHasMore(m.length === 20);
+      setCursor(m.length === 20 ? m[m.length - 1].watched_at : undefined);
       setLoading(false);
     });
+  }
+
+  async function loadMore() {
+    if (!user || !cursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const more = await getWatchedMovies(user.user_id, 20, cursor);
+      setMovies(prev => [...prev, ...more]);
+      setHasMore(more.length === 20);
+      setCursor(more.length > 0 ? more[more.length - 1].watched_at : undefined);
+    } finally {
+      setLoadingMore(false);
+    }
   }
 
   function loadWatchLater() {
@@ -298,6 +317,7 @@ export function MyStuffTab() {
               You haven't watched any movies yet. Click a movie and hit "Mark as Watched"!
             </div>
           ) : (
+            <>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
               {sortedMovies.map(m => (
                 <button
@@ -338,6 +358,18 @@ export function MyStuffTab() {
                 </button>
               ))}
             </div>
+            {hasMore && (
+              <div className="flex justify-center mt-8">
+                <button
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                  className="px-6 py-2.5 rounded-full text-sm font-medium border border-[#2A2A2A] bg-[#111] text-gray-300 hover:text-white hover:border-[#C0392B]/50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {loadingMore ? 'Loading…' : 'Load More'}
+                </button>
+              </div>
+            )}
+            </>
           )
         ) : (
           sortedWatchLater.length === 0 ? (

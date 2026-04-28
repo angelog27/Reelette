@@ -2,12 +2,11 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, Star, Bookmark, BookmarkCheck, Info, Layers } from 'lucide-react';
 import { MovieDetailModal } from './MovieDetailModal';
 import {
-  getTrendingMovies, getTopRatedMovies, getNowPlayingMovies, getUpcomingMovies,
-  discoverMovies, getMovieRecommendations, getWatchedMovies, getRouletteHistory,
-  watchMovieLater, removeFromWatchLater, getWatchLater, getUser, getServices,
+  discoverMovies, watchMovieLater, removeFromWatchLater, getUser, getServices,
 } from '../services/api';
-import type { Movie, WatchedMovie, RouletteSpin } from '../services/api';
+import type { Movie, WatchedMovie } from '../services/api';
 import { PROVIDER_LOGOS } from '../constants/providers';
+import { useDiscover, type ProviderRows } from '../contexts/DiscoverContext';
 
 // ── Constants ─────────────────────────────────────────────────────
 
@@ -47,9 +46,10 @@ const PROVIDER_KEY: Record<string, string> = {
 };
 
 const ROW_LIMIT = 14;
-const CARD_W = 156;
+const CARD_W    = 156;
+const SKELETON_COUNT = 8;
 
-// ── Converters ────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────
 
 function watchedToMovie(w: WatchedMovie): Movie {
   return {
@@ -59,15 +59,35 @@ function watchedToMovie(w: WatchedMovie): Movie {
   };
 }
 
-function spinToMovie(s: RouletteSpin): Movie {
-  return {
-    id: s.movie_id, title: s.movie_title, year: 0,
-    genres: [], rating: 0,
-    poster: s.poster_url ?? '', streamingService: '',
-  };
+// ── Skeleton UI ───────────────────────────────────────────────────
+
+function SkeletonCard() {
+  return (
+    <div className="flex-shrink-0 animate-pulse" style={{ width: CARD_W }}>
+      <div className="rounded-md bg-[#1e1e1e]" style={{ aspectRatio: '2/3' }} />
+      <div className="mt-2 px-0.5">
+        <div className="h-3 bg-[#1e1e1e] rounded w-4/5 mb-1.5" />
+        <div className="h-2.5 bg-[#1e1e1e] rounded w-2/5" />
+      </div>
+    </div>
+  );
 }
 
-// ── Compact landscape card (Netflix-style rows) ───────────────────
+function SkeletonRow({ title }: { title: string }) {
+  return (
+    <div className="mb-8">
+      <h2 className="text-sm md:text-base font-bold text-white mb-3 tracking-wide uppercase"
+        style={{ color: '#e5e5e5', letterSpacing: '0.04em' }}>
+        {title}
+      </h2>
+      <div className="flex gap-2">
+        {Array.from({ length: SKELETON_COUNT }).map((_, i) => <SkeletonCard key={i} />)}
+      </div>
+    </div>
+  );
+}
+
+// ── Compact landscape card ────────────────────────────────────────
 
 function CompactCard({ movie, onClick }: { movie: Movie; onClick: () => void }) {
   return (
@@ -76,7 +96,6 @@ function CompactCard({ movie, onClick }: { movie: Movie; onClick: () => void }) 
       style={{ width: CARD_W }}
       onClick={onClick}
     >
-      {/* 2:3 portrait poster */}
       <div
         className="relative overflow-hidden rounded-md bg-[#1a1a1a]"
         style={{ aspectRatio: '2/3' }}
@@ -94,16 +113,11 @@ function CompactCard({ movie, onClick }: { movie: Movie; onClick: () => void }) 
             {movie.title}
           </div>
         )}
-        {/* hover tint */}
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-200" />
       </div>
-
-      {/* Below-card info */}
       <div className="mt-2 px-0.5">
         <p className="text-white text-[13px] font-medium line-clamp-1 leading-snug">{movie.title}</p>
-        {movie.year > 0 && (
-          <p className="text-gray-500 text-[11px] mt-0.5">{movie.year}</p>
-        )}
+        {movie.year > 0 && <p className="text-gray-500 text-[11px] mt-0.5">{movie.year}</p>}
         {movie.rating > 0 && (
           <div className="flex items-center gap-1 mt-0.5">
             <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" />
@@ -115,14 +129,15 @@ function CompactCard({ movie, onClick }: { movie: Movie; onClick: () => void }) 
   );
 }
 
-// ── Movie Row ─────────────────────────────────────────────────────
+// ── Movie Row — shows skeleton when movies is null ────────────────
 
 function MovieRow({ title, movies, onMovieClick }: {
   title: string;
-  movies: Movie[];
+  movies: Movie[] | null;
   onMovieClick: (id: string) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  if (movies === null) return <SkeletonRow title={title} />;
   if (!movies.length) return null;
 
   const scroll = (dir: 'left' | 'right') =>
@@ -135,7 +150,6 @@ function MovieRow({ title, movies, onMovieClick }: {
         {title}
       </h2>
       <div className="relative group">
-        {/* Left arrow */}
         <button
           onClick={() => scroll('left')}
           className="absolute left-0 top-0 bottom-0 z-10 w-10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 rounded-l-md"
@@ -143,23 +157,18 @@ function MovieRow({ title, movies, onMovieClick }: {
         >
           <ChevronLeft className="w-6 h-6 text-white" />
         </button>
-
         <div
           ref={scrollRef}
           className="hide-scrollbar flex gap-2 overflow-x-auto"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
           onWheel={(e) => {
-            if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-              window.scrollBy(0, e.deltaY);
-            }
+            if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) window.scrollBy(0, e.deltaY);
           }}
         >
           {movies.map(movie => (
             <CompactCard key={movie.id} movie={movie} onClick={() => onMovieClick(movie.id)} />
           ))}
         </div>
-
-        {/* Right arrow */}
         <button
           onClick={() => scroll('right')}
           className="absolute right-0 top-0 bottom-0 z-10 w-10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 rounded-r-md"
@@ -172,7 +181,29 @@ function MovieRow({ title, movies, onMovieClick }: {
   );
 }
 
-// ── Hero Section ──────────────────────────────────────────────────
+// ── Hero ──────────────────────────────────────────────────────────
+
+function HeroSkeleton() {
+  return (
+    <div
+      className="full-bleed relative animate-pulse bg-[#141414]"
+      style={{ height: 540, marginTop: -32 }}
+    >
+      <div className="absolute left-10 md:left-16 bottom-14 flex flex-col gap-3">
+        <div className="flex gap-2">
+          <div className="h-5 w-16 rounded-sm bg-[#222]" />
+          <div className="h-5 w-20 rounded-sm bg-[#222]" />
+        </div>
+        <div className="h-14 w-80 rounded bg-[#222]" />
+        <div className="h-4 w-40 rounded bg-[#222]" />
+        <div className="h-12 w-[28rem] rounded bg-[#222]" />
+        <div className="flex gap-3 mt-2">
+          <div className="h-10 w-28 rounded bg-[#222]" />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function HeroSection({ movies, onOpenModal, onToggleWatchlist, watchlistIds, hasUser }: {
   movies: Movie[];
@@ -202,11 +233,7 @@ function HeroSection({ movies, onOpenModal, onToggleWatchlist, watchlistIds, has
   const isInWatchlist = watchlistIds.includes(movie.id);
 
   return (
-    <div
-      className="full-bleed relative overflow-hidden"
-      style={{ height: 540, marginTop: -32 }}
-    >
-      {/* Backdrop slides */}
+    <div className="full-bleed relative overflow-hidden" style={{ height: 540, marginTop: -32 }}>
       {movies.slice(0, 5).map((m, i) => (
         <div
           key={m.id}
@@ -219,28 +246,10 @@ function HeroSection({ movies, onOpenModal, onToggleWatchlist, watchlistIds, has
           }
         </div>
       ))}
-
-      {/* Netflix-style gradients: dark on left, dark on bottom */}
-      <div className="absolute inset-0" style={{
-        zIndex: 2,
-        background: 'linear-gradient(to right, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.65) 35%, rgba(0,0,0,0.2) 65%, rgba(0,0,0,0) 100%)',
-      }} />
-      <div className="absolute inset-0" style={{
-        zIndex: 2,
-        background: 'linear-gradient(to top, rgba(9,9,9,1) 0%, rgba(9,9,9,0.5) 25%, transparent 60%)',
-      }} />
-      {/* Slight top vignette */}
-      <div className="absolute inset-0" style={{
-        zIndex: 2,
-        background: 'linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, transparent 20%)',
-      }} />
-
-      {/* Content — bottom-left like Netflix */}
-      <div
-        className="absolute left-0 right-0 bottom-0 flex flex-col justify-end pb-14 px-10 md:px-16"
-        style={{ zIndex: 3 }}
-      >
-        {/* Genre tags */}
+      <div className="absolute inset-0" style={{ zIndex: 2, background: 'linear-gradient(to right, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.65) 35%, rgba(0,0,0,0.2) 65%, rgba(0,0,0,0) 100%)' }} />
+      <div className="absolute inset-0" style={{ zIndex: 2, background: 'linear-gradient(to top, rgba(9,9,9,1) 0%, rgba(9,9,9,0.5) 25%, transparent 60%)' }} />
+      <div className="absolute inset-0" style={{ zIndex: 2, background: 'linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, transparent 20%)' }} />
+      <div className="absolute left-0 right-0 bottom-0 flex flex-col justify-end pb-14 px-10 md:px-16" style={{ zIndex: 3 }}>
         <div className="flex flex-wrap gap-2 mb-3">
           {movie.genres.slice(0, 3).map(g => (
             <span key={g} className="text-xs px-2.5 py-0.5 rounded-sm font-medium"
@@ -249,14 +258,10 @@ function HeroSection({ movies, onOpenModal, onToggleWatchlist, watchlistIds, has
             </span>
           ))}
         </div>
-
-        {/* Title */}
         <h1 className="font-black text-white leading-none drop-shadow-2xl mb-3"
           style={{ fontSize: 'clamp(2.4rem, 5vw, 4.5rem)', textShadow: '0 2px 20px rgba(0,0,0,0.8)' }}>
           {movie.title}
         </h1>
-
-        {/* Meta row */}
         <div className="flex items-center gap-3 mb-3 text-sm">
           <span className="flex items-center gap-1">
             <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
@@ -265,16 +270,12 @@ function HeroSection({ movies, onOpenModal, onToggleWatchlist, watchlistIds, has
           <span className="text-gray-400">•</span>
           <span className="text-gray-300">{movie.year}</span>
         </div>
-
-        {/* Description */}
         {movie.overview && (
           <p className="text-gray-300 text-sm leading-relaxed mb-6 line-clamp-2"
             style={{ maxWidth: '38rem', textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>
             {movie.overview}
           </p>
         )}
-
-        {/* Buttons */}
         <div className="flex flex-wrap gap-3">
           <button
             onClick={() => onOpenModal(movie.id)}
@@ -298,8 +299,6 @@ function HeroSection({ movies, onOpenModal, onToggleWatchlist, watchlistIds, has
           )}
         </div>
       </div>
-
-      {/* Slide dots — bottom-right */}
       {total > 1 && (
         <div className="absolute bottom-5 right-10 flex gap-1.5" style={{ zIndex: 3 }}>
           {Array.from({ length: total }).map((_, i) => (
@@ -307,10 +306,7 @@ function HeroSection({ movies, onOpenModal, onToggleWatchlist, watchlistIds, has
               key={i}
               onClick={() => { setCurrent(i); startInterval(); }}
               className="h-[3px] rounded-full transition-all duration-300"
-              style={{
-                width: i === current ? 20 : 8,
-                background: i === current ? '#C0392B' : 'rgba(255,255,255,0.4)',
-              }}
+              style={{ width: i === current ? 20 : 8, background: i === current ? '#C0392B' : 'rgba(255,255,255,0.4)' }}
             />
           ))}
         </div>
@@ -324,115 +320,47 @@ function HeroSection({ movies, onOpenModal, onToggleWatchlist, watchlistIds, has
 export function DiscoverTab() {
   const user = getUser();
 
-  const [selectedMovieId,  setSelectedMovieId]  = useState<string | null>(null);
-  const [activeProvider,   setActiveProvider]    = useState('all');
-  const [hoveredProvider,  setHoveredProvider]   = useState<string | null>(null);
-  // Re-read services from localStorage and react to changes (e.g. user updates in Settings)
-  const [userServices, setUserServices] = useState<Record<string, boolean>>(getServices);
+  // All catalogue + user rows come from the persistent context
+  const {
+    heroMovies, trendingMovies, newReleases, topRated, classics,
+    actionMovies, comedyMovies, horrorMovies, scifiMovies, acclaimed, comingSoon,
+    recommended, userWatched, recentSpins,
+    watchlistIds, setWatchlistIds,
+    providerCache, cacheProvider,
+  } = useDiscover();
 
+  const [selectedMovieId, setSelectedMovieId] = useState<string | null>(null);
+  const [activeProvider,  setActiveProvider]   = useState('all');
+  const [hoveredProvider, setHoveredProvider]  = useState<string | null>(null);
+
+  const [userServices, setUserServices] = useState<Record<string, boolean>>(getServices);
   useEffect(() => {
     const handler = () => setUserServices(getServices());
     window.addEventListener('storage', handler);
     return () => window.removeEventListener('storage', handler);
   }, []);
 
-  // Only show provider tabs the user actually has (always keep "All")
   const visibleProviderTabs = PROVIDER_TABS.filter(
     (p: { id: string; label: string }) =>
       p.id === 'all' || (PROVIDER_KEY[p.id] && userServices[PROVIDER_KEY[p.id]])
   );
 
-  // Client-side service filter — no longer driven by URL param, just a passthrough
-  const applyServiceFilter = (movies: Movie[]): Movie[] => movies;
-
-  // General rows
-  const [heroMovies,       setHeroMovies]        = useState<Movie[]>([]);
-  const [trendingMovies,   setTrendingMovies]    = useState<Movie[]>([]);
-  const [newReleases,      setNewReleases]       = useState<Movie[]>([]);
-  const [topRated,         setTopRated]          = useState<Movie[]>([]);
-  const [classics,         setClassics]          = useState<Movie[]>([]);
-  const [actionMovies,     setActionMovies]      = useState<Movie[]>([]);
-  const [comedyMovies,     setComedyMovies]      = useState<Movie[]>([]);
-  const [horrorMovies,     setHorrorMovies]      = useState<Movie[]>([]);
-  const [scifiMovies,      setScifiMovies]       = useState<Movie[]>([]);
-  const [acclaimed,        setAcclaimed]         = useState<Movie[]>([]);
-  const [comingSoon,       setComingSoon]        = useState<Movie[]>([]);
-  const [recommended,      setRecommended]       = useState<Movie[]>([]);
-
-  // User rows
-  const [userWatched,      setUserWatched]       = useState<WatchedMovie[]>([]);
-  const [recentSpins,      setRecentSpins]       = useState<Movie[]>([]);
-  const [watchlistIds,     setWatchlistIds]      = useState<string[]>([]);
-  const [loading,          setLoading]           = useState(true);
-
-  // Provider rows
-  const [providerPopular,  setProviderPopular]   = useState<Movie[]>([]);
-  const [providerTopRated, setProviderTopRated]  = useState<Movie[]>([]);
-  const [providerNew,      setProviderNew]       = useState<Movie[]>([]);
-  const [providerLoading,  setProviderLoading]   = useState(false);
-
-  // ── Initial load ───────────────────────────────────────────────
-  useEffect(() => {
-    let cancelled = false;
-
-    const load = async () => {
-      const [trending, nowPlaying, topRatedData, classicsData] = await Promise.all([
-        getTrendingMovies('week').catch(() => [] as Movie[]),
-        getNowPlayingMovies().catch(() => [] as Movie[]),
-        getTopRatedMovies().catch(() => [] as Movie[]),
-        discoverMovies({ year_to: '1994', sort_by: 'rating', min_rating: 7 }).catch(() => [] as Movie[]),
-      ]);
-      if (cancelled) return;
-
-      setHeroMovies(trending.slice(0, 5));
-      setTrendingMovies(trending.slice(0, ROW_LIMIT));
-      setNewReleases(nowPlaying.slice(0, ROW_LIMIT));
-      setTopRated(topRatedData.slice(0, ROW_LIMIT));
-      setClassics(classicsData.slice(0, ROW_LIMIT));
-      setLoading(false);
-
-      // Genre rows in background
-      Promise.all([
-        discoverMovies({ genre_id: '28|12', sort_by: 'popularity' }).catch(() => [] as Movie[]),
-        discoverMovies({ genre_id: '35',    sort_by: 'popularity' }).catch(() => [] as Movie[]),
-        discoverMovies({ genre_id: '27',    sort_by: 'popularity' }).catch(() => [] as Movie[]),
-        discoverMovies({ genre_id: '878',   sort_by: 'popularity' }).catch(() => [] as Movie[]),
-        discoverMovies({ sort_by: 'rating', min_rating: 8 }).catch(() => [] as Movie[]),
-        getUpcomingMovies().catch(() => [] as Movie[]),
-      ]).then(([action, comedy, horror, scifi, acc, upcoming]) => {
-        if (cancelled) return;
-        setActionMovies(action.slice(0, ROW_LIMIT));
-        setComedyMovies(comedy.slice(0, ROW_LIMIT));
-        setHorrorMovies(horror.slice(0, ROW_LIMIT));
-        setScifiMovies(scifi.slice(0, ROW_LIMIT));
-        setAcclaimed(acc.slice(0, ROW_LIMIT));
-        setComingSoon(upcoming.slice(0, ROW_LIMIT));
-      });
-
-      if (user) {
-        getWatchLater(user.user_id).then(ids => { if (!cancelled) setWatchlistIds(ids); });
-
-        getWatchedMovies(user.user_id).then(watched => {
-          if (cancelled || !watched.length) return;
-          setUserWatched(watched);
-          getMovieRecommendations(watched[0].movie_id).then(recs => {
-            if (!cancelled) setRecommended(recs.slice(0, ROW_LIMIT));
-          });
-        });
-
-        getRouletteHistory(user.user_id, ROW_LIMIT).then(spins => {
-          if (!cancelled) setRecentSpins(spins.map(spinToMovie));
-        });
-      }
-    };
-
-    load();
-    return () => { cancelled = true; };
-  }, []);
-
   // ── Provider rows ──────────────────────────────────────────────
+  const [providerLoading,  setProviderLoading]  = useState(false);
+  const [providerPopular,  setProviderPopular]  = useState<Movie[]>([]);
+  const [providerTopRated, setProviderTopRated] = useState<Movie[]>([]);
+  const [providerNew,      setProviderNew]      = useState<Movie[]>([]);
+
   useEffect(() => {
     if (activeProvider === 'all') return;
+    // Serve from context cache if we've fetched this provider before
+    const cached = providerCache[activeProvider];
+    if (cached) {
+      setProviderPopular(cached.popular);
+      setProviderTopRated(cached.topRated);
+      setProviderNew(cached.newMovies);
+      return;
+    }
     const key = PROVIDER_KEY[activeProvider];
     if (!key) return;
     setProviderLoading(true);
@@ -442,12 +370,18 @@ export function DiscoverTab() {
       discoverMovies({ services_filter: sf, sort_by: 'rating'     }).catch(() => [] as Movie[]),
       discoverMovies({ services_filter: sf, sort_by: 'newest'     }).catch(() => [] as Movie[]),
     ]).then(([pop, top, newM]) => {
-      setProviderPopular(pop.slice(0, ROW_LIMIT));
-      setProviderTopRated(top.slice(0, ROW_LIMIT));
-      setProviderNew(newM.slice(0, ROW_LIMIT));
+      const rows: ProviderRows = {
+        popular:   pop.slice(0, ROW_LIMIT),
+        topRated:  top.slice(0, ROW_LIMIT),
+        newMovies: newM.slice(0, ROW_LIMIT),
+      };
+      cacheProvider(activeProvider, rows);
+      setProviderPopular(rows.popular);
+      setProviderTopRated(rows.topRated);
+      setProviderNew(rows.newMovies);
       setProviderLoading(false);
     });
-  }, [activeProvider]);
+  }, [activeProvider, providerCache, cacheProvider]);
 
   // ── Derived ────────────────────────────────────────────────────
   const top10 = useMemo<Movie[]>(() =>
@@ -477,23 +411,23 @@ export function DiscoverTab() {
     }
   }
 
-  if (loading) {
-    return <div className="flex items-center justify-center py-32 text-gray-500">Loading…</div>;
-  }
-
   const isProviderView = activeProvider !== 'all';
 
   return (
     <div>
 
-      {/* ── Hero: full-bleed, cancels container py-8 ── */}
-      <HeroSection
-        movies={heroMovies}
-        onOpenModal={setSelectedMovieId}
-        onToggleWatchlist={handleToggleWatchlist}
-        watchlistIds={watchlistIds}
-        hasUser={!!user}
-      />
+      {/* ── Hero ── */}
+      {heroMovies === null ? (
+        <HeroSkeleton />
+      ) : (
+        <HeroSection
+          movies={heroMovies}
+          onOpenModal={setSelectedMovieId}
+          onToggleWatchlist={handleToggleWatchlist}
+          watchlistIds={watchlistIds}
+          hasUser={!!user}
+        />
+      )}
 
       {/* ── Provider tab bar ── */}
       <div className="mt-14 mb-8" style={{ overflow: 'visible' }}>
@@ -507,7 +441,6 @@ export function DiscoverTab() {
             const isHovered = hoveredProvider === p.id;
             const logo      = p.id !== 'all' ? PROVIDER_LOGOS[p.id] : null;
             const lit       = isActive || isHovered;
-
             return (
               <button
                 key={p.id}
@@ -516,45 +449,22 @@ export function DiscoverTab() {
                 onMouseLeave={() => setHoveredProvider(null)}
                 className="flex-shrink-0 flex flex-col items-center gap-2 transition-all duration-250"
                 style={{
-                  background: 'none',
-                  border:     'none',
-                  outline:    'none',
-                  padding:    '4px 0 8px',
-                  transform:  isHovered ? 'translateY(-4px) scale(1.08)' : 'translateY(0) scale(1)',
-                  opacity:    lit ? 1 : 0.55,
+                  background: 'none', border: 'none', outline: 'none', padding: '4px 0 8px',
+                  transform: isHovered ? 'translateY(-4px) scale(1.08)' : 'translateY(0) scale(1)',
+                  opacity: lit ? 1 : 0.55,
                 }}
               >
                 {logo ? (
-                  <img
-                    src={logo}
-                    alt={p.label}
-                    className="rounded-2xl object-cover"
-                    style={{
-                      width:     128,
-                      height:    128,
-                      boxShadow: lit ? `0 0 24px ${color}99` : 'none',
-                      transition: 'box-shadow 0.25s',
-                    }}
+                  <img src={logo} alt={p.label} className="rounded-2xl object-cover"
+                    style={{ width: 128, height: 128, boxShadow: lit ? `0 0 24px ${color}99` : 'none', transition: 'box-shadow 0.25s' }}
                   />
                 ) : (
                   <Layers style={{ width: 80, height: 80, color: lit ? color : '#6b7280' }} />
                 )}
-                <span
-                  className="text-[11px] font-semibold tracking-wide"
-                  style={{ color: lit ? '#fff' : '#9ca3af' }}
-                >
+                <span className="text-[11px] font-semibold tracking-wide" style={{ color: lit ? '#fff' : '#9ca3af' }}>
                   {p.label}
                 </span>
-                {/* active underline */}
-                <div
-                  style={{
-                    height:     2,
-                    width:      isActive ? '100%' : 0,
-                    background: color,
-                    borderRadius: 1,
-                    transition: 'width 0.25s',
-                  }}
-                />
+                <div style={{ height: 2, width: isActive ? '100%' : 0, background: color, borderRadius: 1, transition: 'width 0.25s' }} />
               </button>
             );
           })}
@@ -563,7 +473,6 @@ export function DiscoverTab() {
 
       {/* ── Movie rows ── */}
       <div>
-
         {isProviderView ? (
           providerLoading ? (
             <div className="text-gray-500 text-center py-16 text-sm">Loading {activeProvider}…</div>
@@ -580,34 +489,31 @@ export function DiscoverTab() {
         ) : (
           <>
             {user && top10.length > 0 && (
-              <MovieRow title="Your Top 10" movies={applyServiceFilter(top10)} onMovieClick={setSelectedMovieId} />
+              <MovieRow title="Your Top 10"           movies={top10}          onMovieClick={setSelectedMovieId} />
             )}
-            {user && recentSpins.length > 0 && (
-              <MovieRow title="Your Recent Spins" movies={applyServiceFilter(recentSpins)} onMovieClick={setSelectedMovieId} />
+            {user && recentSpins !== null && recentSpins.length > 0 && (
+              <MovieRow title="Your Recent Spins"     movies={recentSpins}    onMovieClick={setSelectedMovieId} />
             )}
-            {user && recommended.length > 0 && (
-              <MovieRow title="Recommended Watches" movies={applyServiceFilter(recommended)} onMovieClick={setSelectedMovieId} />
+            {user && (
+              <MovieRow title="Recommended Watches"   movies={recommended}    onMovieClick={setSelectedMovieId} />
             )}
-
-            <MovieRow title="Trending Now"         movies={applyServiceFilter(trendingMovies)} onMovieClick={setSelectedMovieId} />
-            <MovieRow title="New Releases"         movies={applyServiceFilter(newReleases)}    onMovieClick={setSelectedMovieId} />
-            <MovieRow title="Top Rated"            movies={applyServiceFilter(topRated)}       onMovieClick={setSelectedMovieId} />
-            <MovieRow title="Classics"             movies={applyServiceFilter(classics)}       onMovieClick={setSelectedMovieId} />
-            <MovieRow title="Action & Adventure"   movies={applyServiceFilter(actionMovies)}   onMovieClick={setSelectedMovieId} />
-            <MovieRow title="Comedy"               movies={applyServiceFilter(comedyMovies)}   onMovieClick={setSelectedMovieId} />
-            <MovieRow title="Horror"               movies={applyServiceFilter(horrorMovies)}   onMovieClick={setSelectedMovieId} />
-            <MovieRow title="Sci-Fi"               movies={applyServiceFilter(scifiMovies)}    onMovieClick={setSelectedMovieId} />
-            <MovieRow title="Critically Acclaimed" movies={applyServiceFilter(acclaimed)}      onMovieClick={setSelectedMovieId} />
-            <MovieRow title="Coming Soon"          movies={applyServiceFilter(comingSoon)}     onMovieClick={setSelectedMovieId} />
+            <MovieRow title="Trending Now"            movies={trendingMovies} onMovieClick={setSelectedMovieId} />
+            <MovieRow title="New Releases"            movies={newReleases}    onMovieClick={setSelectedMovieId} />
+            <MovieRow title="Top Rated"               movies={topRated}       onMovieClick={setSelectedMovieId} />
+            <MovieRow title="Classics"                movies={classics}       onMovieClick={setSelectedMovieId} />
+            <MovieRow title="Action & Adventure"      movies={actionMovies}   onMovieClick={setSelectedMovieId} />
+            <MovieRow title="Comedy"                  movies={comedyMovies}   onMovieClick={setSelectedMovieId} />
+            <MovieRow title="Horror"                  movies={horrorMovies}   onMovieClick={setSelectedMovieId} />
+            <MovieRow title="Sci-Fi"                  movies={scifiMovies}    onMovieClick={setSelectedMovieId} />
+            <MovieRow title="Critically Acclaimed"    movies={acclaimed}      onMovieClick={setSelectedMovieId} />
+            <MovieRow title="Coming Soon"             movies={comingSoon}     onMovieClick={setSelectedMovieId} />
           </>
         )}
-
       </div>
 
       {selectedMovieId && (
         <MovieDetailModal movieId={selectedMovieId} onClose={() => setSelectedMovieId(null)} />
       )}
-
     </div>
   );
 }

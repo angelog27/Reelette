@@ -126,11 +126,13 @@ def verify_user(email, password):
             return {'success': False, 'message': 'Invalid email or password'}
 
         user = auth.get_user_by_email(email)
+        custom_token = auth.create_custom_token(data['localId']).decode('utf-8')
         return {
             'success': True,
             'user_id': data['localId'],
             'email': data['email'],
-            'username': user.display_name
+            'username': user.display_name,
+            'customToken': custom_token,
         }
     except Exception as e:
         return {
@@ -415,13 +417,22 @@ def add_watched_movie(user_id, movie, user_rating, comment=''):
         return {'success': False, 'message': str(e)}
 
 
-#Returns a users watched movies.
-def get_watched_movies(user_id):
+#Returns a users watched movies with optional limit and cursor-based pagination.
+def get_watched_movies(user_id, limit=20, start_after_time=None):
+    from datetime import datetime as _dt
     try:
-        docs = (db.collection('users').document(user_id)
-                  .collection('watched_movies')
-                  .order_by('watched_at', direction=firestore.Query.DESCENDING)
-                  .stream())
+        q = (db.collection('users').document(user_id)
+               .collection('watched_movies')
+               .order_by('watched_at', direction=firestore.Query.DESCENDING)
+               .limit(limit))
+        if start_after_time:
+            try:
+                # Accept ISO strings with or without timezone suffix
+                cursor_dt = _dt.fromisoformat(start_after_time.replace('Z', '+00:00'))
+                q = q.start_after(cursor_dt)
+            except (ValueError, AttributeError):
+                pass
+        docs = q.stream()
         return [doc.to_dict() for doc in docs]
     except Exception as e:
         print(f"Error getting watched movies: {e}")

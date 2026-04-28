@@ -3,6 +3,8 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
 import time
+import json
+from datetime import datetime, timezone
 
 try:
     from config import SECRET_KEY
@@ -103,7 +105,7 @@ def format_movie(movie_data, streaming_service=''):
         'year': year,
         'genres': [g for g in genres if g],
         'rating': round(movie_data.get('vote_average', 0), 1),
-        'poster': get_poster_url(movie_data.get('poster_path')) or '',
+        'poster': get_poster_url(movie_data.get('poster_path'), 'w185') or '',
         'backdrop': get_backdrop_url(movie_data.get('backdrop_path')) or '',
         'overview': movie_data.get('overview', ''),
         'streamingService': streaming_service,
@@ -318,10 +320,15 @@ def search():
     page = request.args.get('page', 1, type=int)
     if not query:
         return jsonify({'movies': []})
+    cache_key = f'search:{query.lower()}:{page}'
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return jsonify({'movies': cached})
     data = search_movies(query, page=page)
     if not data:
         return jsonify({'movies': []})
     movies = fetch_movies_with_streaming(data.get('results', []))
+    _cache_set(cache_key, movies, _MOVIE_LIST_TTL)
     return jsonify({'movies': movies})
 
 SORT_MAP = {
@@ -334,6 +341,12 @@ SORT_MAP = {
 @app.route('/api/movies/discover', methods=['POST'])
 def discover():
     data = request.get_json() or {}
+
+    # Cache key is the full sorted request body — same filters always hit the same entry
+    cache_key = f'discover:{json.dumps(data, sort_keys=True, default=str)}'
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return jsonify({'movies': cached})
 
     genre_id   = data.get('genre_id') or None
     year_from  = data.get('year_from') or None
@@ -386,6 +399,7 @@ def discover():
     if not result:
         return jsonify({'movies': []})
     movies = fetch_movies_with_streaming(result.get('results', []))
+    _cache_set(cache_key, movies, _MOVIE_LIST_TTL)
     return jsonify({'movies': movies})
 
 @app.route('/api/movies/<int:movie_id>', methods=['GET'])
@@ -504,11 +518,13 @@ def remove_from_user_watchlist(user_id, movie_id):
 
 @app.route('/api/watched/<user_id>', methods=['GET'])
 def get_user_watched(user_id):
-    cache_key = f'watched:{user_id}'
+    limit  = request.args.get('limit', 20, type=int)
+    cursor = request.args.get('cursor')          # ISO watched_at of last item from previous page
+    cache_key = f'watched:{user_id}:{limit}:{cursor or ""}'
     cached = _cache_get(cache_key)
-    if cached:
+    if cached is not None:
         return jsonify({'movies': cached})
-    movies = serialize_timestamps(get_watched_movies(user_id))
+    movies = serialize_timestamps(get_watched_movies(user_id, limit=limit, start_after_time=cursor))
     _cache_set(cache_key, movies, _WATCHED_TTL)
     return jsonify({'movies': movies})
 
@@ -899,6 +915,14 @@ def friends_roulette_history_route(user_id):
     result = serialize_timestamps(friends_history)
     _cache_set(cache_key, result, _FRIENDS_HISTORY_TTL)
     return jsonify({'friendsHistory': result})
+
+
+# ── Health check ─────────────────────────────────────────────────
+# No auth, no DB, no TMDB — used by UptimeRobot to keep the server warm.
+
+@app.route('/api/health', methods=['GET'])
+def health():
+    return jsonify({'status': 'ok', 'timestamp': datetime.now(timezone.utc).isoformat()}), 200
 
 
 if __name__ == '__main__':

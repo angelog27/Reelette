@@ -11,6 +11,8 @@ import {
 } from '../services/api';
 import { GENRES } from '../constants/genres';
 import { MovieDetailModal } from './MovieDetailModal';
+import { DiscoverProvider } from '../contexts/DiscoverContext';
+import type { QuerySnapshot, DocumentData } from 'firebase/firestore';
 
 
 type TabLink = { id: string; label: string; path: string; imageLogo?: string };
@@ -142,11 +144,13 @@ export function HomePage() {
     return () => document.removeEventListener('mousedown', handler);
   }, [notifOpen]);
 
-  // Poll notifications every 30 s
+  // Real-time notifications via Firestore onSnapshot; fallback to 60s polling
   useEffect(() => {
     if (!currentUserId) return;
-    const fetch = async () => {
-      const notifs = await getNotifications(currentUserId);
+    let unsubscribe: (() => void) | null = null;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+
+    const applyNotifs = (notifs: AppNotification[]) => {
       const newUnread = notifs.filter(n => !n.read).length;
       if (prevUnreadRef.current > 0 && newUnread > prevUnreadRef.current) {
         const newest = notifs.find(n => !n.read);
@@ -155,9 +159,44 @@ export function HomePage() {
       prevUnreadRef.current = newUnread;
       setNotifications(notifs);
     };
-    fetch();
-    const id = setInterval(fetch, 30_000);
-    return () => clearInterval(id);
+
+    (async () => {
+      const [{ signInFirebase }, { db }, { collection, query, orderBy, limit, onSnapshot }] =
+        await Promise.all([
+          import('../lib/firebase'),
+          import('../lib/firebase'),
+          import('firebase/firestore'),
+        ]);
+
+      const authed = await signInFirebase();
+      if (authed) {
+        const q = query(
+          collection(db, 'users', currentUserId, 'notifications'),
+          orderBy('created_at', 'desc'),
+          limit(30),
+        );
+        unsubscribe = onSnapshot(q, (snapshot: QuerySnapshot<DocumentData>) => {
+          const notifs: AppNotification[] = snapshot.docs.map(doc => ({
+            notification_id: doc.id,
+            ...doc.data(),
+          } as AppNotification));
+          applyNotifs(notifs);
+        }, () => {});
+      } else {
+        // Firebase auth unavailable — fall back to REST polling at 60s
+        const poll = async () => {
+          const notifs = await getNotifications(currentUserId);
+          applyNotifs(notifs);
+        };
+        poll();
+        intervalId = setInterval(poll, 60_000);
+      }
+    })();
+
+    return () => {
+      unsubscribe?.();
+      if (intervalId !== null) clearInterval(intervalId);
+    };
   }, [currentUserId]);
 
   // ── Debounced search ────────────────────────────────────────────
@@ -555,11 +594,13 @@ export function HomePage() {
       </nav>
 
       <main className="container mx-auto px-6 py-8">
-        <Suspense fallback={
-          <div className="flex items-center justify-center py-24 text-gray-500">Loading…</div>
-        }>
-          <Outlet />
-        </Suspense>
+        <DiscoverProvider>
+          <Suspense fallback={
+            <div className="flex items-center justify-center py-24 text-gray-500">Loading…</div>
+          }>
+            <Outlet />
+          </Suspense>
+        </DiscoverProvider>
       </main>
 
       {/* Movie detail modal triggered from search */}

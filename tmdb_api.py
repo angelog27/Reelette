@@ -71,6 +71,10 @@ def get_movie_details(movie_id):
 
 #Get top-rated movies of all time from the API. This can be used to show an "All Time Greats" section.
 def get_top_rated_movies(page=1):
+    cache_key = f"top_rated:{page}"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
     url = f"{TMDB_BASE_URL}/movie/top_rated"
     params = {
         "api_key": TMDB_API_KEY,
@@ -80,7 +84,9 @@ def get_top_rated_movies(page=1):
     try:
         response = requests.get(url, params=params)
         response.raise_for_status()
-        return response.json()
+        result = response.json()
+        _cache_set(cache_key, result, 1200)  # 20 min
+        return result
     except requests.exceptions.RequestException as e:
         print(f"Error getting top rated movies: {e}")
         return None
@@ -88,17 +94,22 @@ def get_top_rated_movies(page=1):
 
 #Get currently popular movies from the API, with pagination support. This can be used to show trending movies on the home page or in a "Popular Movies" section.
 def get_popular_movies(page=1):
+    cache_key = f"popular:{page}"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
     url = f"{TMDB_BASE_URL}/movie/popular"
     params = {
         "api_key": TMDB_API_KEY,
         "language": "en-US",
         "page": page
     }
-    
     try:
         response = requests.get(url, params=params)
         response.raise_for_status()
-        return response.json()
+        result = response.json()
+        _cache_set(cache_key, result, 1200)  # 20 min
+        return result
     except requests.exceptions.RequestException as e:
         print(f"Error getting popular movies: {e}")
         return None
@@ -196,17 +207,21 @@ def get_movie_genres(movie_details):
 
 #Get the actual streaming providers for a movie, which are returned as a list of provider objects with id, name, and logo. This can be used to show users where they can watch a movie online.
 def get_streaming_providers(movie_id):
+    cache_key = f"providers:{movie_id}"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
     url = f"{TMDB_BASE_URL}/movie/{movie_id}/watch/providers"
     params = {
         "api_key": TMDB_API_KEY
     }
-    
     try:
         response = requests.get(url, params=params)
         response.raise_for_status()
         data = response.json()
-        # Return US streaming providers
-        return data.get('results', {}).get('US', {})
+        result = data.get('results', {}).get('US', {})
+        _cache_set(cache_key, result, 21600)  # 6 h — matches _PROVIDER_TTL in app.py
+        return result
     except requests.exceptions.RequestException as e:
         print(f"Error getting streaming providers: {e}")
         return None
@@ -229,15 +244,20 @@ def get_genres():
 
 #Get trending movies (day or week) from the API, which can be used to show users what movies are currently popular and trending.
 def get_trending_movies(time_window="week"):
+    cache_key = f"trending:{time_window}"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
     url = f"{TMDB_BASE_URL}/trending/movie/{time_window}"
     params = {
         "api_key": TMDB_API_KEY
     }
-    
     try:
         response = requests.get(url, params=params)
         response.raise_for_status()
-        return response.json()
+        result = response.json()
+        _cache_set(cache_key, result, 1200)  # 20 min
+        return result
     except requests.exceptions.RequestException as e:
         print(f"Error getting trending movies: {e}")
         return None
@@ -247,6 +267,7 @@ def get_poster_url(poster_path, size="w500"):
     if poster_path:
         return f"{TMDB_IMAGE_BASE}/{size}{poster_path}"
     return None
+
 
 #Returns the 5 most prominent actors in a movie, can be adjusted for more than 5
 def get_movie_actors(movie_details, max_actors=5):
