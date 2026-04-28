@@ -19,6 +19,7 @@ import {
 } from '../services/api';
 import { UserProfileModal } from './UserProfileModal';
 import { MovieDetailModal } from './MovieDetailModal';
+import { MessagesPanel } from './MessagesPanel';
 
 // ── Constants ──────────────────────────────────────────────────
 const SERVICE_KEYS = ['netflix', 'hulu', 'disneyPlus', 'hboMax', 'amazonPrime', 'appleTV', 'paramount', 'peacock'] as const;
@@ -1531,7 +1532,8 @@ export function SocialTab() {
         </div>
       </div>
 
-      <div className="max-w-2xl mx-auto">
+      <div className="flex gap-4 px-4 items-start justify-center">
+      <div className="flex-1 min-w-0 max-w-2xl">
 
         {/* Primary tab bar */}
         <div className="flex border-b border-[#1A1A1A]">
@@ -1622,6 +1624,12 @@ export function SocialTab() {
           </div>
         )}
 
+      </div>
+
+        {/* Messages sidebar */}
+        <div className="w-72 shrink-0">
+          <MessagesPanel friends={friends} />
+        </div>
       </div>
 
       {/* New Post Dialog */}

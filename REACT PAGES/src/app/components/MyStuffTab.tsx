@@ -63,18 +63,18 @@ function sortWatchLater(list: WatchLaterMovie[], mode: SortMode): WatchLaterMovi
 const FILM_HOLES = Array.from({ length: 48 });
 
 export function MyStuffTab() {
-  const [activeTab, setActiveTab]           = useState<Tab>('watched');
-  const [movies, setMovies]                 = useState<WatchedMovie[]>([]);
-  const [watchLater, setWatchLater]         = useState<WatchLaterMovie[]>([]);
-  const [recentSpins, setRecentSpins]       = useState<RouletteSpin[]>([]);
-  const [loading, setLoading]               = useState(true);
-  const [hasMore, setHasMore]               = useState(false);
-  const [cursor, setCursor]                 = useState<string | undefined>(undefined);
-  const [loadingMore, setLoadingMore]       = useState(false);
+  const PAGE_SIZE = 20;
+
+  const [activeTab, setActiveTab]             = useState<Tab>('watched');
+  const [movies, setMovies]                   = useState<WatchedMovie[]>([]);
+  const [watchLater, setWatchLater]           = useState<WatchLaterMovie[]>([]);
+  const [recentSpins, setRecentSpins]         = useState<RouletteSpin[]>([]);
+  const [loading, setLoading]                 = useState(true);
+  const [page, setPage]                       = useState(1);
   const [selectedMovieId, setSelectedMovieId] = useState<string | null>(null);
-  const [sortMode, setSortMode]             = useState<SortMode>('rating-desc');
-  const [sortOpen, setSortOpen]             = useState(false);
-  const sortRef                             = useRef<HTMLDivElement>(null);
+  const [sortMode, setSortMode]               = useState<SortMode>('rating-desc');
+  const [sortOpen, setSortOpen]               = useState(false);
+  const sortRef                               = useRef<HTMLDivElement>(null);
 
   const movieDetailsCacheRef = useRef<Map<string, WatchLaterMovie>>(new Map());
   const user = getUser();
@@ -88,27 +88,8 @@ export function MyStuffTab() {
     return () => document.removeEventListener('mousedown', h);
   }, []);
 
+  // Always load the full library so sorting works across all pages
   function loadWatched() {
-    if (!user) { setLoading(false); return; }
-    setLoading(true);
-    setCursor(undefined);
-    setHasMore(false);
-    Promise.all([
-      getWatchedMovies(user.user_id, 20),
-      getRouletteHistory(user.user_id, 20),
-    ]).then(([m, spins]) => {
-      setMovies(m);
-      setRecentSpins(spins);
-      // Guard against movies with no watched_at — cursor must be a real value
-      const lastWatchedAt = m.length === 20 ? (m[m.length - 1]?.watched_at || null) : null;
-      setHasMore(!!lastWatchedAt);
-      setCursor(lastWatchedAt ?? undefined);
-      setLoading(false);
-    });
-  }
-
-  // Stats tab needs all movies for accurate top-10 / charts — fetches up to 500
-  function loadAllForStats() {
     if (!user) { setLoading(false); return; }
     setLoading(true);
     Promise.all([
@@ -117,24 +98,9 @@ export function MyStuffTab() {
     ]).then(([m, spins]) => {
       setMovies(m);
       setRecentSpins(spins);
-      setHasMore(false);
-      setCursor(undefined);
+      setPage(1);
       setLoading(false);
     });
-  }
-
-  async function loadMore() {
-    if (!user || !cursor || loadingMore) return;
-    setLoadingMore(true);
-    try {
-      const more = await getWatchedMovies(user.user_id, 20, cursor);
-      setMovies(prev => [...prev, ...more]);
-      const lastWatchedAt = more.length === 20 ? (more[more.length - 1]?.watched_at || null) : null;
-      setHasMore(!!lastWatchedAt);
-      setCursor(lastWatchedAt ?? undefined);
-    } finally {
-      setLoadingMore(false);
-    }
   }
 
   function loadWatchLater() {
@@ -166,7 +132,7 @@ export function MyStuffTab() {
 
   useEffect(() => {
     if (activeTab === 'watched') loadWatched();
-    else if (activeTab === 'stats') loadAllForStats();
+    else if (activeTab === 'stats') loadWatched();
     else loadWatchLater();
   }, [activeTab]);
 
@@ -178,7 +144,9 @@ export function MyStuffTab() {
     setActiveTab(tab);
   };
 
-  const sortedMovies    = sortWatched(movies, sortMode);
+  const sortedMovies     = sortWatched(movies, sortMode);
+  const totalPages       = Math.max(1, Math.ceil(sortedMovies.length / PAGE_SIZE));
+  const pagedMovies      = sortedMovies.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const sortedWatchLater = sortWatchLater(watchLater, sortMode);
 
   const visibleSorts = activeTab === 'watched'
@@ -311,7 +279,7 @@ export function MyStuffTab() {
                 {visibleSorts.map(opt => (
                   <button
                     key={opt.value}
-                    onClick={() => { setSortMode(opt.value); setSortOpen(false); }}
+                    onClick={() => { setSortMode(opt.value); setPage(1); setSortOpen(false); }}
                     className="w-full flex items-center justify-between gap-2 px-4 py-2.5 text-sm transition-colors hover:bg-white/[0.04] text-left"
                   >
                     <span className={sortMode === opt.value ? 'text-white font-semibold' : 'text-gray-400'}>
@@ -340,7 +308,7 @@ export function MyStuffTab() {
           ) : (
             <>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-              {sortedMovies.map(m => (
+              {pagedMovies.map(m => (
                 <button
                   key={m.movie_id}
                   onClick={() => setSelectedMovieId(m.movie_id)}
@@ -379,14 +347,33 @@ export function MyStuffTab() {
                 </button>
               ))}
             </div>
-            {hasMore && (
-              <div className="flex justify-center mt-8">
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center gap-1 mt-8 flex-wrap">
                 <button
-                  onClick={loadMore}
-                  disabled={loadingMore}
-                  className="px-6 py-2.5 rounded-full text-sm font-medium border border-[#2A2A2A] bg-[#111] text-gray-300 hover:text-white hover:border-[#C0392B]/50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-3 py-1.5 rounded-lg text-sm border border-[#2A2A2A] bg-[#111] text-gray-400 hover:text-white hover:border-[#333] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
-                  {loadingMore ? 'Loading…' : 'Load More'}
+                  ‹
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p)}
+                    className="px-3 py-1.5 rounded-lg text-sm border transition-colors"
+                    style={p === page
+                      ? { background: '#C0392B', borderColor: '#C0392B', color: '#fff' }
+                      : { background: '#111', borderColor: '#2A2A2A', color: '#9ca3af' }}
+                  >
+                    {p}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="px-3 py-1.5 rounded-lg text-sm border border-[#2A2A2A] bg-[#111] text-gray-400 hover:text-white hover:border-[#333] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >
+                  ›
                 </button>
               </div>
             )}

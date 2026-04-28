@@ -1100,6 +1100,99 @@ def mark_all_notifications_read(user_id):
         return {'success': False, 'message': str(e)}
 
 
+# ── Direct Messages ───────────────────────────────────────────────
+
+def _conv_id(uid1, uid2):
+    return '_'.join(sorted([uid1, uid2]))
+
+def get_or_create_conversation(uid1, uid2, username1, username2):
+    try:
+        conv_id = _conv_id(uid1, uid2)
+        ref = db.collection('conversations').document(conv_id)
+        if not ref.get().exists:
+            ref.set({
+                'participants': [uid1, uid2],
+                'usernames': {uid1: username1, uid2: username2},
+                'last_message': '',
+                'last_sender_id': '',
+                'updated_at': datetime.now(),
+                'unread': {uid1: 0, uid2: 0},
+            })
+        return {'success': True, 'conversation_id': conv_id}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+def get_conversations(user_id):
+    try:
+        docs = (db.collection('conversations')
+                  .where('participants', 'array_contains', user_id)
+                  .order_by('updated_at', direction=firestore.Query.DESCENDING)
+                  .limit(30)
+                  .stream())
+        result = []
+        for doc in docs:
+            d = doc.to_dict()
+            result.append({
+                'conversation_id': doc.id,
+                'participants':    d.get('participants', []),
+                'usernames':       d.get('usernames', {}),
+                'last_message':    d.get('last_message', ''),
+                'last_sender_id':  d.get('last_sender_id', ''),
+                'updated_at':      d['updated_at'].isoformat() if d.get('updated_at') else '',
+                'unread':          d.get('unread', {}),
+            })
+        return result
+    except Exception as e:
+        return []
+
+def get_messages(conversation_id, limit=50):
+    try:
+        docs = (db.collection('conversations').document(conversation_id)
+                  .collection('messages')
+                  .order_by('sent_at', direction=firestore.Query.DESCENDING)
+                  .limit(limit)
+                  .stream())
+        msgs = []
+        for doc in docs:
+            d = doc.to_dict()
+            msgs.append({
+                'message_id': doc.id,
+                'sender_id':  d.get('sender_id', ''),
+                'text':       d.get('text', ''),
+                'sent_at':    d['sent_at'].isoformat() if d.get('sent_at') else '',
+            })
+        return list(reversed(msgs))  # oldest first
+    except Exception as e:
+        return []
+
+def send_message(conversation_id, sender_id, text):
+    try:
+        conv_ref = db.collection('conversations').document(conversation_id)
+        conv_doc = conv_ref.get()
+        if not conv_doc.exists:
+            return {'success': False, 'message': 'Conversation not found'}
+        participants = conv_doc.to_dict().get('participants', [])
+        msg_ref = conv_ref.collection('messages').document()
+        msg_ref.set({'sender_id': sender_id, 'text': text.strip(), 'sent_at': datetime.now()})
+        unread_update = {f'unread.{uid}': firestore.Increment(1) for uid in participants if uid != sender_id}
+        conv_ref.update({
+            'last_message': text.strip(),
+            'last_sender_id': sender_id,
+            'updated_at': datetime.now(),
+            **unread_update,
+        })
+        return {'success': True, 'message_id': msg_ref.id}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+def mark_conversation_read(conversation_id, user_id):
+    try:
+        db.collection('conversations').document(conversation_id).update({f'unread.{user_id}': 0})
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+
 # ── Quiz ──────────────────────────────────────────────────────────
 def save_quiz_result(uid, top_genre, answers):
     """Save quiz completion status and top genre to the user's Firestore document"""

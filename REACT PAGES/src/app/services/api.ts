@@ -887,6 +887,66 @@ export async function markAllNotificationsRead(user_id: string) {
   return res.json();
 }
 
+// ── Direct Messages ──────────────────────────────────────────────
+
+export interface Conversation {
+  conversation_id: string;
+  participants: string[];
+  usernames: Record<string, string>;
+  last_message: string;
+  last_sender_id: string;
+  updated_at: string;
+  unread: Record<string, number>;
+}
+
+export interface DirectMessage {
+  message_id: string;
+  sender_id: string;
+  text: string;
+  sent_at: string;
+}
+
+export function getConversations(user_id: string): Promise<Conversation[]> {
+  return fetch(`${BASE_URL}/conversations/${user_id}`)
+    .then(r => r.json())
+    .then(d => d.conversations ?? []);
+}
+
+export function openConversation(
+  uid1: string, uid2: string, username1: string, username2: string,
+): Promise<{ success: boolean; conversation_id: string }> {
+  return fetch(`${BASE_URL}/conversations/open`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ uid1, uid2, username1, username2 }),
+  }).then(r => r.json());
+}
+
+export function getDirectMessages(conversation_id: string): Promise<DirectMessage[]> {
+  return fetch(`${BASE_URL}/conversations/${conversation_id}/messages`)
+    .then(r => r.json())
+    .then(d => d.messages ?? []);
+}
+
+export function sendDirectMessage(
+  conversation_id: string, sender_id: string, text: string,
+): Promise<{ success: boolean }> {
+  return fetch(`${BASE_URL}/conversations/${conversation_id}/messages`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sender_id, text }),
+  }).then(r => r.json());
+}
+
+export function markConversationRead(conversation_id: string, user_id: string): Promise<void> {
+  return fetch(`${BASE_URL}/conversations/${conversation_id}/read`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_id }),
+  }).then(() => {});
+}
+
+
 // ── Helpers ──────────────────────────────────────────────────────
 
 

@@ -30,6 +30,7 @@ from firebase_helper import (
     get_user_public_profile, get_group_member_profiles, get_members_streaming_services,
     log_roulette_spin, get_roulette_history, get_friends_roulette_history, save_quiz_result,
     get_notifications, mark_notification_read, mark_all_notifications_read,
+    get_or_create_conversation, get_conversations, get_messages, send_message, mark_conversation_read,
 )
 from tmdb_api import (
     search_movies, discover_movies, get_popular_movies, get_movie_details,
@@ -915,6 +916,39 @@ def friends_roulette_history_route(user_id):
     result = serialize_timestamps(friends_history)
     _cache_set(cache_key, result, _FRIENDS_HISTORY_TTL)
     return jsonify({'friendsHistory': result})
+
+
+# ── Direct Messages ──────────────────────────────────────────────
+
+@app.route('/api/conversations/<user_id>', methods=['GET'])
+def get_user_conversations(user_id):
+    return jsonify({'conversations': get_conversations(user_id)})
+
+@app.route('/api/conversations/open', methods=['POST'])
+def open_conversation():
+    data = request.get_json()
+    result = get_or_create_conversation(
+        data.get('uid1'), data.get('uid2'),
+        data.get('username1', ''), data.get('username2', ''),
+    )
+    return jsonify(result)
+
+@app.route('/api/conversations/<conversation_id>/messages', methods=['GET'])
+def get_conversation_messages(conversation_id):
+    return jsonify({'messages': get_messages(conversation_id)})
+
+@app.route('/api/conversations/<conversation_id>/messages', methods=['POST'])
+def post_message(conversation_id):
+    data = request.get_json()
+    text = (data.get('text') or '').strip()
+    if not text:
+        return jsonify({'success': False, 'message': 'Empty message'}), 400
+    return jsonify(send_message(conversation_id, data.get('sender_id'), text))
+
+@app.route('/api/conversations/<conversation_id>/read', methods=['PUT'])
+def read_conversation(conversation_id):
+    data = request.get_json()
+    return jsonify(mark_conversation_read(conversation_id, data.get('user_id')))
 
 
 # ── Health check ─────────────────────────────────────────────────
