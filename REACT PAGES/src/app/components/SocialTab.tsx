@@ -529,12 +529,17 @@ function PostCard({ post, currentUserId, currentUsername, onLike, onDelete, onOp
                 </div>
               )}
               <div className="flex flex-col justify-center px-4 py-3 min-w-0 gap-1.5">
-                <span className="text-white font-semibold text-sm leading-tight line-clamp-2 group-hover:text-[#E74C3C] transition-colors">
+                <span
+                  className="text-white leading-tight line-clamp-2 group-hover:text-[#E74C3C] transition-colors"
+                  style={{ fontFamily: "'Playfair Display', Georgia, serif", fontStyle: 'italic', fontWeight: 700, fontSize: '0.9rem' }}
+                >
                   {post.movie_title}
                 </span>
                 <div className="flex items-center gap-1">
-                  <Star className="w-3.5 h-3.5 fill-yellow-500 text-yellow-500 shrink-0" />
-                  <span className="text-gray-400 text-sm">{post.rating}/10</span>
+                  <span className="text-yellow-500 text-xs font-bold tracking-wide">
+                    {'★'.repeat(Math.round(post.rating / 2))}{'☆'.repeat(5 - Math.round(post.rating / 2))}
+                  </span>
+                  <span className="text-gray-500 text-xs ml-1">{post.rating}/10</span>
                 </div>
               </div>
             </a>
@@ -1466,15 +1471,77 @@ export function SocialTab() {
     <div className="text-white -mx-6 -mt-8">
       {profileUserId && <UserProfileModal userId={profileUserId} onClose={() => setProfileUserId(null)} />}
 
+      {/* ── Cinema header ── */}
+      <div className="full-bleed relative overflow-hidden" style={{ marginBottom: 0 }}>
+        {/* Film strip — top */}
+        <div className="absolute top-0 inset-x-0 h-[22px] bg-[#0c0c0c] border-b border-[#1a1a1a] flex items-center z-20 overflow-hidden">
+          {Array.from({ length: 48 }).map((_, i) => (
+            <div key={i} className="shrink-0 flex-1 px-[3px]">
+              <div className="h-[13px] rounded-[2px] bg-[#050505]" />
+            </div>
+          ))}
+        </div>
+        {/* Film strip — bottom */}
+        <div className="absolute bottom-0 inset-x-0 h-[22px] bg-[#0c0c0c] border-t border-[#1a1a1a] flex items-center z-20 overflow-hidden">
+          {Array.from({ length: 48 }).map((_, i) => (
+            <div key={i} className="shrink-0 flex-1 px-[3px]">
+              <div className="h-[13px] rounded-[2px] bg-[#050505]" />
+            </div>
+          ))}
+        </div>
+
+        {/* Glow flush with nav */}
+        <div className="absolute inset-0 pointer-events-none"
+          style={{ background: 'radial-gradient(ellipse 60% 80% at 50% 0%, rgba(192,57,43,0.22) 0%, rgba(192,57,43,0.06) 45%, transparent 75%)' }} />
+
+        {/* Spotlight beams */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <div className="absolute" style={{ top: 0, left: '50%', width: 500, height: '110%', transform: 'translateX(-80%) rotate(-18deg)', transformOrigin: 'top center', background: 'linear-gradient(to bottom, rgba(255,255,255,0.028) 0%, transparent 65%)' }} />
+          <div className="absolute" style={{ top: 0, left: '50%', width: 500, height: '110%', transform: 'translateX(-20%) rotate(18deg)', transformOrigin: 'top center', background: 'linear-gradient(to bottom, rgba(255,255,255,0.028) 0%, transparent 65%)' }} />
+        </div>
+
+        {/* Side curtains */}
+        <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-black/70 to-transparent pointer-events-none" />
+        <div className="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-black/70 to-transparent pointer-events-none" />
+
+        {/* Content */}
+        <div className="relative z-10 flex flex-col items-center justify-center text-center py-10 px-6" style={{ paddingTop: 48, paddingBottom: 40 }}>
+          {/* NOW SCREENING badge */}
+          <div className="flex items-center gap-2 mb-4">
+            <div className="h-px w-12 bg-gradient-to-r from-transparent to-[#C0392B]/60" />
+            <span className="text-[11px] font-bold tracking-[0.25em] text-[#C0392B] uppercase" style={{ fontFamily: "'Courier New', monospace" }}>
+              Now Screening
+            </span>
+            <span className="w-1.5 h-1.5 rounded-full bg-[#C0392B] animate-pulse" />
+            <div className="h-px w-12 bg-gradient-to-l from-transparent to-[#C0392B]/60" />
+          </div>
+
+          <h1 style={{ fontFamily: "'Playfair Display', Georgia, 'Times New Roman', serif", fontStyle: 'italic', fontWeight: 700, fontSize: 'clamp(1.8rem, 3.5vw, 2.8rem)', color: '#fff', textShadow: '0 2px 24px rgba(0,0,0,0.8)', letterSpacing: '-0.01em', lineHeight: 1.15 }}>
+            The Screening Room
+          </h1>
+          <p className="mt-2 text-gray-400" style={{ fontFamily: "'Playfair Display', Georgia, serif", fontStyle: 'italic', fontSize: '1rem', letterSpacing: '0.03em' }}>
+            Share your take on what you've watched.
+          </p>
+
+          <div className="flex items-center gap-3 mt-4">
+            <div className="h-px w-12 bg-gradient-to-r from-transparent to-[#C0392B]/50" />
+            <span className="text-[#C0392B]/60 text-xs tracking-widest">✦</span>
+            <div className="h-px w-12 bg-gradient-to-l from-transparent to-[#C0392B]/50" />
+          </div>
+        </div>
+      </div>
+
       <div className="max-w-2xl mx-auto">
 
         {/* Primary tab bar */}
         <div className="flex border-b border-[#1A1A1A]">
           {tabs.map(t => (
             <button key={t.id} onClick={() => setActiveTab(t.id)}
-              className={`flex-1 flex items-center justify-center gap-2 py-4 text-[15px] font-semibold transition-colors relative ${
+              className={`flex-1 flex items-center justify-center gap-2 py-4 text-[15px] transition-colors relative ${
                 activeTab === t.id ? 'text-white' : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.03]'
-              }`}>
+              }`}
+              style={{ fontFamily: activeTab === t.id ? "'Playfair Display', Georgia, serif" : undefined, fontWeight: activeTab === t.id ? 700 : 600 }}
+            >
               {t.icon}{t.label}
               {activeTab === t.id && (
                 <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-[3px] bg-[#C0392B] rounded-full" />
@@ -1560,8 +1627,16 @@ export function SocialTab() {
       {/* New Post Dialog */}
       {showNewPostDialog && (
         <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1C1C1C] rounded-2xl border border-[#2A2A2A] p-6 max-w-lg w-full">
-            <h2 className="text-2xl text-white font-semibold mb-4">Create New Post</h2>
+          <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-6 max-w-lg w-full">
+            {/* Dialog cinema header */}
+            <div className="flex items-center gap-2 mb-1">
+              <div className="h-px flex-1 bg-gradient-to-r from-transparent to-[#C0392B]/40" />
+              <span className="text-[10px] font-bold tracking-[0.2em] text-[#C0392B] uppercase" style={{ fontFamily: "'Courier New', monospace" }}>New Review</span>
+              <div className="h-px flex-1 bg-gradient-to-l from-transparent to-[#C0392B]/40" />
+            </div>
+            <h2 className="text-center mb-5" style={{ fontFamily: "'Playfair Display', Georgia, serif", fontStyle: 'italic', fontWeight: 700, fontSize: '1.5rem', color: '#fff' }}>
+              What did you screen?
+            </h2>
             <div className="space-y-4">
               <div>
                 <label className="text-xs text-gray-500 uppercase tracking-wide mb-1.5 block">Movie</label>

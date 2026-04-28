@@ -488,6 +488,33 @@ export function RouletteTab() {
             </div>
           </div>
 
+          {/* Spin button — above the wheel */}
+          {!awaitingVote && (
+            <div className="relative w-full max-w-[340px]">
+              <div
+                className={`absolute -inset-2 rounded-full blur-xl transition-opacity duration-500 ${spinning ? "opacity-0" : "opacity-60 animate-pulse"}`}
+                style={{ backgroundColor: `${btnColor}60` }}
+              />
+              <button
+                onClick={spin}
+                disabled={spinning}
+                className="relative w-full py-5 flex items-center justify-center gap-3 disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-full transition-all shadow-xl active:scale-[0.97]"
+                style={{
+                  backgroundColor: btnColor,
+                  boxShadow: `0 8px 40px ${btnColor}60`,
+                  fontFamily: "'Playfair Display', Georgia, serif",
+                  fontStyle: "italic",
+                  fontWeight: 700,
+                  fontSize: "1.3rem",
+                  letterSpacing: "0.01em",
+                }}
+              >
+                <Shuffle className={`w-6 h-6 ${spinning ? "animate-spin" : ""} shrink-0`} style={{ fontStyle: "normal" }} />
+                {spinning ? "Spinning…" : "Spin the Reel"}
+              </button>
+            </div>
+          )}
+
           {/* Wheel */}
           <div
             style={{
@@ -580,32 +607,6 @@ export function RouletteTab() {
             </div>
           )}
 
-          {/* Spin button */}
-          {!awaitingVote && (
-            <div className="relative w-full max-w-[340px]">
-              <div
-                className={`absolute -inset-2 rounded-full blur-xl transition-opacity duration-500 ${spinning ? "opacity-0" : "opacity-60 animate-pulse"}`}
-                style={{ backgroundColor: `${btnColor}60` }}
-              />
-              <button
-                onClick={spin}
-                disabled={spinning}
-                className="relative w-full py-5 flex items-center justify-center gap-3 disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-full transition-all shadow-xl active:scale-[0.97]"
-                style={{
-                  backgroundColor: btnColor,
-                  boxShadow: `0 8px 40px ${btnColor}60`,
-                  fontFamily: "'Playfair Display', Georgia, serif",
-                  fontStyle: "italic",
-                  fontWeight: 700,
-                  fontSize: "1.3rem",
-                  letterSpacing: "0.01em",
-                }}
-              >
-                <Shuffle className={`w-6 h-6 ${spinning ? "animate-spin" : ""} shrink-0`} style={{ fontStyle: "normal" }} />
-                {spinning ? "Spinning…" : "Spin the Reel"}
-              </button>
-            </div>
-          )}
         </div>
 
         {/* ── Right: Friends' Spins ── */}
