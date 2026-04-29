@@ -450,7 +450,7 @@ export function RouletteTab() {
                 <SlidersHorizontal className="w-3 h-3" />
                 Filters
                 {(minRating[0] > 0 || !!yearFrom || !!yearTo) && (
-                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'oklch(0.62 0.13 278)' }} />
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--reel-accent)' }} />
                 )}
                 <ChevronDown className={`w-3 h-3 transition-transform ${filtersExpanded ? "rotate-180" : ""}`} />
               </button>
@@ -496,7 +496,7 @@ export function RouletteTab() {
                     <button
                       onClick={() => { setGenre(""); setActiveMood(""); setMinRating([0]); setYearFrom(""); setYearTo(""); }}
                       className="text-xs hover:opacity-80 transition-opacity font-medium"
-                      style={{ color: 'oklch(0.72 0.1 278)' }}
+                      style={{ color: 'var(--reel-accent)' }}
                     >
                       Clear all filters
                     </button>

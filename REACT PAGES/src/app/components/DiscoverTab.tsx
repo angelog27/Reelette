@@ -23,7 +23,7 @@ const PROVIDER_TABS = [
 ];
 
 const PROVIDER_COLOR: Record<string, string> = {
-  'all':          '#8875D0',
+  'all':          '#C87820',
   'Netflix':      '#E50914',
   'Disney+':      '#1A4DB5',
   'Hulu':         '#1CE783',
@@ -293,7 +293,7 @@ function HeroSection({ movies, onOpenModal, onToggleWatchlist, watchlistIds, has
               onClick={() => onToggleWatchlist(movie)}
               className="flex items-center gap-2 px-5 py-2.5 font-semibold rounded-lg text-sm transition-colors duration-150"
               style={isInWatchlist
-                ? { background: '#8875D0', color: '#fff' }
+                ? { background: 'var(--reel-accent-hex)', color: '#fff' }
                 : { background: 'rgba(109,109,110,0.7)', color: '#fff' }}
             >
               {isInWatchlist
@@ -311,7 +311,7 @@ function HeroSection({ movies, onOpenModal, onToggleWatchlist, watchlistIds, has
               key={i}
               onClick={() => { setCurrent(i); startInterval(); }}
               className="h-[3px] rounded-full transition-all duration-300"
-              style={{ width: i === current ? 20 : 8, background: i === current ? '#8875D0' : 'rgba(255,255,255,0.4)' }}
+              style={{ width: i === current ? 20 : 8, background: i === current ? 'var(--reel-accent-hex)' : 'rgba(255,255,255,0.4)' }}
             />
           ))}
         </div>

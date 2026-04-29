@@ -141,25 +141,28 @@
 
   h1 {
     font-size: var(--text-2xl);
-    font-weight: var(--font-weight-medium);
-    line-height: 1.5;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
   }
 
   h2 {
     font-size: var(--text-xl);
-    font-weight: var(--font-weight-medium);
-    line-height: 1.5;
+    font-weight: 600;
+    line-height: 1.3;
+    letter-spacing: -0.015em;
   }
 
   h3 {
     font-size: var(--text-lg);
-    font-weight: var(--font-weight-medium);
-    line-height: 1.5;
+    font-weight: 600;
+    line-height: 1.4;
+    letter-spacing: -0.01em;
   }
 
   h4 {
     font-size: var(--text-base);
-    font-weight: var(--font-weight-medium);
+    font-weight: 500;
     line-height: 1.5;
   }
 
@@ -199,9 +202,9 @@ html.dark {
   --reel-t3:          #6B7280;
   --reel-t4:          #4B5563;
   --reel-input-bg:    #050505;
-  --reel-accent:      oklch(0.62 0.13 278);
-  --reel-accent-lo:   oklch(0.35 0.08 278);
-  --reel-accent-hex:  #8875D0;
+  --reel-accent:      oklch(0.67 0.14 48);
+  --reel-accent-lo:   oklch(0.28 0.07 48);
+  --reel-accent-hex:  #C87820;
 }
 
 html.light {
@@ -216,9 +219,9 @@ html.light {
   --reel-t3:          #6B6B7A;
   --reel-t4:          #9090A0;
   --reel-input-bg:    #FFFFFF;
-  --reel-accent:      oklch(0.48 0.15 278);
-  --reel-accent-lo:   oklch(0.92 0.05 278);
-  --reel-accent-hex:  #6348B8;
+  --reel-accent:      oklch(0.52 0.16 48);
+  --reel-accent-lo:   oklch(0.93 0.04 48);
+  --reel-accent-hex:  #9C6015;
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -257,7 +260,7 @@ html.light .hover\:bg-zinc-700:hover      { background-color: var(--reel-hover) 
 /* Nav bar */
 html.light nav.bg-black {
   background-color: var(--reel-card) !important;
-  border-bottom-color: rgba(192, 57, 43, 0.3) !important;
+  border-bottom-color: rgba(200, 120, 32, 0.25) !important;
 }
 
 /* ── Borders ───────────────────────────────────────────────── */

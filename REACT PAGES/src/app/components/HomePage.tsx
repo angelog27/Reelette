@@ -1,8 +1,8 @@
 import { Suspense, useState, useEffect, useRef, useCallback } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { NavLink, Outlet } from 'react-router-dom';
 import {
   Bell, Heart, MessageCircle, Film, Users, UserPlus, Search, SlidersHorizontal,
-  X, Star, ChevronDown, Bookmark, User, Tv, PanelLeft,
+  X, Star, ChevronDown, Bookmark, User, Tv,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import logoImage from '../../assets/Reelette_White.png';
@@ -13,7 +13,6 @@ import {
   type AppNotification, type Movie,
 } from '../services/api';
 import { GENRES } from '../constants/genres';
-import { PROVIDER_LOGOS } from '../constants/providers';
 import { MovieDetailModal } from './MovieDetailModal';
 import { DiscoverProvider } from '../contexts/DiscoverContext';
 import type { QuerySnapshot, DocumentData } from 'firebase/firestore';
@@ -83,23 +82,6 @@ export function HomePage() {
     { id: 'social',   label: 'Social',   path: '/home/social',   icon: Users },
     { id: 'profile',  label: 'Profile',  path: '/home/profile',  icon: User },
   ];
-
-  const location = useLocation();
-
-  // ── Sidebar state ───────────────────────────────────────────────
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [sidebarServices, setSidebarServices] = useState<Record<string, boolean>>(getServices);
-
-  useEffect(() => {
-    const h = () => setSidebarServices(getServices());
-    window.addEventListener('storage', h);
-    return () => window.removeEventListener('storage', h);
-  }, []);
-
-  const activeServiceNames = Object.entries(sidebarServices)
-    .filter(([, v]) => v)
-    .map(([k]) => SERVICE_DISPLAY[k])
-    .filter(Boolean);
 
   // ── Search state ────────────────────────────────────────────────
   const [navSearch, setNavSearch]         = useState('');
@@ -305,42 +287,40 @@ export function HomePage() {
     );
   };
 
-  const currentPageLabel = tabs.find(t => location.pathname.startsWith(t.path))?.label ?? 'Home';
-
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-white flex">
+    <div className="min-h-[100dvh] bg-[#0A0A0A] text-white flex flex-col">
 
-      {/* ── Sidebar ──────────────────────────────────────────────── */}
-      <aside
-        className="fixed left-0 top-0 h-full z-50 flex flex-col bg-[#0A0A0A] overflow-hidden shrink-0"
-        style={{ width: sidebarOpen ? 220 : 0, transition: 'width 250ms cubic-bezier(0.32, 0.72, 0, 1)' }}
-      >
+      {/* ── Top nav bar ──────────────────────────────────────────── */}
+      <header className="sticky top-0 z-50 flex items-center gap-2 px-5 h-[52px] bg-[#0A0A0A]/95 backdrop-blur-sm border-b border-[#1C1C1C]">
+
         {/* Logo */}
-        <div className="flex items-center gap-2.5 px-5 pt-5 pb-7 shrink-0">
-          <img src={reeletteLogo} alt="" className="h-7 w-7 shrink-0" />
-          <img src={logoImage} alt="Reelette" className="h-[17px] w-auto" />
+        <div className="flex items-center gap-2 shrink-0 mr-3">
+          <img src={reeletteLogo} alt="" className="h-6 w-6" />
+          <img src={logoImage} alt="Reelette" className="h-[15px] w-auto" />
         </div>
 
-        {/* Nav — bare text links, no pill, no background */}
-        <nav className="px-5 shrink-0">
+        {/* Nav tabs */}
+        <nav className="flex items-center gap-0.5">
           {tabs.map(tab => (
             <NavLink key={tab.id} to={tab.path}>
               {({ isActive }) => (
                 <div
-                  className={`flex items-center gap-3 py-2.5 whitespace-nowrap cursor-pointer select-none transition-colors duration-150 ${
-                    isActive ? 'text-white' : 'text-[#3E3E52] hover:text-zinc-400'
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer select-none transition-all duration-150 whitespace-nowrap ${
+                    isActive
+                      ? 'text-white bg-white/[0.08]'
+                      : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.04]'
                   }`}
-                  style={{ fontSize: 14, fontWeight: isActive ? 600 : 400 }}
+                  style={{ fontSize: 13, fontWeight: isActive ? 600 : 400 }}
                 >
                   {tab.imageLogo ? (
                     <img
                       src={tab.imageLogo}
                       alt={tab.label}
-                      className="h-[18px] w-[18px] rounded shrink-0"
-                      style={{ filter: isActive ? 'none' : 'brightness(0.28) saturate(0.2)', transition: 'filter 150ms ease-out' }}
+                      className="h-[15px] w-[15px] rounded shrink-0"
+                      style={{ filter: isActive ? 'none' : 'brightness(0.35) saturate(0.2)', transition: 'filter 150ms ease-out' }}
                     />
                   ) : tab.icon ? (
-                    <tab.icon className="w-[18px] h-[18px] shrink-0" />
+                    <tab.icon className="w-[15px] h-[15px] shrink-0" />
                   ) : null}
                   <span>{tab.label}</span>
                 </div>
@@ -349,53 +329,7 @@ export function HomePage() {
           ))}
         </nav>
 
-        {/* Services — small icon strip at bottom */}
-        {activeServiceNames.length > 0 && (
-          <div className="px-5 pt-5 mt-auto pb-6 shrink-0">
-            <p className="text-[10px] text-[#252530] uppercase tracking-[0.2em] mb-3">Services</p>
-            <div className="flex flex-wrap gap-2">
-              {activeServiceNames.map(name => (
-                PROVIDER_LOGOS[name] ? (
-                  <div key={name} className="w-7 h-7 rounded-lg overflow-hidden shrink-0" title={name}
-                    style={{ background: '#111' }}>
-                    <img src={PROVIDER_LOGOS[name]} alt={name} className="w-full h-full object-cover" />
-                  </div>
-                ) : null
-              ))}
-            </div>
-          </div>
-        )}
-      </aside>
-
-      {/* ── Main area ───────────────────────────────────────────── */}
-      <div
-        className="flex flex-col flex-1 min-h-screen"
-        style={{ marginLeft: sidebarOpen ? 220 : 0, transition: 'margin-left 250ms cubic-bezier(0.32, 0.72, 0, 1)' }}
-      >
-        {/* Top bar */}
-        <header className="sticky top-0 z-40 flex items-center gap-3 px-6 py-3 bg-[#0A0A0A]/95 backdrop-blur-sm border-b border-[#1C1C1C]">
-
-          {/* Sidebar toggle */}
-          <button
-            onClick={() => setSidebarOpen(o => !o)}
-            className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 hover:text-white hover:bg-white/[0.06] transition active:scale-[0.97] shrink-0"
-            title={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
-          >
-            <PanelLeft className="w-4 h-4" />
-          </button>
-
-          {/* Breadcrumb */}
-          <div className="flex items-center gap-1.5 text-xs text-gray-600 shrink-0">
-            {currentPageLabel !== 'Reelette' && (
-              <>
-                <span>Reelette</span>
-                <span className="text-gray-700">›</span>
-              </>
-            )}
-            <span className="text-gray-400 font-medium">{currentPageLabel}</span>
-          </div>
-
-          <div className="flex-1" />
+        <div className="flex-1" />
 
           {/* Search + filter */}
           <div className="relative flex items-center gap-1" ref={searchRef}>
@@ -428,7 +362,7 @@ export function HomePage() {
                 title="Filter results"
                 className="flex items-center justify-center w-[35px] h-[35px] rounded-full border transition active:scale-[0.97]"
                 style={hasActiveFilter
-                  ? { background: '#8875D0', borderColor: '#8875D0' }
+                  ? { background: 'var(--reel-accent-hex)', borderColor: 'var(--reel-accent-hex)' }
                   : { background: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.12)' }
                 }
               >
@@ -463,7 +397,7 @@ export function HomePage() {
                           onClick={() => setFilterRating(r.value)}
                           className="px-3 py-1 rounded-full text-xs font-medium border transition-colors"
                           style={filterRating === r.value
-                            ? { background: '#8875D0', borderColor: '#8875D0', color: '#fff' }
+                            ? { background: 'var(--reel-accent-hex)', borderColor: 'var(--reel-accent-hex)', color: '#fff' }
                             : { background: 'rgba(255,255,255,0.07)', borderColor: 'rgba(255,255,255,0.12)', color: '#9ca3af' }
                           }
                         >
@@ -483,7 +417,7 @@ export function HomePage() {
                           onClick={() => setFilterYearIdx(i)}
                           className="px-3 py-1 rounded-full text-xs font-medium border transition-colors"
                           style={filterYearIdx === i
-                            ? { background: '#8875D0', borderColor: '#8875D0', color: '#fff' }
+                            ? { background: 'var(--reel-accent-hex)', borderColor: 'var(--reel-accent-hex)', color: '#fff' }
                             : { background: 'rgba(255,255,255,0.07)', borderColor: 'rgba(255,255,255,0.12)', color: '#9ca3af' }
                           }
                         >
@@ -497,7 +431,7 @@ export function HomePage() {
                     <div
                       onClick={() => setFilterMyServices(v => !v)}
                       className="w-9 h-5 rounded-full relative transition-colors duration-200 shrink-0"
-                      style={{ background: filterMyServices ? '#8875D0' : 'rgba(255,255,255,0.15)' }}
+                      style={{ background: filterMyServices ? 'var(--reel-accent-hex)' : 'rgba(255,255,255,0.15)' }}
                     >
                       <div
                         className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200"
@@ -516,7 +450,7 @@ export function HomePage() {
                         setFilterMyServices(false);
                       }}
                       className="text-xs hover:opacity-80 transition-opacity font-medium text-left"
-                      style={{ color: 'oklch(0.72 0.1 278)' }}
+                      style={{ color: 'var(--reel-accent)' }}
                     >
                       Clear all filters
                     </button>
@@ -533,7 +467,7 @@ export function HomePage() {
                     {navSearch.trim() ? `Results for "${navSearch}"` : 'Filtered Results'}
                   </span>
                   {hasActiveFilter && (
-                    <span className="text-[10px] font-medium" style={{ color: 'oklch(0.72 0.1 278)' }}>Filters active</span>
+                    <span className="text-[10px] font-medium" style={{ color: 'var(--reel-accent)' }}>Filters active</span>
                   )}
                 </div>
                 <div className="overflow-y-auto flex-1">
@@ -586,7 +520,7 @@ export function HomePage() {
             >
               <Bell className="w-4 h-4 text-gray-300" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 flex items-center justify-center bg-[#8875D0] text-white text-[9px] font-bold rounded-full">
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 flex items-center justify-center bg-reel-accent text-white text-[9px] font-bold rounded-full">
                   {unreadCount > 99 ? '99+' : unreadCount}
                 </span>
               )}
@@ -600,7 +534,7 @@ export function HomePage() {
                     <button
                       onClick={handleMarkAllRead}
                       className="text-xs font-medium hover:opacity-80 transition-opacity"
-                      style={{ color: 'oklch(0.72 0.1 278)' }}
+                      style={{ color: 'var(--reel-accent)' }}
                     >
                       Mark all read
                     </button>
@@ -628,7 +562,7 @@ export function HomePage() {
                           </p>
                           <p className="text-xs text-gray-600 mt-0.5">{timeAgo(n.created_at)}</p>
                         </div>
-                        {!n.read && <span className="shrink-0 mt-1.5 w-2 h-2 rounded-full bg-[#8875D0]" />}
+                        {!n.read && <span className="shrink-0 mt-1.5 w-2 h-2 rounded-full bg-reel-accent" />}
                       </button>
                     ))
                   )}
@@ -637,19 +571,18 @@ export function HomePage() {
             )}
           </div>
 
-        </header>
+      </header>
 
-        {/* Page content */}
-        <main className="flex-1 px-6 py-8">
-          <DiscoverProvider>
-            <Suspense fallback={
-              <div className="flex items-center justify-center py-24 text-gray-500">Loading…</div>
-            }>
-              <Outlet />
-            </Suspense>
-          </DiscoverProvider>
-        </main>
-      </div>
+      {/* Page content */}
+      <main className="flex-1 px-6 py-8">
+        <DiscoverProvider>
+          <Suspense fallback={
+            <div className="flex items-center justify-center py-24 text-gray-500">Loading…</div>
+          }>
+            <Outlet />
+          </Suspense>
+        </DiscoverProvider>
+      </main>
 
       {modalMovieId && (
         <MovieDetailModal movieId={modalMovieId} onClose={() => setModalMovieId(null)} />
