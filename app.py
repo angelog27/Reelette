@@ -32,6 +32,7 @@ from firebase_helper import (
     get_notifications, mark_notification_read, mark_all_notifications_read,
     get_or_create_conversation, get_conversations, get_messages, send_message, mark_conversation_read,
     get_group_chat, send_group_message,
+    update_user_email, delete_user_account,
 )
 from tmdb_api import (
     search_movies, discover_movies, get_popular_movies, get_movie_details,
@@ -967,6 +968,21 @@ def post_message(conversation_id):
 def read_conversation(conversation_id):
     data = request.get_json()
     return jsonify(mark_conversation_read(conversation_id, data.get('user_id')))
+
+
+# ── Account management ───────────────────────────────────────────
+
+@app.route('/api/user/<user_id>/email', methods=['PUT'])
+def change_email(user_id):
+    data = request.get_json() or {}
+    new_email = (data.get('email') or '').strip()
+    if not new_email:
+        return jsonify({'success': False, 'message': 'Email is required'}), 400
+    return jsonify(update_user_email(user_id, new_email))
+
+@app.route('/api/user/<user_id>/account', methods=['DELETE'])
+def delete_account(user_id):
+    return jsonify(delete_user_account(user_id))
 
 
 # ── Health check ─────────────────────────────────────────────────

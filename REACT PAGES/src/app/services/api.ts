@@ -925,6 +925,20 @@ export async function markAllNotificationsRead(user_id: string) {
   return res.json();
 }
 
+export async function updateUserEmail(user_id: string, email: string) {
+  const res = await fetch(`${BASE_URL}/user/${user_id}/email`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+  return res.json() as Promise<{ success: boolean; message?: string }>;
+}
+
+export async function deleteUserAccount(user_id: string) {
+  const res = await fetch(`${BASE_URL}/user/${user_id}/account`, { method: 'DELETE' });
+  return res.json() as Promise<{ success: boolean; message?: string }>;
+}
+
 // ── Group Chat ───────────────────────────────────────────────────
 
 export interface GroupMessage {

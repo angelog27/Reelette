@@ -1284,3 +1284,39 @@ def save_quiz_result(uid, top_genre, answers):
         return {'success': True}
     except Exception as e:
         return {'success': False, 'message': str(e)}
+
+# ── Account Management ────────────────────────────────────────────
+
+def update_user_email(user_id, new_email):
+    """Update email in Firebase Auth + Firestore user doc."""
+    try:
+        auth.update_user(user_id, email=new_email)
+        db.collection('users').document(user_id).update({'email': new_email})
+        return {'success': True}
+    except auth.EmailAlreadyExistsError:
+        return {'success': False, 'message': 'That email is already in use by another account.'}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+
+def delete_user_account(user_id):
+    """Delete the Firebase Auth user, remove them from all groups, then delete their Firestore doc."""
+    try:
+        # Remove user from any groups they belong to
+        groups = db.collection('groups').where('members', 'array_contains', user_id).stream()
+        batch = db.batch()
+        for g in groups:
+            batch.update(g.reference, {
+                'members': firestore.ArrayRemove([user_id]),
+                f'member_usernames.{user_id}': firestore.DELETE_FIELD,
+            })
+        batch.commit()
+
+        # Delete main Firestore user doc (subcollections remain as orphaned data)
+        db.collection('users').document(user_id).delete()
+
+        # Delete Firebase Auth account last so the Admin SDK call succeeds
+        auth.delete_user(user_id)
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
