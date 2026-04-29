@@ -496,13 +496,18 @@ def create_post(user_id, username, message, movie_title, movie_id, movie_poster,
     except Exception as e:
         return {'success': False, 'message': str(e)}
 
-# pulls the most recent posts from the feed, newest first
-def get_feed(limit=20):
+# pulls the most recent posts from the feed, newest first.
+# when `since` is an ISO timestamp, only returns posts newer than that timestamp.
+def get_feed(limit=20, since=None):
     try:
-        docs = (db.collection('posts')
-                  .order_by('created_at', direction=firestore.Query.DESCENDING)
-                  .limit(limit)
-                  .stream())
+        q = (db.collection('posts')
+               .order_by('created_at', direction=firestore.Query.DESCENDING))
+        if since:
+            since_dt = datetime.fromisoformat(since.replace('Z', '+00:00'))
+            q = q.where('created_at', '>', since_dt)
+        else:
+            q = q.limit(limit)
+        docs = q.stream()
         return [doc.to_dict() for doc in docs]
     except Exception as e:
         print(f"Error getting feed: {e}")

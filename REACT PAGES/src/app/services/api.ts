@@ -451,6 +451,18 @@ export function getFeed(limit = 20): Promise<FeedPost[]> {
   });
 }
 
+/** Fetch only posts newer than `since` (ISO timestamp). Bypasses and does not populate the cache. */
+export async function getFeedSince(since: string): Promise<FeedPost[]> {
+  const res = await fetch(`${BASE_URL}/feed?since=${encodeURIComponent(since)}`);
+  const data = await res.json();
+  return data.posts ?? [];
+}
+
+/** Bust all client-side feed cache entries so the next getFeed() call hits the network. */
+export function bustFeedCache() {
+  bustCachePrefix('feed:');
+}
+
 
 export async function createPost(payload: {
   user_id: string;

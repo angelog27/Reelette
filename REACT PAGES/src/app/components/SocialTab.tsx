@@ -2,10 +2,10 @@ import { useState, useEffect, useRef, useCallback, type ChangeEvent } from 'reac
 import {
   Heart, MessageCircle, Plus, Star, Trash2, Users, UserPlus, UserMinus,
   Search, Check, X, Film, ChevronRight, Shuffle, Popcorn, Crown, LogOut,
-  Tv, Wifi, WifiOff, Loader2, Sparkles, Clapperboard, Send,
+  Tv, Wifi, WifiOff, Loader2, Sparkles, Clapperboard, Send, RefreshCw,
 } from 'lucide-react';
 import {
-  getFeed, createPost, likePost, deletePost, getUser, timeAgo,
+  getFeed, getFeedSince, bustFeedCache, createPost, likePost, deletePost, getUser, timeAgo,
   getFriends, getFriendRequests, sendFriendRequest, acceptFriendRequest,
   rejectFriendRequest, removeFriend, searchUsers,
   getUserGroups, createGroup, getGroup, addGroupMember, removeGroupMember,
@@ -23,6 +23,22 @@ import { db, signInFirebase } from '../lib/firebase';
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { UserProfileModal } from './UserProfileModal';
 import { MovieDetailModal } from './MovieDetailModal';
+
+// ── Module-level feed cache — survives tab navigation ──────────
+// Keyed by post_id so merging new posts never creates duplicates.
+const _feedCache = new Map<string, FeedPost>();
+let _feedNewestAt = '';
+
+function mergeFeedPosts(posts: FeedPost[]) {
+  for (const p of posts) {
+    _feedCache.set(p.post_id, p);
+    if (!_feedNewestAt || p.created_at > _feedNewestAt) _feedNewestAt = p.created_at;
+  }
+}
+
+function sortedFeedPosts(): FeedPost[] {
+  return [..._feedCache.values()].sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
 
 // ── Constants ──────────────────────────────────────────────────
 const SERVICE_KEYS = ['netflix', 'hulu', 'disneyPlus', 'hboMax', 'amazonPrime', 'appleTV', 'paramount', 'peacock'] as const;
@@ -322,26 +338,6 @@ function WatchModePanel({ groupId, onModeChange }: {
         </div>
       )}
     </section>
-  );
-}
-
-// ── Mini roulette wheel for feed refresh ───────────────────────
-function WheelRefreshIcon({ spinning }: { spinning: boolean }) {
-  const n = 8;
-  const cols = ['#C0392B','#E74C3C','#8E44AD','#2471A3','#1E8449','#D68910','#6C3483','#1A5276'];
-  const cx = 12, cy = 12, r = 10;
-  const seg = 360 / n;
-  const toRad = (d: number) => d * Math.PI / 180;
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" className={spinning ? 'animate-spin' : ''}>
-      {Array.from({ length: n }, (_, i) => {
-        const s = toRad(i * seg - 90), e = toRad((i + 1) * seg - 90);
-        const x1 = cx + r * Math.cos(s), y1 = cy + r * Math.sin(s);
-        const x2 = cx + r * Math.cos(e), y2 = cy + r * Math.sin(e);
-        return <path key={i} d={`M${cx},${cy}L${x1},${y1}A${r},${r} 0 0,1 ${x2},${y2}Z`} fill={cols[i]} />;
-      })}
-      <circle cx={cx} cy={cy} r={3.5} fill="#0A0A0A" />
-    </svg>
   );
 }
 
@@ -1455,21 +1451,25 @@ export function SocialTab() {
 
   useEffect(() => {
     if (activeTab === 'feed') {
+      // Serve from module cache instantly — no loading flash on repeat tab visits
+      if (_feedCache.size > 0) {
+        setPosts(sortedFeedPosts());
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       getFeed().then(async (feedPosts) => {
         const needsAvatars = feedPosts.some(p => !p.avatarUrl);
+        let resolved = feedPosts;
         if (needsAvatars) {
           const uniqueIds = [...new Set(feedPosts.map(p => p.user_id))];
           const profiles = await Promise.all(uniqueIds.map(id => getUserPublicProfile(id)));
           const avatarMap: Record<string, string> = {};
-          uniqueIds.forEach((id, i) => {
-            const url = profiles[i]?.avatarUrl;
-            if (url) avatarMap[id] = url;
-          });
-          setPosts(feedPosts.map(p => ({ ...p, avatarUrl: p.avatarUrl ?? avatarMap[p.user_id] })));
-        } else {
-          setPosts(feedPosts);
+          uniqueIds.forEach((id, i) => { const url = profiles[i]?.avatarUrl; if (url) avatarMap[id] = url; });
+          resolved = feedPosts.map(p => ({ ...p, avatarUrl: p.avatarUrl ?? avatarMap[p.user_id] }));
         }
+        mergeFeedPosts(resolved);
+        setPosts(sortedFeedPosts());
         setLoading(false);
       });
     }
@@ -1509,13 +1509,20 @@ export function SocialTab() {
   const handleRefresh = useCallback(async () => {
     if (refreshing) return;
     setRefreshing(true);
-    const feedPosts = await getFeed();
-    const uniqueIds = [...new Set(feedPosts.map(p => p.user_id))];
-    const profiles = await Promise.all(uniqueIds.map(id => getUserPublicProfile(id)));
-    const avatarMap: Record<string, string> = {};
-    uniqueIds.forEach((id, i) => { const url = profiles[i]?.avatarUrl; if (url) avatarMap[id] = url; });
-    setPosts(feedPosts.map(p => ({ ...p, avatarUrl: p.avatarUrl ?? avatarMap[p.user_id] })));
-    setRefreshing(false);
+    try {
+      // If we have a cached newest timestamp, only fetch posts since then
+      const newPosts = _feedNewestAt ? await getFeedSince(_feedNewestAt) : await getFeed();
+      if (newPosts.length > 0) {
+        const uniqueIds = [...new Set(newPosts.map(p => p.user_id))];
+        const profiles = await Promise.all(uniqueIds.map(id => getUserPublicProfile(id)));
+        const avatarMap: Record<string, string> = {};
+        uniqueIds.forEach((id, i) => { const url = profiles[i]?.avatarUrl; if (url) avatarMap[id] = url; });
+        mergeFeedPosts(newPosts.map(p => ({ ...p, avatarUrl: p.avatarUrl ?? avatarMap[p.user_id] })));
+        setPosts(sortedFeedPosts());
+      }
+    } finally {
+      setRefreshing(false);
+    }
   }, [refreshing]);
 
   const handleMessageChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
@@ -1575,17 +1582,22 @@ export function SocialTab() {
       rating,
     });
     if (result.success) {
+      // Bust TTL cache so getFeed() hits the network, then reset module cache for a clean reload
+      bustFeedCache();
+      _feedCache.clear();
+      _feedNewestAt = '';
       const updated = await getFeed();
       const needsAvatars = updated.some(p => !p.avatarUrl);
+      let resolved = updated;
       if (needsAvatars) {
         const uniqueIds = [...new Set(updated.map(p => p.user_id))];
         const profiles = await Promise.all(uniqueIds.map(id => getUserPublicProfile(id)));
         const avatarMap: Record<string, string> = {};
         uniqueIds.forEach((id, i) => { const url = profiles[i]?.avatarUrl; if (url) avatarMap[id] = url; });
-        setPosts(updated.map(p => ({ ...p, avatarUrl: p.avatarUrl ?? avatarMap[p.user_id] })));
-      } else {
-        setPosts(updated);
+        resolved = updated.map(p => ({ ...p, avatarUrl: p.avatarUrl ?? avatarMap[p.user_id] }));
       }
+      mergeFeedPosts(resolved);
+      setPosts(sortedFeedPosts());
       setSelectedMovie(null); setNewRating(''); setNewMessage('');
       setShowNewPostDialog(false);
     } else setPostError(result.message || 'Failed to create post.');
@@ -1662,7 +1674,7 @@ export function SocialTab() {
         </div>
       </div>
 
-      <div className="max-w-2xl mx-auto">
+      <div>
 
         {/* Primary tab bar */}
         <div className="flex border-b border-[#1A1A1A]">
@@ -1702,7 +1714,7 @@ export function SocialTab() {
               </button>
               <button onClick={handleRefresh} disabled={refreshing} title="Refresh feed"
                 className="px-5 py-3.5 text-gray-500 hover:text-white transition-colors disabled:opacity-40">
-                <WheelRefreshIcon spinning={refreshing} />
+                <RefreshCw className={`w-[18px] h-[18px] ${refreshing ? 'animate-spin' : ''}`} />
               </button>
             </div>
 

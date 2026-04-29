@@ -569,6 +569,11 @@ def update_user_watched_rating(user_id, movie_id):
 @app.route('/api/feed', methods=['GET'])
 def social_feed():
     limit = request.args.get('limit', 20, type=int)
+    since = request.args.get('since', None)
+    if since:
+        # Incremental fetch — bypass cache, never cache the result
+        posts = get_feed(limit=limit, since=since)
+        return jsonify({'posts': serialize_timestamps(posts)})
     cache_key = f'feed:{limit}'
     cached = _cache_get(cache_key)
     if cached:
