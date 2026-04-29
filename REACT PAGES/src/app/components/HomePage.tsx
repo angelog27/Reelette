@@ -1,6 +1,9 @@
 import { Suspense, useState, useEffect, useRef, useCallback } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { Bell, Heart, MessageCircle, Film, Users, UserPlus, Search, SlidersHorizontal, X, Star, ChevronDown } from 'lucide-react';
+import {
+  Bell, Heart, MessageCircle, Film, Users, UserPlus, Search, SlidersHorizontal,
+  X, Star, ChevronDown, Bookmark, User, Tv, PanelLeft,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import logoImage from '../../assets/Reelette_White.png';
 import reeletteLogo from '../../assets/Reelette_LOGO_upscaled.png';
@@ -10,12 +13,13 @@ import {
   type AppNotification, type Movie,
 } from '../services/api';
 import { GENRES } from '../constants/genres';
+import { PROVIDER_LOGOS } from '../constants/providers';
 import { MovieDetailModal } from './MovieDetailModal';
 import { DiscoverProvider } from '../contexts/DiscoverContext';
 import type { QuerySnapshot, DocumentData } from 'firebase/firestore';
 
 
-type TabLink = { id: string; label: string; path: string; imageLogo?: string };
+type TabLink = { id: string; label: string; path: string; imageLogo?: string; icon?: React.ElementType };
 
 function notifMessage(n: AppNotification): string {
   const actor = n.actor_username ? `@${n.actor_username}` : 'Someone';
@@ -73,14 +77,29 @@ const YEAR_OPTIONS = [
 
 export function HomePage() {
   const tabs: TabLink[] = [
-    { id: 'discover', label: 'Discover', path: '/home/discover' },
-    { id: 'mystuff',  label: 'My Stuff', path: '/home/mystuff' },
     { id: 'roulette', label: 'Reelette', path: '/home/roulette', imageLogo: reeletteLogo },
-    { id: 'social',   label: 'Social',   path: '/home/social' },
-    { id: 'profile',  label: 'Profile',  path: '/home/profile' },
+    { id: 'discover', label: 'Discover', path: '/home/discover', icon: Tv },
+    { id: 'mystuff',  label: 'My Stuff', path: '/home/mystuff',  icon: Bookmark },
+    { id: 'social',   label: 'Social',   path: '/home/social',   icon: Users },
+    { id: 'profile',  label: 'Profile',  path: '/home/profile',  icon: User },
   ];
 
   const location = useLocation();
+
+  // ── Sidebar state ───────────────────────────────────────────────
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarServices, setSidebarServices] = useState<Record<string, boolean>>(getServices);
+
+  useEffect(() => {
+    const h = () => setSidebarServices(getServices());
+    window.addEventListener('storage', h);
+    return () => window.removeEventListener('storage', h);
+  }, []);
+
+  const activeServiceNames = Object.entries(sidebarServices)
+    .filter(([, v]) => v)
+    .map(([k]) => SERVICE_DISPLAY[k])
+    .filter(Boolean);
 
   // ── Search state ────────────────────────────────────────────────
   const [navSearch, setNavSearch]         = useState('');
@@ -187,7 +206,6 @@ export function HomePage() {
           applyNotifs(notifs);
         }, () => {});
       } else {
-        // Firebase auth unavailable — fall back to REST polling at 60s
         const poll = async () => {
           const notifs = await getNotifications(currentUserId);
           applyNotifs(notifs);
@@ -223,7 +241,6 @@ export function HomePage() {
       let results: Movie[];
       if (query.trim()) {
         results = await searchMovies(query.trim());
-        // Apply client-side filters on top of keyword search
         if (filterGenre) results = results.filter(m => m.genres.includes(filterGenre));
         if (filterRating) results = results.filter(m => m.rating >= filterRating);
         if (filterMyServices && userServiceKeys) {
@@ -234,7 +251,6 @@ export function HomePage() {
           if (names.length) results = results.filter(m => names.includes(m.streamingService));
         }
       } else {
-        // Discover mode when only filters are active
         results = await discoverMovies({
           genre_id: filterGenre
             ? (GENRES.find(g => g.label === filterGenre)?.value ?? '')
@@ -258,13 +274,12 @@ export function HomePage() {
     debounceRef.current = setTimeout(() => runSearch(val), 300);
   };
 
-  // Re-run search when filters change (if there's a query or filters)
   useEffect(() => {
     if (navSearch.trim() || hasActiveFilter) {
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => runSearch(navSearch), 300);
     }
-  }, [filterGenre, filterRating, filterYearIdx, filterMyServices]);
+  }, [filterGenre, filterRating, filterYearIdx, filterMyServices]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const clearSearch = () => {
     setNavSearch('');
@@ -290,324 +305,359 @@ export function HomePage() {
     );
   };
 
-  const isOnDiscover = location.pathname === '/home/discover';
-  void isOnDiscover; // kept for potential future use
+  const currentPageLabel = tabs.find(t => location.pathname.startsWith(t.path))?.label ?? 'Home';
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-white">
-      <nav className="bg-black border-b border-[#C0392B]/30 sticky top-0 z-50 overflow-visible">
-        <div className="px-6 py-4">
-          {/* Three-column layout: left | center | right */}
-          <div className="flex items-center">
+    <div className="min-h-screen bg-[#0A0A0A] text-white flex">
 
-            {/* ── LEFT: logo + search + filter ── */}
-            <div className="flex items-center gap-3 shrink-0" style={{ minWidth: 320 }}>
-              <img src={logoImage} alt="Reelette" className="h-8 w-auto shrink-0" />
+      {/* ── Sidebar ──────────────────────────────────────────────── */}
+      <aside
+        className="fixed left-0 top-0 h-full z-50 flex flex-col bg-[#0D0D11] border-r border-[#1C1C1C] transition-all duration-300 ease-out overflow-hidden shrink-0"
+        style={{ width: sidebarOpen ? 220 : 0 }}
+      >
+        {/* Logo */}
+        <div className="flex items-center gap-2.5 px-5 pt-5 pb-4 shrink-0">
+          <img src={reeletteLogo} alt="" className="h-7 w-7 shrink-0" />
+          <img src={logoImage} alt="Reelette" className="h-[17px] w-auto" />
+        </div>
 
-              {/* Search + filter group */}
-              <div className="relative flex items-center gap-1" ref={searchRef}>
-                {/* Search input */}
-                <div className="relative" style={{ width: 210 }}>
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-white/40" />
-                  <input
-                    type="text"
-                    value={navSearch}
-                    onChange={e => handleSearchChange(e.target.value)}
-                    onFocus={() => {
-                      if (navSearch.trim() || hasActiveFilter) setSearchOpen(true);
-                    }}
-                    placeholder="Search movies, shows..."
-                    className="w-full h-[35px] pl-9 pr-8 rounded-full text-sm text-white placeholder:text-white/35 bg-white/[0.08] border border-white/[0.12] focus:bg-white/[0.13] focus:border-white/[0.38] focus:outline-none transition-all duration-150"
-                  />
-                  {navSearch && (
-                    <button
-                      onClick={clearSearch}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors"
+        {/* Nav */}
+        <div className="px-3 mb-1 shrink-0">
+          <p className="text-[10px] font-bold text-gray-600 uppercase tracking-[0.18em] px-2 mb-1">Browse</p>
+        </div>
+        <nav className="px-3 space-y-0.5 shrink-0">
+          {tabs.map(tab => (
+            <NavLink
+              key={tab.id}
+              to={tab.path}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 whitespace-nowrap ${
+                  isActive
+                    ? 'bg-white/[0.06] text-white'
+                    : 'text-gray-500 hover:text-white hover:bg-white/[0.04]'
+                }`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  {tab.imageLogo ? (
+                    <img
+                      src={tab.imageLogo}
+                      alt={tab.label}
+                      className="h-[18px] w-[18px] rounded shrink-0"
+                      style={{ filter: isActive ? 'none' : 'brightness(0.45) saturate(0.5)' }}
+                    />
+                  ) : tab.icon ? (
+                    <tab.icon className="w-[18px] h-[18px] shrink-0" />
+                  ) : null}
+                  <span className="flex-1">{tab.label}</span>
+                  {isActive && <span className="w-1.5 h-1.5 rounded-full bg-[#C0392B] shrink-0" />}
+                </>
+              )}
+            </NavLink>
+          ))}
+        </nav>
+
+        {/* Services */}
+        {activeServiceNames.length > 0 && (
+          <div className="px-3 pt-5 mt-auto border-t border-[#1C1C1C] shrink-0 pb-5">
+            <p className="text-[10px] font-bold text-gray-600 uppercase tracking-[0.18em] px-2 mb-2">Services</p>
+            <div className="space-y-0.5">
+              {activeServiceNames.map(name => (
+                <div key={name} className="flex items-center gap-3 px-2 py-1.5 rounded-lg">
+                  {PROVIDER_LOGOS[name] && (
+                    <div className="w-6 h-6 rounded-md overflow-hidden shrink-0 bg-[#1a1a1a]">
+                      <img src={PROVIDER_LOGOS[name]} alt={name} className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                  <span className="text-xs text-gray-500 truncate">{name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </aside>
+
+      {/* ── Main area ───────────────────────────────────────────── */}
+      <div
+        className="flex flex-col flex-1 min-h-screen transition-all duration-300 ease-out"
+        style={{ marginLeft: sidebarOpen ? 220 : 0 }}
+      >
+        {/* Top bar */}
+        <header className="sticky top-0 z-40 flex items-center gap-3 px-6 py-3 bg-[#0A0A0A]/95 backdrop-blur-sm border-b border-[#1C1C1C]">
+
+          {/* Sidebar toggle */}
+          <button
+            onClick={() => setSidebarOpen(o => !o)}
+            className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 hover:text-white hover:bg-white/[0.06] transition-colors shrink-0"
+            title={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+          >
+            <PanelLeft className="w-4 h-4" />
+          </button>
+
+          {/* Breadcrumb */}
+          <div className="flex items-center gap-1.5 text-xs text-gray-600 shrink-0">
+            <span>Reelette</span>
+            <span className="text-gray-700">›</span>
+            <span className="text-gray-400 font-medium">{currentPageLabel}</span>
+          </div>
+
+          <div className="flex-1" />
+
+          {/* Search + filter */}
+          <div className="relative flex items-center gap-1" ref={searchRef}>
+            <div className="relative" style={{ width: 210 }}>
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-white/40" />
+              <input
+                type="text"
+                value={navSearch}
+                onChange={e => handleSearchChange(e.target.value)}
+                onFocus={() => {
+                  if (navSearch.trim() || hasActiveFilter) setSearchOpen(true);
+                }}
+                placeholder="Search movies, shows..."
+                className="w-full h-[35px] pl-9 pr-8 rounded-full text-sm text-white placeholder:text-white/35 bg-white/[0.08] border border-white/[0.12] focus:bg-white/[0.13] focus:border-white/[0.38] focus:outline-none transition-all duration-150"
+              />
+              {navSearch && (
+                <button
+                  onClick={clearSearch}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Filter button */}
+            <div className="relative" ref={filterRef}>
+              <button
+                onClick={() => setFilterOpen(o => !o)}
+                title="Filter results"
+                className="flex items-center justify-center w-[35px] h-[35px] rounded-full border transition-colors"
+                style={hasActiveFilter
+                  ? { background: '#8875D0', borderColor: '#8875D0' }
+                  : { background: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.12)' }
+                }
+              >
+                <SlidersHorizontal className="w-4 h-4 text-white" />
+              </button>
+
+              {filterOpen && (
+                <div className="absolute right-0 top-[42px] w-72 bg-[#141414] border border-[#2A2A2A] rounded-2xl shadow-2xl z-[110] p-4 flex flex-col gap-4">
+                  <div>
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Genre</p>
+                    <div className="relative">
+                      <select
+                        value={filterGenre}
+                        onChange={e => setFilterGenre(e.target.value)}
+                        className="w-full appearance-none bg-white/[0.07] border border-white/[0.12] text-white text-sm rounded-lg px-3 py-2 pr-8 focus:outline-none focus:border-white/30"
+                      >
+                        <option value="">Any Genre</option>
+                        {GENRES.map(g => (
+                          <option key={g.value} value={g.label}>{g.label}</option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 pointer-events-none" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Min Rating</p>
+                    <div className="flex gap-2 flex-wrap">
+                      {RATING_OPTIONS.map(r => (
+                        <button
+                          key={r.value}
+                          onClick={() => setFilterRating(r.value)}
+                          className="px-3 py-1 rounded-full text-xs font-medium border transition-colors"
+                          style={filterRating === r.value
+                            ? { background: '#8875D0', borderColor: '#8875D0', color: '#fff' }
+                            : { background: 'rgba(255,255,255,0.07)', borderColor: 'rgba(255,255,255,0.12)', color: '#9ca3af' }
+                          }
+                        >
+                          {r.value > 0 && <Star className="inline w-2.5 h-2.5 fill-yellow-400 text-yellow-400 mr-0.5 -mt-0.5" />}
+                          {r.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Year</p>
+                    <div className="flex flex-wrap gap-2">
+                      {YEAR_OPTIONS.map((y, i) => (
+                        <button
+                          key={i}
+                          onClick={() => setFilterYearIdx(i)}
+                          className="px-3 py-1 rounded-full text-xs font-medium border transition-colors"
+                          style={filterYearIdx === i
+                            ? { background: '#8875D0', borderColor: '#8875D0', color: '#fff' }
+                            : { background: 'rgba(255,255,255,0.07)', borderColor: 'rgba(255,255,255,0.12)', color: '#9ca3af' }
+                          }
+                        >
+                          {y.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <div
+                      onClick={() => setFilterMyServices(v => !v)}
+                      className="w-9 h-5 rounded-full relative transition-colors duration-200 shrink-0"
+                      style={{ background: filterMyServices ? '#8875D0' : 'rgba(255,255,255,0.15)' }}
                     >
-                      <X className="w-3.5 h-3.5" />
+                      <div
+                        className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200"
+                        style={{ transform: filterMyServices ? 'translateX(18px)' : 'translateX(2px)' }}
+                      />
+                    </div>
+                    <span className="text-sm text-gray-300">My streaming services only</span>
+                  </label>
+
+                  {hasActiveFilter && (
+                    <button
+                      onClick={() => {
+                        setFilterGenre('');
+                        setFilterRating(0);
+                        setFilterYearIdx(0);
+                        setFilterMyServices(false);
+                      }}
+                      className="text-xs hover:opacity-80 transition-opacity font-medium text-left"
+                      style={{ color: 'oklch(0.72 0.1 278)' }}
+                    >
+                      Clear all filters
                     </button>
                   )}
                 </div>
+              )}
+            </div>
 
-                {/* Filter button */}
-                <div className="relative" ref={filterRef}>
-                  <button
-                    onClick={() => setFilterOpen(o => !o)}
-                    title="Filter results"
-                    className="flex items-center justify-center w-[35px] h-[35px] rounded-full border transition-colors"
-                    style={hasActiveFilter
-                      ? { background: '#C0392B', borderColor: '#C0392B' }
-                      : { background: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.12)' }
-                    }
-                  >
-                    <SlidersHorizontal className="w-4 h-4 text-white" />
-                  </button>
-
-                  {/* Filter dropdown */}
-                  {filterOpen && (
-                    <div className="absolute left-0 top-[42px] w-72 bg-[#141414] border border-[#2A2A2A] rounded-2xl shadow-2xl z-[110] p-4 flex flex-col gap-4">
-
-                      {/* Genre */}
-                      <div>
-                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Genre</p>
-                        <div className="relative">
-                          <select
-                            value={filterGenre}
-                            onChange={e => setFilterGenre(e.target.value)}
-                            className="w-full appearance-none bg-white/[0.07] border border-white/[0.12] text-white text-sm rounded-lg px-3 py-2 pr-8 focus:outline-none focus:border-white/30"
-                          >
-                            <option value="">Any Genre</option>
-                            {GENRES.map(g => (
-                              <option key={g.value} value={g.label}>{g.label}</option>
-                            ))}
-                          </select>
-                          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 pointer-events-none" />
-                        </div>
-                      </div>
-
-                      {/* Rating */}
-                      <div>
-                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Min Rating</p>
-                        <div className="flex gap-2 flex-wrap">
-                          {RATING_OPTIONS.map(r => (
-                            <button
-                              key={r.value}
-                              onClick={() => setFilterRating(r.value)}
-                              className="px-3 py-1 rounded-full text-xs font-medium border transition-colors"
-                              style={filterRating === r.value
-                                ? { background: '#C0392B', borderColor: '#C0392B', color: '#fff' }
-                                : { background: 'rgba(255,255,255,0.07)', borderColor: 'rgba(255,255,255,0.12)', color: '#9ca3af' }
-                              }
-                            >
-                              {r.value > 0 && <Star className="inline w-2.5 h-2.5 fill-yellow-400 text-yellow-400 mr-0.5 -mt-0.5" />}
-                              {r.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Year */}
-                      <div>
-                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Year</p>
-                        <div className="flex flex-wrap gap-2">
-                          {YEAR_OPTIONS.map((y, i) => (
-                            <button
-                              key={i}
-                              onClick={() => setFilterYearIdx(i)}
-                              className="px-3 py-1 rounded-full text-xs font-medium border transition-colors"
-                              style={filterYearIdx === i
-                                ? { background: '#C0392B', borderColor: '#C0392B', color: '#fff' }
-                                : { background: 'rgba(255,255,255,0.07)', borderColor: 'rgba(255,255,255,0.12)', color: '#9ca3af' }
-                              }
-                            >
-                              {y.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* My Services */}
-                      <label className="flex items-center gap-3 cursor-pointer">
-                        <div
-                          onClick={() => setFilterMyServices(v => !v)}
-                          className="w-9 h-5 rounded-full relative transition-colors duration-200 shrink-0"
-                          style={{ background: filterMyServices ? '#C0392B' : 'rgba(255,255,255,0.15)' }}
-                        >
-                          <div
-                            className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200"
-                            style={{ transform: filterMyServices ? 'translateX(18px)' : 'translateX(2px)' }}
-                          />
-                        </div>
-                        <span className="text-sm text-gray-300">My streaming services only</span>
-                      </label>
-
-                      {/* Clear */}
-                      {hasActiveFilter && (
-                        <button
-                          onClick={() => {
-                            setFilterGenre('');
-                            setFilterRating(0);
-                            setFilterYearIdx(0);
-                            setFilterMyServices(false);
-                          }}
-                          className="text-xs text-[#C0392B] hover:text-[#E74C3C] transition-colors text-left font-medium"
-                        >
-                          Clear all filters
-                        </button>
-                      )}
-                    </div>
+            {/* Search results dropdown */}
+            {searchOpen && (navSearch.trim() || hasActiveFilter) && (
+              <div className="absolute right-0 top-[42px] w-[340px] max-h-[480px] flex flex-col bg-[#141414] border border-[#2A2A2A] rounded-2xl shadow-2xl z-[100] overflow-hidden">
+                <div className="px-4 py-2.5 border-b border-[#2A2A2A] shrink-0 flex items-center justify-between">
+                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                    {navSearch.trim() ? `Results for "${navSearch}"` : 'Filtered Results'}
+                  </span>
+                  {hasActiveFilter && (
+                    <span className="text-[10px] font-medium" style={{ color: 'oklch(0.72 0.1 278)' }}>Filters active</span>
                   )}
                 </div>
-
-                {/* Search results dropdown */}
-                {searchOpen && (navSearch.trim() || hasActiveFilter) && (
-                  <div className="absolute left-0 top-[42px] w-[340px] max-h-[480px] flex flex-col bg-[#141414] border border-[#2A2A2A] rounded-2xl shadow-2xl z-[100] overflow-hidden">
-                    <div className="px-4 py-2.5 border-b border-[#2A2A2A] shrink-0 flex items-center justify-between">
-                      <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                        {navSearch.trim() ? `Results for "${navSearch}"` : 'Filtered Results'}
-                      </span>
-                      {hasActiveFilter && (
-                        <span className="text-[10px] text-[#C0392B] font-medium">Filters active</span>
-                      )}
-                    </div>
-
-                    <div className="overflow-y-auto flex-1">
-                      {searchLoading ? (
-                        <div className="flex items-center justify-center py-10 text-gray-500 text-sm">Searching…</div>
-                      ) : searchResults.length === 0 ? (
-                        <div className="flex items-center justify-center py-10 text-gray-500 text-sm">No results found</div>
-                      ) : (
-                        searchResults.map(movie => (
-                          <button
-                            key={movie.id}
-                            onClick={() => {
-                              setModalMovieId(movie.id);
-                              setSearchOpen(false);
-                            }}
-                            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[#1C1C1C] transition-colors border-b border-[#2A2A2A] last:border-0 text-left"
-                          >
-                            {movie.poster ? (
-                              <img
-                                src={movie.poster}
-                                alt={movie.title}
-                                className="w-10 h-14 rounded object-cover shrink-0"
-                                loading="lazy"
-                              />
-                            ) : (
-                              <div className="w-10 h-14 rounded bg-[#2A2A2A] shrink-0 flex items-center justify-center">
-                                <Film className="w-4 h-4 text-gray-600" />
-                              </div>
+                <div className="overflow-y-auto flex-1">
+                  {searchLoading ? (
+                    <div className="flex items-center justify-center py-10 text-gray-500 text-sm">Searching…</div>
+                  ) : searchResults.length === 0 ? (
+                    <div className="flex items-center justify-center py-10 text-gray-500 text-sm">No results found</div>
+                  ) : (
+                    searchResults.map(movie => (
+                      <button
+                        key={movie.id}
+                        onClick={() => { setModalMovieId(movie.id); setSearchOpen(false); }}
+                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[#1C1C1C] transition-colors border-b border-[#2A2A2A] last:border-0 text-left"
+                      >
+                        {movie.poster ? (
+                          <img src={movie.poster} alt={movie.title} className="w-10 h-14 rounded object-cover shrink-0" loading="lazy" />
+                        ) : (
+                          <div className="w-10 h-14 rounded bg-[#2A2A2A] shrink-0 flex items-center justify-center">
+                            <Film className="w-4 h-4 text-gray-600" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-white font-medium line-clamp-1">{movie.title}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            {movie.year > 0 && <span className="text-xs text-gray-500">{movie.year}</span>}
+                            {movie.rating > 0 && (
+                              <span className="flex items-center gap-0.5 text-xs text-gray-500">
+                                <Star className="w-2.5 h-2.5 fill-yellow-500 text-yellow-500" />
+                                {movie.rating.toFixed(1)}
+                              </span>
                             )}
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm text-white font-medium line-clamp-1">{movie.title}</p>
-                              <div className="flex items-center gap-2 mt-0.5">
-                                {movie.year > 0 && (
-                                  <span className="text-xs text-gray-500">{movie.year}</span>
-                                )}
-                                {movie.rating > 0 && (
-                                  <span className="flex items-center gap-0.5 text-xs text-gray-500">
-                                    <Star className="w-2.5 h-2.5 fill-yellow-500 text-yellow-500" />
-                                    {movie.rating.toFixed(1)}
-                                  </span>
-                                )}
-                              </div>
-                              {movie.streamingService && (
-                                <span className="text-[10px] text-gray-600 mt-0.5 block line-clamp-1">{movie.streamingService}</span>
-                              )}
-                            </div>
-                          </button>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* ── CENTER: nav tabs (truly centered) ── */}
-            <div className="flex-1 flex items-center justify-center gap-8">
-              {tabs.map((tab) => (
-                <NavLink
-                  key={tab.id}
-                  to={tab.path}
-                  className={({ isActive }) =>
-                    `group relative flex items-center transition-colors ${isActive
-                      ? 'text-[#C0392B]'
-                      : 'text-white hover:text-gray-300'
-                    }`
-                  }
-                >
-                  {({ isActive }) => (
-                    <>
-                      {tab.imageLogo ? (
-                        <img src={tab.imageLogo} alt={tab.label} className="h-12 w-12" />
-                      ) : (
-                        tab.label
-                      )}
-                      <div className={`absolute bottom-0 left-0 right-0 h-0.5 bg-[#C0392B] transition-opacity ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} />
-                    </>
-                  )}
-                </NavLink>
-              ))}
-            </div>
-
-            {/* ── RIGHT: bell ── */}
-            <div className="shrink-0 flex items-center" style={{ minWidth: 380, justifyContent: 'flex-end' }}>
-              <div className="relative" ref={notifPanelRef}>
-                <button
-                  onClick={() => setNotifOpen(o => !o)}
-                  className="relative flex items-center justify-center w-10 h-10 rounded-full bg-[#141414] border border-[#2A2A2A] hover:bg-[#1C1C1C] transition-colors"
-                >
-                  <Bell className="w-5 h-5 text-gray-300" />
-                  {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-[#C0392B] text-white text-[10px] font-bold rounded-full">
-                      {unreadCount > 99 ? '99+' : unreadCount}
-                    </span>
-                  )}
-                </button>
-
-                {notifOpen && (
-                  <div className="absolute right-0 top-12 w-80 max-h-[480px] flex flex-col bg-[#141414] border border-[#2A2A2A] rounded-2xl shadow-2xl z-[100] overflow-hidden">
-                    <div className="flex items-center justify-between px-4 py-3 border-b border-[#2A2A2A] shrink-0">
-                      <span className="text-sm font-semibold text-white">Notifications</span>
-                      {unreadCount > 0 && (
-                        <button
-                          onClick={handleMarkAllRead}
-                          className="text-xs text-[#C0392B] hover:text-[#E74C3C] transition-colors font-medium"
-                        >
-                          Mark all read
-                        </button>
-                      )}
-                    </div>
-                    <div className="overflow-y-auto flex-1">
-                      {notifications.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-12 gap-2">
-                          <Bell className="w-8 h-8 text-gray-600" />
-                          <p className="text-gray-500 text-sm">No notifications yet</p>
+                          </div>
+                          {movie.streamingService && (
+                            <span className="text-[10px] text-gray-600 mt-0.5 block line-clamp-1">{movie.streamingService}</span>
+                          )}
                         </div>
-                      ) : (
-                        notifications.map(n => (
-                          <button
-                            key={n.notification_id}
-                            onClick={() => handleMarkOneRead(n)}
-                            className={`w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-[#1C1C1C] transition-colors border-b border-[#2A2A2A] last:border-0 ${!n.read ? 'bg-[#1A1A1A]' : ''}`}
-                          >
-                            <div className="shrink-0 mt-0.5 w-8 h-8 rounded-full bg-[#2A2A2A] flex items-center justify-center">
-                              {notifIcon(n.type)}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className={`text-sm leading-snug ${n.read ? 'text-gray-400' : 'text-white'}`}>
-                                {notifMessage(n)}
-                              </p>
-                              <p className="text-xs text-gray-600 mt-0.5">{timeAgo(n.created_at)}</p>
-                            </div>
-                            {!n.read && (
-                              <span className="shrink-0 mt-1.5 w-2 h-2 rounded-full bg-[#C0392B]" />
-                            )}
-                          </button>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                )}
+                      </button>
+                    ))
+                  )}
+                </div>
               </div>
-            </div>
-
+            )}
           </div>
-        </div>
-      </nav>
 
-      <main className="container mx-auto px-6 py-8">
-        <DiscoverProvider>
-          <Suspense fallback={
-            <div className="flex items-center justify-center py-24 text-gray-500">Loading…</div>
-          }>
-            <Outlet />
-          </Suspense>
-        </DiscoverProvider>
-      </main>
+          {/* Bell */}
+          <div className="relative shrink-0" ref={notifPanelRef}>
+            <button
+              onClick={() => setNotifOpen(o => !o)}
+              className="relative flex items-center justify-center w-9 h-9 rounded-full bg-white/[0.06] border border-white/[0.08] hover:bg-white/[0.09] transition-colors"
+            >
+              <Bell className="w-4 h-4 text-gray-300" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 flex items-center justify-center bg-[#C0392B] text-white text-[9px] font-bold rounded-full">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
+            </button>
 
-      {/* Movie detail modal triggered from search */}
+            {notifOpen && (
+              <div className="absolute right-0 top-11 w-80 max-h-[480px] flex flex-col bg-[#141414] border border-[#2A2A2A] rounded-2xl shadow-2xl z-[100] overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-[#2A2A2A] shrink-0">
+                  <span className="text-sm font-semibold text-white">Notifications</span>
+                  {unreadCount > 0 && (
+                    <button
+                      onClick={handleMarkAllRead}
+                      className="text-xs font-medium hover:opacity-80 transition-opacity"
+                      style={{ color: 'oklch(0.72 0.1 278)' }}
+                    >
+                      Mark all read
+                    </button>
+                  )}
+                </div>
+                <div className="overflow-y-auto flex-1">
+                  {notifications.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 gap-2">
+                      <Bell className="w-8 h-8 text-gray-600" />
+                      <p className="text-gray-500 text-sm">No notifications yet</p>
+                    </div>
+                  ) : (
+                    notifications.map(n => (
+                      <button
+                        key={n.notification_id}
+                        onClick={() => handleMarkOneRead(n)}
+                        className={`w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-[#1C1C1C] transition-colors border-b border-[#2A2A2A] last:border-0 ${!n.read ? 'bg-[#1A1A1A]' : ''}`}
+                      >
+                        <div className="shrink-0 mt-0.5 w-8 h-8 rounded-full bg-[#2A2A2A] flex items-center justify-center">
+                          {notifIcon(n.type)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm leading-snug ${n.read ? 'text-gray-400' : 'text-white'}`}>
+                            {notifMessage(n)}
+                          </p>
+                          <p className="text-xs text-gray-600 mt-0.5">{timeAgo(n.created_at)}</p>
+                        </div>
+                        {!n.read && <span className="shrink-0 mt-1.5 w-2 h-2 rounded-full bg-[#C0392B]" />}
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+        </header>
+
+        {/* Page content */}
+        <main className="flex-1 px-6 py-8">
+          <DiscoverProvider>
+            <Suspense fallback={
+              <div className="flex items-center justify-center py-24 text-gray-500">Loading…</div>
+            }>
+              <Outlet />
+            </Suspense>
+          </DiscoverProvider>
+        </main>
+      </div>
+
       {modalMovieId && (
         <MovieDetailModal movieId={modalMovieId} onClose={() => setModalMovieId(null)} />
       )}

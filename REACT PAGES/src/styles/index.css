@@ -10,10 +10,10 @@ html {
     overflow-x: hidden;
 }
 
-/* Breaks out of any container to span the full viewport width */
+/* Breaks out of the px-6 content padding only — does not bleed into the sidebar */
 .full-bleed {
-  width: 100vw;
-  margin-left: calc(50% - 50vw);
+  width: calc(100% + 3rem);
+  margin-left: -1.5rem;
 }
 
 /* Hide scrollbar for horizontal movie rows */
