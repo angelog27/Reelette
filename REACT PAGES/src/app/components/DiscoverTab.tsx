@@ -23,7 +23,7 @@ const PROVIDER_TABS = [
 ];
 
 const PROVIDER_COLOR: Record<string, string> = {
-  'all':          '#C0392B',
+  'all':          '#8875D0',
   'Netflix':      '#E50914',
   'Disney+':      '#1A4DB5',
   'Hulu':         '#1CE783',
@@ -76,8 +76,8 @@ function SkeletonCard() {
 function SkeletonRow({ title }: { title: string }) {
   return (
     <div className="mb-8">
-      <h2 className="text-sm md:text-base font-bold text-white mb-3 tracking-wide uppercase"
-        style={{ color: '#e5e5e5', letterSpacing: '0.04em' }}>
+      <h2 className="text-[15px] font-bold text-white mb-3"
+        style={{ color: '#e8e8e8', letterSpacing: '-0.01em' }}>
         {title}
       </h2>
       <div className="flex gap-2">
@@ -114,6 +114,11 @@ function CompactCard({ movie, onClick }: { movie: Movie; onClick: () => void }) 
           </div>
         )}
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-200" />
+        {movie.streamingService && PROVIDER_LOGOS[movie.streamingService] && (
+          <div className="absolute top-1.5 right-1.5 w-7 h-7 rounded-md overflow-hidden bg-black/60">
+            <img src={PROVIDER_LOGOS[movie.streamingService]} alt={movie.streamingService} className="w-full h-full object-cover" />
+          </div>
+        )}
       </div>
       <div className="mt-2 px-0.5">
         <p className="text-white text-[13px] font-medium line-clamp-1 leading-snug">{movie.title}</p>
@@ -145,8 +150,8 @@ function MovieRow({ title, movies, onMovieClick }: {
 
   return (
     <div className="mb-8">
-      <h2 className="text-sm md:text-base font-bold text-white mb-3 tracking-wide uppercase"
-        style={{ color: '#e5e5e5', letterSpacing: '0.04em' }}>
+      <h2 className="text-[15px] font-bold text-white mb-3"
+        style={{ color: '#e8e8e8', letterSpacing: '-0.01em' }}>
         {title}
       </h2>
       <div className="relative group">
@@ -253,7 +258,7 @@ function HeroSection({ movies, onOpenModal, onToggleWatchlist, watchlistIds, has
         <div className="flex flex-wrap gap-2 mb-3">
           {movie.genres.slice(0, 3).map(g => (
             <span key={g} className="text-xs px-2.5 py-0.5 rounded-sm font-medium"
-              style={{ background: 'rgba(192,57,43,0.75)', color: '#fff' }}>
+              style={{ background: 'rgba(136,117,208,0.7)', color: '#fff' }}>
               {g}
             </span>
           ))}
@@ -279,16 +284,16 @@ function HeroSection({ movies, onOpenModal, onToggleWatchlist, watchlistIds, has
         <div className="flex flex-wrap gap-3">
           <button
             onClick={() => onOpenModal(movie.id)}
-            className="flex items-center gap-2 px-6 py-2.5 bg-white text-black font-bold rounded text-sm hover:bg-gray-200 transition-colors duration-150"
+            className="flex items-center gap-2 px-6 py-2.5 bg-white/90 text-zinc-900 font-semibold rounded-lg text-sm hover:bg-white transition-colors duration-150"
           >
             <Info className="w-4 h-4" /> More Info
           </button>
           {hasUser && (
             <button
               onClick={() => onToggleWatchlist(movie)}
-              className="flex items-center gap-2 px-5 py-2.5 font-semibold rounded text-sm transition-colors duration-150"
+              className="flex items-center gap-2 px-5 py-2.5 font-semibold rounded-lg text-sm transition-colors duration-150"
               style={isInWatchlist
-                ? { background: '#C0392B', color: '#fff' }
+                ? { background: '#8875D0', color: '#fff' }
                 : { background: 'rgba(109,109,110,0.7)', color: '#fff' }}
             >
               {isInWatchlist
@@ -306,7 +311,7 @@ function HeroSection({ movies, onOpenModal, onToggleWatchlist, watchlistIds, has
               key={i}
               onClick={() => { setCurrent(i); startInterval(); }}
               className="h-[3px] rounded-full transition-all duration-300"
-              style={{ width: i === current ? 20 : 8, background: i === current ? '#C0392B' : 'rgba(255,255,255,0.4)' }}
+              style={{ width: i === current ? 20 : 8, background: i === current ? '#8875D0' : 'rgba(255,255,255,0.4)' }}
             />
           ))}
         </div>

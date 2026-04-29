@@ -6,6 +6,7 @@ import { Switch } from "./ui/switch";
 import { Slider } from "./ui/slider";
 import { Input } from "./ui/input";
 import reeletteLogo from "../../assets/Reelette_LOGO_upscaled.png";
+import { PROVIDER_LOGOS } from "../constants/providers";
 import {
   discoverMovies,
   getServices,
@@ -382,7 +383,43 @@ export function RouletteTab() {
         {/* ── Center: Wheel + controls ── */}
         <div className="flex flex-col items-center gap-5">
 
-          {/* Filter controls */}
+          {/* Mood chips — always visible, primary filter */}
+          <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-0.5" style={{ maxWidth: 400, width: '100%' }}>
+            <button
+              onClick={() => { setActiveMood(""); setGenre(""); }}
+              className="flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all duration-200"
+              style={
+                !activeMood
+                  ? { backgroundColor: 'oklch(0.35 0.08 278)', borderColor: 'oklch(0.55 0.11 278)', color: '#d4c9f5' }
+                  : { backgroundColor: '#111', borderColor: '#222', color: '#6b7280' }
+              }
+            >
+              Any
+            </button>
+            {MOODS.map(mood => {
+              const isActive = activeMood === mood.label;
+              const moodColor = getWheelColor(mood.genre);
+              return (
+                <button
+                  key={mood.label}
+                  onClick={() => {
+                    if (isActive) { setActiveMood(""); setGenre(""); }
+                    else { setActiveMood(mood.label); setGenre(mood.genre); }
+                  }}
+                  className="flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all duration-200"
+                  style={
+                    isActive
+                      ? { backgroundColor: moodColor, borderColor: moodColor, color: '#fff', boxShadow: `0 0 14px ${moodColor}55` }
+                      : { backgroundColor: '#111', borderColor: '#222', color: '#9ca3af' }
+                  }
+                >
+                  {mood.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Secondary controls */}
           <div className="flex items-center gap-3 flex-wrap justify-center">
             <div className="flex items-center gap-2 bg-[#111] border border-[#1e1e1e] rounded-full px-3.5 py-2">
               <Switch
@@ -405,47 +442,27 @@ export function RouletteTab() {
               <button
                 onClick={() => setFiltersExpanded(v => !v)}
                 className={`flex items-center gap-1.5 text-xs border rounded-full px-3.5 py-2 transition-colors ${
-                  hasActiveFilters
-                    ? "bg-[#C0392B]/10 border-[#C0392B]/40 text-[#E74C3C]"
+                  (minRating[0] > 0 || !!yearFrom || !!yearTo)
+                    ? "bg-[#111] border-[#3d3566] text-[#a89de0]"
                     : "bg-[#111] border-[#1e1e1e] text-gray-400 hover:text-white hover:border-[#333]"
                 }`}
               >
                 <SlidersHorizontal className="w-3 h-3" />
                 Filters
-                {hasActiveFilters && <span className="w-1.5 h-1.5 rounded-full bg-[#C0392B]" />}
+                {(minRating[0] > 0 || !!yearFrom || !!yearTo) && (
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'oklch(0.62 0.13 278)' }} />
+                )}
                 <ChevronDown className={`w-3 h-3 transition-transform ${filtersExpanded ? "rotate-180" : ""}`} />
               </button>
 
               {filtersExpanded && (
                 <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-72 bg-[#111] border border-[#1e1e1e] rounded-2xl shadow-2xl z-50 p-5 space-y-5">
-                  <div className="space-y-2">
-                    <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Vibe</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {MOODS.map(mood => (
-                        <button
-                          key={mood.label}
-                          onClick={() => {
-                            if (activeMood === mood.label) { setActiveMood(""); setGenre(""); }
-                            else { setActiveMood(mood.label); setGenre(mood.genre); }
-                          }}
-                          className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors border ${
-                            activeMood === mood.label
-                              ? "bg-[#C0392B] border-[#C0392B] text-white"
-                              : "border-[#252525] text-gray-400 hover:border-[#C0392B]/50 hover:text-white"
-                          }`}
-                        >
-                          {mood.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
                   <div className="space-y-1.5">
                     <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Genre</p>
                     <select
                       value={genre}
                       onChange={e => { setGenre(e.target.value); setActiveMood(""); }}
-                      className="w-full bg-[#0a0a0a] border border-[#252525] text-white text-xs rounded-lg px-2.5 py-2 focus:border-[#C0392B] focus:outline-none"
+                      className="w-full bg-[#0a0a0a] border border-[#252525] text-white text-xs rounded-lg px-2.5 py-2 focus:outline-none"
                     >
                       <option value="">Any Genre</option>
                       {GENRES.map(g => <option key={g.value} value={g.value}>{g.label}</option>)}
@@ -478,7 +495,8 @@ export function RouletteTab() {
                   {hasActiveFilters && (
                     <button
                       onClick={() => { setGenre(""); setActiveMood(""); setMinRating([0]); setYearFrom(""); setYearTo(""); }}
-                      className="text-xs text-[#C0392B] hover:text-[#E74C3C] transition-colors font-medium"
+                      className="text-xs hover:opacity-80 transition-opacity font-medium"
+                      style={{ color: 'oklch(0.72 0.1 278)' }}
                     >
                       Clear all filters
                     </button>
@@ -535,74 +553,81 @@ export function RouletteTab() {
 
           {/* Vote card */}
           {awaitingVote && pendingMovie && (
-            <div className="w-full max-w-[380px] -mt-6 bg-[#111] border border-[#222] rounded-2xl overflow-hidden shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
-              <div className="flex gap-4 p-4">
-                {pendingMovie.poster ? (
-                  <img src={pendingMovie.poster} alt={pendingMovie.title}
-                    className="w-16 h-24 rounded-xl object-cover shrink-0 shadow-lg" />
-                ) : (
-                  <div className="w-16 h-24 rounded-xl bg-[#1a1a1a] shrink-0 flex items-center justify-center">
-                    <Film className="w-5 h-5 text-gray-600" />
-                  </div>
-                )}
-                <div className="flex-1 min-w-0 flex flex-col justify-center">
+            <div className="w-full max-w-[420px] bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl overflow-hidden shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-400">
+              <div className="flex gap-5 p-5 pb-3">
+                <div className="relative shrink-0">
+                  {pendingMovie.poster ? (
+                    <img src={pendingMovie.poster} alt={pendingMovie.title}
+                      className="w-24 h-36 rounded-xl object-cover shadow-xl ring-1 ring-white/10" />
+                  ) : (
+                    <div className="w-24 h-36 rounded-xl bg-[#1a1a1a] flex items-center justify-center ring-1 ring-white/5">
+                      <Film className="w-6 h-6 text-gray-600" />
+                    </div>
+                  )}
+                  {pendingMovie.streamingService && PROVIDER_LOGOS[pendingMovie.streamingService] && (
+                    <div className="absolute -bottom-1.5 -right-1.5 w-8 h-8 rounded-lg overflow-hidden shadow-lg ring-1 ring-black">
+                      <img src={PROVIDER_LOGOS[pendingMovie.streamingService]} alt={pendingMovie.streamingService} className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
                   <p
-                    className="text-white font-bold text-sm line-clamp-2 leading-snug"
-                    style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
+                    className="text-white font-bold leading-snug line-clamp-2"
+                    style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '1rem' }}
                   >
                     {pendingMovie.title}
                   </p>
-                  <div className="flex items-center gap-2 mt-1.5 text-xs">
+                  <div className="flex items-center gap-2 text-xs">
                     {pendingMovie.year > 0 && <span className="text-gray-500">{pendingMovie.year}</span>}
                     {pendingMovie.rating > 0 && <span className="text-yellow-400 font-semibold">★ {pendingMovie.rating.toFixed(1)}</span>}
                   </div>
                   {pendingMovie.genres.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {pendingMovie.genres.slice(0, 3).map(g => (
-                        <span key={g} className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.05] text-gray-500 border border-white/[0.07]">{g}</span>
+                    <div className="flex flex-wrap gap-1 mt-0.5">
+                      {pendingMovie.genres.slice(0, 2).map(g => (
+                        <span key={g} className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.04] text-gray-500 border border-white/[0.06]">{g}</span>
                       ))}
                     </div>
                   )}
                 </div>
               </div>
 
-              <div className="px-4 pb-4 space-y-3">
-                <p
-                  className="text-xs text-gray-600 text-center italic"
-                  style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
+              <p
+                className="text-[11px] text-gray-600 text-center italic px-5 pb-3"
+                style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
+              >
+                Fate has spoken. Your verdict?
+              </p>
+
+              <div className="grid grid-cols-2 gap-3 px-4 pb-3">
+                <button
+                  onClick={() => handleVote("dislike")}
+                  disabled={userVote !== null}
+                  className="flex items-center justify-center gap-2 py-3.5 rounded-xl border border-[#222] bg-white/[0.02] hover:bg-red-500/10 hover:border-red-500/30 transition-all text-sm font-semibold text-gray-400 hover:text-red-400 disabled:opacity-40"
                 >
-                  Fate has spoken — what's your verdict?
-                </p>
-                <div className="grid grid-cols-2 gap-2.5">
-                  <button
-                    onClick={() => handleVote("dislike")}
-                    disabled={userVote !== null}
-                    className="flex items-center justify-center gap-2 py-3 rounded-xl border border-[#222] bg-white/[0.02] hover:bg-red-500/10 hover:border-red-500/40 transition-all text-sm font-semibold text-gray-400 hover:text-red-400 disabled:opacity-40"
-                  >
-                    <ThumbsDown className="w-4 h-4" /> Nope
-                  </button>
-                  <button
-                    onClick={() => handleVote("like")}
-                    disabled={userVote !== null}
-                    className="flex items-center justify-center gap-2 py-3 rounded-xl border border-[#222] bg-white/[0.02] hover:bg-green-500/10 hover:border-green-500/40 transition-all text-sm font-semibold text-gray-400 hover:text-green-400 disabled:opacity-40"
-                  >
-                    <ThumbsUp className="w-4 h-4" /> I'm in
-                  </button>
-                </div>
-                <div className="flex items-center justify-between pt-1">
-                  <button
-                    onClick={() => { setAwaitingVote(false); setPendingMovie(null); spin(); }}
-                    className="text-xs text-gray-600 hover:text-gray-400 transition-colors"
-                  >
-                    Skip &amp; respin
-                  </button>
-                  <button
-                    onClick={() => setSelectedMovieId(pendingMovie.id)}
-                    className="text-xs text-[#C0392B] hover:text-[#E74C3C] transition-colors font-semibold"
-                  >
-                    More info →
-                  </button>
-                </div>
+                  <ThumbsDown className="w-4 h-4" /> Pass
+                </button>
+                <button
+                  onClick={() => handleVote("like")}
+                  disabled={userVote !== null}
+                  className="flex items-center justify-center gap-2 py-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20 hover:border-emerald-500/40 transition-all text-sm font-semibold text-emerald-400 hover:text-emerald-300 disabled:opacity-40"
+                >
+                  <ThumbsUp className="w-4 h-4" /> I'm in
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between px-4 pb-4">
+                <button
+                  onClick={() => { setAwaitingVote(false); setPendingMovie(null); spin(); }}
+                  className="text-xs text-gray-600 hover:text-gray-400 transition-colors"
+                >
+                  Skip &amp; respin
+                </button>
+                <button
+                  onClick={() => setSelectedMovieId(pendingMovie.id)}
+                  className="text-xs text-gray-400 hover:text-white transition-colors font-medium"
+                >
+                  More info →
+                </button>
               </div>
             </div>
           )}
