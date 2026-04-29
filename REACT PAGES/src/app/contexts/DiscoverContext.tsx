@@ -146,7 +146,11 @@ export function DiscoverProvider({ children }: { children: React.ReactNode }) {
 
       getWatchedMovies(user.user_id)
         .then(watched => {
-          if (!watched.length) return;
+          if (!watched.length) {
+            // No watch history — nothing to base recommendations on
+            if (!lastWatchedId) setRecommended([]);
+            return;
+          }
           setUserWatched(watched);
           const id = watched[0].movie_id;
           localStorage.setItem(LAST_WATCHED_KEY, id);
@@ -157,7 +161,9 @@ export function DiscoverProvider({ children }: { children: React.ReactNode }) {
               .catch(() => setRecommended([]));
           }
         })
-        .catch(() => {});
+        .catch(() => {
+          if (!lastWatchedId) setRecommended([]);
+        });
 
       getRouletteHistory(user.user_id, ROW_LIMIT)
         .then(spins => setRecentSpins(spins.map(spinToMovie)))

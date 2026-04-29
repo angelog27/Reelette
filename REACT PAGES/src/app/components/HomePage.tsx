@@ -1,14 +1,14 @@
 import { Suspense, useState, useEffect, useRef, useCallback } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
   Bell, Heart, MessageCircle, Film, Users, UserPlus, Search, SlidersHorizontal,
-  X, Star, ChevronDown, Bookmark, User, Tv,
+  X, Star, ChevronDown, Bookmark, User, Tv, LogOut,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import logoImage from '../../assets/Reelette_White.png';
 import reeletteLogo from '../../assets/Reelette_LOGO_upscaled.png';
 import {
-  getNotifications, markNotificationRead, markAllNotificationsRead, getUser, timeAgo,
+  BASE_URL, getNotifications, markNotificationRead, markAllNotificationsRead,
+  getUser, clearUser, clearServices, timeAgo,
   searchMovies, discoverMovies, getServices, SERVICE_DISPLAY,
   type AppNotification, type Movie,
 } from '../services/api';
@@ -75,12 +75,13 @@ const YEAR_OPTIONS = [
 ];
 
 export function HomePage() {
+  const navigate = useNavigate();
+
   const tabs: TabLink[] = [
     { id: 'roulette', label: 'Reelette', path: '/home/roulette', imageLogo: reeletteLogo },
     { id: 'discover', label: 'Discover', path: '/home/discover', icon: Tv },
     { id: 'mystuff',  label: 'My Stuff', path: '/home/mystuff',  icon: Bookmark },
     { id: 'social',   label: 'Social',   path: '/home/social',   icon: Users },
-    { id: 'profile',  label: 'Profile',  path: '/home/profile',  icon: User },
   ];
 
   // ── Search state ────────────────────────────────────────────────
@@ -111,6 +112,11 @@ export function HomePage() {
   const [notifOpen, setNotifOpen]         = useState(false);
   const notifPanelRef                     = useRef<HTMLDivElement>(null);
   const prevUnreadRef                     = useRef(0);
+
+  // ── Avatar dropdown ─────────────────────────────────────────────
+  const [navAvatarUrl,  setNavAvatarUrl]  = useState('');
+  const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
+  const avatarMenuRef                     = useRef<HTMLDivElement>(null);
 
   // Close search dropdown on outside click
   useEffect(() => {
@@ -148,6 +154,34 @@ export function HomePage() {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [notifOpen]);
+
+  // Fetch avatar URL for nav circle
+  useEffect(() => {
+    if (!currentUserId) return;
+    fetch(`${BASE_URL}/user/${currentUserId}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.avatarUrl) setNavAvatarUrl(d.avatarUrl); })
+      .catch(() => {});
+  }, [currentUserId]);
+
+  // Close avatar dropdown on outside click
+  useEffect(() => {
+    if (!avatarMenuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (avatarMenuRef.current && !avatarMenuRef.current.contains(e.target as Node)) {
+        setAvatarMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [avatarMenuOpen]);
+
+  function handleNavLogout() {
+    clearUser();
+    clearServices();
+    localStorage.removeItem('user_id');
+    navigate('/login');
+  }
 
   // Real-time notifications via Firestore onSnapshot; fallback to 60s polling
   useEffect(() => {
@@ -293,10 +327,48 @@ export function HomePage() {
       {/* ── Top nav bar ──────────────────────────────────────────── */}
       <header className="sticky top-0 z-50 flex items-center gap-2 px-5 h-[52px] bg-[#0A0A0A]/95 backdrop-blur-sm border-b border-[#1C1C1C]">
 
-        {/* Logo */}
-        <div className="flex items-center gap-2 shrink-0 mr-3">
-          <img src={reeletteLogo} alt="" className="h-6 w-6" />
-          <img src={logoImage} alt="Reelette" className="h-[15px] w-auto" />
+        {/* Avatar circle — profile dropdown */}
+        <div className="relative shrink-0 mr-3" ref={avatarMenuRef}>
+          <button
+            onClick={() => setAvatarMenuOpen(o => !o)}
+            className="w-8 h-8 rounded-full overflow-hidden border border-white/10 hover:border-white/30 transition-all duration-150 active:scale-95"
+            title="Profile"
+          >
+            {navAvatarUrl ? (
+              <img src={navAvatarUrl} alt="Profile" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full bg-[#2A2A2A] flex items-center justify-center text-[10px] font-semibold text-white/60">
+                {currentUser?.username?.slice(0, 2).toUpperCase() ?? '?'}
+              </div>
+            )}
+          </button>
+
+          {avatarMenuOpen && (
+            <div className="absolute left-0 top-10 w-52 bg-[#141414] border border-[#2A2A2A] rounded-2xl shadow-2xl z-[110] overflow-hidden panel-enter">
+              <div className="px-4 py-3 border-b border-[#2A2A2A]">
+                <p className="text-white text-sm font-semibold truncate">
+                  {(currentUser as { displayName?: string; username?: string })?.displayName || currentUser?.username || 'User'}
+                </p>
+                {currentUser?.username && (
+                  <p className="text-zinc-500 text-xs">@{currentUser.username}</p>
+                )}
+              </div>
+              <NavLink to="/home/profile" onClick={() => setAvatarMenuOpen(false)}>
+                <div className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-white/[0.04] transition-colors cursor-pointer">
+                  <User className="w-4 h-4 text-zinc-400" />
+                  <span className="text-sm text-zinc-300">Profile & settings</span>
+                </div>
+              </NavLink>
+              <div className="border-t border-[#2A2A2A]" />
+              <button
+                onClick={handleNavLogout}
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 hover:bg-white/[0.04] transition-colors text-left"
+              >
+                <LogOut className="w-4 h-4 text-zinc-400" />
+                <span className="text-sm text-zinc-300">Log out</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Nav tabs */}

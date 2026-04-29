@@ -1,15 +1,15 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Camera, Edit2, Save, X, User, Mail, Film, Users, Eye, Lock,
   Bell, LogOut, Trash2, CheckCheck, Loader2, UserPlus, Heart,
-  MessageCircle, Star, Shield, ChevronRight,
+  MessageCircle, Shield, ChevronRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { UserProfileModal } from './UserProfileModal';
 import { PROVIDER_LOGOS } from '../constants/providers';
 import {
-  BASE_URL, getUser, clearUser, clearServices, saveServices, getServices,
+  BASE_URL, getUser, clearUser, clearServices, saveServices,
   getFriends, getUserPublicProfile, saveSocialSettings,
   getNotifications, markNotificationRead, markAllNotificationsRead,
   updateUserAvatar, updateUserEmail, deleteUserAccount,
@@ -17,11 +17,11 @@ import {
   type AppNotification, type Friend,
 } from '../services/api';
 
-// ── Theatre background ───────────────────────────────────────────
+// ── Film grain texture ────────────────────────────────────────────
 
 const FILM_GRAIN = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZmlsdGVyIGlkPSJuIj48ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iMC45IiBudW1PY3RhdmVzPSI0Ii8+PC9maWx0ZXI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsdGVyPSJ1cmwoI24pIiBvcGFjaXR5PSIxIi8+PC9zdmc+";
 
-// ── Banner presets ───────────────────────────────────────────────
+// ── Banner presets ────────────────────────────────────────────────
 
 const BANNERS = [
   { id: 'default',  label: 'Cinematic', swatch: '#27272a', gradient: 'linear-gradient(135deg,#18181b 0%,#09090b 60%,#000 100%)' },
@@ -35,7 +35,7 @@ const BANNERS = [
 ];
 const getBannerGradient = (id: string) => (BANNERS.find(b => b.id === id) ?? BANNERS[0]).gradient;
 
-// ── Streaming service config (matches Discover page exactly) ─────
+// ── Streaming services ────────────────────────────────────────────
 
 const SERVICES: { key: string; label: string; color: string }[] = [
   { key: 'netflix',     label: 'Netflix',      color: '#E50914' },
@@ -48,7 +48,6 @@ const SERVICES: { key: string; label: string; color: string }[] = [
   { key: 'hulu',        label: 'Hulu',         color: '#3DBB3D' },
 ];
 
-// Map service key → PROVIDER_LOGOS key (display name)
 const KEY_TO_DISPLAY: Record<string, string> = {
   netflix:     'Netflix',
   hboMax:      'Max',
@@ -60,7 +59,7 @@ const KEY_TO_DISPLAY: Record<string, string> = {
   hulu:        'Hulu',
 };
 
-// ── Notification helpers (mirrors HomePage logic) ─────────────────
+// ── Notification helpers ──────────────────────────────────────────
 
 function notifMessage(n: AppNotification): string {
   const actor = n.actor_username ? `@${n.actor_username}` : 'Someone';
@@ -101,21 +100,23 @@ function timeAgoShort(iso: string): string {
   return `${Math.floor(h / 24)}d ago`;
 }
 
-// ── Section card wrapper ──────────────────────────────────────────
+// ── Card wrapper ──────────────────────────────────────────────────
 
 function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl p-6 ${className}`}>
+    <div className={`bg-[#111111] border border-[#222222] rounded-2xl p-6 ${className}`}>
       {children}
     </div>
   );
 }
 
+// ── Section title ─────────────────────────────────────────────────
+
 function SectionTitle({ label, icon }: { label: string; icon: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-3 mb-5">
-      <div className="w-0.5 h-5 bg-red-600 rounded-full" />
-      <span className="text-white text-sm font-semibold uppercase tracking-widest">{label}</span>
+    <div className="flex items-center gap-2.5 mb-5">
+      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: 'var(--reel-accent-hex)' }} />
+      <span className="text-zinc-300 text-xs font-semibold uppercase tracking-wider">{label}</span>
       <span className="text-zinc-600 ml-auto">{icon}</span>
     </div>
   );
@@ -134,9 +135,12 @@ function Field({
       <label className="block text-zinc-500 text-xs uppercase tracking-wider mb-1.5">{label}</label>
       <input
         type={type} name={name} value={value} disabled={disabled} onChange={onChange}
-        className="w-full bg-[#090909] border border-[#1e1e1e] rounded-xl px-4 py-2.5 text-white text-sm
-          focus:border-red-600 focus:ring-1 focus:ring-red-600/30 focus:outline-none transition-all
+        className="w-full bg-[#0a0a0a] border border-[#222] rounded-xl px-4 py-2.5 text-white text-sm
+          focus:outline-none transition-all
           disabled:text-zinc-500 disabled:cursor-default placeholder-zinc-700"
+        style={{ '--tw-ring-color': 'var(--reel-accent-hex)' } as React.CSSProperties}
+        onFocus={e => { e.currentTarget.style.borderColor = 'var(--reel-accent-hex)'; }}
+        onBlur={e => { e.currentTarget.style.borderColor = '#222'; }}
       />
       {hint && <p className="text-zinc-600 text-xs mt-1">{hint}</p>}
     </div>
@@ -150,12 +154,12 @@ function DeleteModal({ onConfirm, onCancel, loading }: { onConfirm: () => void; 
   const confirmed = typed.toLowerCase() === 'delete';
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm px-4">
-      <div className="bg-[#0f0f0f] border border-red-900/50 rounded-2xl p-8 max-w-md w-full shadow-2xl shadow-red-950/30">
+      <div className="bg-[#111] border border-red-900/50 rounded-2xl p-8 max-w-md w-full shadow-2xl shadow-red-950/30">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 bg-red-950/50 rounded-full flex items-center justify-center">
             <Trash2 className="w-5 h-5 text-red-500" />
           </div>
-          <h2 className="text-white font-semibold text-lg">Delete Account</h2>
+          <h2 className="text-white font-semibold text-lg">Delete account</h2>
         </div>
         <p className="text-zinc-400 text-sm leading-relaxed mb-6">
           This permanently deletes your account, profile, and all data. This cannot be undone.
@@ -166,7 +170,7 @@ function DeleteModal({ onConfirm, onCancel, loading }: { onConfirm: () => void; 
           value={typed}
           onChange={e => setTyped(e.target.value)}
           placeholder="Type delete to confirm"
-          className="w-full bg-[#090909] border border-[#1e1e1e] rounded-xl px-4 py-2.5 text-white text-sm
+          className="w-full bg-[#0a0a0a] border border-[#222] rounded-xl px-4 py-2.5 text-white text-sm
             focus:border-red-600 focus:outline-none mb-4 placeholder-zinc-700"
         />
         <div className="flex gap-3">
@@ -178,7 +182,7 @@ function DeleteModal({ onConfirm, onCancel, loading }: { onConfirm: () => void; 
             className="flex-1 py-2.5 bg-red-700 hover:bg-red-600 text-white rounded-xl text-sm font-semibold
               transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-            Delete Account
+            Delete account
           </button>
         </div>
       </div>
@@ -186,14 +190,14 @@ function DeleteModal({ onConfirm, onCancel, loading }: { onConfirm: () => void; 
   );
 }
 
-// ── Toggle switch ─────────────────────────────────────────────────
+// ── Toggle ────────────────────────────────────────────────────────
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
   return (
     <button
       onClick={() => onChange(!checked)}
-      className="relative w-11 h-6 rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-red-600/40"
-      style={{ background: checked ? '#dc2626' : '#3f3f46' }}
+      className="relative w-11 h-6 rounded-full transition-colors duration-300 focus:outline-none shrink-0"
+      style={{ background: checked ? 'var(--reel-accent-hex)' : '#3f3f46' }}
     >
       <span
         className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-300"
@@ -337,10 +341,8 @@ export function ProfileandSettingsTab() {
   async function handleToggleService(key: string) {
     const updated = { ...services, [key]: !services[key] };
     setServices(updated);
-    // Sync to localStorage so DiscoverTab provider tabs update live
     saveServices(updated);
     window.dispatchEvent(new StorageEvent('storage'));
-    // Persist to backend
     setServicesSaving(true);
     try {
       await updateUserStreaming(userId, updated);
@@ -412,18 +414,21 @@ export function ProfileandSettingsTab() {
   // ── Render guards ─────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#090909] flex items-center justify-center">
-        <Loader2 className="w-6 h-6 text-red-600 animate-spin" />
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <Loader2 className="w-5 h-5 animate-spin" style={{ color: 'var(--reel-accent-hex)' }} />
       </div>
     );
   }
 
   if (loadErr) {
     return (
-      <div className="min-h-screen bg-[#090909] flex flex-col items-center justify-center gap-4">
-        <p className="text-red-400 text-sm">{loadErr}</p>
-        <button onClick={() => { setLoading(true); setRetryKey(k => k + 1); }}
-          className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm transition-all">
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
+        <p className="text-zinc-400 text-sm">{loadErr}</p>
+        <button
+          onClick={() => { setLoading(true); setRetryKey(k => k + 1); }}
+          className="px-4 py-2 rounded-xl text-sm font-medium text-white transition-all"
+          style={{ background: 'var(--reel-accent-hex)' }}
+        >
           Retry
         </button>
       </div>
@@ -445,8 +450,9 @@ export function ProfileandSettingsTab() {
       {/* Film grain */}
       <div className="pointer-events-none fixed inset-0 opacity-[0.025] z-0"
         style={{ backgroundImage: `url(${FILM_GRAIN})` }} />
-      {/* Red vignette */}
-      <div className="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(ellipse_at_top_right,rgba(220,38,38,0.06)_0%,transparent_60%)]" />
+      {/* Ambient glow */}
+      <div className="pointer-events-none fixed inset-0 z-0"
+        style={{ background: 'radial-gradient(ellipse at top right, rgba(200,120,32,0.04) 0%, transparent 60%)' }} />
 
       {viewProfileId && <UserProfileModal userId={viewProfileId} onClose={() => setViewProfileId(null)} />}
       {showDeleteModal && <DeleteModal onConfirm={handleDeleteAccount} onCancel={() => setShowDeleteModal(false)} loading={deleteLoading} />}
@@ -456,12 +462,12 @@ export function ProfileandSettingsTab() {
         {/* ── Banner + Avatar ────────────────────────────────────────── */}
         <div className="relative mb-0">
           {/* Banner */}
-          <div className="h-44 rounded-b-none rounded-t-none relative overflow-hidden" style={{ background: bannerGradient }}>
-            <div className="absolute inset-0 bg-gradient-to-r from-red-950/20 to-transparent pointer-events-none" />
+          <div className="h-44 relative overflow-hidden" style={{ background: bannerGradient }}>
+            <div className="absolute inset-0 bg-gradient-to-r from-black/25 to-transparent pointer-events-none" />
             {/* Scanline texture */}
-            <div className="absolute inset-0 pointer-events-none opacity-[0.06]"
+            <div className="absolute inset-0 pointer-events-none opacity-[0.05]"
               style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.3) 2px, rgba(0,0,0,0.3) 4px)' }} />
-            {/* Banner picker — edit mode only */}
+            {/* Banner picker — edit mode */}
             {editing && (
               <div className="absolute bottom-3 right-4 flex items-center gap-1.5 bg-black/60 backdrop-blur-sm rounded-full px-3 py-1.5">
                 <span className="text-zinc-500 text-[9px] uppercase tracking-widest mr-1">Banner</span>
@@ -485,9 +491,12 @@ export function ProfileandSettingsTab() {
                     : <div className="w-full h-full flex items-center justify-center text-zinc-700"><User size={40} /></div>
                   }
                 </div>
-                <button onClick={() => fileInputRef.current?.click()}
-                  className="absolute bottom-0.5 right-0.5 w-8 h-8 bg-red-600 hover:bg-red-700 rounded-full flex items-center justify-center shadow-lg transition-all opacity-0 group-hover:opacity-100"
-                  title="Change photo">
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="absolute bottom-0.5 right-0.5 w-8 h-8 rounded-full flex items-center justify-center shadow-lg transition-all opacity-0 group-hover:opacity-100 active:scale-95"
+                  style={{ background: 'var(--reel-accent-hex)' }}
+                  title="Change photo"
+                >
                   <Camera size={14} className="text-white" />
                 </button>
                 <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
@@ -497,20 +506,27 @@ export function ProfileandSettingsTab() {
               <div className="flex items-center gap-2 pb-1">
                 {editing ? (
                   <>
-                    <button onClick={() => { setDraft(profile); setEditing(false); }}
-                      className="flex items-center gap-1.5 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-sm transition-all">
+                    <button
+                      onClick={() => { setDraft(profile); setEditing(false); }}
+                      className="flex items-center gap-1.5 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-sm transition-all"
+                    >
                       <X size={14} /> Cancel
                     </button>
-                    <button onClick={handleSave} disabled={saving}
-                      className="flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold transition-all disabled:opacity-60">
+                    <button
+                      onClick={handleSave} disabled={saving}
+                      className="flex items-center gap-1.5 px-4 py-2 text-white rounded-xl text-sm font-semibold transition-all disabled:opacity-60"
+                      style={{ background: 'var(--reel-accent-hex)' }}
+                    >
                       {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
                       Save
                     </button>
                   </>
                 ) : (
-                  <button onClick={() => setEditing(true)}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-sm transition-all border border-zinc-700">
-                    <Edit2 size={14} /> Edit Profile
+                  <button
+                    onClick={() => setEditing(true)}
+                    className="flex items-center gap-1.5 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-sm transition-all border border-zinc-700"
+                  >
+                    <Edit2 size={14} /> Edit profile
                   </button>
                 )}
               </div>
@@ -519,8 +535,11 @@ export function ProfileandSettingsTab() {
             {/* Name / username / bio */}
             <div className="mt-3 space-y-0.5">
               {editing ? (
-                <input name="displayName" value={draft.displayName} onChange={handleChange}
-                  className="bg-transparent text-white text-xl font-semibold w-full focus:outline-none border-b border-zinc-700 pb-0.5 focus:border-red-600 transition-colors" />
+                <input
+                  name="displayName" value={draft.displayName} onChange={handleChange}
+                  className="bg-transparent text-white text-xl font-semibold w-full focus:outline-none border-b border-zinc-700 pb-0.5 transition-colors"
+                  style={{ borderBottomColor: 'var(--reel-accent-hex)' }}
+                />
               ) : (
                 <h1 className="text-white text-xl font-semibold">{profile.displayName || profile.username}</h1>
               )}
@@ -531,19 +550,25 @@ export function ProfileandSettingsTab() {
         </div>
 
         {/* ── Tab bar ───────────────────────────────────────────────── */}
-        <div className="flex border-b border-[#1e1e1e] mb-6 mt-2">
+        <div className="flex gap-1 bg-[#0a0a0a] rounded-xl p-1 mb-6 mt-3 border border-[#1e1e1e]">
           {TABS.map(tab => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-              className={`relative px-5 py-3 text-sm font-medium transition-colors flex items-center gap-1.5
-                ${activeTab === tab.id ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'}`}>
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`relative flex-1 flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150
+                ${activeTab === tab.id
+                  ? 'bg-[#1e1e1e] text-white shadow-sm'
+                  : 'text-zinc-500 hover:text-zinc-300'
+                }`}
+            >
               {tab.label}
               {(tab.badge ?? 0) > 0 && (
-                <span className="w-4 h-4 bg-red-600 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                <span
+                  className="w-4 h-4 flex items-center justify-center rounded-full text-[9px] font-bold text-white"
+                  style={{ background: 'var(--reel-accent-hex)' }}
+                >
                   {tab.badge}
                 </span>
-              )}
-              {activeTab === tab.id && (
-                <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-red-600 rounded-full" />
               )}
             </button>
           ))}
@@ -556,24 +581,28 @@ export function ProfileandSettingsTab() {
           <div className="space-y-5">
             {/* Basic info */}
             <Card>
-              <SectionTitle label="Basic Information" icon={<User size={18} />} />
+              <SectionTitle label="Basic information" icon={<User size={16} />} />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Field label="Display Name" name="displayName" value={editing ? draft.displayName : profile.displayName}
+                <Field label="Display name" name="displayName" value={editing ? draft.displayName : profile.displayName}
                   disabled={!editing} onChange={handleChange} />
                 <Field label="Username" name="username" value={editing ? draft.username : profile.username}
                   disabled={!editing} onChange={handleChange} />
               </div>
               <div className="mt-4">
                 <label className="block text-zinc-500 text-xs uppercase tracking-wider mb-1.5">Bio</label>
-                <textarea name="bio" value={editing ? draft.bio : profile.bio} disabled={!editing} onChange={e => setDraft(p => ({ ...p, bio: e.target.value }))}
+                <textarea
+                  name="bio" value={editing ? draft.bio : profile.bio} disabled={!editing}
+                  onChange={e => setDraft(p => ({ ...p, bio: e.target.value }))}
                   rows={3}
-                  className="w-full bg-[#090909] border border-[#1e1e1e] rounded-xl px-4 py-2.5 text-white text-sm
-                    focus:border-red-600 focus:ring-1 focus:ring-red-600/30 focus:outline-none transition-all
-                    disabled:text-zinc-500 disabled:cursor-default resize-none placeholder-zinc-700" />
+                  className="w-full bg-[#0a0a0a] border border-[#222] rounded-xl px-4 py-2.5 text-white text-sm
+                    focus:outline-none transition-all disabled:text-zinc-500 disabled:cursor-default resize-none placeholder-zinc-700"
+                  onFocus={e => { e.currentTarget.style.borderColor = 'var(--reel-accent-hex)'; }}
+                  onBlur={e => { e.currentTarget.style.borderColor = '#222'; }}
+                />
               </div>
               <div className="mt-4">
                 <label className="block text-zinc-500 text-xs uppercase tracking-wider mb-1.5">Email</label>
-                <div className="flex items-center gap-3 px-4 py-2.5 bg-[#090909] border border-[#1e1e1e] rounded-xl">
+                <div className="flex items-center gap-3 px-4 py-2.5 bg-[#0a0a0a] border border-[#222] rounded-xl">
                   <Mail size={15} className="text-zinc-600 shrink-0" />
                   <span className="text-zinc-400 text-sm flex-1">{profile.email || '—'}</span>
                   <span className="text-[10px] px-2 py-0.5 rounded-full border text-zinc-500 border-zinc-700">verified</span>
@@ -583,13 +612,13 @@ export function ProfileandSettingsTab() {
 
             {/* Social settings */}
             <Card>
-              <SectionTitle label="Social" icon={<Users size={18} />} />
+              <SectionTitle label="Social" icon={<Users size={16} />} />
               <div className="space-y-3 mb-5">
                 {[
-                  { key: 'showOnlineStatus' as const,    label: 'Show Online Status',     icon: <Eye size={16} className="text-zinc-500" /> },
-                  { key: 'showMyStuffPublicly' as const, label: 'Show MyStuff Publicly',  icon: <Lock size={16} className="text-zinc-500" /> },
+                  { key: 'showOnlineStatus' as const,    label: 'Show online status',      icon: <Eye size={15} className="text-zinc-500" /> },
+                  { key: 'showMyStuffPublicly' as const, label: 'Show My Stuff publicly',  icon: <Lock size={15} className="text-zinc-500" /> },
                 ].map(({ key, label, icon }) => (
-                  <div key={key} className="flex items-center justify-between px-4 py-3 bg-[#090909] border border-[#1e1e1e] rounded-xl">
+                  <div key={key} className="flex items-center justify-between px-4 py-3 bg-[#0a0a0a] border border-[#222] rounded-xl">
                     <div className="flex items-center gap-3">{icon}<span className="text-zinc-300 text-sm">{label}</span></div>
                     <Toggle checked={socialSettings[key]} onChange={v => handleSocialToggle(key, v)} />
                   </div>
@@ -602,7 +631,10 @@ export function ProfileandSettingsTab() {
                   Friends {friendsLoaded && `(${friends.length})`}
                 </p>
                 {!friendsLoaded ? (
-                  <div className="flex items-center gap-2 text-zinc-600 text-sm"><Loader2 size={14} className="animate-spin" /> Loading…</div>
+                  <div className="flex items-center gap-2 text-zinc-600 text-sm">
+                    <Loader2 size={14} className="animate-spin" style={{ color: 'var(--reel-accent-hex)' }} />
+                    Loading…
+                  </div>
                 ) : friends.length === 0 ? (
                   <p className="text-zinc-600 text-sm">No friends yet — head to Social to connect.</p>
                 ) : (
@@ -611,7 +643,12 @@ export function ProfileandSettingsTab() {
                       <button key={f.friend_id} title={f.displayName || f.friend_username}
                         onClick={() => setViewProfileId(f.friend_id)}
                         className="group flex flex-col items-center gap-1">
-                        <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-[#2a2a2a] group-hover:border-red-600 transition-all">
+                        <div
+                          className="w-11 h-11 rounded-full overflow-hidden border-2 border-[#2a2a2a] transition-all"
+                          style={{ '--hover-border': 'var(--reel-accent-hex)' } as React.CSSProperties}
+                          onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--reel-accent-hex)'; }}
+                          onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = '#2a2a2a'; }}
+                        >
                           {f.avatarUrl
                             ? <img src={f.avatarUrl} alt={f.friend_username} className="w-full h-full object-cover" />
                             : <div className="w-full h-full bg-[#1a1a1a] flex items-center justify-center text-zinc-500 text-xs font-bold">
@@ -641,36 +678,46 @@ export function ProfileandSettingsTab() {
         {/* ═══════════════════════════════════════════════════════════ */}
         {activeTab === 'streaming' && (
           <Card>
-            <SectionTitle label="Streaming Services" icon={<Film size={18} />} />
+            <SectionTitle label="Streaming services" icon={<Film size={16} />} />
             <p className="text-zinc-500 text-sm mb-6">
               Select the services you subscribe to. Your Discover page will filter content to these providers.
             </p>
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-4 gap-5">
               {SERVICES.map(svc => {
-                const active = !!services[svc.key];
+                const active  = !!services[svc.key];
                 const logoKey = KEY_TO_DISPLAY[svc.key];
                 const logo    = PROVIDER_LOGOS[logoKey];
                 return (
-                  <button key={svc.key} onClick={() => handleToggleService(svc.key)}
-                    className="flex flex-col items-center gap-2 transition-all duration-200 group"
-                    style={{ opacity: active ? 1 : 0.45 }}>
-                    <div className="relative">
-                      <img src={logo} alt={svc.label}
-                        className="w-28 h-28 rounded-2xl object-cover transition-all duration-250"
+                  <button
+                    key={svc.key}
+                    onClick={() => handleToggleService(svc.key)}
+                    className="flex flex-col items-center gap-2.5 transition-all duration-200"
+                    style={{ opacity: active ? 1 : 0.4 }}
+                  >
+                    <div className="relative w-full">
+                      <img
+                        src={logo}
+                        alt={svc.label}
+                        className="w-full aspect-square rounded-2xl object-cover transition-all duration-250"
                         style={{
-                          boxShadow: active ? `0 0 24px ${svc.color}99, 0 0 6px ${svc.color}55` : 'none',
+                          boxShadow: active ? `0 0 28px ${svc.color}70, 0 0 8px ${svc.color}40` : 'none',
                           transform: active ? 'scale(1.04)' : 'scale(1)',
                         }}
                       />
                       {active && (
-                        <div className="absolute inset-0 rounded-2xl ring-2 ring-white/30" />
+                        <div className="absolute inset-0 rounded-2xl ring-2 ring-white/20" />
                       )}
                     </div>
-                    <span className="text-xs font-semibold tracking-wide"
-                      style={{ color: active ? '#fff' : '#6b7280' }}>
+                    <span className="text-xs font-semibold tracking-wide" style={{ color: active ? '#fff' : '#6b7280' }}>
                       {svc.label}
                     </span>
-                    <div style={{ height: 2, width: active ? '60%' : 0, background: svc.color, borderRadius: 1, transition: 'width 0.25s' }} />
+                    <div style={{
+                      height: 2,
+                      width: active ? '60%' : 0,
+                      background: svc.color,
+                      borderRadius: 1,
+                      transition: 'width 0.25s',
+                    }} />
                   </button>
                 );
               })}
@@ -687,17 +734,21 @@ export function ProfileandSettingsTab() {
         {activeTab === 'notifications' && (
           <Card>
             <div className="flex items-center justify-between mb-5">
-              <SectionTitle label="Notifications" icon={<Bell size={18} />} />
+              <SectionTitle label="Notifications" icon={<Bell size={16} />} />
               {notifs.some(n => !n.read) && (
-                <button onClick={handleMarkAllRead}
-                  className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors -mt-5">
+                <button
+                  onClick={handleMarkAllRead}
+                  className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors -mt-5"
+                >
                   <CheckCheck size={14} /> Mark all read
                 </button>
               )}
             </div>
 
             {notifsLoading ? (
-              <div className="flex justify-center py-12"><Loader2 className="w-5 h-5 text-red-600 animate-spin" /></div>
+              <div className="flex justify-center py-12">
+                <Loader2 className="w-5 h-5 animate-spin" style={{ color: 'var(--reel-accent-hex)' }} />
+              </div>
             ) : notifs.length === 0 ? (
               <div className="flex flex-col items-center gap-3 py-14 text-zinc-600">
                 <Bell size={32} className="opacity-30" />
@@ -706,9 +757,12 @@ export function ProfileandSettingsTab() {
             ) : (
               <div className="space-y-1">
                 {notifs.map(n => (
-                  <button key={n.notification_id} onClick={() => handleMarkRead(n)}
+                  <button
+                    key={n.notification_id}
+                    onClick={() => handleMarkRead(n)}
                     className={`w-full flex items-start gap-3 px-4 py-3 rounded-xl text-left transition-all
-                      ${n.read ? 'hover:bg-[#141414]' : 'bg-[#141414] hover:bg-[#1a1a1a]'}`}>
+                      ${n.read ? 'hover:bg-[#141414]' : 'bg-[#141414] hover:bg-[#1a1a1a]'}`}
+                  >
                     <div className="mt-0.5 shrink-0">
                       <NotifIcon type={n.type} />
                     </div>
@@ -718,7 +772,9 @@ export function ProfileandSettingsTab() {
                       </p>
                       <p className="text-zinc-600 text-xs mt-0.5">{timeAgoShort(n.created_at)}</p>
                     </div>
-                    {!n.read && <div className="w-1.5 h-1.5 rounded-full bg-red-500 mt-1.5 shrink-0" />}
+                    {!n.read && (
+                      <span className="shrink-0 mt-1.5 w-1.5 h-1.5 rounded-full" style={{ background: 'var(--reel-accent-hex)' }} />
+                    )}
                   </button>
                 ))}
               </div>
@@ -733,17 +789,28 @@ export function ProfileandSettingsTab() {
           <div className="space-y-5">
             {/* Email update */}
             <Card>
-              <SectionTitle label="Email Address" icon={<Mail size={18} />} />
-              <p className="text-zinc-500 text-sm mb-4">Current: <span className="text-zinc-300">{profile.email}</span></p>
+              <SectionTitle label="Email address" icon={<Mail size={16} />} />
+              <p className="text-zinc-500 text-sm mb-4">
+                Current: <span className="text-zinc-300">{profile.email}</span>
+              </p>
               <div className="flex gap-3">
-                <input value={newEmail} onChange={e => { setNewEmail(e.target.value); setEmailError(''); }}
-                  type="email" placeholder="New email address"
-                  className="flex-1 bg-[#090909] border border-[#1e1e1e] rounded-xl px-4 py-2.5 text-white text-sm
-                    focus:border-red-600 focus:ring-1 focus:ring-red-600/30 focus:outline-none transition-all placeholder-zinc-700"
+                <input
+                  value={newEmail}
+                  onChange={e => { setNewEmail(e.target.value); setEmailError(''); }}
+                  type="email"
+                  placeholder="New email address"
+                  className="flex-1 bg-[#0a0a0a] border border-[#222] rounded-xl px-4 py-2.5 text-white text-sm
+                    focus:outline-none transition-all placeholder-zinc-700"
+                  onFocus={e => { e.currentTarget.style.borderColor = 'var(--reel-accent-hex)'; }}
+                  onBlur={e => { e.currentTarget.style.borderColor = '#222'; }}
                 />
-                <button onClick={handleEmailUpdate} disabled={emailSaving || !newEmail.trim()}
-                  className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold
-                    transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2">
+                <button
+                  onClick={handleEmailUpdate}
+                  disabled={emailSaving || !newEmail.trim()}
+                  className="px-5 py-2.5 text-white rounded-xl text-sm font-semibold transition-all
+                    disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+                  style={{ background: 'var(--reel-accent-hex)' }}
+                >
                   {emailSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
                   Update
                 </button>
@@ -753,17 +820,21 @@ export function ProfileandSettingsTab() {
 
             {/* Password */}
             <Card>
-              <SectionTitle label="Password" icon={<Lock size={18} />} />
-              <p className="text-zinc-500 text-sm mb-4">We'll send a reset link to <span className="text-zinc-300">{profile.email}</span>.</p>
+              <SectionTitle label="Password" icon={<Lock size={16} />} />
+              <p className="text-zinc-500 text-sm mb-4">
+                We'll send a reset link to <span className="text-zinc-300">{profile.email}</span>.
+              </p>
               {pwResetSent ? (
                 <div className="flex items-center gap-2 text-green-400 text-sm">
                   <CheckCheck size={16} /> Reset email sent — check your inbox.
                 </div>
               ) : (
-                <button onClick={handlePasswordReset}
+                <button
+                  onClick={handlePasswordReset}
                   className="flex items-center gap-2 px-5 py-2.5 bg-[#141414] hover:bg-[#1a1a1a] border border-[#2a2a2a]
-                    hover:border-zinc-600 text-zinc-300 hover:text-white rounded-xl text-sm transition-all">
-                  <Shield size={15} /> Send Password Reset Email
+                    hover:border-zinc-600 text-zinc-300 hover:text-white rounded-xl text-sm transition-all"
+                >
+                  <Shield size={15} /> Send password reset email
                   <ChevronRight size={14} className="ml-auto text-zinc-600" />
                 </button>
               )}
@@ -771,26 +842,30 @@ export function ProfileandSettingsTab() {
 
             {/* Session */}
             <Card>
-              <SectionTitle label="Session" icon={<LogOut size={18} />} />
-              <button onClick={handleLogout}
-                className="w-full flex items-center gap-3 px-4 py-3 bg-[#090909] border border-[#1e1e1e]
-                  hover:border-zinc-700 rounded-xl text-zinc-300 hover:text-white text-sm transition-all group">
-                <LogOut size={16} className="text-zinc-500 group-hover:text-zinc-300" />
-                Log Out
+              <SectionTitle label="Session" icon={<LogOut size={16} />} />
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-3 px-4 py-3 bg-[#0a0a0a] border border-[#222]
+                  hover:border-zinc-700 rounded-xl text-zinc-300 hover:text-white text-sm transition-all group"
+              >
+                <LogOut size={15} className="text-zinc-500 group-hover:text-zinc-300" />
+                Log out
                 <ChevronRight size={14} className="ml-auto text-zinc-600" />
               </button>
             </Card>
 
             {/* Danger zone */}
             <Card className="border-red-950/40">
-              <SectionTitle label="Danger Zone" icon={<Trash2 size={18} />} />
+              <SectionTitle label="Danger zone" icon={<Trash2 size={16} />} />
               <p className="text-zinc-500 text-sm mb-4">
-                Permanently delete your account and all associated data. This action cannot be undone.
+                Permanently delete your account and all associated data. This cannot be undone.
               </p>
-              <button onClick={() => setShowDeleteModal(true)}
+              <button
+                onClick={() => setShowDeleteModal(true)}
                 className="flex items-center gap-2 px-5 py-2.5 bg-red-950/30 hover:bg-red-950/50 border border-red-900/40
-                  hover:border-red-700/60 text-red-400 hover:text-red-300 rounded-xl text-sm font-semibold transition-all">
-                <Trash2 size={15} /> Delete My Account
+                  hover:border-red-700/60 text-red-400 hover:text-red-300 rounded-xl text-sm font-semibold transition-all"
+              >
+                <Trash2 size={15} /> Delete my account
               </button>
             </Card>
           </div>
