@@ -887,6 +887,37 @@ export async function markAllNotificationsRead(user_id: string) {
   return res.json();
 }
 
+// ── Group Chat ───────────────────────────────────────────────────
+
+export interface GroupMessage {
+  message_id: string;
+  sender_id: string;
+  sender_username: string;
+  text: string;
+  sent_at: string;
+}
+
+export function getGroupChat(group_id: string): Promise<GroupMessage[]> {
+  return fromCache(`group_chat:${group_id}`, 2 * 60 * 1000, () =>
+    fetch(`${BASE_URL}/groups/${group_id}/chat`)
+      .then(r => r.json())
+      .then(d => d.messages ?? [])
+  );
+}
+
+export async function sendGroupMessage(
+  group_id: string, sender_id: string, sender_username: string, text: string,
+): Promise<{ success: boolean }> {
+  bustCache(`group_chat:${group_id}`);
+  const res = await fetch(`${BASE_URL}/groups/${group_id}/chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sender_id, sender_username, text }),
+  });
+  return res.json();
+}
+
+
 // ── Direct Messages ──────────────────────────────────────────────
 
 export interface Conversation {

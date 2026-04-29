@@ -13,13 +13,16 @@ import {
   spinGroupReelette, getGroupMemberProfiles, getGroupMemberServices,
   updateLastSeen, searchMovies, discoverMovies,
   getReplies, addReply,
+  getGroupChat, sendGroupMessage,
   type FeedPost, type Friend, type FriendRequest, type MovieGroup,
   type GroupMovie, type MemberProfile, type MemberServiceEntry, type PostReply,
+  type GroupMessage,
   SERVICE_DISPLAY, getUserPublicProfile,
 } from '../services/api';
+import { db, signInFirebase } from '../lib/firebase';
+import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { UserProfileModal } from './UserProfileModal';
 import { MovieDetailModal } from './MovieDetailModal';
-import { MessagesPanel } from './MessagesPanel';
 
 // ── Constants ──────────────────────────────────────────────────
 const SERVICE_KEYS = ['netflix', 'hulu', 'disneyPlus', 'hboMax', 'amazonPrime', 'appleTV', 'paramount', 'peacock'] as const;
@@ -859,6 +862,67 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
   const [watchMode, setWatchMode] = useState<WatchMode | null>(null);
   const [watchMemberServices, setWatchMemberServices] = useState<Record<string, MemberServiceEntry>>({});
 
+  // ── Group Chat ────────────────────────────────────────────────
+  const [innerTab, setInnerTab]     = useState<'group' | 'chat'>('group');
+  const [chatMessages, setChatMessages] = useState<GroupMessage[]>([]);
+  const [chatDraft, setChatDraft]   = useState('');
+  const [chatSending, setChatSending] = useState(false);
+  const chatBottomRef = useRef<HTMLDivElement>(null);
+  const chatInputRef  = useRef<HTMLInputElement>(null);
+  const chatUnsubRef  = useRef<(() => void) | null>(null);
+  // Tracks whether we've already started the subscription for this group session.
+  // Prevents re-subscribing (and paying 60 reads) every time the user toggles tabs.
+  const chatInitedRef = useRef(false);
+
+  // Tear down subscription when group changes, reset init flag
+  useEffect(() => {
+    return () => {
+      chatUnsubRef.current?.();
+      chatUnsubRef.current = null;
+      chatInitedRef.current = false;
+    };
+  }, [group.group_id]);
+
+  // Lazy-init once on first Chat tab open; subscription stays alive until group changes
+  useEffect(() => {
+    if (innerTab !== 'chat' || chatInitedRef.current) return;
+    chatInitedRef.current = true;
+
+    getGroupChat(group.group_id).then(setChatMessages);
+
+    (async () => {
+      const authed = await signInFirebase();
+      if (!authed) return;
+      const q = query(
+        collection(db, 'groups', group.group_id, 'chat'),
+        orderBy('sent_at', 'asc'),
+        limit(60),
+      );
+      chatUnsubRef.current = onSnapshot(q, snap => {
+        setChatMessages(snap.docs.map(d => ({
+          message_id:      d.id,
+          sender_id:       d.data().sender_id as string,
+          sender_username: d.data().sender_username as string,
+          text:            d.data().text as string,
+          sent_at:         (d.data().sent_at?.toDate?.()?.toISOString?.() ?? d.data().sent_at ?? '') as string,
+        })));
+      });
+    })();
+  }, [innerTab, group.group_id]);
+
+  useEffect(() => {
+    chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages]);
+
+  const handleChatSend = async () => {
+    if (!chatDraft.trim() || chatSending) return;
+    const text = chatDraft.trim();
+    setChatDraft('');
+    setChatSending(true);
+    try { await sendGroupMessage(group.group_id, currentUserId, currentUsername, text); }
+    finally { setChatSending(false); chatInputRef.current?.focus(); }
+  };
+
   const isCreator = group.created_by === currentUserId;
 
   const refresh = useCallback(async () => {
@@ -956,7 +1020,7 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
         <MovieDetailModal movieId={randomMovieId} onClose={() => setRandomMovieOpen(false)} />
       )}
 
-      <div className="max-w-3xl mx-auto space-y-6">
+      <div className="max-w-3xl mx-auto space-y-4">
         {/* Header */}
         <div className="flex items-center gap-3">
           <button onClick={onBack} className="text-gray-400 hover:text-white transition-colors p-1">
@@ -980,6 +1044,23 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
               : <button onClick={handleLeave} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1C1C1C] hover:bg-[#2A2A2A] border border-[#2A2A2A] text-gray-400 hover:text-white rounded-lg text-sm transition-all"><LogOut className="w-4 h-4" />Leave</button>}
           </div>
         </div>
+
+        {/* Inner tab bar */}
+        <div className="flex border-b border-[#1A1A1A]">
+          {(['group', 'chat'] as const).map(t => (
+            <button key={t} onClick={() => setInnerTab(t)}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-semibold transition-colors relative capitalize ${
+                innerTab === t ? 'text-white' : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.03]'
+              }`}>
+              {t === 'group' ? <Clapperboard className="w-4 h-4" /> : <MessageCircle className="w-4 h-4" />}
+              {t === 'group' ? 'Group' : 'Chat'}
+              {innerTab === t && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-10 h-[3px] bg-[#C0392B] rounded-full" />}
+            </button>
+          ))}
+        </div>
+
+        {/* Group content */}
+        {innerTab === 'group' && <div className="space-y-6">
 
         {/* Movie Night — Watch Together/Separately */}
         <WatchModePanel
@@ -1170,6 +1251,55 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
             })}
           </div>
         </section>
+        </div>}
+
+        {/* Chat panel */}
+        {innerTab === 'chat' && (
+          <div className="flex flex-col bg-[#111] border border-[#1e1e1e] rounded-2xl overflow-hidden" style={{ height: 520 }}>
+            <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
+              {chatMessages.length === 0 && (
+                <div className="flex items-center justify-center h-full">
+                  <p className="text-gray-600 text-sm">No messages yet — say something!</p>
+                </div>
+              )}
+              {chatMessages.map(msg => {
+                const isMine = msg.sender_id === currentUserId;
+                return (
+                  <div key={msg.message_id} className={`flex items-end gap-2 ${isMine ? 'flex-row-reverse' : 'flex-row'}`}>
+                    {!isMine && (
+                      <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(msg.sender_username)}`}
+                        alt={msg.sender_username} className="w-7 h-7 rounded-full bg-[#141414] shrink-0" />
+                    )}
+                    <div className={`max-w-[75%] flex flex-col gap-0.5 ${isMine ? 'items-end' : 'items-start'}`}>
+                      {!isMine && <span className="text-[10px] text-gray-600 px-1">@{msg.sender_username}</span>}
+                      <div className={`px-3.5 py-2.5 rounded-2xl text-sm leading-snug ${
+                        isMine ? 'bg-[#C0392B] text-white rounded-br-sm' : 'bg-[#1e1e1e] text-gray-200 rounded-bl-sm'
+                      }`}>
+                        {msg.text}
+                      </div>
+                      {msg.sent_at && <span className="text-[9px] text-gray-700 px-1">{timeAgo(msg.sent_at)}</span>}
+                    </div>
+                  </div>
+                );
+              })}
+              <div ref={chatBottomRef} />
+            </div>
+            <div className="shrink-0 px-3 py-3 border-t border-[#1e1e1e] flex items-center gap-2">
+              <input
+                ref={chatInputRef}
+                value={chatDraft}
+                onChange={e => setChatDraft(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleChatSend(); } }}
+                placeholder="Message the group…"
+                className="flex-1 bg-[#1a1a1a] border border-[#2A2A2A] rounded-full px-4 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-[#C0392B]/50"
+              />
+              <button onClick={handleChatSend} disabled={!chatDraft.trim() || chatSending}
+                className="w-9 h-9 flex items-center justify-center rounded-full bg-[#C0392B] hover:bg-[#E74C3C] disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0">
+                <Send className="w-4 h-4 text-white" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );
@@ -1465,7 +1595,7 @@ export function SocialTab() {
   const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
     { id: 'feed',    label: 'Feed',    icon: <MessageCircle className="w-4 h-4" /> },
     { id: 'friends', label: 'Friends', icon: <UserPlus className="w-4 h-4" /> },
-    { id: 'groups',  label: 'Groups',  icon: <Users className="w-4 h-4" /> },
+    { id: 'groups',  label: 'Movie Groups',  icon: <Users className="w-4 h-4" /> },
   ];
 
   return (
@@ -1532,8 +1662,7 @@ export function SocialTab() {
         </div>
       </div>
 
-      <div className="flex gap-4 px-4 items-start justify-center">
-      <div className="flex-1 min-w-0 max-w-2xl">
+      <div className="max-w-2xl mx-auto">
 
         {/* Primary tab bar */}
         <div className="flex border-b border-[#1A1A1A]">
@@ -1624,12 +1753,6 @@ export function SocialTab() {
           </div>
         )}
 
-      </div>
-
-        {/* Messages sidebar */}
-        <div className="w-72 shrink-0">
-          <MessagesPanel />
-        </div>
       </div>
 
       {/* New Post Dialog */}

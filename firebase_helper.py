@@ -1100,6 +1100,43 @@ def mark_all_notifications_read(user_id):
         return {'success': False, 'message': str(e)}
 
 
+# ── Group Chat ────────────────────────────────────────────────────
+
+def get_group_chat(group_id, limit=60):
+    try:
+        docs = (db.collection('groups').document(group_id)
+                  .collection('chat')
+                  .order_by('sent_at', direction=firestore.Query.DESCENDING)
+                  .limit(limit)
+                  .stream())
+        msgs = []
+        for doc in docs:
+            d = doc.to_dict()
+            msgs.append({
+                'message_id':      doc.id,
+                'sender_id':       d.get('sender_id', ''),
+                'sender_username': d.get('sender_username', ''),
+                'text':            d.get('text', ''),
+                'sent_at':         d['sent_at'].isoformat() if d.get('sent_at') else '',
+            })
+        return list(reversed(msgs))
+    except Exception:
+        return []
+
+def send_group_message(group_id, sender_id, sender_username, text):
+    try:
+        ref = db.collection('groups').document(group_id).collection('chat').document()
+        ref.set({
+            'sender_id':       sender_id,
+            'sender_username': sender_username,
+            'text':            text.strip(),
+            'sent_at':         datetime.now(),
+        })
+        return {'success': True, 'message_id': ref.id}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+
 # ── Direct Messages ───────────────────────────────────────────────
 
 def _conv_id(uid1, uid2):

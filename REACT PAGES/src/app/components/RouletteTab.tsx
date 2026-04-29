@@ -334,7 +334,7 @@ export function RouletteTab() {
       </div>
 
       {/* ── Main three-column layout ── */}
-      <div className="grid grid-cols-1 md:grid-cols-[200px_1fr_200px] gap-6 items-start px-2 md:px-4 pt-8 pb-12">
+      <div className="grid grid-cols-1 md:grid-cols-[280px_1fr_280px] gap-6 items-start px-2 md:px-6 pt-8 pb-12">
 
         {/* ── Left: My Recent Spins ── */}
         <aside className="hidden md:flex flex-col gap-1">
@@ -346,12 +346,12 @@ export function RouletteTab() {
           </p>
 
           {!spinsLoaded && (
-            [...Array(5)].map((_, i) => (
-              <div key={i} className="flex items-center gap-2.5 py-1.5 animate-pulse">
-                <div className="w-9 h-[52px] rounded-md bg-[#1C1C1C] shrink-0" />
-                <div className="flex-1 space-y-1.5">
-                  <div className="h-2.5 bg-[#1C1C1C] rounded w-3/4" />
-                  <div className="h-2 bg-[#1C1C1C] rounded w-1/2" />
+            [...Array(6)].map((_, i) => (
+              <div key={i} className="flex items-center gap-3 py-2 animate-pulse">
+                <div className="w-14 h-[82px] rounded-lg bg-[#1C1C1C] shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3 bg-[#1C1C1C] rounded w-3/4" />
+                  <div className="h-2.5 bg-[#1C1C1C] rounded w-1/2" />
                 </div>
               </div>
             ))
@@ -364,16 +364,16 @@ export function RouletteTab() {
           )}
 
           {spinsLoaded && recentSpins.map((s, i) => (
-            <div key={i} className="flex items-center gap-2.5 py-1.5 group">
-              <div className="w-9 h-[52px] rounded-md overflow-hidden bg-[#1C1C1C] shrink-0">
+            <div key={i} className="flex items-center gap-3 py-2 group cursor-default">
+              <div className="w-14 h-[82px] rounded-lg overflow-hidden bg-[#1C1C1C] shrink-0 ring-1 ring-white/5">
                 {s.poster_url
                   ? <img src={s.poster_url} alt={s.movie_title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" />
                   : <div className="w-full h-full bg-[#252525]" />
                 }
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-white text-[11px] font-medium truncate leading-tight">{s.movie_title}</p>
-                <p className="text-gray-600 text-[10px] mt-0.5">{timeAgo(s.spun_at)}</p>
+                <p className="text-white text-xs font-semibold leading-snug line-clamp-2">{s.movie_title}</p>
+                <p className="text-gray-600 text-[11px] mt-1">{timeAgo(s.spun_at)}</p>
               </div>
             </div>
           ))}
@@ -622,19 +622,31 @@ export function RouletteTab() {
               {user ? "No friend spins yet." : "Log in to see friends' spins."}
             </p>
           )}
-          {friendSpins.slice(0, 7).map(entry => {
+          {friendSpins.slice(0, 8).map(entry => {
             const s = entry.spins[0];
             return (
-              <div key={entry.friend_id} className="flex items-start gap-2.5 py-1.5">
-                <img
-                  src={entry.avatarUrl || dicebearUrl(entry.friend_username)}
-                  alt={entry.friend_username}
-                  className="w-8 h-8 rounded-full object-cover shrink-0 bg-[#1a1a1a] ring-1 ring-white/10"
-                  onError={e => { (e.target as HTMLImageElement).src = dicebearUrl(entry.friend_username); }}
-                />
+              <div key={entry.friend_id} className="flex items-center gap-3 py-2 group cursor-default">
+                {s.poster_url ? (
+                  <div className="relative w-14 h-[82px] rounded-lg overflow-hidden bg-[#1C1C1C] shrink-0 ring-1 ring-white/5">
+                    <img src={s.poster_url} alt={s.movie_title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" />
+                    <img
+                      src={entry.avatarUrl || dicebearUrl(entry.friend_username)}
+                      alt={entry.friend_username}
+                      className="absolute bottom-1 right-1 w-6 h-6 rounded-full object-cover bg-[#1a1a1a] ring-1 ring-black"
+                      onError={e => { (e.target as HTMLImageElement).src = dicebearUrl(entry.friend_username); }}
+                    />
+                  </div>
+                ) : (
+                  <img
+                    src={entry.avatarUrl || dicebearUrl(entry.friend_username)}
+                    alt={entry.friend_username}
+                    className="w-10 h-10 rounded-full object-cover shrink-0 bg-[#1a1a1a] ring-1 ring-white/10"
+                    onError={e => { (e.target as HTMLImageElement).src = dicebearUrl(entry.friend_username); }}
+                  />
+                )}
                 <div className="min-w-0 flex-1">
-                  <p className="text-white text-[11px] font-medium truncate leading-tight">{s.movie_title}</p>
-                  <p className="text-gray-500 text-[10px] truncate">@{entry.friend_username}</p>
+                  <p className="text-white text-xs font-semibold leading-snug line-clamp-2">{s.movie_title}</p>
+                  <p className="text-gray-500 text-[11px] mt-0.5">@{entry.friend_username}</p>
                   <p className="text-gray-700 text-[10px] mt-0.5">{timeAgo(s.spun_at)}</p>
                 </div>
               </div>

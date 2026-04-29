@@ -31,6 +31,7 @@ from firebase_helper import (
     log_roulette_spin, get_roulette_history, get_friends_roulette_history, save_quiz_result,
     get_notifications, mark_notification_read, mark_all_notifications_read,
     get_or_create_conversation, get_conversations, get_messages, send_message, mark_conversation_read,
+    get_group_chat, send_group_message,
 )
 from tmdb_api import (
     search_movies, discover_movies, get_popular_movies, get_movie_details,
@@ -916,6 +917,23 @@ def friends_roulette_history_route(user_id):
     result = serialize_timestamps(friends_history)
     _cache_set(cache_key, result, _FRIENDS_HISTORY_TTL)
     return jsonify({'friendsHistory': result})
+
+
+# ── Group Chat ───────────────────────────────────────────────────
+
+@app.route('/api/groups/<group_id>/chat', methods=['GET'])
+def get_chat(group_id):
+    return jsonify({'messages': get_group_chat(group_id)})
+
+@app.route('/api/groups/<group_id>/chat', methods=['POST'])
+def post_chat(group_id):
+    data = request.get_json()
+    text = (data.get('text') or '').strip()
+    if not text:
+        return jsonify({'success': False, 'message': 'Empty message'}), 400
+    return jsonify(send_group_message(
+        group_id, data.get('sender_id'), data.get('sender_username', ''), text,
+    ))
 
 
 # ── Direct Messages ──────────────────────────────────────────────
