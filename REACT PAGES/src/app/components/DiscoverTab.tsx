@@ -435,10 +435,10 @@ export function DiscoverTab() {
       )}
 
       {/* ── Provider tab bar ── */}
-      <div className="mt-14 mb-8" style={{ overflow: 'visible' }}>
+      <div className="mt-14 mb-8">
         <div
-          className="hide-scrollbar flex gap-2 justify-evenly overflow-x-auto"
-          style={{ scrollbarWidth: 'none', overflow: 'visible' } as React.CSSProperties}
+          className="hide-scrollbar flex gap-3 justify-evenly"
+          style={{ scrollbarWidth: 'none' } as React.CSSProperties}
         >
           {visibleProviderTabs.map(p => {
             const color     = PROVIDER_COLOR[p.id] ?? '#C0392B';
@@ -460,11 +460,11 @@ export function DiscoverTab() {
                 }}
               >
                 {logo ? (
-                  <img src={logo} alt={p.label} className="rounded-2xl object-cover"
-                    style={{ width: 128, height: 128, boxShadow: lit ? `0 0 24px ${color}99` : 'none', transition: 'box-shadow 0.25s' }}
+                  <img src={logo} alt={p.label} className="rounded-xl object-cover"
+                    style={{ width: 80, height: 80, boxShadow: lit ? `0 0 16px ${color}99` : 'none', transition: 'box-shadow 0.25s' }}
                   />
                 ) : (
-                  <Layers style={{ width: 80, height: 80, color: lit ? color : '#6b7280' }} />
+                  <Layers style={{ width: 52, height: 52, color: lit ? color : '#6b7280' }} />
                 )}
                 <span className="text-[11px] font-semibold tracking-wide" style={{ color: lit ? '#fff' : '#9ca3af' }}>
                   {p.label}

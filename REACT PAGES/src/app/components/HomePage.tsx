@@ -312,66 +312,55 @@ export function HomePage() {
 
       {/* ── Sidebar ──────────────────────────────────────────────── */}
       <aside
-        className="fixed left-0 top-0 h-full z-50 flex flex-col bg-[#0D0D11] border-r border-[#1C1C1C] transition-all duration-300 ease-out overflow-hidden shrink-0"
-        style={{ width: sidebarOpen ? 220 : 0 }}
+        className="fixed left-0 top-0 h-full z-50 flex flex-col bg-[#0A0A0A] overflow-hidden shrink-0"
+        style={{ width: sidebarOpen ? 220 : 0, transition: 'width 250ms cubic-bezier(0.32, 0.72, 0, 1)' }}
       >
         {/* Logo */}
-        <div className="flex items-center gap-2.5 px-5 pt-5 pb-4 shrink-0">
+        <div className="flex items-center gap-2.5 px-5 pt-5 pb-7 shrink-0">
           <img src={reeletteLogo} alt="" className="h-7 w-7 shrink-0" />
           <img src={logoImage} alt="Reelette" className="h-[17px] w-auto" />
         </div>
 
-        {/* Nav */}
-        <div className="px-3 mb-1 shrink-0">
-          <p className="text-[10px] font-bold text-gray-600 uppercase tracking-[0.18em] px-2 mb-1">Browse</p>
-        </div>
-        <nav className="px-3 space-y-0.5 shrink-0">
+        {/* Nav — bare text links, no pill, no background */}
+        <nav className="px-5 shrink-0">
           {tabs.map(tab => (
-            <NavLink
-              key={tab.id}
-              to={tab.path}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 whitespace-nowrap ${
-                  isActive
-                    ? 'bg-white/[0.06] text-white'
-                    : 'text-gray-500 hover:text-white hover:bg-white/[0.04]'
-                }`
-              }
-            >
+            <NavLink key={tab.id} to={tab.path}>
               {({ isActive }) => (
-                <>
+                <div
+                  className={`flex items-center gap-3 py-2.5 whitespace-nowrap cursor-pointer select-none transition-colors duration-150 ${
+                    isActive ? 'text-white' : 'text-[#3E3E52] hover:text-zinc-400'
+                  }`}
+                  style={{ fontSize: 14, fontWeight: isActive ? 600 : 400 }}
+                >
                   {tab.imageLogo ? (
                     <img
                       src={tab.imageLogo}
                       alt={tab.label}
                       className="h-[18px] w-[18px] rounded shrink-0"
-                      style={{ filter: isActive ? 'none' : 'brightness(0.45) saturate(0.5)' }}
+                      style={{ filter: isActive ? 'none' : 'brightness(0.28) saturate(0.2)', transition: 'filter 150ms ease-out' }}
                     />
                   ) : tab.icon ? (
                     <tab.icon className="w-[18px] h-[18px] shrink-0" />
                   ) : null}
-                  <span className="flex-1">{tab.label}</span>
-                  {isActive && <span className="w-1.5 h-1.5 rounded-full bg-[#C0392B] shrink-0" />}
-                </>
+                  <span>{tab.label}</span>
+                </div>
               )}
             </NavLink>
           ))}
         </nav>
 
-        {/* Services */}
+        {/* Services — small icon strip at bottom */}
         {activeServiceNames.length > 0 && (
-          <div className="px-3 pt-5 mt-auto border-t border-[#1C1C1C] shrink-0 pb-5">
-            <p className="text-[10px] font-bold text-gray-600 uppercase tracking-[0.18em] px-2 mb-2">Services</p>
-            <div className="space-y-0.5">
+          <div className="px-5 pt-5 mt-auto pb-6 shrink-0">
+            <p className="text-[10px] text-[#252530] uppercase tracking-[0.2em] mb-3">Services</p>
+            <div className="flex flex-wrap gap-2">
               {activeServiceNames.map(name => (
-                <div key={name} className="flex items-center gap-3 px-2 py-1.5 rounded-lg">
-                  {PROVIDER_LOGOS[name] && (
-                    <div className="w-6 h-6 rounded-md overflow-hidden shrink-0 bg-[#1a1a1a]">
-                      <img src={PROVIDER_LOGOS[name]} alt={name} className="w-full h-full object-cover" />
-                    </div>
-                  )}
-                  <span className="text-xs text-gray-500 truncate">{name}</span>
-                </div>
+                PROVIDER_LOGOS[name] ? (
+                  <div key={name} className="w-7 h-7 rounded-lg overflow-hidden shrink-0" title={name}
+                    style={{ background: '#111' }}>
+                    <img src={PROVIDER_LOGOS[name]} alt={name} className="w-full h-full object-cover" />
+                  </div>
+                ) : null
               ))}
             </div>
           </div>
@@ -380,8 +369,8 @@ export function HomePage() {
 
       {/* ── Main area ───────────────────────────────────────────── */}
       <div
-        className="flex flex-col flex-1 min-h-screen transition-all duration-300 ease-out"
-        style={{ marginLeft: sidebarOpen ? 220 : 0 }}
+        className="flex flex-col flex-1 min-h-screen"
+        style={{ marginLeft: sidebarOpen ? 220 : 0, transition: 'margin-left 250ms cubic-bezier(0.32, 0.72, 0, 1)' }}
       >
         {/* Top bar */}
         <header className="sticky top-0 z-40 flex items-center gap-3 px-6 py-3 bg-[#0A0A0A]/95 backdrop-blur-sm border-b border-[#1C1C1C]">
@@ -389,7 +378,7 @@ export function HomePage() {
           {/* Sidebar toggle */}
           <button
             onClick={() => setSidebarOpen(o => !o)}
-            className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 hover:text-white hover:bg-white/[0.06] transition-colors shrink-0"
+            className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 hover:text-white hover:bg-white/[0.06] transition active:scale-[0.97] shrink-0"
             title={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
           >
             <PanelLeft className="w-4 h-4" />
@@ -397,8 +386,12 @@ export function HomePage() {
 
           {/* Breadcrumb */}
           <div className="flex items-center gap-1.5 text-xs text-gray-600 shrink-0">
-            <span>Reelette</span>
-            <span className="text-gray-700">›</span>
+            {currentPageLabel !== 'Reelette' && (
+              <>
+                <span>Reelette</span>
+                <span className="text-gray-700">›</span>
+              </>
+            )}
             <span className="text-gray-400 font-medium">{currentPageLabel}</span>
           </div>
 
@@ -433,7 +426,7 @@ export function HomePage() {
               <button
                 onClick={() => setFilterOpen(o => !o)}
                 title="Filter results"
-                className="flex items-center justify-center w-[35px] h-[35px] rounded-full border transition-colors"
+                className="flex items-center justify-center w-[35px] h-[35px] rounded-full border transition active:scale-[0.97]"
                 style={hasActiveFilter
                   ? { background: '#8875D0', borderColor: '#8875D0' }
                   : { background: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.12)' }
@@ -443,7 +436,7 @@ export function HomePage() {
               </button>
 
               {filterOpen && (
-                <div className="absolute right-0 top-[42px] w-72 bg-[#141414] border border-[#2A2A2A] rounded-2xl shadow-2xl z-[110] p-4 flex flex-col gap-4">
+                <div className="absolute right-0 top-[42px] w-72 bg-[#141414] border border-[#2A2A2A] rounded-2xl shadow-2xl z-[110] p-4 flex flex-col gap-4 panel-enter">
                   <div>
                     <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Genre</p>
                     <div className="relative">
@@ -534,7 +527,7 @@ export function HomePage() {
 
             {/* Search results dropdown */}
             {searchOpen && (navSearch.trim() || hasActiveFilter) && (
-              <div className="absolute right-0 top-[42px] w-[340px] max-h-[480px] flex flex-col bg-[#141414] border border-[#2A2A2A] rounded-2xl shadow-2xl z-[100] overflow-hidden">
+              <div className="absolute right-0 top-[42px] w-[340px] max-h-[480px] flex flex-col bg-[#141414] border border-[#2A2A2A] rounded-2xl shadow-2xl z-[100] overflow-hidden panel-enter">
                 <div className="px-4 py-2.5 border-b border-[#2A2A2A] shrink-0 flex items-center justify-between">
                   <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
                     {navSearch.trim() ? `Results for "${navSearch}"` : 'Filtered Results'}
@@ -589,18 +582,18 @@ export function HomePage() {
           <div className="relative shrink-0" ref={notifPanelRef}>
             <button
               onClick={() => setNotifOpen(o => !o)}
-              className="relative flex items-center justify-center w-9 h-9 rounded-full bg-white/[0.06] border border-white/[0.08] hover:bg-white/[0.09] transition-colors"
+              className="relative flex items-center justify-center w-9 h-9 rounded-full bg-white/[0.06] border border-white/[0.08] hover:bg-white/[0.09] transition active:scale-[0.97]"
             >
               <Bell className="w-4 h-4 text-gray-300" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 flex items-center justify-center bg-[#C0392B] text-white text-[9px] font-bold rounded-full">
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 flex items-center justify-center bg-[#8875D0] text-white text-[9px] font-bold rounded-full">
                   {unreadCount > 99 ? '99+' : unreadCount}
                 </span>
               )}
             </button>
 
             {notifOpen && (
-              <div className="absolute right-0 top-11 w-80 max-h-[480px] flex flex-col bg-[#141414] border border-[#2A2A2A] rounded-2xl shadow-2xl z-[100] overflow-hidden">
+              <div className="absolute right-0 top-11 w-80 max-h-[480px] flex flex-col bg-[#141414] border border-[#2A2A2A] rounded-2xl shadow-2xl z-[100] overflow-hidden panel-enter">
                 <div className="flex items-center justify-between px-4 py-3 border-b border-[#2A2A2A] shrink-0">
                   <span className="text-sm font-semibold text-white">Notifications</span>
                   {unreadCount > 0 && (
@@ -635,7 +628,7 @@ export function HomePage() {
                           </p>
                           <p className="text-xs text-gray-600 mt-0.5">{timeAgo(n.created_at)}</p>
                         </div>
-                        {!n.read && <span className="shrink-0 mt-1.5 w-2 h-2 rounded-full bg-[#C0392B]" />}
+                        {!n.read && <span className="shrink-0 mt-1.5 w-2 h-2 rounded-full bg-[#8875D0]" />}
                       </button>
                     ))
                   )}

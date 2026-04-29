@@ -300,3 +300,29 @@ html.light textarea::placeholder {
 html.light ::-webkit-scrollbar-track  { background: var(--reel-surface); }
 html.light ::-webkit-scrollbar-thumb  { background: var(--reel-raised); border-radius: 4px; }
 html.light ::-webkit-scrollbar-thumb:hover { background: var(--reel-hover); }
+
+/* ─────────────────────────────────────────────────────────────
+   Emil Kowalski easing system
+   Strong ease-out for UI interactions (enters, expands)
+   Drawer curve for panels that slide from an edge
+──────────────────────────────────────────────────────────────*/
+:root {
+  --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-drawer:     cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* Dropdown / popover panel entrance — scales from top-right anchor */
+.panel-enter {
+  transform-origin: top right;
+  transition: opacity 160ms var(--ease-out-strong),
+              transform 160ms var(--ease-out-strong);
+}
+
+@supports (transition-behavior: allow-discrete) {
+  .panel-enter {
+    @starting-style {
+      opacity: 0;
+      transform: scale(0.95) translateY(-6px);
+    }
+  }
+}

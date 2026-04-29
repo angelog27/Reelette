@@ -387,7 +387,7 @@ export function RouletteTab() {
           <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-0.5" style={{ maxWidth: 400, width: '100%' }}>
             <button
               onClick={() => { setActiveMood(""); setGenre(""); }}
-              className="flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all duration-200"
+              className="flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition duration-150 active:scale-[0.97]"
               style={
                 !activeMood
                   ? { backgroundColor: 'oklch(0.35 0.08 278)', borderColor: 'oklch(0.55 0.11 278)', color: '#d4c9f5' }
@@ -406,7 +406,7 @@ export function RouletteTab() {
                     if (isActive) { setActiveMood(""); setGenre(""); }
                     else { setActiveMood(mood.label); setGenre(mood.genre); }
                   }}
-                  className="flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all duration-200"
+                  className="flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition duration-150 active:scale-[0.97]"
                   style={
                     isActive
                       ? { backgroundColor: moodColor, borderColor: moodColor, color: '#fff', boxShadow: `0 0 14px ${moodColor}55` }
@@ -456,7 +456,7 @@ export function RouletteTab() {
               </button>
 
               {filtersExpanded && (
-                <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-72 bg-[#111] border border-[#1e1e1e] rounded-2xl shadow-2xl z-50 p-5 space-y-5">
+                <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-72 bg-[#111] border border-[#1e1e1e] rounded-2xl shadow-2xl z-50 p-5 space-y-5 panel-enter" style={{ transformOrigin: 'top center' }}>
                   <div className="space-y-1.5">
                     <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Genre</p>
                     <select
@@ -516,7 +516,7 @@ export function RouletteTab() {
               <button
                 onClick={spin}
                 disabled={spinning}
-                className="relative w-full py-5 flex items-center justify-center gap-3 disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-full transition-all shadow-xl active:scale-[0.97]"
+                className="relative w-full py-5 flex items-center justify-center gap-3 disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-full shadow-xl active:scale-[0.97]"
                 style={{
                   backgroundColor: btnColor,
                   boxShadow: `0 8px 40px ${btnColor}60`,
@@ -525,6 +525,7 @@ export function RouletteTab() {
                   fontWeight: 700,
                   fontSize: "1.3rem",
                   letterSpacing: "0.01em",
+                  transition: 'transform 150ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 300ms ease, opacity 200ms ease',
                 }}
               >
                 <Shuffle className={`w-6 h-6 ${spinning ? "animate-spin" : ""} shrink-0`} style={{ fontStyle: "normal" }} />
