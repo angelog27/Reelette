@@ -1123,15 +1123,58 @@ def get_group_chat(group_id, limit=60):
     except Exception:
         return []
 
+def _send_notification(user_id, notif_type, actor_id, actor_username, data: dict):
+    """Write a single notification doc to users/{user_id}/notifications."""
+    db.collection('users').document(user_id).collection('notifications').document().set({
+        'type':            notif_type,
+        'actor_user_id':   actor_id,
+        'actor_username':  actor_username,
+        'data':            data,
+        'read':            False,
+        'created_at':      datetime.now(),
+    })
+
+
 def send_group_message(group_id, sender_id, sender_username, text):
     try:
+        clean_text = text.strip()
         ref = db.collection('groups').document(group_id).collection('chat').document()
         ref.set({
             'sender_id':       sender_id,
             'sender_username': sender_username,
-            'text':            text.strip(),
+            'text':            clean_text,
             'sent_at':         datetime.now(),
         })
+
+        # Notify all other group members via their existing notifications listener.
+        # Batch-write so it's a single Firestore round-trip regardless of group size.
+        group_doc = db.collection('groups').document(group_id).get()
+        if group_doc.exists:
+            g = group_doc.to_dict()
+            group_name    = g.get('name', 'your group')
+            members       = g.get('members', [])
+            preview       = clean_text[:80] + ('…' if len(clean_text) > 80 else '')
+            notif_data    = {
+                'group_id':        group_id,
+                'group_name':      group_name,
+                'message_preview': preview,
+            }
+            batch = db.batch()
+            for member_id in members:
+                if member_id == sender_id:
+                    continue
+                notif_ref = (db.collection('users').document(member_id)
+                               .collection('notifications').document())
+                batch.set(notif_ref, {
+                    'type':           'group_message',
+                    'actor_user_id':  sender_id,
+                    'actor_username': sender_username,
+                    'data':           notif_data,
+                    'read':           False,
+                    'created_at':     datetime.now(),
+                })
+            batch.commit()
+
         return {'success': True, 'message_id': ref.id}
     except Exception as e:
         return {'success': False, 'message': str(e)}

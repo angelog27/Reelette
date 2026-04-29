@@ -443,10 +443,12 @@ export async function removeFromWatchLater(user_id: string, movie_id: string) {
 // ── Social Feed ──────────────────────────────────────────────────
 
 
-export async function getFeed(limit = 20): Promise<FeedPost[]> {
-  const res = await fetch(`${BASE_URL}/feed?limit=${limit}`);
-  const data = await res.json();
-  return data.posts ?? [];
+export function getFeed(limit = 20): Promise<FeedPost[]> {
+  return fromCache(`feed:${limit}`, 2 * 60 * 1000, async () => {
+    const res = await fetch(`${BASE_URL}/feed?limit=${limit}`);
+    const data = await res.json();
+    return data.posts ?? [];
+  });
 }
 
 
@@ -459,6 +461,7 @@ export async function createPost(payload: {
   movie_poster?: string;
   rating?: number;
 }) {
+  bustCachePrefix('feed:');
   const res = await fetch(`${BASE_URL}/feed`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -469,6 +472,7 @@ export async function createPost(payload: {
 
 
 export async function likePost(post_id: string, user_id: string) {
+  bustCachePrefix('feed:');
   const res = await fetch(`${BASE_URL}/feed/${post_id}/like`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -479,6 +483,7 @@ export async function likePost(post_id: string, user_id: string) {
 
 
 export async function deletePost(post_id: string, user_id: string) {
+  bustCachePrefix('feed:');
   const res = await fetch(`${BASE_URL}/feed/${post_id}`, {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },
@@ -560,10 +565,12 @@ export interface UserPublicProfile {
   showOnlineStatus: boolean;
 }
 
-export async function getUserPublicProfile(user_id: string): Promise<UserPublicProfile | null> {
-  const res = await fetch(`${BASE_URL}/user/${user_id}/public`);
-  if (!res.ok) return null;
-  return res.json();
+export function getUserPublicProfile(user_id: string): Promise<UserPublicProfile | null> {
+  return fromCache(`profile:public:${user_id}`, 5 * 60 * 1000, async () => {
+    const res = await fetch(`${BASE_URL}/user/${user_id}/public`);
+    if (!res.ok) return null;
+    return res.json();
+  });
 }
 
 export interface MemberProfile {
@@ -574,10 +581,12 @@ export interface MemberProfile {
   lastSeen?: string;
 }
 
-export async function getGroupMemberProfiles(group_id: string): Promise<MemberProfile[]> {
-  const res = await fetch(`${BASE_URL}/groups/${group_id}/members/profiles`);
-  const data = await res.json();
-  return data.profiles ?? [];
+export function getGroupMemberProfiles(group_id: string): Promise<MemberProfile[]> {
+  return fromCache(`group:members:${group_id}`, 5 * 60 * 1000, async () => {
+    const res = await fetch(`${BASE_URL}/groups/${group_id}/members/profiles`);
+    const data = await res.json();
+    return data.profiles ?? [];
+  });
 }
 
 export interface MemberServiceEntry {
@@ -585,10 +594,12 @@ export interface MemberServiceEntry {
   services: Record<string, boolean>;
 }
 
-export async function getGroupMemberServices(group_id: string): Promise<Record<string, MemberServiceEntry>> {
-  const res = await fetch(`${BASE_URL}/groups/${group_id}/members/services`);
-  const data = await res.json();
-  return data.services ?? {};
+export function getGroupMemberServices(group_id: string): Promise<Record<string, MemberServiceEntry>> {
+  return fromCache(`group:services:${group_id}`, 10 * 60 * 1000, async () => {
+    const res = await fetch(`${BASE_URL}/groups/${group_id}/members/services`);
+    const data = await res.json();
+    return data.services ?? {};
+  });
 }
 
 export async function saveSocialSettings(user_id: string, settings: { showOnlineStatus: boolean; showMyStuffPublicly: boolean }) {
@@ -634,16 +645,20 @@ export interface FriendRequest {
   created_at: string;
 }
 
-export async function getFriends(user_id: string): Promise<Friend[]> {
-  const res = await fetch(`${BASE_URL}/friends/${user_id}`);
-  const data = await res.json();
-  return data.friends ?? [];
+export function getFriends(user_id: string): Promise<Friend[]> {
+  return fromCache(`friends:${user_id}`, 3 * 60 * 1000, async () => {
+    const res = await fetch(`${BASE_URL}/friends/${user_id}`);
+    const data = await res.json();
+    return data.friends ?? [];
+  });
 }
 
-export async function getFriendRequests(user_id: string): Promise<FriendRequest[]> {
-  const res = await fetch(`${BASE_URL}/friends/${user_id}/requests`);
-  const data = await res.json();
-  return data.requests ?? [];
+export function getFriendRequests(user_id: string): Promise<FriendRequest[]> {
+  return fromCache(`friend_requests:${user_id}`, 60 * 1000, async () => {
+    const res = await fetch(`${BASE_URL}/friends/${user_id}/requests`);
+    const data = await res.json();
+    return data.requests ?? [];
+  });
 }
 
 export async function sendFriendRequest(to_user_id: string, from_user_id: string, from_username: string, from_avatarUrl?: string) {
@@ -656,6 +671,9 @@ export async function sendFriendRequest(to_user_id: string, from_user_id: string
 }
 
 export async function acceptFriendRequest(user_id: string, user_username: string, from_id: string, from_username: string, from_avatarUrl?: string) {
+  bustCache(`friend_requests:${user_id}`);
+  bustCache(`friends:${user_id}`);
+  bustCache(`friends:${from_id}`);
   const res = await fetch(`${BASE_URL}/friends/${user_id}/request/${from_id}/accept`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -665,6 +683,7 @@ export async function acceptFriendRequest(user_id: string, user_username: string
 }
 
 export async function rejectFriendRequest(user_id: string, from_id: string, from_username: string, from_avatarUrl?: string) {
+  bustCache(`friend_requests:${user_id}`);
   const res = await fetch(`${BASE_URL}/friends/${user_id}/request/${from_id}/reject`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -674,6 +693,8 @@ export async function rejectFriendRequest(user_id: string, from_id: string, from
 }
 
 export async function removeFriend(user_id: string, friend_id: string) {
+  bustCache(`friends:${user_id}`);
+  bustCache(`friends:${friend_id}`);
   const res = await fetch(`${BASE_URL}/friends/${user_id}/${friend_id}`, {
     method: 'DELETE',
   });
@@ -704,6 +725,7 @@ export interface MovieGroup {
 }
 
 export async function createGroup(name: string, description: string, creator_id: string, creator_username: string) {
+  bustCache(`user_groups:${creator_id}`);
   const res = await fetch(`${BASE_URL}/groups`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -718,13 +740,18 @@ export async function getGroup(group_id: string): Promise<MovieGroup | null> {
   return res.json();
 }
 
-export async function getUserGroups(user_id: string): Promise<MovieGroup[]> {
-  const res = await fetch(`${BASE_URL}/user/${user_id}/groups`);
-  const data = await res.json();
-  return data.groups ?? [];
+export function getUserGroups(user_id: string): Promise<MovieGroup[]> {
+  return fromCache(`user_groups:${user_id}`, 2 * 60 * 1000, async () => {
+    const res = await fetch(`${BASE_URL}/user/${user_id}/groups`);
+    const data = await res.json();
+    return data.groups ?? [];
+  });
 }
 
 export async function addGroupMember(group_id: string, user_id: string, username: string) {
+  bustCache(`user_groups:${user_id}`);
+  bustCache(`group:members:${group_id}`);
+  bustCache(`group:services:${group_id}`);
   const res = await fetch(`${BASE_URL}/groups/${group_id}/members`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -734,6 +761,9 @@ export async function addGroupMember(group_id: string, user_id: string, username
 }
 
 export async function removeGroupMember(group_id: string, member_id: string) {
+  bustCache(`user_groups:${member_id}`);
+  bustCache(`group:members:${group_id}`);
+  bustCache(`group:services:${group_id}`);
   const res = await fetch(`${BASE_URL}/groups/${group_id}/members/${member_id}`, {
     method: 'DELETE',
   });
@@ -765,6 +795,9 @@ export async function spinGroupReelette(group_id: string): Promise<{ success: bo
 }
 
 export async function deleteGroup(group_id: string, user_id: string) {
+  bustCache(`user_groups:${user_id}`);
+  bustCache(`group:members:${group_id}`);
+  bustCache(`group:services:${group_id}`);
   const res = await fetch(`${BASE_URL}/groups/${group_id}`, {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },
@@ -814,9 +847,10 @@ export async function logRouletteSpin(
   movie_title: string,
   poster_url: string
 ): Promise<void> {
-  // Bust spin cache so DiscoverTab picks up the new spin on next visit
+  // Bust own spin cache; friends' views of this user will refresh on next load
   bustCache(`spins:${user_id}:10`);
   bustCache(`spins:${user_id}:12`);
+  bustCachePrefix(`friends_spins:`);
   await fetch(`${BASE_URL}/roulette/${user_id}/spin`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -832,10 +866,12 @@ export function getRouletteHistory(user_id: string, limit = 10): Promise<Roulett
   });
 }
 
-  export async function getfriendsRouletteHistory(user_id: string, limit = 1): Promise<{ friend_id: string; friend_username: string; avatarUrl?: string; spins: RouletteSpin[] }[]> {
+export function getfriendsRouletteHistory(user_id: string, limit = 1): Promise<{ friend_id: string; friend_username: string; avatarUrl?: string; spins: RouletteSpin[] }[]> {
+  return fromCache(`friends_spins:${user_id}:${limit}`, 5 * 60 * 1000, async () => {
     const res = await fetch(`${BASE_URL}/roulette/${user_id}/friends-history?limit=${limit}`);
     const data = await res.json();
     return data.friendsHistory ?? [];
+  });
 }
 
 
@@ -847,7 +883,8 @@ export type NotificationType =
   | 'post_like'
   | 'post_reply'
   | 'friend_watched'
-  | 'group_invite';
+  | 'group_invite'
+  | 'group_message';
 
 export interface AppNotification {
   notification_id: string;
@@ -862,6 +899,7 @@ export interface AppNotification {
     post_id?: string;
     group_id?: string;
     group_name?: string;
+    message_preview?: string;
   };
   read: boolean;
   created_at: string;

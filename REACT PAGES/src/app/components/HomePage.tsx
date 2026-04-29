@@ -34,6 +34,9 @@ function notifMessage(n: AppNotification): string {
     case 'group_invite':   return n.data.group_name
       ? `${actor} added you to the group "${n.data.group_name}"`
       : `${actor} added you to a group`;
+    case 'group_message':  return n.data.group_name
+      ? `${actor} in ${n.data.group_name}: ${n.data.message_preview ?? '…'}`
+      : `${actor} sent a message in your group`;
     default: return 'New notification';
   }
 }
@@ -46,6 +49,7 @@ function notifIcon(type: AppNotification['type']) {
     case 'post_reply':     return <MessageCircle className="w-4 h-4 text-green-400" />;
     case 'friend_watched': return <Film className="w-4 h-4 text-purple-400" />;
     case 'group_invite':   return <Users className="w-4 h-4 text-yellow-400" />;
+    case 'group_message':  return <MessageCircle className="w-4 h-4 text-yellow-400" />;
     default: return <Bell className="w-4 h-4 text-gray-400" />;
   }
 }
