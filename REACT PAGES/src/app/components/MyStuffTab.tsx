@@ -203,8 +203,7 @@ export function MyStuffTab() {
 
           <h1
             style={{
-              fontFamily: "'Playfair Display', Georgia, 'Times New Roman', serif",
-              fontStyle: 'italic',
+              fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
               fontWeight: 700,
               fontSize: 'clamp(1.6rem, 3vw, 2.4rem)',
               color: '#fff',
@@ -335,7 +334,7 @@ export function MyStuffTab() {
                   <div className="mt-2 px-0.5">
                     <p
                       className="text-white text-sm leading-snug line-clamp-1"
-                      style={{ fontFamily: "'Playfair Display', Georgia, serif", fontWeight: 600 }}
+                      style={{ fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", fontWeight: 600 }}
                     >
                       {m.title}
                     </p>
@@ -412,7 +411,7 @@ export function MyStuffTab() {
                   <div className="mt-2 px-0.5">
                     <p
                       className="text-white text-sm leading-snug line-clamp-1"
-                      style={{ fontFamily: "'Playfair Display', Georgia, serif", fontWeight: 600 }}
+                      style={{ fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", fontWeight: 600 }}
                     >
                       {m.title}
                     </p>

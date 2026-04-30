@@ -285,11 +285,10 @@ export function RouletteTab() {
             }}
           />
 
-          {/* Main tagline — Playfair Display serif, italic */}
+          {/* Main tagline */}
           <h1
             style={{
-              fontFamily: "'Playfair Display', Georgia, 'Times New Roman', serif",
-              fontStyle: "italic",
+              fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
               fontWeight: 700,
               fontSize: "clamp(1.8rem, 3.5vw, 3rem)",
               lineHeight: 1.15,
@@ -305,8 +304,7 @@ export function RouletteTab() {
           <p
             className="mt-3 text-gray-400 font-medium"
             style={{
-              fontFamily: "'Playfair Display', Georgia, serif",
-              fontStyle: "italic",
+              fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
               fontSize: "1.1rem",
               letterSpacing: "0.04em",
             }}
@@ -520,8 +518,7 @@ export function RouletteTab() {
                 style={{
                   backgroundColor: btnColor,
                   boxShadow: `0 8px 40px ${btnColor}60`,
-                  fontFamily: "'Playfair Display', Georgia, serif",
-                  fontStyle: "italic",
+                  fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
                   fontWeight: 700,
                   fontSize: "1.3rem",
                   letterSpacing: "0.01em",
@@ -574,7 +571,7 @@ export function RouletteTab() {
                 <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
                   <p
                     className="text-white font-bold leading-snug line-clamp-2"
-                    style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '1rem' }}
+                    style={{ fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", fontSize: '1rem' }}
                   >
                     {pendingMovie.title}
                   </p>
@@ -594,7 +591,7 @@ export function RouletteTab() {
 
               <p
                 className="text-[11px] text-gray-600 text-center italic px-5 pb-3"
-                style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
+                style={{ fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}
               >
                 Fate has spoken. Your verdict?
               </p>

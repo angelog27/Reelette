@@ -1289,7 +1289,7 @@ function LeftSidebar({ view, onViewChange, groups, groupsLoading, activeGroupId,
   ];
 
   return (
-    <aside className="w-[220px] shrink-0 flex flex-col overflow-y-auto overflow-x-hidden border-r border-[#1a1a1e] no-scrollbar">
+    <aside className="w-[220px] shrink-0 flex flex-col overflow-y-auto overflow-x-hidden no-scrollbar">
       {/* Nav section */}
       <div className="px-3 pt-5 pb-3">
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600 px-2 mb-2">Navigation</p>
@@ -1538,13 +1538,13 @@ function RightSidebar({ currentUserId, currentUsername, onOpenProfile }: {
   };
 
   if (loading) return (
-    <aside className="w-[270px] shrink-0 border-l border-[#1a1a1e] overflow-y-auto px-4 py-5 space-y-4 no-scrollbar">
+    <aside className="w-[270px] shrink-0 overflow-y-auto px-4 py-5 space-y-4 no-scrollbar">
       {[...Array(3)].map((_, i) => <div key={i} className="h-20 bg-[#141416] rounded-xl animate-pulse" />)}
     </aside>
   );
 
   return (
-    <aside className="w-[270px] shrink-0 border-l border-[#1a1a1e] overflow-y-auto no-scrollbar">
+    <aside className="w-[270px] shrink-0 overflow-y-auto no-scrollbar">
 
       {/* Friend Requests */}
       {requests.length > 0 && (
@@ -1674,6 +1674,12 @@ export function SocialTab() {
   const currentUser = getUser();
   const currentUserId = currentUser?.user_id ?? '';
   const currentUsername = currentUser?.username ?? '';
+  const [currentUserAvatarUrl, setCurrentUserAvatarUrl] = useState<string | undefined>(currentUser?.avatarUrl);
+
+  useEffect(() => {
+    if (!currentUserId) return;
+    getUserPublicProfile(currentUserId).then(p => { if (p?.avatarUrl) setCurrentUserAvatarUrl(p.avatarUrl); });
+  }, [currentUserId]);
 
   // Heartbeat
   useEffect(() => {
@@ -1853,7 +1859,7 @@ export function SocialTab() {
             </div>
 
             {/* Compose */}
-            <ComposeBox currentUser={currentUser} onPostCreated={handlePostCreated} />
+            <ComposeBox currentUser={currentUser ? { ...currentUser, avatarUrl: currentUserAvatarUrl } : null} onPostCreated={handlePostCreated} />
 
             {/* Posts */}
             <div>
