@@ -567,6 +567,9 @@ export function DiscoverTab() {
 
       {/* ── Provider tab bar ── */}
       <div className="mt-14 mb-8">
+        <p className="text-xs font-semibold uppercase tracking-widest text-gray-500 text-center mb-5">
+          Your Providers
+        </p>
         <div
           className="hide-scrollbar flex gap-3 justify-evenly"
           style={{ scrollbarWidth: 'none' } as React.CSSProperties}
@@ -592,10 +595,10 @@ export function DiscoverTab() {
               >
                 {logo ? (
                   <img src={logo} alt={p.label} className="rounded-xl object-cover"
-                    style={{ width: 80, height: 80, boxShadow: lit ? `0 0 16px ${color}99` : 'none', transition: 'box-shadow 0.25s' }}
+                    style={{ width: 108, height: 108, boxShadow: lit ? `0 0 20px ${color}99` : 'none', transition: 'box-shadow 0.25s' }}
                   />
                 ) : (
-                  <Layers style={{ width: 52, height: 52, color: lit ? color : '#6b7280' }} />
+                  <Layers style={{ width: 68, height: 68, color: lit ? color : '#6b7280' }} />
                 )}
                 <span className="text-[11px] font-semibold tracking-wide" style={{ color: lit ? '#fff' : '#9ca3af' }}>
                   {p.label}

@@ -6,7 +6,8 @@
       "Bash(sed -n '13,25p' \"c:\\\\4330DEV\\\\Reelette\\\\REACT PAGES\\\\src\\\\styles\\\\index.css\")",
       "Bash(sed -n '79,95p' \"c:\\\\4330DEV\\\\Reelette\\\\REACT PAGES\\\\src\\\\app\\\\services\\\\api.ts\")",
       "Bash(xargs cat *)",
-      "Bash(pnpm exec *)"
+      "Bash(pnpm exec *)",
+      "Bash(node_modules/.bin/vite build *)"
     ]
   }
 }
