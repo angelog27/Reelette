@@ -352,9 +352,9 @@ def get_user_data(user_id):
         return data
 
     except Exception as e:
-        print(f"Error getting user data: {e}")
-        return None
-    
+        print(f"Error getting user data for {user_id}: {e}")
+        raise   # let the caller (app.py route) handle 503 vs 500 vs 404
+
 def add_to_watchlist(user_id, movie_id):
     #add movies to watchlist.
     try:
@@ -465,7 +465,7 @@ def update_watched_rating(user_id, movie_id, new_rating, comment=None):
 # ── Social Feed ───────────────────────────────────────────────
 
 # creates a new post in the global feed with the movie info and user's message
-def create_post(user_id, username, message, movie_title, movie_id, rating):
+def create_post(user_id, username, message, movie_title, movie_id, movie_poster, rating):
     try:
         post_ref = db.collection('posts').document()
         post_ref.set({
@@ -475,6 +475,7 @@ def create_post(user_id, username, message, movie_title, movie_id, rating):
             'message': message,
             'movie_title': movie_title,
             'movie_id': str(movie_id),
+            'movie_poster': movie_poster or '',
             'rating': rating,
             'likes': 0,
             'liked_by': [],
@@ -526,7 +527,8 @@ def like_post(post_id, user_id):
 # adds a reply to a post's replies subcollection
 def add_reply(post_id, user_id, username, message):
     try:
-        reply_ref = db.collection('posts').document(post_id).collection('replies').document()
+        post_ref = db.collection('posts').document(post_id)
+        reply_ref = post_ref.collection('replies').document()
         reply_ref.set({
             'reply_id': reply_ref.id,
             'user_id': user_id,
@@ -534,6 +536,7 @@ def add_reply(post_id, user_id, username, message):
             'message': message,
             'created_at': datetime.now()
         })
+        post_ref.update({'reply_count': firestore.Increment(1)})
         return {'success': True, 'reply_id': reply_ref.id}
     except Exception as e:
         return {'success': False, 'message': str(e)}
@@ -592,6 +595,7 @@ def search_users(query, exclude_user_id=None, limit=10):
         docs = (db.collection('users')
                   .where('username', '>=', query_lower)
                   .where('username', '<=', query_lower + '\uf8ff')
+                  .select(['username', 'displayName', 'avatarUrl'])
                   .limit(limit)
                   .stream())
         users = []
@@ -868,14 +872,16 @@ def update_user_last_seen(user_id):
 def get_user_public_profile(user_id):
     """Return a user's public profile including computed stats"""
     try:
-        doc = db.collection('users').document(user_id).get()
+        doc = db.collection('users').document(user_id).get(
+            field_paths=['username', 'displayName', 'bio', 'avatarUrl', 'createdAt', 'lastSeen', 'socialSettings']
+        )
         if not doc.exists:
             return None
         d = doc.to_dict()
-        # Compute stats in parallel (lightweight Firestore aggregations)
-        watched_docs  = db.collection('users').document(user_id).collection('watched_movies').stream()
-        watchlist_doc = db.collection('users').document(user_id).collection('lists').document('watchlist').get()
-        friends_docs  = db.collection('users').document(user_id).collection('friends').stream()
+        user_ref = db.collection('users').document(user_id)
+        watched_count = user_ref.collection('watched_movies').count().get()[0][0].value
+        watchlist_doc = user_ref.collection('lists').document('watchlist').get(field_paths=['movies'])
+        friends_count = user_ref.collection('friends').count().get()[0][0].value
         social = d.get('socialSettings', {})
         return {
             'user_id':             user_id,
@@ -885,9 +891,9 @@ def get_user_public_profile(user_id):
             'avatarUrl':           d.get('avatarUrl'),
             'createdAt':           d.get('createdAt'),
             'lastSeen':            d.get('lastSeen'),
-            'watchedCount':        sum(1 for _ in watched_docs),
+            'watchedCount':        watched_count,
             'watchlistCount':      len(watchlist_doc.to_dict().get('movies', [])) if watchlist_doc.exists else 0,
-            'friendsCount':        sum(1 for _ in friends_docs),
+            'friendsCount':        friends_count,
             'showMyStuffPublicly': social.get('showMyStuffPublicly', False),
             'showOnlineStatus':    social.get('showOnlineStatus', True),
         }
@@ -905,13 +911,16 @@ def get_group_member_profiles(group_id):
         if not group_doc.exists:
             return []
         member_ids = group_doc.to_dict().get('members', [])
+        if not member_ids:
+            return []
+        refs = [db.collection('users').document(uid) for uid in member_ids]
+        docs = db.get_all(refs, field_paths=['username', 'displayName', 'avatarUrl', 'lastSeen'])
         profiles = []
-        for uid in member_ids:
-            u = db.collection('users').document(uid).get()
+        for u in docs:
             if u.exists:
                 d = u.to_dict()
                 profiles.append({
-                    'user_id':     uid,
+                    'user_id':     u.id,
                     'username':    d.get('username', ''),
                     'displayName': d.get('displayName', d.get('username', '')),
                     'avatarUrl':   d.get('avatarUrl'),
@@ -930,12 +939,15 @@ def get_members_streaming_services(group_id):
         if not group_doc.exists:
             return {}
         member_ids = group_doc.to_dict().get('members', [])
+        if not member_ids:
+            return {}
+        refs = [db.collection('users').document(uid) for uid in member_ids]
+        docs = db.get_all(refs, field_paths=['username', 'streamingServices'])
         result = {}
-        for uid in member_ids:
-            u = db.collection('users').document(uid).get()
+        for u in docs:
             if u.exists:
                 d = u.to_dict()
-                result[uid] = {
+                result[u.id] = {
                     'username': d.get('username', ''),
                     'services': d.get('streamingServices', {})
                 }
@@ -948,23 +960,44 @@ def get_members_streaming_services(group_id):
 # ── Roulette Spin History ─────────────────────────────────────────
 
 def log_roulette_spin(user_id, movie_id, movie_title, poster_url):
-    """Prepend a spin to /users/{user_id}/roulette, keep max 20 entries."""
+    """Prepend a spin to /users/{user_id}/roulette, keep max 20 entries.
+
+    Uses a _meta counter doc so we read 1 doc per spin instead of streaming
+    the entire subcollection. The cleanup query (streaming all docs) only runs
+    when the counter exceeds 20, which is rare after the first fill.
+    Firestore excludes _meta from get_roulette_history automatically because
+    order_by('spun_at') skips documents that lack that field.
+    """
     try:
         roulette_ref = db.collection('users').document(user_id).collection('roulette')
-        new_doc = roulette_ref.document()
-        new_doc.set({
-            'movie_id': str(movie_id),
+        meta_ref = roulette_ref.document('_meta')
+
+        # Write the new spin entry
+        roulette_ref.document().set({
+            'movie_id':    str(movie_id),
             'movie_title': movie_title,
-            'poster_url': poster_url or '',
-            'spun_at': datetime.now()
+            'poster_url':  poster_url or '',
+            'spun_at':     datetime.now()
         })
-        # Enforce a 20-entry cap
-        all_spins = list(
-            roulette_ref.order_by('spun_at', direction=firestore.Query.DESCENDING).stream()
-        )
-        if len(all_spins) > 20:
+
+        # Atomically increment counter (initialises to 1 if _meta doesn't exist yet)
+        meta_ref.set({'count': firestore.Increment(1)}, merge=True)
+
+        # 1 read to decide whether pruning is needed
+        count = (meta_ref.get().to_dict() or {}).get('count', 0)
+
+        if count > 20:
+            # Rare path: stream only the spin docs (order_by excludes _meta),
+            # delete anything beyond position 20, reset counter.
+            all_spins = list(
+                roulette_ref
+                    .order_by('spun_at', direction=firestore.Query.DESCENDING)
+                    .stream()
+            )
             for doc in all_spins[20:]:
                 doc.reference.delete()
+            meta_ref.set({'count': min(count, 20)}, merge=True)
+
         return {'success': True}
     except Exception as e:
         return {'success': False, 'message': str(e)}
@@ -1014,6 +1047,48 @@ def get_friends_roulette_history(user_id, limit=1):
         print(f"Error getting friends roulette history: {e}")
         return []
     
+# ── Notifications ────────────────────────────────────────────────
+def get_notifications(user_id, limit=30):
+    """Return the most recent notifications for a user, newest first."""
+    try:
+        docs = (
+            db.collection('users').document(user_id)
+              .collection('notifications')
+              .order_by('created_at', direction=firestore.Query.DESCENDING)
+              .limit(limit)
+              .stream()
+        )
+        return [doc.to_dict() for doc in docs]
+    except Exception as e:
+        print(f"Error getting notifications: {e}")
+        return []
+
+
+def mark_notification_read(user_id, notification_id):
+    """Mark a single notification as read."""
+    try:
+        db.collection('users').document(user_id) \
+          .collection('notifications').document(notification_id) \
+          .update({'read': True})
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+
+def mark_all_notifications_read(user_id):
+    """Mark all of a user's notifications as read."""
+    try:
+        notif_ref = db.collection('users').document(user_id).collection('notifications')
+        unread = notif_ref.where('read', '==', False).stream()
+        batch = db.batch()
+        for doc in unread:
+            batch.update(doc.reference, {'read': True})
+        batch.commit()
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+
 # ── Quiz ──────────────────────────────────────────────────────────
 def save_quiz_result(uid, top_genre, answers):
     """Save quiz completion status and top genre to the user's Firestore document"""

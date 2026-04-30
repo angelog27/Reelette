@@ -49,10 +49,12 @@ export interface FeedPost {
   message: string;
   movie_title: string;
   movie_id: string;
+  movie_poster?: string;
   rating: number;
   likes: number;
   liked_by: string[];
   created_at: string;
+  reply_count?: number;
 }
 
 
@@ -209,7 +211,7 @@ export async function searchMovies(query: string, page = 1): Promise<Movie[]> {
 }
 
 
-export async function discoverMovies(filters: {
+export function discoverMovies(filters: {
   genre_id?: string;
   year_from?: string;
   year_to?: string;
@@ -220,13 +222,17 @@ export async function discoverMovies(filters: {
   services_filter?: Record<string, boolean>;
   page?: number;
 }): Promise<Movie[]> {
-  const res = await fetch(`${BASE_URL}/movies/discover`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(filters),
+  // Stable cache key regardless of property insertion order
+  const key = `discover:${JSON.stringify(Object.fromEntries(Object.entries(filters).sort()))}`;
+  return fromCache(key, TTL.CATALOG, async () => {
+    const res = await fetch(`${BASE_URL}/movies/discover`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(filters),
+    });
+    const data = await res.json();
+    return data.movies ?? [];
   });
-  const data = await res.json();
-  return data.movies ?? [];
 }
 
 
@@ -234,6 +240,41 @@ export function getMovieDetails(movie_id: string): Promise<Record<string, unknow
   return fromCache(`movie:${movie_id}`, TTL.MOVIE, async () => {
     const res = await fetch(`${BASE_URL}/movies/${movie_id}`);
     return res.json();
+  });
+}
+
+// Returns the first flatrate streaming service name for a movie, or '' if none.
+// Cached for 6 hours to match the backend provider TTL.
+export function getMovieProvider(movie_id: string): Promise<string> {
+  return fromCache(`provider:${movie_id}`, 6 * 60 * 60 * 1000, async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/movies/${movie_id}/providers`);
+      const data = await res.json();
+      const flatrate: { provider_id: number; provider_name: string }[] = data?.flatrate ?? [];
+      const NAMES: Record<number, string> = {
+        8: 'Netflix', 15: 'Hulu', 337: 'Disney+', 1899: 'Max',
+        9: 'Prime Video', 350: 'Apple TV+', 531: 'Paramount+', 386: 'Peacock',
+      };
+      for (const p of flatrate) {
+        const name = NAMES[p.provider_id];
+        if (name) return name;
+      }
+    } catch { /* ignore */ }
+    return '';
+  });
+}
+
+
+// Returns the TMDB profile photo URL for an actor/director by name, or null.
+export function getPersonPhoto(name: string): Promise<string | null> {
+  return fromCache(`person:${name}`, 24 * 60 * 60 * 1000, async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/person/search?name=${encodeURIComponent(name)}`);
+      const data = await res.json();
+      return data.profile_path
+        ? `https://image.tmdb.org/t/p/w185${data.profile_path}`
+        : null;
+    } catch { return null; }
   });
 }
 
@@ -265,10 +306,12 @@ export async function getWatchedMovies(user_id: string): Promise<WatchedMovie[]>
 }
 
 
-export async function getWatchedMovie(user_id: string, movie_id: string): Promise<(WatchedMovie & { watched: boolean }) | null> {
-  const res = await fetch(`${BASE_URL}/watched/${user_id}/${movie_id}`);
-  const data = await res.json();
-  return data.watched ? data : null;
+export function getWatchedMovie(user_id: string, movie_id: string): Promise<(WatchedMovie & { watched: boolean }) | null> {
+  return fromCache(`watched_check:${user_id}:${movie_id}`, 5 * 60 * 1000, async () => {
+    const res = await fetch(`${BASE_URL}/watched/${user_id}/${movie_id}`);
+    const data = await res.json();
+    return data.watched ? data : null;
+  });
 }
 
 
@@ -282,6 +325,7 @@ export async function addWatchedMovie(
   user_rating: number,
   comment: string
 ) {
+  bustCache(`watched_check:${user_id}:${movie.movie_id}`);
   const res = await fetch(`${BASE_URL}/watched/${user_id}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -292,6 +336,7 @@ export async function addWatchedMovie(
 
 
 export async function updateWatchedMovie(user_id: string, movie_id: string, rating: number, comment: string) {
+  bustCache(`watched_check:${user_id}:${movie_id}`);
   const res = await fetch(`${BASE_URL}/watched/${user_id}/${movie_id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -300,13 +345,16 @@ export async function updateWatchedMovie(user_id: string, movie_id: string, rati
   return res.json();
 }
 
-export async function getWatchLater(user_id: string): Promise<string[]> {
-  const res = await fetch(`${BASE_URL}/watchlist/${user_id}`);
-  const data = await res.json();
-  return data.movies ?? [];
+export function getWatchLater(user_id: string): Promise<string[]> {
+  return fromCache(`watchlist:${user_id}`, 5 * 60 * 1000, async () => {
+    const res = await fetch(`${BASE_URL}/watchlist/${user_id}`);
+    const data = await res.json();
+    return data.movies ?? [];
+  });
 }
 
 export async function watchMovieLater(user_id: string, movie_id: string) {
+  bustCache(`watchlist:${user_id}`);
   const res = await fetch(`${BASE_URL}/watchlist/${user_id}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -316,6 +364,7 @@ export async function watchMovieLater(user_id: string, movie_id: string) {
 }
 
 export async function removeFromWatchLater(user_id: string, movie_id: string) {
+  bustCache(`watchlist:${user_id}`);
   const res = await fetch(`${BASE_URL}/watchlist/${user_id}/${movie_id}`, {
     method: 'DELETE',
   });
@@ -339,6 +388,7 @@ export async function createPost(payload: {
   message: string;
   movie_title: string;
   movie_id?: string;
+  movie_poster?: string;
   rating?: number;
 }) {
   const res = await fetch(`${BASE_URL}/feed`, {
@@ -691,6 +741,54 @@ export async function getRouletteHistory(user_id: string, limit = 10): Promise<R
     return data.friendsHistory ?? [];
 }
 
+
+// ── Notifications ────────────────────────────────────────────────
+
+export type NotificationType =
+  | 'friend_request'
+  | 'friend_accept'
+  | 'post_like'
+  | 'post_reply'
+  | 'friend_watched'
+  | 'group_invite';
+
+export interface AppNotification {
+  notification_id: string;
+  type: NotificationType;
+  actor_user_id: string;
+  actor_username: string;
+  data: {
+    movie_title?: string;
+    movie_id?: string;
+    movie_poster?: string;
+    user_rating?: number;
+    post_id?: string;
+    group_id?: string;
+    group_name?: string;
+  };
+  read: boolean;
+  created_at: string;
+}
+
+export async function getNotifications(user_id: string): Promise<AppNotification[]> {
+  const res = await fetch(`${BASE_URL}/user/${user_id}/notifications`);
+  const data = await res.json();
+  return data.notifications ?? [];
+}
+
+export async function markNotificationRead(user_id: string, notification_id: string) {
+  const res = await fetch(`${BASE_URL}/user/${user_id}/notifications/${notification_id}/read`, {
+    method: 'PUT',
+  });
+  return res.json();
+}
+
+export async function markAllNotificationsRead(user_id: string) {
+  const res = await fetch(`${BASE_URL}/user/${user_id}/notifications/read-all`, {
+    method: 'PUT',
+  });
+  return res.json();
+}
 
 // ── Helpers ──────────────────────────────────────────────────────
 

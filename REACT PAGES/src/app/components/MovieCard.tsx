@@ -1,22 +1,13 @@
-import { Star, Tv } from 'lucide-react';
+import { Star } from 'lucide-react';
 import { Movie } from '../types/movie';
+import { PROVIDER_LOGOS } from '../constants/providers';
 
 interface MovieCardProps {
   movie: Movie;
   onClick?: (movie: Movie) => void;
 }
-//comment
+
 export function MovieCard({ movie, onClick }: MovieCardProps) {
-  const streamingColors: Record<string, string> = {
-    Netflix:      'bg-[#E50914]',
-    'Max':        'bg-[#6B2FF1]',
-    Hulu:         'bg-[#1CE783] text-black',
-    'Paramount+': 'bg-[#0064FF]',
-    'Disney+':    'bg-[#113CCF]',
-    'Prime Video':'bg-[#00A8E1]',
-    'Apple TV+':  'bg-[#555555]',
-    Peacock:      'bg-[#FF6E30]',
-  };
 
   return (
     <div
@@ -41,15 +32,14 @@ export function MovieCard({ movie, onClick }: MovieCardProps) {
           </div>
         )}
 
-        {/* Streaming Badge — only shown when a service is known */}
-        {movie.streamingService && (
-          <div
-            className={`absolute top-2 right-2 ${
-              streamingColors[movie.streamingService] || 'bg-gray-700'
-            } px-2.5 py-1 rounded-md text-xs text-white font-medium flex items-center gap-1`}
-          >
-            <Tv className="w-3 h-3" />
-            {movie.streamingService}
+        {/* Streaming Badge — official provider logo */}
+        {movie.streamingService && PROVIDER_LOGOS[movie.streamingService] && (
+          <div className="absolute top-2 right-2 w-9 h-9 rounded-lg overflow-hidden shadow-lg ring-1 ring-white/10">
+            <img
+              src={PROVIDER_LOGOS[movie.streamingService]}
+              alt={movie.streamingService}
+              className="w-full h-full object-cover"
+            />
           </div>
         )}
       </div>

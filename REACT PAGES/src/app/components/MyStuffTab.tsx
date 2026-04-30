@@ -1,32 +1,43 @@
-import { useState, useEffect } from 'react';
-import { Star, Bookmark } from 'lucide-react';
-import { getWatchedMovies, getWatchLater, getMovieDetails, getUser } from '../services/api';
-import type { WatchedMovie } from '../services/api';
+import { useState, useEffect, useRef } from 'react';
+import { Star, Bookmark, BarChart2 } from 'lucide-react';
+import { getWatchedMovies, getWatchLater, getMovieDetails, getMovieProvider, getUser, getRouletteHistory } from '../services/api';
+import type { WatchedMovie, RouletteSpin } from '../services/api';
 import { MovieDetailModal } from './MovieDetailModal';
+import { PROVIDER_LOGOS } from '../constants/providers';
+import { StatsTab } from './StatsTab';
 
-type Tab = 'watched' | 'watchlater';
+type Tab = 'watched' | 'watchlater' | 'stats';
 
 interface WatchLaterMovie {
   movie_id: string;
   title: string;
   year: string;
   poster: string | null;
+  streamingService: string;
 }
 
 export function MyStuffTab() {
   const [activeTab, setActiveTab] = useState<Tab>('watched');
   const [movies, setMovies] = useState<WatchedMovie[]>([]);
   const [watchLater, setWatchLater] = useState<WatchLaterMovie[]>([]);
+  const [recentSpins, setRecentSpins] = useState<RouletteSpin[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMovieId, setSelectedMovieId] = useState<string | null>(null);
+
+  // Cache movie details for the session so modal closes don't re-fetch every entry
+  const movieDetailsCacheRef = useRef<Map<string, WatchLaterMovie>>(new Map());
 
   const user = getUser();
 
   function loadWatched() {
     if (!user) { setLoading(false); return; }
     setLoading(true);
-    getWatchedMovies(user.user_id).then((m) => {
+    Promise.all([
+      getWatchedMovies(user.user_id),
+      getRouletteHistory(user.user_id, 20),
+    ]).then(([m, spins]) => {
       setMovies(m);
+      setRecentSpins(spins);
       setLoading(false);
     });
   }
@@ -35,15 +46,25 @@ export function MyStuffTab() {
     if (!user) { setLoading(false); return; }
     setLoading(true);
     getWatchLater(user.user_id).then(async (ids) => {
+      const cache = movieDetailsCacheRef.current;
       const details = await Promise.all(
-        ids.map((id) =>
-          getMovieDetails(id).then((d) => ({
-            movie_id: String(id),
-            title: d?.title ?? 'Unknown',
-            year: d?.release_date ? d.release_date.slice(0, 4) : '',
-            poster: d?.poster_path ? `https://image.tmdb.org/t/p/w500${d.poster_path}` : null,
-          }))
-        )
+        ids.map((id) => {
+          const strId = String(id);
+          if (cache.has(strId)) return Promise.resolve(cache.get(strId)!);
+          return Promise.all([getMovieDetails(strId), getMovieProvider(strId)]).then(([d, svc]) => {
+            const entry: WatchLaterMovie = {
+              movie_id: strId,
+              title: (d as any)?.title ?? 'Unknown',
+              year: (d as any)?.release_date ? String((d as any).release_date).slice(0, 4) : '',
+              poster: (d as any)?.poster_path
+                ? `https://image.tmdb.org/t/p/w500${(d as any).poster_path}`
+                : null,
+              streamingService: svc,
+            };
+            cache.set(strId, entry);
+            return entry;
+          });
+        })
       );
       setWatchLater(details);
       setLoading(false);
@@ -51,7 +72,7 @@ export function MyStuffTab() {
   }
 
   useEffect(() => {
-    if (activeTab === 'watched') loadWatched();
+    if (activeTab === 'watched' || activeTab === 'stats') loadWatched();
     else loadWatchLater();
   }, [activeTab]);
 
@@ -94,10 +115,24 @@ export function MyStuffTab() {
           <Bookmark className="w-3.5 h-3.5" />
           Watch Later
         </button>
+        <button
+          onClick={() => setActiveTab('stats')}
+          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+            activeTab === 'stats'
+              ? 'text-white'
+              : 'text-gray-400 hover:text-white'
+          }`}
+          style={activeTab === 'stats' ? { backgroundColor: '#f97316' } : {}}
+        >
+          <BarChart2 className="w-3.5 h-3.5" />
+          Stats
+        </button>
       </div>
 
       {loading ? (
         <div className="text-gray-500 text-center py-16">Loading...</div>
+      ) : activeTab === 'stats' ? (
+        <StatsTab movies={movies} recentSpins={recentSpins} onMovieClick={setSelectedMovieId} />
       ) : activeTab === 'watched' ? (
         movies.length === 0 ? (
           <div className="text-gray-500 text-center py-16">
@@ -119,10 +154,15 @@ export function MyStuffTab() {
                       <span className="text-gray-600 text-xs text-center px-2">{m.title}</span>
                     </div>
                   )}
-                  <div className="absolute top-2 right-2 flex items-center gap-1 bg-black/70 rounded-full px-2 py-0.5">
+                  <div className="absolute top-2 left-2 flex items-center gap-1 bg-black/70 rounded-full px-2 py-0.5">
                     <Star className="w-3 h-3 fill-[#C0392B] text-[#C0392B]" />
                     <span className="text-white text-xs font-semibold">{m.user_rating}</span>
                   </div>
+                  {m.services[0] && PROVIDER_LOGOS[m.services[0]] && (
+                    <div className="absolute top-2 right-2 w-8 h-8 rounded-lg overflow-hidden shadow-lg ring-1 ring-white/10">
+                      <img src={PROVIDER_LOGOS[m.services[0]]} alt={m.services[0]} className="w-full h-full object-cover" />
+                    </div>
+                  )}
                 </div>
                 <div className="mt-2 px-0.5">
                   <p className="text-white text-sm font-medium leading-snug line-clamp-1">{m.title}</p>
@@ -156,9 +196,14 @@ export function MyStuffTab() {
                       <span className="text-gray-600 text-xs text-center px-2">{m.title}</span>
                     </div>
                   )}
-                  <div className="absolute top-2 right-2 bg-black/70 rounded-full p-1">
+                  <div className="absolute top-2 left-2 bg-black/70 rounded-full p-1">
                     <Bookmark className="w-3 h-3 fill-white text-white" />
                   </div>
+                  {m.streamingService && PROVIDER_LOGOS[m.streamingService] && (
+                    <div className="absolute top-2 right-2 w-8 h-8 rounded-lg overflow-hidden shadow-lg ring-1 ring-white/10">
+                      <img src={PROVIDER_LOGOS[m.streamingService]} alt={m.streamingService} className="w-full h-full object-cover" />
+                    </div>
+                  )}
                 </div>
                 <div className="mt-2 px-0.5">
                   <p className="text-white text-sm font-medium leading-snug line-clamp-1">{m.title}</p>
@@ -175,8 +220,9 @@ export function MyStuffTab() {
           movieId={selectedMovieId}
           onClose={() => {
             setSelectedMovieId(null);
+            // Only refresh the watched list (user may have rated something).
+            // Watch Later details are cached in movieDetailsCacheRef — no re-fetch needed.
             if (activeTab === 'watched') loadWatched();
-            else loadWatchLater();
           }}
         />
       )}
