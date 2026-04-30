@@ -272,7 +272,7 @@ function WatchModePanel({ groupId, onModeChange }: {
       {movies.length > 0 && (
         <div>
           <p className="text-zinc-400 text-sm mb-3">{movies.length} movies available</p>
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 max-h-72 overflow-y-auto pr-1">
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 max-h-72 overflow-y-auto no-scrollbar pr-1">
             {movies.map(m => (
               <button key={m.id}
                 onClick={async () => {
@@ -329,7 +329,7 @@ function renderMessage(message: string, onOpenProfile: (userId: string) => void)
 // ── Activity Skeleton ─────────────────────────────────────────
 function ActivitySkeleton() {
   return (
-    <div className="mb-3 rounded-2xl border border-[#1a1a1e] bg-[#0d0d0f] overflow-hidden">
+    <div className="mb-3 rounded-2xl bg-[#0d0d0f] overflow-hidden">
       <div className="px-4 py-3 flex gap-3">
         <div className="w-10 h-10 bg-[#1a1a1e] rounded-full animate-pulse shrink-0" />
         <div className="flex-1 space-y-2 pt-1">
@@ -389,7 +389,7 @@ function PostMovieSearch({ onSelect, selected }: { onSelect: (m: MovieOption | n
         {searching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 animate-spin" />}
       </div>
       {results.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-[#141416] border border-[#2a2a2e] rounded-xl shadow-2xl z-20 overflow-hidden max-h-60 overflow-y-auto">
+        <div className="absolute top-full left-0 right-0 mt-1 bg-[#141416] border border-[#2a2a2e] rounded-xl shadow-2xl z-20 overflow-hidden max-h-60 overflow-y-auto no-scrollbar">
           {results.map(m => (
             <button key={m.id} onClick={() => { onSelect(m); setQuery(''); setResults([]); }}
               className="w-full flex items-center gap-3 p-3 hover:bg-[#1a1a1e] transition-colors text-left border-b border-[#2a2a2e] last:border-0">
@@ -528,13 +528,16 @@ function ComposeBox({ currentUser, onPostCreated }: {
   if (!currentUser) return null;
 
   return (
-    <div ref={boxRef} className="border-b border-[#1a1a1e]">
+    <div ref={boxRef}>
       {!expanded ? (
         <button
           onClick={() => setExpanded(true)}
           className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-[#0f0f11] transition-colors text-left"
         >
-          <UserAvatar username={currentUser.username} size={38} />
+          <UserAvatar 
+          username={currentUser.username} 
+          avatarUrl={currentUser.avatarUrl}
+          size={38} />
           <span className="flex-1 text-zinc-600 text-[15px]">What movie did you watch?</span>
           <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-[#7C5DBD]/20 text-[#9B7BD7] border border-[#7C5DBD]/30">
             Post
@@ -543,7 +546,11 @@ function ComposeBox({ currentUser, onPostCreated }: {
       ) : (
         <div className="px-4 pt-4 pb-3 space-y-3">
           <div className="flex gap-3">
-            <UserAvatar username={currentUser.username} size={38} />
+            <UserAvatar 
+            username={currentUser.username}
+            avatarUrl={currentUser.avatarUrl }
+            
+            size={38} />
             <div className="flex-1 relative">
               <textarea
                 ref={textareaRef}
@@ -559,7 +566,7 @@ function ComposeBox({ currentUser, onPostCreated }: {
                 <div className="absolute top-full left-0 right-0 mt-1 bg-[#141416] border border-[#2a2a2e] rounded-xl shadow-2xl z-30 overflow-hidden">
                   {mentionResults.map(u => (
                     <button key={u.user_id} onMouseDown={e => { e.preventDefault(); handleMentionSelect(u.username); }}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-[#1a1a1e] transition-colors text-left border-b border-[#2a2a2e] last:border-0">
+                      className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-[#1a1a1e] transition-colors text-left">
                       <span className="text-white text-sm font-medium">@{u.username}</span>
                       {u.displayName !== u.username && <span className="text-zinc-500 text-xs">{u.displayName}</span>}
                     </button>
@@ -629,7 +636,7 @@ function ComposeBox({ currentUser, onPostCreated }: {
           {postError && <p className="text-red-400 text-sm ml-[50px]">{postError}</p>}
 
           {/* Action row */}
-          <div className="flex items-center justify-between ml-[50px] border-t border-[#1a1a1e] pt-3">
+          <div className="flex items-center justify-between ml-[50px] pt-3">
             <div className="flex items-center gap-1">
               <button
                 onClick={() => { setMovieSearchOpen(v => !v); setRatingOpen(false); }}
@@ -715,7 +722,7 @@ function ActivityCard({ post, currentUserId, currentUsername, onLike, onDelete, 
   };
 
   return (
-    <article className="mb-0 border-b border-[#1a1a1e] transition-colors duration-150 hover:bg-[#0f0f11]">
+    <article className="mb-0 transition-colors duration-150 hover:bg-[#0f0f11]">
       {/* Rating strip */}
       {post.rating > 0 && (
         <div className="px-4 pt-3 pb-0 flex items-center gap-2">
@@ -799,7 +806,7 @@ function ActivityCard({ post, currentUserId, currentUsername, onLike, onDelete, 
 
       {/* Replies */}
       {showReplies && (
-        <div className="px-4 pb-3 pl-[62px] space-y-3 border-t border-[#141416]">
+        <div className="px-4 pb-3 pl-[62px] space-y-3 ">
           <div className="pt-3">
             {loadingReplies ? (
               <div className="flex items-center gap-2 text-zinc-600 text-xs"><Loader2 className="w-3 h-3 animate-spin" /> Loading…</div>
@@ -810,7 +817,7 @@ function ActivityCard({ post, currentUserId, currentUsername, onLike, onDelete, 
                 {replies.map(r => (
                   <div key={r.reply_id} className="flex items-start gap-2">
                     <UserAvatar username={r.username} avatarUrl={r.avatarUrl} size={26} onClick={() => onOpenProfile(r.user_id)} />
-                    <div className="flex-1 bg-[#141416] border border-[#1e1e22] rounded-2xl px-3 py-2">
+                    <div className="flex-1 bg-[#141416] rounded-2xl px-3 py-2">
                       <div className="flex items-center gap-2 mb-0.5">
                         <button onClick={() => onOpenProfile(r.user_id)} className="text-white text-xs font-semibold hover:text-[#9B7BD7] transition-colors">@{r.username}</button>
                         <span className="text-zinc-700 text-xs">{timeAgo(r.created_at)}</span>
@@ -825,7 +832,7 @@ function ActivityCard({ post, currentUserId, currentUsername, onLike, onDelete, 
               <input type="text" placeholder="Reply…" value={replyText}
                 onChange={e => setReplyText(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSubmitReply()}
-                className="flex-1 bg-[#141416] border border-[#1e1e22] rounded-full px-4 py-1.5 text-white text-sm placeholder:text-zinc-700 focus:border-[#7C5DBD]/40 focus:outline-none" />
+                className="flex-1 bg-[#141416] rounded-full px-4 py-1.5 text-white text-sm placeholder:text-zinc-700 focus:border-[#7C5DBD]/40 focus:outline-none" />
               <button onClick={handleSubmitReply} disabled={submittingReply || !replyText.trim()}
                 className="p-2 bg-[#7C5DBD] hover:bg-[#6B4DAD] disabled:opacity-40 text-white rounded-full transition-colors">
                 {submittingReply ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
@@ -877,7 +884,7 @@ function TMDBMovieSearch({ groupId, onAdded }: { groupId: string; onAdded: () =>
         {searching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 animate-spin" />}
       </div>
       {results.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-[#141416] border border-[#2a2a2e] rounded-xl shadow-2xl z-20 overflow-hidden max-h-72 overflow-y-auto">
+        <div className="absolute top-full left-0 right-0 mt-1 bg-[#141416] border border-[#2a2a2e] rounded-xl shadow-2xl z-20 overflow-hidden max-h-72 overflow-y-auto no-scrollbar">
           {results.map(m => (
             <button key={m.id} onClick={() => handleAdd(m)} disabled={addingId === m.id}
               className="w-full flex items-center gap-3 p-3 hover:bg-[#1a1a1e] transition-colors text-left border-b border-[#2a2a2e] last:border-0">
@@ -1201,7 +1208,7 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
 
         {innerTab === 'chat' && (
           <div className="flex flex-col bg-[#0d0d0f] border border-[#1a1a1e] rounded-2xl overflow-hidden" style={{ height: 520 }}>
-            <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
+            <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3 no-scrollbar">
               {chatMessages.length === 0 && (
                 <div className="flex items-center justify-center h-full">
                   <p className="text-zinc-600 text-sm">No messages yet — say something!</p>
@@ -1282,7 +1289,7 @@ function LeftSidebar({ view, onViewChange, groups, groupsLoading, activeGroupId,
   ];
 
   return (
-    <aside className="w-[220px] shrink-0 flex flex-col overflow-y-auto overflow-x-hidden border-r border-[#1a1a1e]">
+    <aside className="w-[220px] shrink-0 flex flex-col overflow-y-auto overflow-x-hidden border-r border-[#1a1a1e] no-scrollbar">
       {/* Nav section */}
       <div className="px-3 pt-5 pb-3">
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600 px-2 mb-2">Navigation</p>
@@ -1531,13 +1538,13 @@ function RightSidebar({ currentUserId, currentUsername, onOpenProfile }: {
   };
 
   if (loading) return (
-    <aside className="w-[270px] shrink-0 border-l border-[#1a1a1e] overflow-y-auto px-4 py-5 space-y-4">
+    <aside className="w-[270px] shrink-0 border-l border-[#1a1a1e] overflow-y-auto px-4 py-5 space-y-4 no-scrollbar">
       {[...Array(3)].map((_, i) => <div key={i} className="h-20 bg-[#141416] rounded-xl animate-pulse" />)}
     </aside>
   );
 
   return (
-    <aside className="w-[270px] shrink-0 border-l border-[#1a1a1e] overflow-y-auto">
+    <aside className="w-[270px] shrink-0 border-l border-[#1a1a1e] overflow-y-auto no-scrollbar">
 
       {/* Friend Requests */}
       {requests.length > 0 && (
@@ -1799,7 +1806,7 @@ export function SocialTab() {
       />
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto min-w-0">
+      <main className="flex-1 overflow-y-auto  no-scrollbar min-w-0">
         {activeGroup ? (
           <GroupDetail
             group={activeGroup}
@@ -1814,7 +1821,7 @@ export function SocialTab() {
         ) : sidebarView === 'recent' ? (
           <>
             {/* Recent Watches header */}
-            <div className="sticky top-0 z-10 px-4 py-3.5 border-b border-[#1a1a1e] bg-[#0A0A0A]/95 backdrop-blur-sm">
+            <div className="sticky top-0 z-10 px-4 py-3.5 bg-[#0A0A0A]/95 backdrop-blur-sm">
               <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4 text-zinc-500" />
                 <h2 className="text-white font-semibold text-[15px]">Recent Watches</h2>
@@ -1826,7 +1833,7 @@ export function SocialTab() {
         ) : (
           <>
             {/* Feed tab bar */}
-            <div className="sticky top-0 z-10 bg-[#0A0A0A]/95 backdrop-blur-sm border-b border-[#1a1a1e]">
+            <div className="sticky top-0 z-10 bg-[#0A0A0A]/95 backdrop-blur-sm">
               <div className="flex items-center">
                 <button onClick={() => setFeedMode('all')}
                   className={`flex-1 py-3.5 text-sm font-semibold relative transition-colors ${feedMode === 'all' ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'}`}>
