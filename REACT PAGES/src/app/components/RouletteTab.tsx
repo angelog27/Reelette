@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+﻿import { useState, useEffect, useRef } from "react";
 import { Shuffle, ChevronDown, ThumbsUp, ThumbsDown, Film, SlidersHorizontal } from "lucide-react";
 import { MovieDetailModal } from "./MovieDetailModal";
 import { RouletteWheelModal, getWheelColor } from "./RouletteWheelModal";
@@ -263,15 +263,15 @@ export function RouletteTab() {
 
           {/* "NOW PLAYING" marquee badge */}
           <div className="flex items-center gap-2 mb-5">
-            <div className="h-px w-12 bg-gradient-to-r from-transparent to-[#C0392B]/60" />
+            <div className="h-px w-12 bg-gradient-to-r from-transparent to-[#7C5DBD]/60" />
             <span
-              className="text-[11px] font-bold tracking-[0.25em] text-[#C0392B] uppercase"
+              className="text-[11px] font-bold tracking-[0.25em] text-[#7C5DBD] uppercase"
               style={{ fontFamily: "'Courier New', monospace" }}
             >
               Now Playing
             </span>
-            <span className="w-1.5 h-1.5 rounded-full bg-[#C0392B] animate-pulse" />
-            <div className="h-px w-12 bg-gradient-to-l from-transparent to-[#C0392B]/60" />
+            <span className="w-1.5 h-1.5 rounded-full bg-[#7C5DBD] animate-pulse" />
+            <div className="h-px w-12 bg-gradient-to-l from-transparent to-[#7C5DBD]/60" />
           </div>
 
           {/* Reelette logo */}
@@ -316,9 +316,9 @@ export function RouletteTab() {
 
           {/* Decorative rule */}
           <div className="flex items-center gap-3 mt-5">
-            <div className="h-px w-16 bg-gradient-to-r from-transparent to-[#C0392B]/50" />
-            <span className="text-[#C0392B]/60 text-xs tracking-widest">✦</span>
-            <div className="h-px w-16 bg-gradient-to-l from-transparent to-[#C0392B]/50" />
+            <div className="h-px w-16 bg-gradient-to-r from-transparent to-[#7C5DBD]/50" />
+            <span className="text-[#7C5DBD]/60 text-xs tracking-widest">✦</span>
+            <div className="h-px w-16 bg-gradient-to-l from-transparent to-[#7C5DBD]/50" />
           </div>
 
           {/* Pool size badge */}
@@ -425,7 +425,7 @@ export function RouletteTab() {
               <Switch
                 checked={filterStreaming}
                 onCheckedChange={setFilterStreaming}
-                className="data-[state=checked]:bg-[#C0392B] scale-90"
+                className="data-[state=checked]:bg-[#7C5DBD] scale-90"
               />
               <span
                 className="text-xs text-gray-300 cursor-pointer whitespace-nowrap"

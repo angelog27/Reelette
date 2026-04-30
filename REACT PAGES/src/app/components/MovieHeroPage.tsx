@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { ArrowLeft, Star, Clock, Play, Tv, Check } from 'lucide-react';
 import {
   getMovieDetails, getWatchedMovie, addWatchedMovie, updateWatchedMovie, getUser,
@@ -99,7 +99,7 @@ export function MovieHeroPage({ movieId, onClose }: Props) {
     return (
       <div className="fixed inset-0 z-50 bg-black flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 border-2 border-[#C0392B] border-t-transparent rounded-full animate-spin" />
+          <div className="w-10 h-10 border-2 border-[#7C5DBD] border-t-transparent rounded-full animate-spin" />
           <p className="text-gray-400">Loading...</p>
         </div>
       </div>
@@ -111,7 +111,7 @@ export function MovieHeroPage({ movieId, onClose }: Props) {
       <div className="fixed inset-0 z-50 bg-black flex items-center justify-center">
         <div className="text-center">
           <p className="text-gray-400 mb-4">Could not load movie details.</p>
-          <button onClick={onClose} className="text-[#C0392B] hover:text-[#E74C3C]">Go Back</button>
+          <button onClick={onClose} className="text-[#7C5DBD] hover:text-[#9B7BD7]">Go Back</button>
         </div>
       </div>
     );
@@ -210,7 +210,7 @@ export function MovieHeroPage({ movieId, onClose }: Props) {
                 {isLongOverview && (
                   <button
                     onClick={() => setOverviewExpanded(!overviewExpanded)}
-                    className="ml-1 text-[#E74C3C] hover:text-[#C0392B] font-medium text-sm"
+                    className="ml-1 text-[#9B7BD7] hover:text-[#7C5DBD] font-medium text-sm"
                   >
                     {overviewExpanded ? 'See less' : 'See more'}
                   </button>
@@ -288,7 +288,7 @@ export function MovieHeroPage({ movieId, onClose }: Props) {
                     <div>
                       <p className="text-gray-500 text-xs uppercase tracking-widest mb-1">Your Rating</p>
                       <div className="flex items-center gap-1.5">
-                        <Star className="w-4 h-4 fill-[#C0392B] text-[#C0392B]" />
+                        <Star className="w-4 h-4 fill-[#7C5DBD] text-[#7C5DBD]" />
                         <span className="text-white font-semibold">{watchEntry.user_rating}/10</span>
                       </div>
                       {watchEntry.comment && (
@@ -297,7 +297,7 @@ export function MovieHeroPage({ movieId, onClose }: Props) {
                     </div>
                     <button
                       onClick={() => setShowWatchForm(true)}
-                      className="text-sm text-[#C0392B] hover:text-[#E74C3C] transition-colors flex-shrink-0"
+                      className="text-sm text-[#7C5DBD] hover:text-[#9B7BD7] transition-colors flex-shrink-0"
                     >
                       Update
                     </button>
@@ -324,7 +324,7 @@ export function MovieHeroPage({ movieId, onClose }: Props) {
                         value={ratingInput}
                         onChange={(e) => setRatingInput(e.target.value)}
                         placeholder="e.g. 8.5"
-                        className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#C0392B]"
+                        className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#7C5DBD]"
                       />
                     </div>
                     <div>
@@ -334,14 +334,14 @@ export function MovieHeroPage({ movieId, onClose }: Props) {
                         onChange={(e) => setCommentInput(e.target.value)}
                         placeholder="What did you think?"
                         rows={2}
-                        className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#C0392B] resize-none"
+                        className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#7C5DBD] resize-none"
                       />
                     </div>
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleSaveWatch(movie, posterUrl)}
                         disabled={saving || ratingInput === ''}
-                        className="flex-1 py-2 rounded-full bg-[#C0392B] hover:bg-[#E74C3C] disabled:opacity-50 text-white font-medium transition-colors text-sm"
+                        className="flex-1 py-2 rounded-full bg-[#7C5DBD] hover:bg-[#9B7BD7] disabled:opacity-50 text-white font-medium transition-colors text-sm"
                       >
                         {saving ? 'Saving...' : watchEntry ? 'Update' : 'Save'}
                       </button>

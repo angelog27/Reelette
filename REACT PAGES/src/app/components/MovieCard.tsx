@@ -1,4 +1,4 @@
-import { Star } from 'lucide-react';
+﻿import { Star } from 'lucide-react';
 import { Movie } from '../types/movie';
 import { PROVIDER_LOGOS } from '../constants/providers';
 
@@ -11,7 +11,7 @@ export function MovieCard({ movie, onClick }: MovieCardProps) {
   return (
     <div
       onClick={() => onClick?.(movie)}
-      className={`bg-[#1C1C1C] rounded-xl overflow-hidden border border-[#2A2A2A] hover:border-[#C0392B]/50 transition-all duration-300 hover:scale-105 group ${
+      className={`bg-[#1C1C1C] rounded-xl overflow-hidden border border-[#2A2A2A] hover:border-[#7C5DBD]/50 transition-all duration-300 hover:scale-105 group ${
         onClick ? 'cursor-pointer' : ''
       }`}
     >

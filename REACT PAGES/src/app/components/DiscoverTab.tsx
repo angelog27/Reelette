@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Star, Bookmark, BookmarkCheck, Info, Layers } from 'lucide-react';
+﻿import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { ChevronLeft, ChevronRight, Star, Bookmark, BookmarkCheck, Info, Layers, Sparkles } from 'lucide-react';
 import { MovieDetailModal } from './MovieDetailModal';
 import {
   discoverMovies, watchMovieLater, removeFromWatchLater, getUser, getServices,
+  getFeed, getFriends, getMovieDetails, getUserPublicProfile,
 } from '../services/api';
 import type { Movie, WatchedMovie } from '../services/api';
 import { PROVIDER_LOGOS } from '../constants/providers';
@@ -23,7 +24,7 @@ const PROVIDER_TABS = [
 ];
 
 const PROVIDER_COLOR: Record<string, string> = {
-  'all':          '#C87820',
+  'all':          '#7C5DBD',
   'Netflix':      '#E50914',
   'Disney+':      '#1A4DB5',
   'Hulu':         '#1CE783',
@@ -186,32 +187,37 @@ function MovieRow({ title, movies, onMovieClick }: {
   );
 }
 
-// ── Hero ──────────────────────────────────────────────────────────
+// ── Personalized Hero ─────────────────────────────────────────────
 
-function HeroSkeleton() {
+type PersonalizedSlot =
+  | { kind: 'friend';      movie: Movie; friendName: string; friendAvatar?: string; friendRating: number; friendReview: string }
+  | { kind: 'recommended'; movie: Movie }
+  | { kind: 'tonight';     movie: Movie }
+  | { kind: 'topPick';     movie: Movie; yourRating: number };
+
+const SLOT_META: Record<PersonalizedSlot['kind'], { label: string; color: string }> = {
+  friend:      { label: 'Your Friends Are Watching', color: '#9B7BD7' },
+  recommended: { label: 'Recommended for You',       color: '#9B7BD7' },
+  tonight:     { label: "Tonight's Pick",             color: 'rgba(255,255,255,0.75)' },
+  topPick:     { label: 'Your Top Pick',              color: '#fbbf24' },
+};
+
+function PersonalizedHeroSkeleton() {
   return (
-    <div
-      className="full-bleed relative animate-pulse bg-[#141414]"
-      style={{ height: 540, marginTop: -32 }}
-    >
+    <div className="full-bleed relative animate-pulse bg-[#141414]" style={{ height: 520, marginTop: -32 }}>
       <div className="absolute left-10 md:left-16 bottom-14 flex flex-col gap-3">
-        <div className="flex gap-2">
-          <div className="h-5 w-16 rounded-sm bg-[#222]" />
-          <div className="h-5 w-20 rounded-sm bg-[#222]" />
-        </div>
+        <div className="h-3 w-40 rounded bg-[#222]" />
         <div className="h-14 w-80 rounded bg-[#222]" />
         <div className="h-4 w-40 rounded bg-[#222]" />
-        <div className="h-12 w-[28rem] rounded bg-[#222]" />
-        <div className="flex gap-3 mt-2">
-          <div className="h-10 w-28 rounded bg-[#222]" />
-        </div>
+        <div className="h-10 w-[28rem] rounded bg-[#222]" />
+        <div className="flex gap-3 mt-2"><div className="h-10 w-28 rounded bg-[#222]" /></div>
       </div>
     </div>
   );
 }
 
-function HeroSection({ movies, onOpenModal, onToggleWatchlist, watchlistIds, hasUser }: {
-  movies: Movie[];
+function PersonalizedHero({ slots, onOpenModal, onToggleWatchlist, watchlistIds, hasUser }: {
+  slots: PersonalizedSlot[];
   onOpenModal: (id: string) => void;
   onToggleWatchlist: (movie: Movie) => void;
   watchlistIds: string[];
@@ -219,99 +225,167 @@ function HeroSection({ movies, onOpenModal, onToggleWatchlist, watchlistIds, has
 }) {
   const [current, setCurrent] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const total = Math.min(movies.length, 5);
+  const total = slots.length;
 
   const startInterval = useCallback(() => {
     if (intervalRef.current) clearInterval(intervalRef.current);
     if (total <= 1) return;
-    intervalRef.current = setInterval(() => setCurrent(c => (c + 1) % total), 6000);
+    intervalRef.current = setInterval(() => setCurrent(c => (c + 1) % total), 8000);
   }, [total]);
 
-  useEffect(() => {
-    startInterval();
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [startInterval]);
+  useEffect(() => { startInterval(); return () => { if (intervalRef.current) clearInterval(intervalRef.current); }; }, [startInterval]);
 
-  if (!movies.length) return null;
+  if (!slots.length) return null;
 
-  const movie = movies[current] ?? movies[0];
-  const isInWatchlist = watchlistIds.includes(movie.id);
+  const slot = slots[Math.min(current, total - 1)];
+  const { label, color } = SLOT_META[slot.kind];
+  const isInWatchlist = watchlistIds.includes(slot.movie.id);
 
   return (
-    <div className="full-bleed relative overflow-hidden" style={{ height: 540, marginTop: -32 }}>
-      {movies.slice(0, 5).map((m, i) => (
-        <div
-          key={m.id}
-          className="absolute inset-0 transition-opacity duration-1000 ease-in-out"
-          style={{ opacity: i === current ? 1 : 0, zIndex: i === current ? 1 : 0 }}
-        >
-          {m.backdrop
-            ? <img src={m.backdrop} alt={m.title} className="w-full h-full object-cover" loading={i === 0 ? 'eager' : 'lazy'} />
-            : <div className="w-full h-full bg-[#141414]" />
-          }
-        </div>
-      ))}
-      <div className="absolute inset-0" style={{ zIndex: 2, background: 'linear-gradient(to right, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.65) 35%, rgba(0,0,0,0.2) 65%, rgba(0,0,0,0) 100%)' }} />
-      <div className="absolute inset-0" style={{ zIndex: 2, background: 'linear-gradient(to top, rgba(9,9,9,1) 0%, rgba(9,9,9,0.5) 25%, transparent 60%)' }} />
-      <div className="absolute inset-0" style={{ zIndex: 2, background: 'linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, transparent 20%)' }} />
-      <div className="absolute left-0 right-0 bottom-0 flex flex-col justify-end pb-14 px-10 md:px-16" style={{ zIndex: 3 }}>
-        <div className="flex flex-wrap gap-2 mb-3">
-          {movie.genres.slice(0, 3).map(g => (
-            <span key={g} className="text-xs px-2.5 py-0.5 rounded-sm font-medium"
-              style={{ background: 'rgba(136,117,208,0.7)', color: '#fff' }}>
-              {g}
-            </span>
-          ))}
-        </div>
-        <h1 className="font-black text-white leading-none drop-shadow-2xl mb-3"
-          style={{ fontSize: 'clamp(2.4rem, 5vw, 4.5rem)', textShadow: '0 2px 20px rgba(0,0,0,0.8)' }}>
-          {movie.title}
-        </h1>
-        <div className="flex items-center gap-3 mb-3 text-sm">
-          <span className="flex items-center gap-1">
-            <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
-            <span className="text-white font-semibold">{movie.rating.toFixed(1)}</span>
-          </span>
-          <span className="text-gray-400">•</span>
-          <span className="text-gray-300">{movie.year}</span>
-        </div>
-        {movie.overview && (
-          <p className="text-gray-300 text-sm leading-relaxed mb-6 line-clamp-2"
-            style={{ maxWidth: '38rem', textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>
-            {movie.overview}
-          </p>
-        )}
-        <div className="flex flex-wrap gap-3">
-          <button
-            onClick={() => onOpenModal(movie.id)}
-            className="flex items-center gap-2 px-6 py-2.5 bg-white/90 text-zinc-900 font-semibold rounded-lg text-sm hover:bg-white transition-colors duration-150"
-          >
-            <Info className="w-4 h-4" /> More Info
-          </button>
-          {hasUser && (
-            <button
-              onClick={() => onToggleWatchlist(movie)}
-              className="flex items-center gap-2 px-5 py-2.5 font-semibold rounded-lg text-sm transition-colors duration-150"
-              style={isInWatchlist
-                ? { background: 'var(--reel-accent-hex)', color: '#fff' }
-                : { background: 'rgba(109,109,110,0.7)', color: '#fff' }}
-            >
-              {isInWatchlist
-                ? <><BookmarkCheck className="w-4 h-4" /> In Watchlist</>
-                : <><Bookmark className="w-4 h-4" /> Watchlist</>
-              }
+    <div className="full-bleed relative overflow-hidden" style={{ height: 520, marginTop: -32 }}>
+      {/* Backdrop layers */}
+      {slots.map((s, i) => {
+        const sBg = s.movie.backdrop || s.movie.poster || '';
+        const sBlur = !s.movie.backdrop && !!s.movie.poster;
+        return (
+          <div key={i} className="absolute inset-0 transition-opacity duration-1000 ease-in-out"
+            style={{ opacity: i === current ? 1 : 0, zIndex: i === current ? 1 : 0 }}>
+            {sBg
+              ? <img src={sBg} alt={s.movie.title} className="w-full h-full object-cover"
+                  style={sBlur ? { filter: 'blur(18px) brightness(0.65) saturate(1.3)', transform: 'scale(1.08)' } : undefined}
+                  loading={i === 0 ? 'eager' : 'lazy'} />
+              : <div className="w-full h-full bg-[#141414]" />
+            }
+          </div>
+        );
+      })}
+
+      {/* Gradient overlays */}
+      <div className="absolute inset-0" style={{ zIndex: 2, background: 'linear-gradient(to right, rgba(0,0,0,0.94) 0%, rgba(0,0,0,0.70) 38%, rgba(0,0,0,0.25) 62%, rgba(0,0,0,0.05) 100%)' }} />
+      <div className="absolute inset-0" style={{ zIndex: 2, background: 'linear-gradient(to top, rgba(9,9,9,1) 0%, rgba(9,9,9,0.55) 22%, transparent 55%)' }} />
+      <div className="absolute inset-0" style={{ zIndex: 2, background: 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, transparent 18%)' }} />
+
+      {/* Content row */}
+      <div className="absolute inset-x-0 bottom-0 flex items-end justify-between px-10 md:px-16 pb-12 gap-10" style={{ zIndex: 3 }}>
+
+        {/* ── Left: movie info ── */}
+        <div className="flex flex-col min-w-0 max-w-[520px]">
+          {/* Slot label */}
+          <div className="flex items-center gap-2.5 mb-3">
+            <div className="h-px w-8 rounded-full" style={{ background: color }} />
+            <span className="text-[11px] font-bold tracking-[0.22em] uppercase" style={{ color }}>{label}</span>
+          </div>
+
+          {/* Genre chips */}
+          {slot.movie.genres.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-3">
+              {slot.movie.genres.slice(0, 3).map(g => (
+                <span key={g} className="text-xs px-2.5 py-0.5 rounded-sm font-medium"
+                  style={{ background: 'rgba(124,93,189,0.55)', color: '#fff' }}>{g}</span>
+              ))}
+            </div>
+          )}
+
+          <h1 className="font-black text-white leading-none drop-shadow-2xl mb-3"
+            style={{ fontSize: 'clamp(2.2rem, 4.5vw, 4rem)', textShadow: '0 2px 20px rgba(0,0,0,0.8)' }}>
+            {slot.movie.title}
+          </h1>
+
+          <div className="flex items-center gap-3 mb-3 text-sm">
+            {slot.movie.rating > 0 && (
+              <span className="flex items-center gap-1">
+                <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
+                <span className="text-white font-semibold">{slot.movie.rating.toFixed(1)}</span>
+              </span>
+            )}
+            {slot.movie.rating > 0 && slot.movie.year > 0 && <span className="text-gray-400">•</span>}
+            {slot.movie.year > 0 && <span className="text-gray-300">{slot.movie.year}</span>}
+          </div>
+
+          {slot.movie.overview && (
+            <p className="text-gray-300 text-sm leading-relaxed mb-5 line-clamp-2"
+              style={{ maxWidth: '36rem', textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>
+              {slot.movie.overview}
+            </p>
+          )}
+
+          <div className="flex flex-wrap gap-3">
+            <button onClick={() => onOpenModal(slot.movie.id)}
+              className="flex items-center gap-2 px-6 py-2.5 bg-white/90 text-zinc-900 font-semibold rounded-lg text-sm hover:bg-white transition-colors duration-150">
+              <Info className="w-4 h-4" /> More Info
             </button>
+            {hasUser && (
+              <button onClick={() => onToggleWatchlist(slot.movie)}
+                className="flex items-center gap-2 px-5 py-2.5 font-semibold rounded-lg text-sm transition-colors duration-150"
+                style={isInWatchlist ? { background: '#7C5DBD', color: '#fff' } : { background: 'rgba(109,109,110,0.7)', color: '#fff' }}>
+                {isInWatchlist ? <><BookmarkCheck className="w-4 h-4" /> In Watchlist</> : <><Bookmark className="w-4 h-4" /> Watchlist</>}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* ── Right: context card ── */}
+        <div className="hidden md:block shrink-0">
+          {slot.kind === 'friend' && (
+            <div className="bg-black/55 backdrop-blur-sm rounded-2xl p-5 border border-white/10 w-[280px]">
+              <div className="flex items-center gap-3 mb-4">
+                {slot.friendAvatar
+                  ? <img src={slot.friendAvatar} className="w-11 h-11 rounded-full object-cover border border-white/20 shrink-0" alt="" />
+                  : <div className="w-11 h-11 rounded-full bg-[#2A2A2A] border border-white/10 flex items-center justify-center text-sm font-bold text-white/70 shrink-0">
+                      {slot.friendName.slice(0, 2).toUpperCase()}
+                    </div>
+                }
+                <div className="min-w-0">
+                  <p className="text-white text-sm font-semibold truncate">@{slot.friendName}</p>
+                  <div className="flex items-center gap-0.5 mt-0.5">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star key={i} className={`w-3 h-3 ${i < Math.round(slot.friendRating / 2) ? 'fill-yellow-400 text-yellow-400' : 'fill-gray-700 text-gray-700'}`} />
+                    ))}
+                    <span className="text-yellow-400 text-[11px] font-semibold ml-1.5">{slot.friendRating.toFixed(1)}/10</span>
+                  </div>
+                </div>
+              </div>
+              <p className="text-gray-300 text-sm leading-relaxed line-clamp-5 italic">"{slot.friendReview}"</p>
+            </div>
+          )}
+
+          {slot.kind === 'recommended' && (
+            <div className="bg-black/55 backdrop-blur-sm rounded-2xl p-5 border border-white/10 w-[240px]">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={{ background: 'rgba(155,123,215,0.2)' }}>
+                  <Sparkles className="w-3.5 h-3.5 text-[#9B7BD7]" />
+                </div>
+                <span className="text-[#9B7BD7] text-xs font-semibold uppercase tracking-widest">Just for You</span>
+              </div>
+              <p className="text-gray-300 text-sm leading-relaxed">
+                Picked from your watch history and the films you've rated highest.
+              </p>
+            </div>
+          )}
+
+          {slot.kind === 'topPick' && (
+            <div className="bg-black/55 backdrop-blur-sm rounded-2xl p-5 border border-white/10 w-[240px]">
+              <div className="flex items-center gap-2 mb-3">
+                <Star className="w-4 h-4 fill-yellow-400 text-yellow-400 shrink-0" />
+                <span className="text-yellow-400 text-xs font-semibold uppercase tracking-widest">Your Rating</span>
+              </div>
+              <div className="flex items-baseline gap-1">
+                <span className="text-white font-black" style={{ fontSize: '3rem', lineHeight: 1 }}>{slot.yourRating.toFixed(1)}</span>
+                <span className="text-gray-500 text-xl">/10</span>
+              </div>
+              <p className="text-gray-400 text-xs mt-2">Your highest-rated film of all time.</p>
+            </div>
           )}
         </div>
       </div>
+
+      {/* Slot indicator dots */}
       {total > 1 && (
-        <div className="absolute bottom-5 right-10 flex gap-1.5" style={{ zIndex: 3 }}>
-          {Array.from({ length: total }).map((_, i) => (
-            <button
-              key={i}
-              onClick={() => { setCurrent(i); startInterval(); }}
+        <div className="absolute bottom-4 right-10 flex gap-1.5" style={{ zIndex: 3 }}>
+          {slots.map((_, i) => (
+            <button key={i} onClick={() => { setCurrent(i); startInterval(); }}
               className="h-[3px] rounded-full transition-all duration-300"
-              style={{ width: i === current ? 20 : 8, background: i === current ? 'var(--reel-accent-hex)' : 'rgba(255,255,255,0.4)' }}
+              style={{ width: i === current ? 20 : 8, background: i === current ? '#9B7BD7' : 'rgba(255,255,255,0.35)' }}
             />
           ))}
         </div>
@@ -337,6 +411,30 @@ export function DiscoverTab() {
   const [selectedMovieId, setSelectedMovieId] = useState<string | null>(null);
   const [activeProvider,  setActiveProvider]   = useState('all');
   const [hoveredProvider, setHoveredProvider]  = useState<string | null>(null);
+
+  // ── Friend hero slot ───────────────────────────────────────────
+  const [friendSlot, setFriendSlot] = useState<Extract<PersonalizedSlot, { kind: 'friend' }> | null>(null);
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    Promise.all([getFeed(15), getFriends(user.user_id)])
+      .then(async ([posts, friends]) => {
+        if (cancelled) return;
+        const friendIds = new Set(friends.map((f: { friend_id: string }) => f.friend_id));
+        const post = posts.find(p => friendIds.has(p.user_id) && !!p.movie_id && p.message.trim().length > 10);
+        if (!post) return;
+        let backdrop = post.movie_poster ?? '';
+        try { const d = await getMovieDetails(post.movie_id); backdrop = (d.backdrop as string) || backdrop; } catch {}
+        let friendAvatar: string | undefined;
+        try { const pr = await getUserPublicProfile(post.user_id); friendAvatar = pr?.avatarUrl; } catch {}
+        if (!cancelled) setFriendSlot({
+          kind: 'friend',
+          movie: { id: post.movie_id, title: post.movie_title, year: 0, genres: [], rating: post.rating ?? 0, poster: post.movie_poster ?? '', backdrop, streamingService: '' },
+          friendName: post.username, friendAvatar, friendRating: post.rating ?? 0, friendReview: post.message,
+        });
+      }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [user?.user_id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [userServices, setUserServices] = useState<Record<string, boolean>>(getServices);
   useEffect(() => {
@@ -396,6 +494,19 @@ export function DiscoverTab() {
       .map(watchedToMovie),
     [userWatched]);
 
+  // Build the personalized hero slots in priority order
+  const heroSlots = useMemo<PersonalizedSlot[]>(() => {
+    const slots: PersonalizedSlot[] = [];
+    if (friendSlot) slots.push(friendSlot);
+    if (recommended?.length) slots.push({ kind: 'recommended', movie: recommended[0] });
+    if (heroMovies?.length)  slots.push({ kind: 'tonight',     movie: heroMovies[0] });
+    if (top10.length) {
+      const watched = userWatched.find(w => w.movie_id === top10[0].id);
+      if (watched?.user_rating) slots.push({ kind: 'topPick', movie: top10[0], yourRating: watched.user_rating });
+    }
+    return slots;
+  }, [friendSlot, recommended, heroMovies, top10, userWatched]);
+
   const providerWatched = useMemo<Movie[]>(() => {
     if (activeProvider === 'all' || !user) return [];
     return userWatched
@@ -422,11 +533,11 @@ export function DiscoverTab() {
     <div>
 
       {/* ── Hero ── */}
-      {heroMovies === null ? (
-        <HeroSkeleton />
+      {heroSlots.length === 0 ? (
+        <PersonalizedHeroSkeleton />
       ) : (
-        <HeroSection
-          movies={heroMovies}
+        <PersonalizedHero
+          slots={heroSlots}
           onOpenModal={setSelectedMovieId}
           onToggleWatchlist={handleToggleWatchlist}
           watchlistIds={watchlistIds}
@@ -441,7 +552,7 @@ export function DiscoverTab() {
           style={{ scrollbarWidth: 'none' } as React.CSSProperties}
         >
           {visibleProviderTabs.map(p => {
-            const color     = PROVIDER_COLOR[p.id] ?? '#C0392B';
+            const color     = PROVIDER_COLOR[p.id] ?? '#7C5DBD';
             const isActive  = activeProvider === p.id;
             const isHovered = hoveredProvider === p.id;
             const logo      = p.id !== 'all' ? PROVIDER_LOGOS[p.id] : null;

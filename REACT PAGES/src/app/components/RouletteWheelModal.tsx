@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from "react";
+﻿import { useEffect, useRef, useCallback } from "react";
 
 interface Props {
   genre: string;
@@ -25,7 +25,7 @@ const SEGMENT_LABELS = [
 ];
 
 export function getWheelColor(genre: string): string {
-  return GENRE_COLORS[genre] ?? "#C0392B";
+  return GENRE_COLORS[genre] ?? "#7C5DBD";
 }
 
 function hexToRgb(hex: string): [number, number, number] {

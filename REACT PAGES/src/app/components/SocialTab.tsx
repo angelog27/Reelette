@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, type ChangeEvent } from 'react';
+﻿import { useState, useEffect, useRef, useCallback, type ChangeEvent } from 'react';
 import {
   Heart, MessageCircle, Plus, Star, Trash2, Users, UserPlus, UserMinus,
   Search, Check, X, Film, ChevronRight, Shuffle, Popcorn, Crown, LogOut,
@@ -44,7 +44,7 @@ function sortedFeedPosts(): FeedPost[] {
 const SERVICE_KEYS = ['netflix', 'hulu', 'disneyPlus', 'hboMax', 'amazonPrime', 'appleTV', 'paramount', 'peacock'] as const;
 
 const WHEEL_COLORS = [
-  '#C0392B', '#8E44AD', '#2471A3', '#1E8449', '#D68910',
+  '#7C5DBD', '#8E44AD', '#2471A3', '#1E8449', '#D68910',
   '#784212', '#717D7E', '#6C3483', '#1A5276', '#1D6A39',
   '#B7950B', '#6E2F1A', '#2C3E50', '#512E5F',
 ];
@@ -142,9 +142,9 @@ function SpinWheel({ items, onSpinEnd }: { items: GroupMovie[]; onSpinEnd: (m: G
     <div className="flex flex-col items-center gap-6">
       <div className="relative">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 z-10"
-          style={{ width: 0, height: 0, borderLeft: '12px solid transparent', borderRight: '12px solid transparent', borderTop: '22px solid #C0392B' }} />
+          style={{ width: 0, height: 0, borderLeft: '12px solid transparent', borderRight: '12px solid transparent', borderTop: '22px solid #7C5DBD' }} />
         <svg width="400" height="400" viewBox="0 0 400 400"
-          style={{ filter: 'drop-shadow(0 0 24px rgba(192,57,43,0.4))' }}>
+          style={{ filter: 'drop-shadow(0 0 24px rgba(124,93,189,0.4))' }}>
           <circle cx={cx} cy={cy} r={r + 8} fill="none" stroke="#2A2A2A" strokeWidth="8" />
           <g style={{ transformOrigin: `${cx}px ${cy}px`, transform: `rotate(${rotation}deg)`, transition: spinning ? 'transform 4s cubic-bezier(0.17,0.67,0.12,0.99)' : 'none' }}
             onTransitionEnd={() => { setSpinning(false); if (pendingWinner) onSpinEnd(pendingWinner); }}>
@@ -169,12 +169,12 @@ function SpinWheel({ items, onSpinEnd }: { items: GroupMovie[]; onSpinEnd: (m: G
               );
             })}
             <circle cx={cx} cy={cy} r={28} fill="#1C1C1C" stroke="#2A2A2A" strokeWidth="3" />
-            <circle cx={cx} cy={cy} r={10} fill="#C0392B" />
+            <circle cx={cx} cy={cy} r={10} fill="#7C5DBD" />
           </g>
         </svg>
       </div>
       <button onClick={handleSpin} disabled={spinning}
-        className="flex items-center gap-3 px-10 py-4 bg-gradient-to-r from-[#C0392B] to-[#E74C3C] hover:from-[#A93226] hover:to-[#C0392B] disabled:opacity-50 text-white font-bold text-lg rounded-full shadow-2xl shadow-[#C0392B]/40 transition-all hover:scale-105 disabled:scale-100">
+        className="flex items-center gap-3 px-10 py-4 bg-gradient-to-r from-[#7C5DBD] to-[#9B7BD7] hover:from-[#6B4DAD] hover:to-[#7C5DBD] disabled:opacity-50 text-white font-bold text-lg rounded-full shadow-2xl shadow-[#7C5DBD]/40 transition-all hover:scale-105 disabled:scale-100">
         <Shuffle className="w-6 h-6" />{spinning ? 'Spinning…' : 'Spin!'}
       </button>
     </div>
@@ -227,13 +227,13 @@ function WatchModePanel({ groupId, onModeChange }: {
   return (
     <section className="bg-[#1C1C1C] border border-[#2A2A2A] rounded-xl p-5 space-y-4">
       <h3 className="text-white font-semibold flex items-center gap-2">
-        <Tv className="w-5 h-5 text-[#C0392B]" /> Movie Night
+        <Tv className="w-5 h-5 text-[#7C5DBD]" /> Movie Night
       </h3>
 
       {/* Mode selector */}
       <div className="grid grid-cols-2 gap-3">
         <button onClick={() => handleMode('separately')}
-          className={`p-4 rounded-xl border-2 text-left transition-all ${mode === 'separately' ? 'border-[#C0392B] bg-[#C0392B]/10' : 'border-[#2A2A2A] hover:border-[#444]'}`}>
+          className={`p-4 rounded-xl border-2 text-left transition-all ${mode === 'separately' ? 'border-[#7C5DBD] bg-[#7C5DBD]/10' : 'border-[#2A2A2A] hover:border-[#444]'}`}>
           <div className="flex items-center gap-2 mb-1">
             <WifiOff className="w-4 h-4 text-blue-400" />
             <span className="text-white font-medium text-sm">Watch Separately</span>
@@ -241,7 +241,7 @@ function WatchModePanel({ groupId, onModeChange }: {
           <p className="text-gray-500 text-xs">Finds movies everyone can stream on their own device — shows only services all members share.</p>
         </button>
         <button onClick={() => handleMode('together')}
-          className={`p-4 rounded-xl border-2 text-left transition-all ${mode === 'together' ? 'border-[#C0392B] bg-[#C0392B]/10' : 'border-[#2A2A2A] hover:border-[#444]'}`}>
+          className={`p-4 rounded-xl border-2 text-left transition-all ${mode === 'together' ? 'border-[#7C5DBD] bg-[#7C5DBD]/10' : 'border-[#2A2A2A] hover:border-[#444]'}`}>
           <div className="flex items-center gap-2 mb-1">
             <Wifi className="w-4 h-4 text-green-400" />
             <span className="text-white font-medium text-sm">Watch Together</span>
@@ -316,7 +316,7 @@ function WatchModePanel({ groupId, onModeChange }: {
                   setSelectedGroupMovie(null);
                 }}
                 disabled={selectedGroupMovie === m.id}
-                className="relative group rounded-lg overflow-hidden border border-[#2A2A2A] hover:border-[#C0392B] transition-all"
+                className="relative group rounded-lg overflow-hidden border border-[#2A2A2A] hover:border-[#7C5DBD] transition-all"
                 title={`${m.title} (${m.year}) — Add to watchlist`}
               >
                 {m.poster
@@ -367,7 +367,7 @@ function PostMovieSearch({ onSelect, selected }: {
 
   if (selected) {
     return (
-      <div className="flex items-center gap-3 bg-[#141414] border border-[#C0392B] rounded-lg p-3">
+      <div className="flex items-center gap-3 bg-[#141414] border border-[#7C5DBD] rounded-lg p-3">
         {selected.poster
           ? <img src={selected.poster} alt={selected.title} className="w-10 h-14 object-cover rounded shrink-0" />
           : <div className="w-10 h-14 bg-[#2A2A2A] rounded shrink-0 flex items-center justify-center"><Film className="w-4 h-4 text-gray-600" /></div>}
@@ -391,7 +391,7 @@ function PostMovieSearch({ onSelect, selected }: {
           placeholder="Search for a movie…"
           value={query}
           onChange={e => setQuery(e.target.value)}
-          className="w-full bg-[#141414] border border-[#2A2A2A] rounded-lg pl-10 pr-4 py-3 text-white placeholder:text-gray-600 focus:border-[#C0392B] focus:outline-none"
+          className="w-full bg-[#141414] border border-[#2A2A2A] rounded-lg pl-10 pr-4 py-3 text-white placeholder:text-gray-600 focus:border-[#7C5DBD] focus:outline-none"
         />
         {searching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 animate-spin" />}
       </div>
@@ -432,7 +432,7 @@ function renderMessage(message: string, onOpenProfile: (userId: string) => void)
             const match = results.find((r: { username: string; user_id: string }) => r.username.toLowerCase() === uname.toLowerCase());
             if (match) onOpenProfile(match.user_id);
           }}
-          className="text-[#C0392B] font-semibold hover:underline cursor-pointer"
+          className="text-[#7C5DBD] font-semibold hover:underline cursor-pointer"
           style={{ background: 'none', border: 'none', padding: 0 }}
         >
           {part}
@@ -530,7 +530,7 @@ function PostCard({ post, currentUserId, currentUsername, onLike, onDelete, onOp
               )}
               <div className="flex flex-col justify-center px-4 py-3 min-w-0 gap-1.5">
                 <span
-                  className="text-white leading-tight line-clamp-2 group-hover:text-[#E74C3C] transition-colors"
+                  className="text-white leading-tight line-clamp-2 group-hover:text-[#9B7BD7] transition-colors"
                   style={{ fontFamily: "'Playfair Display', Georgia, serif", fontStyle: 'italic', fontWeight: 700, fontSize: '0.9rem' }}
                 >
                   {post.movie_title}
@@ -563,8 +563,8 @@ function PostCard({ post, currentUserId, currentUsername, onLike, onDelete, onOp
               )}
             </button>
             <button onClick={() => onLike(post.post_id)}
-              className={`flex items-center gap-1.5 px-2 py-1.5 rounded-full text-sm transition-colors hover:bg-[#C0392B]/10 hover:text-[#C0392B] ${isLiked ? 'text-[#C0392B]' : 'text-gray-500'}`}>
-              <Heart className={`w-[18px] h-[18px] ${isLiked ? 'fill-[#C0392B]' : ''}`} />
+              className={`flex items-center gap-1.5 px-2 py-1.5 rounded-full text-sm transition-colors hover:bg-[#7C5DBD]/10 hover:text-[#7C5DBD] ${isLiked ? 'text-[#7C5DBD]' : 'text-gray-500'}`}>
+              <Heart className={`w-[18px] h-[18px] ${isLiked ? 'fill-[#7C5DBD]' : ''}`} />
               {post.likes > 0 && <span>{post.likes}</span>}
             </button>
           </div>
@@ -597,9 +597,9 @@ function PostCard({ post, currentUserId, currentUsername, onLike, onDelete, onOp
                   <input type="text" placeholder="Reply…"
                     value={replyText} onChange={e => setReplyText(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSubmitReply()}
-                    className="flex-1 bg-[#111] border border-[#242424] rounded-full px-4 py-2 text-white text-sm placeholder:text-gray-600 focus:border-[#C0392B] focus:outline-none" />
+                    className="flex-1 bg-[#111] border border-[#242424] rounded-full px-4 py-2 text-white text-sm placeholder:text-gray-600 focus:border-[#7C5DBD] focus:outline-none" />
                   <button onClick={handleSubmitReply} disabled={submittingReply || !replyText.trim()}
-                    className="p-2 bg-[#C0392B] hover:bg-[#A93226] disabled:opacity-50 text-white rounded-full transition-colors">
+                    className="p-2 bg-[#7C5DBD] hover:bg-[#6B4DAD] disabled:opacity-50 text-white rounded-full transition-colors">
                     {submittingReply ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                   </button>
                 </div>
@@ -683,15 +683,15 @@ function FriendsPanel({ onOpenProfile }: { onOpenProfile: (uid: string) => void 
       {requests.length > 0 && (
         <section className="bg-[#1C1C1C] border border-[#2A2A2A] rounded-xl p-5">
           <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
-            <UserPlus className="w-5 h-5 text-[#C0392B]" /> Friend Requests
-            <span className="ml-1 bg-[#C0392B] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">{requests.length}</span>
+            <UserPlus className="w-5 h-5 text-[#7C5DBD]" /> Friend Requests
+            <span className="ml-1 bg-[#7C5DBD] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">{requests.length}</span>
           </h3>
           <div className="space-y-3">
             {requests.map(req => (
               <div key={req.from_user_id} className="flex items-center gap-3">
                 <UserAvatar username={req.from_username} avatarUrl={req.avatarUrl} size={40} onClick={() => onOpenProfile(req.from_user_id)} />
                 <div className="flex-1">
-                  <button onClick={() => onOpenProfile(req.from_user_id)} className="text-white font-medium hover:text-[#C0392B] transition-colors">
+                  <button onClick={() => onOpenProfile(req.from_user_id)} className="text-white font-medium hover:text-[#7C5DBD] transition-colors">
                     @{req.from_username}
                   </button>
                   <p className="text-xs text-gray-500">{timeAgo(req.created_at)}</p>
@@ -706,13 +706,13 @@ function FriendsPanel({ onOpenProfile }: { onOpenProfile: (uid: string) => void 
 
       {/* Search */}
       <section className="bg-[#1C1C1C] border border-[#2A2A2A] rounded-xl p-5">
-        <h3 className="text-white font-semibold mb-4 flex items-center gap-2"><Search className="w-5 h-5 text-[#C0392B]" /> Find Friends</h3>
+        <h3 className="text-white font-semibold mb-4 flex items-center gap-2"><Search className="w-5 h-5 text-[#7C5DBD]" /> Find Friends</h3>
         <div className="flex gap-2 mb-4">
           <input type="text" placeholder="Search by username…" value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearch()}
-            className="flex-1 bg-[#141414] border border-[#2A2A2A] rounded-lg px-4 py-2.5 text-white placeholder:text-gray-600 focus:border-[#C0392B] focus:outline-none" />
+            className="flex-1 bg-[#141414] border border-[#2A2A2A] rounded-lg px-4 py-2.5 text-white placeholder:text-gray-600 focus:border-[#7C5DBD] focus:outline-none" />
           <button onClick={handleSearch} disabled={searching}
-            className="px-4 py-2.5 bg-[#C0392B] hover:bg-[#A93226] text-white rounded-lg transition-colors disabled:opacity-50">
+            className="px-4 py-2.5 bg-[#7C5DBD] hover:bg-[#6B4DAD] text-white rounded-lg transition-colors disabled:opacity-50">
             {searching ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
           </button>
         </div>
@@ -720,13 +720,13 @@ function FriendsPanel({ onOpenProfile }: { onOpenProfile: (uid: string) => void 
           <div key={u.user_id} className="flex items-center gap-3 p-3 bg-[#141414] rounded-lg border border-[#2A2A2A] mb-2">
             <UserAvatar username={u.username} avatarUrl={u.avatarUrl} size={36} onClick={() => onOpenProfile(u.user_id)} />
             <div className="flex-1">
-              <button onClick={() => onOpenProfile(u.user_id)} className="text-white font-medium hover:text-[#C0392B] transition-colors block">{u.displayName}</button>
+              <button onClick={() => onOpenProfile(u.user_id)} className="text-white font-medium hover:text-[#7C5DBD] transition-colors block">{u.displayName}</button>
               <p className="text-xs text-gray-500">@{u.username}</p>
             </div>
             {sentTo.has(u.user_id)
               ? <span className="text-xs text-gray-500 flex items-center gap-1"><Check className="w-3 h-3 text-green-500" />Sent</span>
               : <button onClick={() => handleSendRequest(u.user_id)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#C0392B]/20 hover:bg-[#C0392B] border border-[#C0392B]/50 hover:border-[#C0392B] text-[#C0392B] hover:text-white rounded-lg text-sm transition-all">
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#7C5DBD]/20 hover:bg-[#7C5DBD] border border-[#7C5DBD]/50 hover:border-[#7C5DBD] text-[#7C5DBD] hover:text-white rounded-lg text-sm transition-all">
                   <UserPlus className="w-4 h-4" />Add
                 </button>}
           </div>
@@ -739,7 +739,7 @@ function FriendsPanel({ onOpenProfile }: { onOpenProfile: (uid: string) => void 
       {/* Friends List */}
       <section className="bg-[#1C1C1C] border border-[#2A2A2A] rounded-xl p-5">
         <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
-          <Users className="w-5 h-5 text-[#C0392B]" /> My Friends
+          <Users className="w-5 h-5 text-[#7C5DBD]" /> My Friends
           {!loading && <span className="text-gray-500 text-sm font-normal">({friends.length})</span>}
         </h3>
         {loading ? <p className="text-gray-500 text-center py-4">Loading…</p>
@@ -750,7 +750,7 @@ function FriendsPanel({ onOpenProfile }: { onOpenProfile: (uid: string) => void 
                 <div key={f.friend_id} className="flex items-center gap-3 p-3 bg-[#141414] rounded-lg border border-[#2A2A2A]">
                   <UserAvatar username={f.friend_username} avatarUrl={f.avatarUrl} size={40} onClick={() => onOpenProfile(f.friend_id)} />
                   <div className="flex-1">
-                    <button onClick={() => onOpenProfile(f.friend_id)} className="text-white font-medium hover:text-[#C0392B] transition-colors">@{f.friend_username}</button>
+                    <button onClick={() => onOpenProfile(f.friend_id)} className="text-white font-medium hover:text-[#7C5DBD] transition-colors">@{f.friend_username}</button>
                     <p className="text-xs text-gray-600">Friends since {timeAgo(f.since)}</p>
                   </div>
                   <button onClick={() => handleRemove(f.friend_id)} className="p-2 text-gray-600 hover:text-red-500 transition-colors" title="Remove friend">
@@ -805,7 +805,7 @@ function TMDBMovieSearch({ groupId, onAdded }: { groupId: string; onAdded: () =>
             placeholder="Search TMDB for a movie to add…"
             value={query}
             onChange={e => setQuery(e.target.value)}
-            className="w-full bg-[#141414] border border-[#2A2A2A] rounded-lg pl-10 pr-4 py-2.5 text-white placeholder:text-gray-600 focus:border-[#C0392B] focus:outline-none"
+            className="w-full bg-[#141414] border border-[#2A2A2A] rounded-lg pl-10 pr-4 py-2.5 text-white placeholder:text-gray-600 focus:border-[#7C5DBD] focus:outline-none"
           />
           {searching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 animate-spin" />}
         </div>
@@ -829,7 +829,7 @@ function TMDBMovieSearch({ groupId, onAdded }: { groupId: string; onAdded: () =>
               </div>
               {addingId === m.id
                 ? <Loader2 className="w-4 h-4 text-gray-400 animate-spin shrink-0" />
-                : <Plus className="w-4 h-4 text-[#C0392B] shrink-0" />}
+                : <Plus className="w-4 h-4 text-[#7C5DBD] shrink-0" />}
             </button>
           ))}
         </div>
@@ -1050,7 +1050,7 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
               }`}>
               {t === 'group' ? <Clapperboard className="w-4 h-4" /> : <MessageCircle className="w-4 h-4" />}
               {t === 'group' ? 'Group' : 'Chat'}
-              {innerTab === t && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-10 h-[3px] bg-[#C0392B] rounded-full" />}
+              {innerTab === t && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-10 h-[3px] bg-[#7C5DBD] rounded-full" />}
             </button>
           ))}
         </div>
@@ -1068,7 +1068,7 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
         <section className="bg-[#1C1C1C] border border-[#2A2A2A] rounded-xl p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-white font-semibold flex items-center gap-2">
-              <Popcorn className="w-5 h-5 text-[#C0392B]" />Group Reelette
+              <Popcorn className="w-5 h-5 text-[#7C5DBD]" />Group Reelette
             </h3>
             <div className="flex gap-2">
               {/* Random Reelette — always available */}
@@ -1094,7 +1094,7 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
               {group.watchlist.length > 0 && (
                 <button
                   onClick={() => { setShowWheel(w => !w); setWinner(null); }}
-                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#C0392B] to-[#E74C3C] hover:from-[#A93226] hover:to-[#C0392B] text-white rounded-lg text-sm font-medium transition-all hover:scale-105"
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#7C5DBD] to-[#9B7BD7] hover:from-[#6B4DAD] hover:to-[#7C5DBD] text-white rounded-lg text-sm font-medium transition-all hover:scale-105"
                 >
                   <Shuffle className="w-4 h-4" />{showWheel ? 'Hide Wheel' : 'Spin the Wheel'}
                 </button>
@@ -1106,12 +1106,12 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
 
           {/* Random movie result */}
           {randomMovieId && (
-            <div className="mb-4 p-4 bg-[#141414] border border-[#C0392B]/30 rounded-xl flex items-center justify-between gap-4">
+            <div className="mb-4 p-4 bg-[#141414] border border-[#7C5DBD]/30 rounded-xl flex items-center justify-between gap-4">
               <div>
                 <p className="text-gray-400 text-xs mb-1">Random pick for the group</p>
                 <button
                   onClick={() => setRandomMovieOpen(true)}
-                  className="text-white font-semibold hover:text-[#E74C3C] transition-colors text-left"
+                  className="text-white font-semibold hover:text-[#9B7BD7] transition-colors text-left"
                 >
                   Click to view
                 </button>
@@ -1119,7 +1119,7 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
               <div className="flex gap-2">
                 <button
                   onClick={() => setRandomMovieOpen(true)}
-                  className="px-3 py-1.5 bg-[#C0392B] hover:bg-[#E74C3C] text-white rounded-lg text-sm transition-colors"
+                  className="px-3 py-1.5 bg-[#7C5DBD] hover:bg-[#9B7BD7] text-white rounded-lg text-sm transition-colors"
                 >
                   View Movie
                 </button>
@@ -1136,7 +1136,7 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
               {winner ? (
                 <div className="text-center space-y-4 py-4">
                   <div className="text-6xl animate-bounce">🎬</div>
-                  <div className="bg-gradient-to-r from-[#C0392B] to-[#E74C3C] rounded-2xl p-6 shadow-2xl shadow-[#C0392B]/30 max-w-sm mx-auto">
+                  <div className="bg-gradient-to-r from-[#7C5DBD] to-[#9B7BD7] rounded-2xl p-6 shadow-2xl shadow-[#7C5DBD]/30 max-w-sm mx-auto">
                     <p className="text-white/80 text-sm mb-1">Tonight you're watching…</p>
                     <h3 className="text-white text-2xl font-bold">{winner.movie_title}</h3>
                     <p className="text-white/60 text-sm mt-2">Added by @{winner.added_by_username}</p>
@@ -1157,7 +1157,7 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
         {/* Watchlist with TMDB search */}
         <section className="bg-[#1C1C1C] border border-[#2A2A2A] rounded-xl p-5">
           <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
-            <Clapperboard className="w-5 h-5 text-[#C0392B]" /> Group Watchlist
+            <Clapperboard className="w-5 h-5 text-[#7C5DBD]" /> Group Watchlist
             <span className="text-gray-500 text-sm font-normal">({group.watchlist.length})</span>
           </h3>
           <div className="mb-4">
@@ -1189,7 +1189,7 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
         {/* Members with online status */}
         <section className="bg-[#1C1C1C] border border-[#2A2A2A] rounded-xl p-5">
           <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
-            <Users className="w-5 h-5 text-[#C0392B]" /> Members
+            <Users className="w-5 h-5 text-[#7C5DBD]" /> Members
             <span className="text-gray-500 text-sm font-normal">({group.members.length})</span>
             {onlineCount > 0 && <span className="text-green-500 text-xs">• {onlineCount} online</span>}
           </h3>
@@ -1198,7 +1198,7 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
           <div className="flex gap-2 mb-4">
             <input type="text" placeholder="Search username to invite…" value={friendSearch}
               onChange={e => setFriendSearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleFriendSearch()}
-              className="flex-1 bg-[#141414] border border-[#2A2A2A] rounded-lg px-4 py-2.5 text-white placeholder:text-gray-600 focus:border-[#C0392B] focus:outline-none" />
+              className="flex-1 bg-[#141414] border border-[#2A2A2A] rounded-lg px-4 py-2.5 text-white placeholder:text-gray-600 focus:border-[#7C5DBD] focus:outline-none" />
             <button onClick={handleFriendSearch} className="px-4 py-2.5 bg-[#2A2A2A] hover:bg-[#333] text-gray-300 rounded-lg transition-colors">
               <Search className="w-5 h-5" />
             </button>
@@ -1209,7 +1209,7 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
                 <div key={u.user_id} className="flex items-center gap-2">
                   <p className="flex-1 text-white text-sm">@{u.username}</p>
                   <button onClick={() => handleAddMember(u)} disabled={addingMember === u.user_id}
-                    className="text-sm px-3 py-1 bg-[#C0392B]/20 hover:bg-[#C0392B] border border-[#C0392B]/50 text-[#C0392B] hover:text-white rounded-lg transition-all disabled:opacity-50">
+                    className="text-sm px-3 py-1 bg-[#7C5DBD]/20 hover:bg-[#7C5DBD] border border-[#7C5DBD]/50 text-[#7C5DBD] hover:text-white rounded-lg transition-all disabled:opacity-50">
                     {addingMember === u.user_id ? '…' : 'Invite'}
                   </button>
                 </div>
@@ -1233,7 +1233,7 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
                     onClick={() => setProfileUserId(member_id)}
                   />
                   <div className="flex-1">
-                    <button onClick={() => setProfileUserId(member_id)} className="text-white text-sm hover:text-[#C0392B] transition-colors">@{uname}</button>
+                    <button onClick={() => setProfileUserId(member_id)} className="text-white text-sm hover:text-[#7C5DBD] transition-colors">@{uname}</button>
                     <p className="text-xs text-gray-600">{online ? 'Online now' : prof?.lastSeen ? `Last seen ${timeAgo(prof.lastSeen)}` : 'Offline'}</p>
                   </div>
                   {isOwner && <span title="Creator"><Crown className="w-4 h-4 text-yellow-500 shrink-0" /></span>}
@@ -1269,7 +1269,7 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
                     <div className={`max-w-[75%] flex flex-col gap-0.5 ${isMine ? 'items-end' : 'items-start'}`}>
                       {!isMine && <span className="text-[10px] text-gray-600 px-1">@{msg.sender_username}</span>}
                       <div className={`px-3.5 py-2.5 rounded-2xl text-sm leading-snug ${
-                        isMine ? 'bg-[#C0392B] text-white rounded-br-sm' : 'bg-[#1e1e1e] text-gray-200 rounded-bl-sm'
+                        isMine ? 'bg-[#7C5DBD] text-white rounded-br-sm' : 'bg-[#1e1e1e] text-gray-200 rounded-bl-sm'
                       }`}>
                         {msg.text}
                       </div>
@@ -1287,10 +1287,10 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
                 onChange={e => setChatDraft(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleChatSend(); } }}
                 placeholder="Message the group…"
-                className="flex-1 bg-[#1a1a1a] border border-[#2A2A2A] rounded-full px-4 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-[#C0392B]/50"
+                className="flex-1 bg-[#1a1a1a] border border-[#2A2A2A] rounded-full px-4 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-[#7C5DBD]/50"
               />
               <button onClick={handleChatSend} disabled={!chatDraft.trim() || chatSending}
-                className="w-9 h-9 flex items-center justify-center rounded-full bg-[#C0392B] hover:bg-[#E74C3C] disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0">
+                className="w-9 h-9 flex items-center justify-center rounded-full bg-[#7C5DBD] hover:bg-[#9B7BD7] disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0">
                 <Send className="w-4 h-4 text-white" />
               </button>
             </div>
@@ -1364,22 +1364,22 @@ function GroupsPanel({ onOpenProfile }: { onOpenProfile: (uid: string) => void }
     <div className="max-w-2xl mx-auto space-y-6">
       <section className="bg-[#1C1C1C] border border-[#2A2A2A] rounded-xl p-5">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-white font-semibold flex items-center gap-2"><Users className="w-5 h-5 text-[#C0392B]" />Movie Groups</h3>
+          <h3 className="text-white font-semibold flex items-center gap-2"><Users className="w-5 h-5 text-[#7C5DBD]" />Movie Groups</h3>
           <button onClick={() => setShowCreate(v => !v)}
-            className="flex items-center gap-2 px-4 py-2 bg-[#C0392B] hover:bg-[#A93226] text-white rounded-lg text-sm transition-colors">
+            className="flex items-center gap-2 px-4 py-2 bg-[#7C5DBD] hover:bg-[#6B4DAD] text-white rounded-lg text-sm transition-colors">
             <Plus className="w-4 h-4" />New Group
           </button>
         </div>
         {showCreate && (
           <div className="space-y-3 mb-2">
             <input type="text" placeholder="Group name…" value={newName} onChange={e => setNewName(e.target.value)}
-              className="w-full bg-[#141414] border border-[#2A2A2A] rounded-lg px-4 py-2.5 text-white placeholder:text-gray-600 focus:border-[#C0392B] focus:outline-none" />
+              className="w-full bg-[#141414] border border-[#2A2A2A] rounded-lg px-4 py-2.5 text-white placeholder:text-gray-600 focus:border-[#7C5DBD] focus:outline-none" />
             <input type="text" placeholder="Description (optional)…" value={newDesc} onChange={e => setNewDesc(e.target.value)}
-              className="w-full bg-[#141414] border border-[#2A2A2A] rounded-lg px-4 py-2.5 text-white placeholder:text-gray-600 focus:border-[#C0392B] focus:outline-none" />
+              className="w-full bg-[#141414] border border-[#2A2A2A] rounded-lg px-4 py-2.5 text-white placeholder:text-gray-600 focus:border-[#7C5DBD] focus:outline-none" />
             <div className="flex gap-2">
               <button onClick={() => setShowCreate(false)} className="flex-1 bg-[#2A2A2A] hover:bg-[#333] text-gray-300 px-4 py-2.5 rounded-lg transition-colors">Cancel</button>
               <button onClick={handleCreateGroup} disabled={creating || !newName.trim()}
-                className="flex-1 bg-[#C0392B] hover:bg-[#A93226] text-white px-4 py-2.5 rounded-lg transition-colors disabled:opacity-50">
+                className="flex-1 bg-[#7C5DBD] hover:bg-[#6B4DAD] text-white px-4 py-2.5 rounded-lg transition-colors disabled:opacity-50">
                 {creating ? 'Creating…' : 'Create'}
               </button>
             </div>
@@ -1399,7 +1399,7 @@ function GroupsPanel({ onOpenProfile }: { onOpenProfile: (uid: string) => void }
               const onlineMembers = 0; // refreshed inside GroupDetail
               return (
                 <button key={g.group_id} onClick={() => handleOpenGroup(g)}
-                  className="w-full bg-[#1C1C1C] border border-[#2A2A2A] hover:border-[#C0392B]/50 rounded-xl p-5 text-left transition-all hover:bg-[#222]">
+                  className="w-full bg-[#1C1C1C] border border-[#2A2A2A] hover:border-[#7C5DBD]/50 rounded-xl p-5 text-left transition-all hover:bg-[#222]">
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="flex items-center gap-2 mb-1">
@@ -1635,7 +1635,7 @@ export function SocialTab() {
 
         {/* Glow flush with nav */}
         <div className="absolute inset-0 pointer-events-none"
-          style={{ background: 'radial-gradient(ellipse 60% 80% at 50% 0%, rgba(192,57,43,0.22) 0%, rgba(192,57,43,0.06) 45%, transparent 75%)' }} />
+          style={{ background: 'radial-gradient(ellipse 60% 80% at 50% 0%, rgba(124,93,189,0.22) 0%, rgba(124,93,189,0.06) 45%, transparent 75%)' }} />
 
         {/* Spotlight beams */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
@@ -1651,12 +1651,12 @@ export function SocialTab() {
         <div className="relative z-10 flex flex-col items-center justify-center text-center py-10 px-6" style={{ paddingTop: 48, paddingBottom: 40 }}>
           {/* NOW SCREENING badge */}
           <div className="flex items-center gap-2 mb-4">
-            <div className="h-px w-12 bg-gradient-to-r from-transparent to-[#C0392B]/60" />
-            <span className="text-[11px] font-bold tracking-[0.25em] text-[#C0392B] uppercase" style={{ fontFamily: "'Courier New', monospace" }}>
+            <div className="h-px w-12 bg-gradient-to-r from-transparent to-[#7C5DBD]/60" />
+            <span className="text-[11px] font-bold tracking-[0.25em] text-[#7C5DBD] uppercase" style={{ fontFamily: "'Courier New', monospace" }}>
               Now Screening
             </span>
-            <span className="w-1.5 h-1.5 rounded-full bg-[#C0392B] animate-pulse" />
-            <div className="h-px w-12 bg-gradient-to-l from-transparent to-[#C0392B]/60" />
+            <span className="w-1.5 h-1.5 rounded-full bg-[#7C5DBD] animate-pulse" />
+            <div className="h-px w-12 bg-gradient-to-l from-transparent to-[#7C5DBD]/60" />
           </div>
 
           <h1 style={{ fontFamily: "'Playfair Display', Georgia, 'Times New Roman', serif", fontStyle: 'italic', fontWeight: 700, fontSize: 'clamp(1.8rem, 3.5vw, 2.8rem)', color: '#fff', textShadow: '0 2px 24px rgba(0,0,0,0.8)', letterSpacing: '-0.01em', lineHeight: 1.15 }}>
@@ -1667,9 +1667,9 @@ export function SocialTab() {
           </p>
 
           <div className="flex items-center gap-3 mt-4">
-            <div className="h-px w-12 bg-gradient-to-r from-transparent to-[#C0392B]/50" />
-            <span className="text-[#C0392B]/60 text-xs tracking-widest">✦</span>
-            <div className="h-px w-12 bg-gradient-to-l from-transparent to-[#C0392B]/50" />
+            <div className="h-px w-12 bg-gradient-to-r from-transparent to-[#7C5DBD]/50" />
+            <span className="text-[#7C5DBD]/60 text-xs tracking-widest">✦</span>
+            <div className="h-px w-12 bg-gradient-to-l from-transparent to-[#7C5DBD]/50" />
           </div>
         </div>
       </div>
@@ -1687,7 +1687,7 @@ export function SocialTab() {
             >
               {t.icon}{t.label}
               {activeTab === t.id && (
-                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-[3px] bg-[#C0392B] rounded-full" />
+                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-[3px] bg-[#7C5DBD] rounded-full" />
               )}
             </button>
           ))}
@@ -1703,14 +1703,14 @@ export function SocialTab() {
                   feedMode === 'all' ? 'text-white' : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.03]'
                 }`}>
                 For You
-                {feedMode === 'all' && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-14 h-[3px] bg-[#C0392B] rounded-full" />}
+                {feedMode === 'all' && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-14 h-[3px] bg-[#7C5DBD] rounded-full" />}
               </button>
               <button onClick={() => setFeedMode('friends')}
                 className={`flex-1 py-3.5 text-sm font-semibold relative transition-colors ${
                   feedMode === 'friends' ? 'text-white' : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.03]'
                 }`}>
                 Friends
-                {feedMode === 'friends' && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-14 h-[3px] bg-[#C0392B] rounded-full" />}
+                {feedMode === 'friends' && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-14 h-[3px] bg-[#7C5DBD] rounded-full" />}
               </button>
               <button onClick={handleRefresh} disabled={refreshing} title="Refresh feed"
                 className="px-5 py-3.5 text-gray-500 hover:text-white transition-colors disabled:opacity-40">
@@ -1726,8 +1726,8 @@ export function SocialTab() {
                 <div className="flex-1 min-w-0 pointer-events-none">
                   <p className="text-gray-600 text-[17px] py-2">What movie are you watching?</p>
                   <div className="flex items-center justify-between pt-2 border-t border-[#1A1A1A] mt-1">
-                    <Film className="w-5 h-5 text-[#C0392B]" />
-                    <span className="bg-[#C0392B] text-white font-bold text-sm rounded-full px-5 py-1.5">
+                    <Film className="w-5 h-5 text-[#7C5DBD]" />
+                    <span className="bg-[#7C5DBD] text-white font-bold text-sm rounded-full px-5 py-1.5">
                       Post
                     </span>
                   </div>
@@ -1773,9 +1773,9 @@ export function SocialTab() {
           <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-6 max-w-lg w-full">
             {/* Dialog cinema header */}
             <div className="flex items-center gap-2 mb-1">
-              <div className="h-px flex-1 bg-gradient-to-r from-transparent to-[#C0392B]/40" />
-              <span className="text-[10px] font-bold tracking-[0.2em] text-[#C0392B] uppercase" style={{ fontFamily: "'Courier New', monospace" }}>New Review</span>
-              <div className="h-px flex-1 bg-gradient-to-l from-transparent to-[#C0392B]/40" />
+              <div className="h-px flex-1 bg-gradient-to-r from-transparent to-[#7C5DBD]/40" />
+              <span className="text-[10px] font-bold tracking-[0.2em] text-[#7C5DBD] uppercase" style={{ fontFamily: "'Courier New', monospace" }}>New Review</span>
+              <div className="h-px flex-1 bg-gradient-to-l from-transparent to-[#7C5DBD]/40" />
             </div>
             <h2 className="text-center mb-5" style={{ fontFamily: "'Playfair Display', Georgia, serif", fontStyle: 'italic', fontWeight: 700, fontSize: '1.5rem', color: '#fff' }}>
               What did you screen?
@@ -1786,7 +1786,7 @@ export function SocialTab() {
                 <PostMovieSearch onSelect={setSelectedMovie} selected={selectedMovie} />
               </div>
               <input type="number" placeholder="Your rating (0–10)" min="0" max="10" step="0.5" value={newRating} onChange={e => setNewRating(e.target.value)}
-                className="w-full bg-[#141414] border border-[#2A2A2A] rounded-lg px-4 py-3 text-white placeholder:text-gray-600 focus:border-[#C0392B] focus:outline-none" />
+                className="w-full bg-[#141414] border border-[#2A2A2A] rounded-lg px-4 py-3 text-white placeholder:text-gray-600 focus:border-[#7C5DBD] focus:outline-none" />
               <div className="relative">
                 <textarea
                   ref={textareaRef}
@@ -1795,7 +1795,7 @@ export function SocialTab() {
                   value={newMessage}
                   onChange={handleMessageChange}
                   onKeyDown={e => { if (e.key === 'Escape') { setMentionQuery(null); setMentionResults([]); } }}
-                  className="w-full bg-[#141414] border border-[#2A2A2A] rounded-lg px-4 py-3 text-white placeholder:text-gray-600 focus:border-[#C0392B] focus:outline-none resize-none"
+                  className="w-full bg-[#141414] border border-[#2A2A2A] rounded-lg px-4 py-3 text-white placeholder:text-gray-600 focus:border-[#7C5DBD] focus:outline-none resize-none"
                 />
                 {mentionQuery !== null && mentionResults.length > 0 && (
                   <div className="absolute bottom-full left-0 right-0 mb-1 bg-[#141414] border border-[#2A2A2A] rounded-xl shadow-2xl z-10 overflow-hidden">
@@ -1817,7 +1817,7 @@ export function SocialTab() {
                 <button onClick={() => { setShowNewPostDialog(false); setPostError(''); setSelectedMovie(null); setNewRating(''); setNewMessage(''); setMentionQuery(null); setMentionResults([]); }}
                   className="flex-1 bg-[#2A2A2A] hover:bg-[#333333] text-white px-6 py-3 rounded-lg transition-colors font-medium">Cancel</button>
                 <button onClick={handleCreatePost} disabled={posting}
-                  className="flex-1 bg-gradient-to-r from-[#C0392B] to-[#E74C3C] hover:from-[#A93226] hover:to-[#C0392B] text-white px-6 py-3 rounded-lg transition-all font-medium disabled:opacity-50">
+                  className="flex-1 bg-gradient-to-r from-[#7C5DBD] to-[#9B7BD7] hover:from-[#6B4DAD] hover:to-[#7C5DBD] text-white px-6 py-3 rounded-lg transition-all font-medium disabled:opacity-50">
                   {posting ? 'Posting…' : 'Post'}
                 </button>
               </div>

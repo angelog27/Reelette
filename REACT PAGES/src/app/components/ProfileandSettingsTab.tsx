@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Camera, Edit2, Save, X, User, Mail, Film, Users, Eye, Lock,
@@ -452,7 +452,7 @@ export function ProfileandSettingsTab() {
         style={{ backgroundImage: `url(${FILM_GRAIN})` }} />
       {/* Ambient glow */}
       <div className="pointer-events-none fixed inset-0 z-0"
-        style={{ background: 'radial-gradient(ellipse at top right, rgba(200,120,32,0.04) 0%, transparent 60%)' }} />
+        style={{ background: 'radial-gradient(ellipse at top right, rgba(124,93,189,0.04) 0%, transparent 60%)' }} />
 
       {viewProfileId && <UserProfileModal userId={viewProfileId} onClose={() => setViewProfileId(null)} />}
       {showDeleteModal && <DeleteModal onConfirm={handleDeleteAccount} onCancel={() => setShowDeleteModal(false)} loading={deleteLoading} />}

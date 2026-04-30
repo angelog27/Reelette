@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import { Star } from 'lucide-react';
 import { getWatchedMovies, getUser } from '../services/api';
 import type { WatchedMovie } from '../services/api';
@@ -54,7 +54,7 @@ export function LibraryTab() {
               onClick={() => setSelectedMovieId(m.movie_id)}
               className="text-left group focus:outline-none"
             >
-              <div className="relative rounded-xl overflow-hidden bg-[#1A1A1A] border border-[#2A2A2A] group-hover:border-[#C0392B]/50 transition-colors">
+              <div className="relative rounded-xl overflow-hidden bg-[#1A1A1A] border border-[#2A2A2A] group-hover:border-[#7C5DBD]/50 transition-colors">
                 {m.poster ? (
                   <img
                     src={m.poster}
@@ -68,7 +68,7 @@ export function LibraryTab() {
                 )}
                 {/* Rating badge */}
                 <div className="absolute top-2 right-2 flex items-center gap-1 bg-black/70 rounded-full px-2 py-0.5">
-                  <Star className="w-3 h-3 fill-[#C0392B] text-[#C0392B]" />
+                  <Star className="w-3 h-3 fill-[#7C5DBD] text-[#7C5DBD]" />
                   <span className="text-white text-xs font-semibold">{m.user_rating}</span>
                 </div>
               </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, CSSProperties, ReactNode } from "react"
+﻿import { useState, useEffect, useRef, CSSProperties, ReactNode } from "react"
 import { ChevronLeft, Sparkles, Film, LucideIcon } from "lucide-react"
 
 /* ─── Types ─── */
@@ -439,8 +439,8 @@ export function MovieQuiz({ onComplete, onSkip }: MovieQuizProps) {
     return (
       <EndScreen
         icon={Film}
-        iconBg="rgba(192,57,43,0.2)"
-        iconColor="#C0392B"
+        iconBg="rgba(124,93,189,0.2)"
+        iconColor="#7C5DBD"
         title="Welcome to Reelette"
         subtitle="Your personalized movie journey begins now. Explore films tailored to your unique taste."
       />
@@ -467,9 +467,9 @@ export function MovieQuiz({ onComplete, onSkip }: MovieQuizProps) {
             <div style={{
               display: "inline-flex", alignItems: "center", justifyContent: "center",
               width: 64, height: 64, borderRadius: "50%",
-              background: "rgba(192,57,43,0.2)", marginBottom: 24,
+              background: "rgba(124,93,189,0.2)", marginBottom: 24,
             }}>
-              <Sparkles style={{ width: 32, height: 32, color: "#C0392B" }} />
+              <Sparkles style={{ width: 32, height: 32, color: "#7C5DBD" }} />
             </div>
             <p style={{
               fontSize: 12, textTransform: "uppercase",
@@ -480,7 +480,7 @@ export function MovieQuiz({ onComplete, onSkip }: MovieQuizProps) {
             <div style={{
               display: "inline-block", padding: "6px 16px", borderRadius: 999,
               fontSize: 14, fontWeight: 500, marginBottom: 16,
-              background: "rgba(192,57,43,0.2)", color: "#C0392B",
+              background: "rgba(124,93,189,0.2)", color: "#7C5DBD",
             }}>
               {genreLabels[topGenre]}
             </div>
@@ -497,7 +497,7 @@ export function MovieQuiz({ onComplete, onSkip }: MovieQuizProps) {
               onClick={() => setShowWelcome(true)}
               style={{
                 width: "100%", height: 48, fontSize: 16,
-                background: "#C0392B", color: "#fff", borderRadius: 8,
+                background: "#7C5DBD", color: "#fff", borderRadius: 8,
               }}
             >
               Continue to Reelette
@@ -556,13 +556,13 @@ export function MovieQuiz({ onComplete, onSkip }: MovieQuizProps) {
       <div style={{ padding: "0 1.5rem", position: "relative", zIndex: 1 }}>
         <div style={{
           height: 8, borderRadius: 999,
-          background: "rgba(192,57,43,0.15)", overflow: "hidden",
+          background: "rgba(124,93,189,0.15)", overflow: "hidden",
         }}>
           <div style={{
             height: "100%", borderRadius: 999,
             width: `${progress}%`,
-            background: "#C0392B",
-            boxShadow: "0 0 12px rgba(192,57,43,0.6), 0 0 24px rgba(192,57,43,0.3)",
+            background: "#7C5DBD",
+            boxShadow: "0 0 12px rgba(124,93,189,0.6), 0 0 24px rgba(124,93,189,0.3)",
             transition: "width 0.3s ease-out",
           }} />
         </div>
@@ -600,9 +600,9 @@ export function MovieQuiz({ onComplete, onSkip }: MovieQuizProps) {
                     style={{
                       display: "flex", alignItems: "center", gap: 16,
                       padding: "1rem", borderRadius: 8, textAlign: "left",
-                      background: isSelected ? "rgba(192,57,43,0.15)" : "rgba(26,26,26,0.8)",
+                      background: isSelected ? "rgba(124,93,189,0.15)" : "rgba(26,26,26,0.8)",
                       border: "1px solid rgba(255,255,255,0.05)",
-                      borderLeft: `3px solid ${isSelected ? "#C0392B" : "transparent"}`,
+                      borderLeft: `3px solid ${isSelected ? "#7C5DBD" : "transparent"}`,
                       transition: "all 0.2s",
                       color: "#FAFAFA", cursor: "pointer",
                     }}
@@ -611,7 +611,7 @@ export function MovieQuiz({ onComplete, onSkip }: MovieQuizProps) {
                       flexShrink: 0, width: 32, height: 32, borderRadius: 8,
                       display: "flex", alignItems: "center", justifyContent: "center",
                       fontSize: 14, fontWeight: 500,
-                      background: isSelected ? "#C0392B" : "#1A1A1A",
+                      background: isSelected ? "#7C5DBD" : "#1A1A1A",
                       color: isSelected ? "#fff" : "#888",
                       transition: "all 0.2s",
                     }}>
@@ -634,7 +634,7 @@ export function MovieQuiz({ onComplete, onSkip }: MovieQuizProps) {
             disabled={!selectedAnswer}
             style={{
               width: "100%", height: 48, fontSize: 16,
-              background: selectedAnswer ? "#C0392B" : "transparent",
+              background: selectedAnswer ? "#7C5DBD" : "transparent",
               color: selectedAnswer ? "#fff" : "#FAFAFA",
               opacity: selectedAnswer ? 1 : 0.3,
               border: selectedAnswer ? "none" : "1px solid rgba(255,255,255,0.1)",

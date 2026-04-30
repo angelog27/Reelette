@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Search, ChevronDown, ChevronUp } from 'lucide-react';
 import { MovieCard } from './MovieCard';
@@ -102,7 +102,7 @@ export function SearchTab() {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search by title or keyword..."
-          className="w-full bg-[#1C1C1C] border-[#2A2A2A] text-white placeholder:text-gray-600 pl-12 h-14 rounded-xl focus:border-[#C0392B]"
+          className="w-full bg-[#1C1C1C] border-[#2A2A2A] text-white placeholder:text-gray-600 pl-12 h-14 rounded-xl focus:border-[#7C5DBD]"
         />
       </div>
 
@@ -150,7 +150,7 @@ export function SearchTab() {
                 <select
                   value={f.genre}
                   onChange={(e) => f.setGenre(e.target.value)}
-                  className="w-full bg-[#141414] border border-[#2A2A2A] text-white rounded-md px-3 py-2 focus:border-[#C0392B] focus:outline-none"
+                  className="w-full bg-[#141414] border border-[#2A2A2A] text-white rounded-md px-3 py-2 focus:border-[#7C5DBD] focus:outline-none"
                 >
                   <option value="">All Genres</option>
                   {GENRES.map((g) => (
@@ -163,7 +163,7 @@ export function SearchTab() {
                 <select
                   value={f.sortBy}
                   onChange={(e) => f.setSortBy(e.target.value)}
-                  className="w-full bg-[#141414] border border-[#2A2A2A] text-white rounded-md px-3 py-2 focus:border-[#C0392B] focus:outline-none"
+                  className="w-full bg-[#141414] border border-[#2A2A2A] text-white rounded-md px-3 py-2 focus:border-[#7C5DBD] focus:outline-none"
                 >
                   <option value="popularity">Popularity</option>
                   <option value="rating">Rating</option>
@@ -189,7 +189,7 @@ export function SearchTab() {
         <Switch
           checked={f.filterStreaming}
           onCheckedChange={f.setFilterStreaming}
-          className="data-[state=checked]:bg-[#C0392B]"
+          className="data-[state=checked]:bg-[#7C5DBD]"
         />
         <label
           className="text-gray-300 cursor-pointer text-sm"

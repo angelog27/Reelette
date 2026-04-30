@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import {
   X, Film, BookMarked, Users, UserPlus, UserMinus, Check,
   Loader2, Calendar, Star, Maximize2, ChevronLeft,
@@ -92,7 +92,7 @@ function MyStuffFullscreen({
           <button
             onClick={() => setTab('watched')}
             className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              tab === 'watched' ? 'bg-[#C0392B] text-white' : 'text-gray-400 hover:text-white'
+              tab === 'watched' ? 'bg-[#7C5DBD] text-white' : 'text-gray-400 hover:text-white'
             }`}
           >
             <Star className="w-3.5 h-3.5" />
@@ -101,7 +101,7 @@ function MyStuffFullscreen({
           <button
             onClick={() => setTab('watchlater')}
             className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              tab === 'watchlater' ? 'bg-[#C0392B] text-white' : 'text-gray-400 hover:text-white'
+              tab === 'watchlater' ? 'bg-[#7C5DBD] text-white' : 'text-gray-400 hover:text-white'
             }`}
           >
             <BookMarked className="w-3.5 h-3.5" />
@@ -131,7 +131,7 @@ function MyStuffFullscreen({
                     </div>
                   )}
                   <div className="absolute top-1.5 right-1.5 flex items-center gap-0.5 bg-black/70 rounded-full px-1.5 py-0.5">
-                    <Star className="w-2.5 h-2.5 fill-[#C0392B] text-[#C0392B]" />
+                    <Star className="w-2.5 h-2.5 fill-[#7C5DBD] text-[#7C5DBD]" />
                     <span className="text-white text-[10px] font-semibold">{m.user_rating}</span>
                   </div>
                   <div className="p-2">
@@ -348,7 +348,7 @@ export function UserProfileModal({ userId, onClose }: Props) {
                       <button
                         onClick={handleAddFriend}
                         disabled={acting}
-                        className="flex items-center gap-1.5 px-4 py-2 bg-[#C0392B] hover:bg-[#A93226] text-white rounded-lg text-sm transition-all disabled:opacity-50 shadow-lg shadow-[#C0392B]/20"
+                        className="flex items-center gap-1.5 px-4 py-2 bg-[#7C5DBD] hover:bg-[#6B4DAD] text-white rounded-lg text-sm transition-all disabled:opacity-50 shadow-lg shadow-[#7C5DBD]/20"
                       >
                         {acting ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
                         Add Friend
@@ -383,7 +383,7 @@ export function UserProfileModal({ userId, onClose }: Props) {
                   <div className="grid grid-cols-3 gap-3 mt-5 pt-4 border-t border-[#2A2A2A]">
                     {statBlocks.map((s) => (
                       <div key={s.label} className="flex flex-col items-center gap-1 p-3 bg-[#141414] rounded-xl border border-[#2A2A2A]">
-                        <span className="text-[#C0392B]">{s.icon}</span>
+                        <span className="text-[#7C5DBD]">{s.icon}</span>
                         <span className="text-white font-bold text-lg">{s.value}</span>
                         <span className="text-gray-600 text-xs">{s.label}</span>
                       </div>
@@ -397,7 +397,7 @@ export function UserProfileModal({ userId, onClose }: Props) {
                       {profile.showMyStuffPublicly && (
                         <button
                           onClick={() => setMyStuffOpen(true)}
-                          className="flex items-center gap-1.5 text-xs text-[#C0392B] hover:text-[#E74C3C] transition-colors"
+                          className="flex items-center gap-1.5 text-xs text-[#7C5DBD] hover:text-[#9B7BD7] transition-colors"
                         >
                           <Maximize2 className="w-3.5 h-3.5" />
                           View Fullscreen
@@ -425,7 +425,7 @@ export function UserProfileModal({ userId, onClose }: Props) {
                         {previewWatched.length > 0 && (
                           <div className="mb-4">
                             <p className="text-gray-500 text-xs mb-2 flex items-center gap-1">
-                              <Star className="w-3 h-3 fill-[#C0392B] text-[#C0392B]" />
+                              <Star className="w-3 h-3 fill-[#7C5DBD] text-[#7C5DBD]" />
                               Watched ({profile.watchedCount})
                             </p>
                             <div className="flex gap-2 overflow-x-auto pb-1">
@@ -442,7 +442,7 @@ export function UserProfileModal({ userId, onClose }: Props) {
                                     </div>
                                   )}
                                   <div className="absolute top-1 right-1 flex items-center gap-0.5 bg-black/70 rounded-full px-1 py-0.5">
-                                    <Star className="w-2 h-2 fill-[#C0392B] text-[#C0392B]" />
+                                    <Star className="w-2 h-2 fill-[#7C5DBD] text-[#7C5DBD]" />
                                     <span className="text-white text-[9px]">{m.user_rating}</span>
                                   </div>
                                 </div>

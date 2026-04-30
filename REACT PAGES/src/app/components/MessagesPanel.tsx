@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+﻿import { useState, useEffect, useRef, useCallback } from 'react';
 import { MessageCircle, Send, ArrowLeft, Search, X } from 'lucide-react';
 import {
   getConversations, openConversation, getDirectMessages, sendDirectMessage,
@@ -140,11 +140,11 @@ export function MessagesPanel() {
           className="w-full flex items-center justify-between px-4 py-3 bg-[#111] border border-[#1e1e1e] rounded-2xl hover:border-[#2A2A2A] transition-colors"
         >
           <div className="flex items-center gap-2">
-            <MessageCircle className="w-4 h-4 text-[#C0392B]" />
+            <MessageCircle className="w-4 h-4 text-[#7C5DBD]" />
             <span className="text-sm font-semibold text-white">Messages</span>
           </div>
           {totalUnread > 0 && (
-            <span className="min-w-[20px] h-5 px-1.5 flex items-center justify-center bg-[#C0392B] text-white text-[10px] font-bold rounded-full">
+            <span className="min-w-[20px] h-5 px-1.5 flex items-center justify-center bg-[#7C5DBD] text-white text-[10px] font-bold rounded-full">
               {totalUnread > 99 ? '99+' : totalUnread}
             </span>
           )}
@@ -169,10 +169,10 @@ export function MessagesPanel() {
               </button>
             ) : (
               <div className="flex items-center gap-2">
-                <MessageCircle className="w-4 h-4 text-[#C0392B]" />
+                <MessageCircle className="w-4 h-4 text-[#7C5DBD]" />
                 <span className="text-sm font-semibold text-white">Messages</span>
                 {totalUnread > 0 && (
-                  <span className="min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-[#C0392B] text-white text-[10px] font-bold rounded-full">
+                  <span className="min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-[#7C5DBD] text-white text-[10px] font-bold rounded-full">
                     {totalUnread}
                   </span>
                 )}
@@ -207,7 +207,7 @@ export function MessagesPanel() {
                   value={newDMQuery}
                   onChange={e => handleNewDMSearch(e.target.value)}
                   placeholder="Search for a user…"
-                  className="w-full pl-8 pr-3 py-1.5 text-sm bg-[#1a1a1a] border border-[#2A2A2A] rounded-lg text-white placeholder:text-gray-600 focus:outline-none focus:border-[#C0392B]/50"
+                  className="w-full pl-8 pr-3 py-1.5 text-sm bg-[#1a1a1a] border border-[#2A2A2A] rounded-lg text-white placeholder:text-gray-600 focus:outline-none focus:border-[#7C5DBD]/50"
                 />
               </div>
               {newDMResults.length > 0 && (
@@ -265,7 +265,7 @@ export function MessagesPanel() {
                         </p>
                       </div>
                       {unread > 0 && (
-                        <span className="shrink-0 min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-[#C0392B] text-white text-[10px] font-bold rounded-full">
+                        <span className="shrink-0 min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-[#7C5DBD] text-white text-[10px] font-bold rounded-full">
                           {unread}
                         </span>
                       )}
@@ -292,7 +292,7 @@ export function MessagesPanel() {
                       <div
                         className={`max-w-[78%] px-3 py-2 rounded-2xl text-sm leading-snug ${
                           isMine
-                            ? 'bg-[#C0392B] text-white rounded-br-sm'
+                            ? 'bg-[#7C5DBD] text-white rounded-br-sm'
                             : 'bg-[#1e1e1e] text-gray-200 rounded-bl-sm'
                         }`}
                       >
@@ -317,12 +317,12 @@ export function MessagesPanel() {
                   onChange={e => setDraft(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
                   placeholder="Message…"
-                  className="flex-1 bg-[#1a1a1a] border border-[#2A2A2A] rounded-full px-4 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-[#C0392B]/50"
+                  className="flex-1 bg-[#1a1a1a] border border-[#2A2A2A] rounded-full px-4 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-[#7C5DBD]/50"
                 />
                 <button
                   onClick={handleSend}
                   disabled={!draft.trim() || sending}
-                  className="w-8 h-8 flex items-center justify-center rounded-full bg-[#C0392B] hover:bg-[#E74C3C] disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0"
+                  className="w-8 h-8 flex items-center justify-center rounded-full bg-[#7C5DBD] hover:bg-[#9B7BD7] disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0"
                 >
                   <Send className="w-3.5 h-3.5 text-white" />
                 </button>

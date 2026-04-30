@@ -202,9 +202,9 @@ html.dark {
   --reel-t3:          #6B7280;
   --reel-t4:          #4B5563;
   --reel-input-bg:    #050505;
-  --reel-accent:      oklch(0.67 0.14 48);
-  --reel-accent-lo:   oklch(0.28 0.07 48);
-  --reel-accent-hex:  #C87820;
+  --reel-accent:      oklch(0.60 0.13 289);
+  --reel-accent-lo:   oklch(0.24 0.06 289);
+  --reel-accent-hex:  #7C5DBD;
 }
 
 html.light {
@@ -219,9 +219,9 @@ html.light {
   --reel-t3:          #6B6B7A;
   --reel-t4:          #9090A0;
   --reel-input-bg:    #FFFFFF;
-  --reel-accent:      oklch(0.52 0.16 48);
-  --reel-accent-lo:   oklch(0.93 0.04 48);
-  --reel-accent-hex:  #9C6015;
+  --reel-accent:      oklch(0.50 0.13 289);
+  --reel-accent-lo:   oklch(0.93 0.04 289);
+  --reel-accent-hex:  #6244A6;
 }
 
 /* ─────────────────────────────────────────────────────────────

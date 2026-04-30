@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import { Star, Bookmark, BarChart2, ArrowUpDown, Check } from 'lucide-react';
 import { getWatchedMovies, getWatchLater, getMovieDetails, getMovieProvider, getUser, getRouletteHistory } from '../services/api';
 import type { WatchedMovie, RouletteSpin } from '../services/api';
@@ -180,7 +180,7 @@ export function MyStuffTab() {
         {/* Subtle glow from nav — softer than Roulette/Social */}
         <div
           className="absolute inset-0 pointer-events-none"
-          style={{ background: 'radial-gradient(ellipse 55% 70% at 50% 0%, rgba(192,57,43,0.14) 0%, transparent 70%)' }}
+          style={{ background: 'radial-gradient(ellipse 55% 70% at 50% 0%, rgba(124,93,189,0.14) 0%, transparent 70%)' }}
         />
 
         {/* Faint side curtains */}
@@ -191,14 +191,14 @@ export function MyStuffTab() {
         <div className="relative z-10 flex flex-col items-center justify-center text-center px-6" style={{ paddingTop: 42, paddingBottom: 32 }}>
           {/* Badge */}
           <div className="flex items-center gap-2 mb-3">
-            <div className="h-px w-10 bg-gradient-to-r from-transparent to-[#C0392B]/50" />
+            <div className="h-px w-10 bg-gradient-to-r from-transparent to-[#7C5DBD]/50" />
             <span
-              className="text-[10px] font-bold tracking-[0.25em] text-[#C0392B] uppercase"
+              className="text-[10px] font-bold tracking-[0.25em] text-[#7C5DBD] uppercase"
               style={{ fontFamily: "'Courier New', monospace" }}
             >
               My Collection
             </span>
-            <div className="h-px w-10 bg-gradient-to-l from-transparent to-[#C0392B]/50" />
+            <div className="h-px w-10 bg-gradient-to-l from-transparent to-[#7C5DBD]/50" />
           </div>
 
           <h1
@@ -216,9 +216,9 @@ export function MyStuffTab() {
           </h1>
 
           <div className="flex items-center gap-3 mt-3">
-            <div className="h-px w-8 bg-gradient-to-r from-transparent to-[#C0392B]/40" />
-            <span className="text-[#C0392B]/50 text-xs">✦</span>
-            <div className="h-px w-8 bg-gradient-to-l from-transparent to-[#C0392B]/40" />
+            <div className="h-px w-8 bg-gradient-to-r from-transparent to-[#7C5DBD]/40" />
+            <span className="text-[#7C5DBD]/50 text-xs">✦</span>
+            <div className="h-px w-8 bg-gradient-to-l from-transparent to-[#7C5DBD]/40" />
           </div>
         </div>
       </div>
@@ -231,7 +231,7 @@ export function MyStuffTab() {
           <button
             onClick={() => handleTabChange('watched')}
             className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              activeTab === 'watched' ? 'bg-[#C0392B] text-white' : 'text-gray-400 hover:text-white'
+              activeTab === 'watched' ? 'bg-[#7C5DBD] text-white' : 'text-gray-400 hover:text-white'
             }`}
           >
             <Star className="w-3.5 h-3.5" /> Watched
@@ -239,7 +239,7 @@ export function MyStuffTab() {
           <button
             onClick={() => handleTabChange('watchlater')}
             className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              activeTab === 'watchlater' ? 'bg-[#C0392B] text-white' : 'text-gray-400 hover:text-white'
+              activeTab === 'watchlater' ? 'bg-[#7C5DBD] text-white' : 'text-gray-400 hover:text-white'
             }`}
           >
             <Bookmark className="w-3.5 h-3.5" /> Watch Later
@@ -285,7 +285,7 @@ export function MyStuffTab() {
                     <span className={sortMode === opt.value ? 'text-white font-semibold' : 'text-gray-400'}>
                       {opt.label}
                     </span>
-                    {sortMode === opt.value && <Check className="w-3.5 h-3.5 text-[#C0392B] shrink-0" />}
+                    {sortMode === opt.value && <Check className="w-3.5 h-3.5 text-[#7C5DBD] shrink-0" />}
                   </button>
                 ))}
               </div>
@@ -314,7 +314,7 @@ export function MyStuffTab() {
                   onClick={() => setSelectedMovieId(m.movie_id)}
                   className="text-left group focus:outline-none"
                 >
-                  <div className="relative rounded-xl overflow-hidden bg-[#111] border border-[#1e1e1e] group-hover:border-[#C0392B]/50 transition-colors">
+                  <div className="relative rounded-xl overflow-hidden bg-[#111] border border-[#1e1e1e] group-hover:border-[#7C5DBD]/50 transition-colors">
                     {m.poster ? (
                       <img src={m.poster} alt={m.title} className="w-full aspect-[2/3] object-cover" loading="lazy" decoding="async" />
                     ) : (
@@ -323,7 +323,7 @@ export function MyStuffTab() {
                       </div>
                     )}
                     <div className="absolute top-2 left-2 flex items-center gap-1 bg-black/75 rounded-full px-2 py-0.5">
-                      <Star className="w-3 h-3 fill-[#C0392B] text-[#C0392B]" />
+                      <Star className="w-3 h-3 fill-[#7C5DBD] text-[#7C5DBD]" />
                       <span className="text-white text-xs font-semibold">{m.user_rating}</span>
                     </div>
                     {m.services[0] && PROVIDER_LOGOS[m.services[0]] && (
@@ -362,7 +362,7 @@ export function MyStuffTab() {
                     onClick={() => setPage(p)}
                     className="px-3 py-1.5 rounded-lg text-sm border transition-colors"
                     style={p === page
-                      ? { background: '#C0392B', borderColor: '#C0392B', color: '#fff' }
+                      ? { background: '#7C5DBD', borderColor: '#7C5DBD', color: '#fff' }
                       : { background: '#111', borderColor: '#2A2A2A', color: '#9ca3af' }}
                   >
                     {p}
@@ -392,7 +392,7 @@ export function MyStuffTab() {
                   onClick={() => setSelectedMovieId(m.movie_id)}
                   className="text-left group focus:outline-none"
                 >
-                  <div className="relative rounded-xl overflow-hidden bg-[#111] border border-[#1e1e1e] group-hover:border-[#C0392B]/50 transition-colors">
+                  <div className="relative rounded-xl overflow-hidden bg-[#111] border border-[#1e1e1e] group-hover:border-[#7C5DBD]/50 transition-colors">
                     {m.poster ? (
                       <img src={m.poster} alt={m.title} className="w-full aspect-[2/3] object-cover" loading="lazy" decoding="async" />
                     ) : (

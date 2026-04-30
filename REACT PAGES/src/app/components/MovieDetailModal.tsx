@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { X, Bookmark, BookmarkCheck, Star, Play, ChevronDown, ChevronUp } from 'lucide-react';
 import {
   getMovieDetails, getWatchedMovie, addWatchedMovie, updateWatchedMovie,
@@ -124,7 +124,7 @@ export function MovieDetailModal({ movieId, onClose, onWatchedChange }: Props) {
     return (
       <div className="fixed inset-0 z-50 bg-black flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-[#C0392B] border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-[#7C5DBD] border-t-transparent rounded-full animate-spin" />
           <p className="text-gray-400 text-sm">Loading…</p>
         </div>
       </div>
@@ -136,7 +136,7 @@ export function MovieDetailModal({ movieId, onClose, onWatchedChange }: Props) {
       <div className="fixed inset-0 z-50 bg-black flex items-center justify-center">
         <div className="text-center">
           <p className="text-gray-400 mb-4">Could not load movie details.</p>
-          <button onClick={onClose} className="text-[#C0392B] hover:text-[#E74C3C]">Close</button>
+          <button onClick={onClose} className="text-[#7C5DBD] hover:text-[#9B7BD7]">Close</button>
         </div>
       </div>
     );
@@ -241,7 +241,7 @@ export function MovieDetailModal({ movieId, onClose, onWatchedChange }: Props) {
         <div className="px-10 md:px-16 pb-8 max-w-2xl">
 
           {/* Genre badge */}
-          <span className="inline-block bg-[#C0392B] text-white text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded mb-4">
+          <span className="inline-block bg-[#7C5DBD] text-white text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded mb-4">
             {primaryGenre}
           </span>
 
@@ -273,7 +273,7 @@ export function MovieDetailModal({ movieId, onClose, onWatchedChange }: Props) {
                 {isLongOverview && (
                   <button
                     onClick={() => setOverviewExpanded(!overviewExpanded)}
-                    className="text-[#C0392B] hover:text-[#E74C3C] ml-1 inline-flex items-center gap-0.5 text-xs font-medium"
+                    className="text-[#7C5DBD] hover:text-[#9B7BD7] ml-1 inline-flex items-center gap-0.5 text-xs font-medium"
                   >
                     {overviewExpanded
                       ? <><ChevronUp className="w-3 h-3" /> Less</>
@@ -337,7 +337,7 @@ export function MovieDetailModal({ movieId, onClose, onWatchedChange }: Props) {
                     className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-white/30 bg-white/5 hover:bg-white/15 text-white text-sm font-medium transition-colors disabled:opacity-50"
                   >
                     {inWatchLater
-                      ? <BookmarkCheck className="w-4 h-4 text-[#C0392B]" />
+                      ? <BookmarkCheck className="w-4 h-4 text-[#7C5DBD]" />
                       : <Bookmark className="w-4 h-4" />}
                     {inWatchLater ? 'Saved' : 'Watch Later'}
                   </button>
@@ -348,7 +348,7 @@ export function MovieDetailModal({ movieId, onClose, onWatchedChange }: Props) {
                   (watchEntry && !saveSuccess) || (saveSuccess && watchEntry) ? (
                     <div className="flex items-center gap-3">
                       <div className="flex items-center gap-1.5 bg-black/40 border border-white/10 rounded-full px-4 py-2">
-                        <Star className="w-4 h-4 fill-[#C0392B] text-[#C0392B]" />
+                        <Star className="w-4 h-4 fill-[#7C5DBD] text-[#7C5DBD]" />
                         <span className="text-white text-sm font-semibold">{watchEntry.user_rating}/10</span>
                       </div>
                       {!saveSuccess && (
@@ -363,7 +363,7 @@ export function MovieDetailModal({ movieId, onClose, onWatchedChange }: Props) {
                   ) : (
                     <button
                       onClick={() => setShowWatchForm(true)}
-                      className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#C0392B] hover:bg-[#E74C3C] text-white text-sm font-medium transition-colors shadow-lg shadow-[#C0392B]/30"
+                      className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#7C5DBD] hover:bg-[#9B7BD7] text-white text-sm font-medium transition-colors shadow-lg shadow-[#7C5DBD]/30"
                     >
                       <Star className="w-4 h-4" />
                       Mark as Watched
@@ -411,7 +411,7 @@ export function MovieDetailModal({ movieId, onClose, onWatchedChange }: Props) {
                     value={ratingInput}
                     onChange={(e) => setRatingInput(e.target.value)}
                     placeholder="e.g. 8.5"
-                    className="w-full bg-white/5 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#C0392B] placeholder-gray-600"
+                    className="w-full bg-white/5 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#7C5DBD] placeholder-gray-600"
                   />
                 </div>
                 <div>
@@ -421,14 +421,14 @@ export function MovieDetailModal({ movieId, onClose, onWatchedChange }: Props) {
                     onChange={(e) => setCommentInput(e.target.value)}
                     placeholder="What did you think?"
                     rows={2}
-                    className="w-full bg-white/5 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#C0392B] resize-none placeholder-gray-600"
+                    className="w-full bg-white/5 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#7C5DBD] resize-none placeholder-gray-600"
                   />
                 </div>
                 <div className="flex gap-2 pt-1">
                   <button
                     onClick={handleSaveWatch}
                     disabled={saving || ratingInput === ''}
-                    className="flex-1 py-2 rounded-full bg-[#C0392B] hover:bg-[#E74C3C] disabled:opacity-50 text-white font-medium text-sm transition-colors"
+                    className="flex-1 py-2 rounded-full bg-[#7C5DBD] hover:bg-[#9B7BD7] disabled:opacity-50 text-white font-medium text-sm transition-colors"
                   >
                     {saving ? 'Saving…' : watchEntry ? 'Update' : 'Save'}
                   </button>
@@ -456,7 +456,7 @@ export function MovieDetailModal({ movieId, onClose, onWatchedChange }: Props) {
                   <div
                     key={m.id}
                     onClick={() => setRelatedMovieId(String(m.id))}
-                    className="flex-shrink-0 w-16 md:w-20 cursor-pointer hover:scale-105 transition-transform rounded-lg overflow-hidden ring-1 ring-white/10 hover:ring-[#C0392B]/60"
+                    className="flex-shrink-0 w-16 md:w-20 cursor-pointer hover:scale-105 transition-transform rounded-lg overflow-hidden ring-1 ring-white/10 hover:ring-[#7C5DBD]/60"
                     title={m.title}
                   >
                     <img
