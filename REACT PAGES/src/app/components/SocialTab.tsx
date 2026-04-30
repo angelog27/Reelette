@@ -443,8 +443,32 @@ function renderMessage(message: string, onOpenProfile: (userId: string) => void)
   });
 }
 
-// ── Post Card ──────────────────────────────────────────────────
-function PostCard({ post, currentUserId, currentUsername, onLike, onDelete, onOpenProfile }: {
+// ── Activity Skeleton ─────────────────────────────────────────
+function ActivitySkeleton() {
+  return (
+    <div className="mx-4 mb-3 rounded-2xl border border-[#1a1a1a] bg-[#0f0f0f] overflow-hidden">
+      <div className="px-4 py-2.5 border-b border-[#1a1a1a] flex items-center gap-3">
+        <div className="w-3.5 h-3.5 bg-[#1e1e1e] rounded-full animate-pulse shrink-0" />
+        <div className="h-3 w-10 bg-[#1e1e1e] rounded-full animate-pulse" />
+        <div className="h-3 w-36 bg-[#1e1e1e] rounded-full animate-pulse" />
+      </div>
+      <div className="px-4 py-3 flex gap-3">
+        <div className="w-12 bg-[#1a1a1a] rounded-xl animate-pulse shrink-0" style={{ height: 72 }} />
+        <div className="flex-1 space-y-2 pt-1">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 bg-[#1a1a1a] rounded-full animate-pulse" />
+            <div className="h-3 w-28 bg-[#1a1a1a] rounded-full animate-pulse" />
+          </div>
+          <div className="h-3 w-full bg-[#1a1a1a] rounded-full animate-pulse" />
+          <div className="h-3 w-4/5 bg-[#1a1a1a] rounded-full animate-pulse" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Activity Card ─────────────────────────────────────────────
+function ActivityCard({ post, currentUserId, currentUsername, onLike, onDelete, onOpenProfile }: {
   post: FeedPost; currentUserId: string; currentUsername: string;
   onLike: (id: string) => void;
   onDelete: (id: string) => void;
@@ -457,6 +481,7 @@ function PostCard({ post, currentUserId, currentUsername, onLike, onDelete, onOp
   const [replyText, setReplyText] = useState('');
   const [submittingReply, setSubmittingReply] = useState(false);
   const [localReplyCount, setLocalReplyCount] = useState(post.reply_count ?? 0);
+  const [likeAnim, setLikeAnim] = useState(false);
 
   const loadReplies = useCallback(async () => {
     setLoadingReplies(true);
@@ -474,6 +499,12 @@ function PostCard({ post, currentUserId, currentUsername, onLike, onDelete, onOp
     setShowReplies(s => !s);
   };
 
+  const handleLikeClick = () => {
+    setLikeAnim(true);
+    onLike(post.post_id);
+    setTimeout(() => setLikeAnim(false), 320);
+  };
+
   const handleSubmitReply = async () => {
     if (!replyText.trim() || !currentUserId) return;
     setSubmittingReply(true);
@@ -487,127 +518,146 @@ function PostCard({ post, currentUserId, currentUsername, onLike, onDelete, onOp
   };
 
   return (
-    <article className="border-b border-[#1A1A1A] px-4 py-4 hover:bg-[#0d0d0d] transition-colors">
-      <div className="flex gap-3">
-        <div className="shrink-0 pt-0.5">
-          <UserAvatar username={post.username} avatarUrl={post.avatarUrl} size={44} onClick={() => onOpenProfile(post.user_id)} />
+    <article className="mx-4 mb-3 rounded-2xl border border-[#1a1a1a] bg-[#0f0f0f] overflow-hidden transition-colors duration-200 hover:border-[#252525]">
+
+      {/* ── Rating header strip ── */}
+      {post.rating > 0 && (
+        <div
+          className="px-4 py-2.5 flex items-center gap-2.5 border-b border-yellow-500/[0.1]"
+          style={{ background: 'rgba(234,179,8,0.055)' }}
+        >
+          <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400 shrink-0" />
+          <span className="text-yellow-400 font-bold text-sm tabular-nums">{post.rating}/10</span>
+          <span className="text-[#2a2a2a] select-none">·</span>
+          <span className="text-white/90 font-semibold text-sm truncate">{post.movie_title}</span>
         </div>
+      )}
+
+      {/* ── Main body ── */}
+      <div className="px-4 pt-3 pb-1 flex gap-3">
+
+        {/* Movie poster */}
+        {post.movie_poster && (
+          <div className="shrink-0 self-start">
+            <img
+              src={post.movie_poster}
+              alt={post.movie_title}
+              className="rounded-xl object-cover shadow-lg"
+              style={{ width: 48, height: 72 }}
+            />
+          </div>
+        )}
+
+        {/* Content */}
         <div className="flex-1 min-w-0">
 
-          {/* Header row */}
-          <div className="flex items-start justify-between gap-2 mb-1">
-            <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-              <button onClick={() => onOpenProfile(post.user_id)}
-                className="font-bold text-[15px] text-white hover:underline truncate">
-                {post.username}
+          {/* User row */}
+          <div className="flex items-center justify-between gap-2 mb-1.5">
+            <div className="flex items-center gap-2 min-w-0">
+              <UserAvatar username={post.username} avatarUrl={post.avatarUrl} size={26} onClick={() => onOpenProfile(post.user_id)} />
+              <button
+                onClick={() => onOpenProfile(post.user_id)}
+                className="text-sm font-semibold text-white hover:text-[#9B7BD7] transition-colors truncate leading-none"
+              >
+                @{post.username}
               </button>
-              <span className="text-gray-500 text-sm shrink-0">· {timeAgo(post.created_at)}</span>
+              <span className="text-gray-700 text-xs shrink-0">· {timeAgo(post.created_at)}</span>
             </div>
             {post.user_id === currentUserId && (
-              <button onClick={() => onDelete(post.post_id)}
-                className="shrink-0 p-1 -mr-1 text-gray-600 hover:text-red-500 transition-colors">
-                <Trash2 className="w-4 h-4" />
+              <button
+                onClick={() => onDelete(post.post_id)}
+                className="shrink-0 text-gray-700 hover:text-red-500 transition-colors p-0.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
 
           {/* Message */}
-          <p className="text-[15px] text-gray-200 leading-relaxed mb-3">
-            {renderMessage(post.message, onOpenProfile)}
-          </p>
-
-          {/* Movie card */}
-          {post.movie_id ? (
-            <a href={`https://www.themoviedb.org/movie/${post.movie_id}`} target="_blank" rel="noopener noreferrer"
-              className="flex rounded-2xl border border-[#242424] overflow-hidden hover:border-[#3a3a3a] transition-colors group mb-3">
-              {post.movie_poster ? (
-                <img src={post.movie_poster} alt={post.movie_title}
-                  className="w-20 shrink-0 object-cover" style={{ aspectRatio: '2/3' }} />
-              ) : (
-                <div className="w-20 shrink-0 bg-[#1a1a1a] flex items-center justify-center" style={{ aspectRatio: '2/3' }}>
-                  <Film className="w-6 h-6 text-gray-600" />
-                </div>
-              )}
-              <div className="flex flex-col justify-center px-4 py-3 min-w-0 gap-1.5">
-                <span
-                  className="text-white leading-tight line-clamp-2 group-hover:text-[#9B7BD7] transition-colors"
-                  style={{ fontFamily: "'Playfair Display', Georgia, serif", fontStyle: 'italic', fontWeight: 700, fontSize: '0.9rem' }}
-                >
-                  {post.movie_title}
-                </span>
-                <div className="flex items-center gap-1">
-                  <span className="text-yellow-500 text-xs font-bold tracking-wide">
-                    {'★'.repeat(Math.round(post.rating / 2))}{'☆'.repeat(5 - Math.round(post.rating / 2))}
-                  </span>
-                  <span className="text-gray-500 text-xs ml-1">{post.rating}/10</span>
-                </div>
-              </div>
-            </a>
-          ) : (
-            <div className="flex items-center gap-2 text-sm text-gray-500 mb-3">
-              <Film className="w-4 h-4 shrink-0" />
-              <span className="truncate">{post.movie_title}</span>
-              <span className="shrink-0 flex items-center gap-1">
-                <Star className="w-3.5 h-3.5 fill-yellow-500 text-yellow-500" />{post.rating}/10
-              </span>
-            </div>
+          {post.message && (
+            <p className="text-gray-400 text-sm leading-relaxed italic">
+              "{renderMessage(post.message, onOpenProfile)}"
+            </p>
           )}
 
-          {/* Action bar */}
-          <div className="flex items-center gap-1 -ml-2">
-            <button onClick={toggleReplies}
-              className={`flex items-center gap-1.5 px-2 py-1.5 rounded-full text-sm transition-colors hover:bg-blue-500/10 hover:text-blue-400 ${showReplies ? 'text-blue-400' : 'text-gray-500'}`}>
-              <MessageCircle className="w-[18px] h-[18px]" />
-              {(showReplies ? replies.length : localReplyCount) > 0 && (
-                <span>{showReplies ? replies.length : localReplyCount}</span>
-              )}
-            </button>
-            <button onClick={() => onLike(post.post_id)}
-              className={`flex items-center gap-1.5 px-2 py-1.5 rounded-full text-sm transition-colors hover:bg-[#7C5DBD]/10 hover:text-[#7C5DBD] ${isLiked ? 'text-[#7C5DBD]' : 'text-gray-500'}`}>
-              <Heart className={`w-[18px] h-[18px] ${isLiked ? 'fill-[#7C5DBD]' : ''}`} />
-              {post.likes > 0 && <span>{post.likes}</span>}
-            </button>
-          </div>
-
-          {/* Replies */}
-          {showReplies && (
-            <div className="mt-3 pt-3 border-t border-[#1A1A1A] space-y-3">
-              {loadingReplies ? (
-                <div className="flex items-center gap-2 text-gray-500 text-sm">
-                  <Loader2 className="w-3 h-3 animate-spin" /> Loading replies…
-                </div>
-              ) : replies.length === 0 ? (
-                <p className="text-gray-600 text-sm">No replies yet.</p>
-              ) : (
-                replies.map(r => (
-                  <div key={r.reply_id} className="flex items-start gap-2">
-                    <UserAvatar username={r.username} avatarUrl={r.avatarUrl} size={30} onClick={() => onOpenProfile(r.user_id)} />
-                    <div className="flex-1 bg-[#111] rounded-2xl px-3 py-2">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <button onClick={() => onOpenProfile(r.user_id)} className="text-white text-xs font-bold hover:underline">{r.username}</button>
-                        <span className="text-gray-600 text-xs">{timeAgo(r.created_at)}</span>
-                      </div>
-                      <p className="text-gray-300 text-sm">{r.message}</p>
-                    </div>
-                  </div>
-                ))
-              )}
-              {currentUserId && (
-                <div className="flex gap-2 pt-1">
-                  <input type="text" placeholder="Reply…"
-                    value={replyText} onChange={e => setReplyText(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSubmitReply()}
-                    className="flex-1 bg-[#111] border border-[#242424] rounded-full px-4 py-2 text-white text-sm placeholder:text-gray-600 focus:border-[#7C5DBD] focus:outline-none" />
-                  <button onClick={handleSubmitReply} disabled={submittingReply || !replyText.trim()}
-                    className="p-2 bg-[#7C5DBD] hover:bg-[#6B4DAD] disabled:opacity-50 text-white rounded-full transition-colors">
-                    {submittingReply ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                  </button>
-                </div>
-              )}
-            </div>
+          {/* Movie label when no rating strip */}
+          {!post.rating && post.movie_title && (
+            <p className="text-gray-600 text-xs mt-1.5 flex items-center gap-1.5">
+              <Film className="w-3 h-3 shrink-0" />
+              <span className="truncate">{post.movie_title}</span>
+            </p>
           )}
         </div>
       </div>
+
+      {/* ── Action bar ── */}
+      <div className="px-3 pb-2.5 pt-1.5 flex items-center gap-0.5">
+        <button
+          onClick={toggleReplies}
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-colors hover:bg-blue-500/[0.08] hover:text-blue-400 ${showReplies ? 'text-blue-400' : 'text-gray-600'}`}
+        >
+          <MessageCircle className="w-[15px] h-[15px]" />
+          {(showReplies ? replies.length : localReplyCount) > 0 && (
+            <span className="tabular-nums">{showReplies ? replies.length : localReplyCount}</span>
+          )}
+        </button>
+        <button
+          onClick={handleLikeClick}
+          style={{
+            transition: 'transform 0.25s cubic-bezier(0.34,1.56,0.64,1)',
+            transform: likeAnim ? 'scale(1.4)' : 'scale(1)',
+          }}
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-colors hover:bg-[#7C5DBD]/[0.08] hover:text-[#9B7BD7] ${isLiked ? 'text-[#7C5DBD]' : 'text-gray-600'}`}
+        >
+          <Heart className={`w-[15px] h-[15px] ${isLiked ? 'fill-[#7C5DBD]' : ''}`} />
+          {post.likes > 0 && <span className="tabular-nums">{post.likes}</span>}
+        </button>
+      </div>
+
+      {/* ── Replies ── */}
+      {showReplies && (
+        <div className="px-4 pb-3 pt-2 border-t border-[#151515] space-y-3">
+          {loadingReplies ? (
+            <div className="flex items-center gap-2 text-gray-600 text-xs">
+              <Loader2 className="w-3 h-3 animate-spin" /> Loading replies…
+            </div>
+          ) : replies.length === 0 ? (
+            <p className="text-gray-700 text-xs">No replies yet.</p>
+          ) : (
+            replies.map(r => (
+              <div key={r.reply_id} className="flex items-start gap-2">
+                <UserAvatar username={r.username} avatarUrl={r.avatarUrl} size={28} onClick={() => onOpenProfile(r.user_id)} />
+                <div className="flex-1 bg-[#141414] border border-[#1c1c1c] rounded-2xl px-3 py-2">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <button onClick={() => onOpenProfile(r.user_id)} className="text-white text-xs font-semibold hover:text-[#9B7BD7] transition-colors">@{r.username}</button>
+                    <span className="text-gray-700 text-xs">{timeAgo(r.created_at)}</span>
+                  </div>
+                  <p className="text-gray-400 text-sm leading-snug">{r.message}</p>
+                </div>
+              </div>
+            ))
+          )}
+          {currentUserId && (
+            <div className="flex gap-2 pt-0.5">
+              <input
+                type="text"
+                placeholder="Write a reply…"
+                value={replyText}
+                onChange={e => setReplyText(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSubmitReply()}
+                className="flex-1 bg-[#141414] border border-[#1e1e1e] rounded-full px-4 py-1.5 text-white text-sm placeholder:text-gray-700 focus:border-[#7C5DBD]/50 focus:outline-none"
+              />
+              <button
+                onClick={handleSubmitReply}
+                disabled={submittingReply || !replyText.trim()}
+                className="p-2 bg-[#7C5DBD] hover:bg-[#6B4DAD] disabled:opacity-40 text-white rounded-full transition-colors"
+              >
+                {submittingReply ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </article>
   );
 }
@@ -678,88 +728,125 @@ function FriendsPanel({ onOpenProfile }: { onOpenProfile: (uid: string) => void 
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      {/* Pending Requests */}
+    <div className="max-w-2xl mx-auto px-4 space-y-6 pt-5 pb-10">
+
+      {/* ── Friend Requests ── */}
       {requests.length > 0 && (
-        <section className="bg-[#1C1C1C] border border-[#2A2A2A] rounded-xl p-5">
-          <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
-            <UserPlus className="w-5 h-5 text-[#7C5DBD]" /> Friend Requests
-            <span className="ml-1 bg-[#7C5DBD] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">{requests.length}</span>
-          </h3>
-          <div className="space-y-3">
+        <section className="rounded-2xl border border-yellow-500/20 overflow-hidden" style={{ background: 'rgba(234,179,8,0.04)' }}>
+          <div className="px-5 pt-4 pb-3 flex items-center gap-2 border-b border-yellow-500/10">
+            <UserPlus className="w-4 h-4 text-yellow-400 shrink-0" />
+            <span className="text-xs font-semibold uppercase tracking-widest text-yellow-400/80">Friend Requests</span>
+            <span className="ml-1 bg-yellow-400 text-black text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">{requests.length}</span>
+          </div>
+          <div className="px-5 py-3 space-y-3">
             {requests.map(req => (
               <div key={req.from_user_id} className="flex items-center gap-3">
                 <UserAvatar username={req.from_username} avatarUrl={req.avatarUrl} size={40} onClick={() => onOpenProfile(req.from_user_id)} />
-                <div className="flex-1">
-                  <button onClick={() => onOpenProfile(req.from_user_id)} className="text-white font-medium hover:text-[#7C5DBD] transition-colors">
+                <div className="flex-1 min-w-0">
+                  <button onClick={() => onOpenProfile(req.from_user_id)} className="text-white text-sm font-semibold hover:text-[#9B7BD7] transition-colors truncate block">
                     @{req.from_username}
                   </button>
-                  <p className="text-xs text-gray-500">{timeAgo(req.created_at)}</p>
+                  <p className="text-xs text-gray-600">{timeAgo(req.created_at)}</p>
                 </div>
-                <button onClick={() => handleAccept(req)} className="p-2 bg-green-600/20 hover:bg-green-600 border border-green-600/50 hover:border-green-600 text-green-400 hover:text-white rounded-lg transition-all"><Check className="w-4 h-4" /></button>
-                <button onClick={() => handleReject(req)} className="p-2 bg-red-600/20 hover:bg-red-600 border border-red-600/50 hover:border-red-600 text-red-400 hover:text-white rounded-lg transition-all"><X className="w-4 h-4" /></button>
+                <div className="flex gap-2 shrink-0">
+                  <button onClick={() => handleAccept(req)}
+                    className="p-2 bg-green-500/10 hover:bg-green-500/20 border border-green-500/25 text-green-400 rounded-xl transition-all active:scale-95">
+                    <Check className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => handleReject(req)}
+                    className="p-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-500 rounded-xl transition-all active:scale-95">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         </section>
       )}
 
-      {/* Search */}
-      <section className="bg-[#1C1C1C] border border-[#2A2A2A] rounded-xl p-5">
-        <h3 className="text-white font-semibold mb-4 flex items-center gap-2"><Search className="w-5 h-5 text-[#7C5DBD]" /> Find Friends</h3>
-        <div className="flex gap-2 mb-4">
-          <input type="text" placeholder="Search by username…" value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearch()}
-            className="flex-1 bg-[#141414] border border-[#2A2A2A] rounded-lg px-4 py-2.5 text-white placeholder:text-gray-600 focus:border-[#7C5DBD] focus:outline-none" />
-          <button onClick={handleSearch} disabled={searching}
-            className="px-4 py-2.5 bg-[#7C5DBD] hover:bg-[#6B4DAD] text-white rounded-lg transition-colors disabled:opacity-50">
-            {searching ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
+      {/* ── Find Friends ── */}
+      <section>
+        <p className="text-xs font-semibold uppercase tracking-widest text-gray-600 mb-3">Find Friends</p>
+        <div className="flex gap-2 mb-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search by username…"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleSearch()}
+              className="w-full bg-[#0f0f0f] border border-[#1a1a1a] rounded-xl pl-10 pr-4 py-2.5 text-white text-sm placeholder:text-gray-700 focus:border-[#7C5DBD]/50 focus:outline-none transition-colors"
+            />
+          </div>
+          <button
+            onClick={handleSearch}
+            disabled={searching}
+            className="px-4 py-2.5 bg-[#7C5DBD] hover:bg-[#6B4DAD] text-white rounded-xl transition-colors disabled:opacity-50 active:scale-95"
+          >
+            {searching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
           </button>
         </div>
-        {searchResults.map(u => (
-          <div key={u.user_id} className="flex items-center gap-3 p-3 bg-[#141414] rounded-lg border border-[#2A2A2A] mb-2">
-            <UserAvatar username={u.username} avatarUrl={u.avatarUrl} size={36} onClick={() => onOpenProfile(u.user_id)} />
-            <div className="flex-1">
-              <button onClick={() => onOpenProfile(u.user_id)} className="text-white font-medium hover:text-[#7C5DBD] transition-colors block">{u.displayName}</button>
-              <p className="text-xs text-gray-500">@{u.username}</p>
-            </div>
-            {sentTo.has(u.user_id)
-              ? <span className="text-xs text-gray-500 flex items-center gap-1"><Check className="w-3 h-3 text-green-500" />Sent</span>
-              : <button onClick={() => handleSendRequest(u.user_id)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#7C5DBD]/20 hover:bg-[#7C5DBD] border border-[#7C5DBD]/50 hover:border-[#7C5DBD] text-[#7C5DBD] hover:text-white rounded-lg text-sm transition-all">
-                  <UserPlus className="w-4 h-4" />Add
-                </button>}
+
+        {searchResults.length > 0 && (
+          <div className="space-y-2">
+            {searchResults.map(u => (
+              <div key={u.user_id} className="flex items-center gap-3 p-3 bg-[#0f0f0f] border border-[#1a1a1a] rounded-2xl hover:border-[#252525] transition-colors">
+                <UserAvatar username={u.username} avatarUrl={u.avatarUrl} size={38} onClick={() => onOpenProfile(u.user_id)} />
+                <div className="flex-1 min-w-0">
+                  <button onClick={() => onOpenProfile(u.user_id)} className="text-white text-sm font-semibold hover:text-[#9B7BD7] transition-colors truncate block">{u.displayName}</button>
+                  <p className="text-xs text-gray-600">@{u.username}</p>
+                </div>
+                {sentTo.has(u.user_id)
+                  ? <span className="text-xs text-gray-600 flex items-center gap-1 shrink-0"><Check className="w-3 h-3 text-green-500" />Sent</span>
+                  : <button onClick={() => handleSendRequest(u.user_id)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-[#7C5DBD]/15 hover:bg-[#7C5DBD] border border-[#7C5DBD]/40 hover:border-[#7C5DBD] text-[#9B7BD7] hover:text-white rounded-xl text-xs font-semibold transition-all active:scale-95 shrink-0">
+                      <UserPlus className="w-3.5 h-3.5" />Add
+                    </button>
+                }
+              </div>
+            ))}
           </div>
-        ))}
+        )}
         {searchResults.length === 0 && searchQuery && !searching && (
-          <p className="text-gray-500 text-sm text-center py-2">No users found for "{searchQuery}"</p>
+          <p className="text-gray-600 text-sm text-center py-3">No users found for "{searchQuery}"</p>
         )}
       </section>
 
-      {/* Friends List */}
-      <section className="bg-[#1C1C1C] border border-[#2A2A2A] rounded-xl p-5">
-        <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
-          <Users className="w-5 h-5 text-[#7C5DBD]" /> My Friends
-          {!loading && <span className="text-gray-500 text-sm font-normal">({friends.length})</span>}
-        </h3>
-        {loading ? <p className="text-gray-500 text-center py-4">Loading…</p>
-          : friends.length === 0 ? <p className="text-gray-500 text-center py-8">No friends yet — search above to connect!</p>
-          : (
-            <div className="space-y-3">
-              {friends.map(f => (
-                <div key={f.friend_id} className="flex items-center gap-3 p-3 bg-[#141414] rounded-lg border border-[#2A2A2A]">
-                  <UserAvatar username={f.friend_username} avatarUrl={f.avatarUrl} size={40} onClick={() => onOpenProfile(f.friend_id)} />
-                  <div className="flex-1">
-                    <button onClick={() => onOpenProfile(f.friend_id)} className="text-white font-medium hover:text-[#7C5DBD] transition-colors">@{f.friend_username}</button>
-                    <p className="text-xs text-gray-600">Friends since {timeAgo(f.since)}</p>
-                  </div>
-                  <button onClick={() => handleRemove(f.friend_id)} className="p-2 text-gray-600 hover:text-red-500 transition-colors" title="Remove friend">
-                    <UserMinus className="w-4 h-4" />
-                  </button>
+      {/* ── Friends List ── */}
+      <section>
+        <p className="text-xs font-semibold uppercase tracking-widest text-gray-600 mb-3 flex items-center gap-2">
+          My Friends
+          {!loading && friends.length > 0 && <span className="text-gray-700 normal-case tracking-normal font-normal">({friends.length})</span>}
+        </p>
+
+        {loading ? (
+          <div className="space-y-2">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="h-[68px] bg-[#0f0f0f] border border-[#1a1a1a] rounded-2xl animate-pulse" />
+            ))}
+          </div>
+        ) : friends.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-14 border border-dashed border-[#1e1e1e] rounded-2xl">
+            <Users className="w-8 h-8 text-gray-700 mb-3" />
+            <p className="text-gray-600 text-sm">No friends yet — search above to connect.</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {friends.map(f => (
+              <div key={f.friend_id} className="flex items-center gap-3 p-3 bg-[#0f0f0f] border border-[#1a1a1a] rounded-2xl hover:border-[#252525] transition-colors">
+                <UserAvatar username={f.friend_username} avatarUrl={f.avatarUrl} size={42} onClick={() => onOpenProfile(f.friend_id)} />
+                <div className="flex-1 min-w-0">
+                  <button onClick={() => onOpenProfile(f.friend_id)} className="text-white text-sm font-semibold hover:text-[#9B7BD7] transition-colors truncate block">@{f.friend_username}</button>
+                  <p className="text-xs text-gray-600">Friends since {timeAgo(f.since)}</p>
                 </div>
-              ))}
-            </div>
-          )}
+                <button onClick={() => handleRemove(f.friend_id)} className="p-2 text-gray-700 hover:text-red-500 transition-colors shrink-0" title="Remove friend">
+                  <UserMinus className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );
@@ -1605,72 +1692,40 @@ export function SocialTab() {
   };
 
   const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
-    { id: 'feed',    label: 'Feed',    icon: <MessageCircle className="w-4 h-4" /> },
-    { id: 'friends', label: 'Friends', icon: <UserPlus className="w-4 h-4" /> },
-    { id: 'groups',  label: 'Movie Groups',  icon: <Users className="w-4 h-4" /> },
+    { id: 'feed',    label: 'Activity', icon: <MessageCircle className="w-4 h-4" /> },
+    { id: 'friends', label: 'Friends',  icon: <UserPlus className="w-4 h-4" /> },
+    { id: 'groups',  label: 'Groups',   icon: <Users className="w-4 h-4" /> },
   ];
 
   return (
     <div className="text-white -mx-6 -mt-8">
+      {/* Stagger animation keyframes */}
+      <style>{`
+        @keyframes feedCardIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+
       {profileUserId && <UserProfileModal userId={profileUserId} onClose={() => setProfileUserId(null)} />}
 
-      {/* ── Cinema header ── */}
-      <div className="full-bleed relative overflow-hidden" style={{ marginBottom: 0 }}>
-        {/* Film strip — top */}
-        <div className="absolute top-0 inset-x-0 h-[22px] bg-[#0c0c0c] border-b border-[#1a1a1a] flex items-center z-20 overflow-hidden">
-          {Array.from({ length: 48 }).map((_, i) => (
-            <div key={i} className="shrink-0 flex-1 px-[3px]">
-              <div className="h-[13px] rounded-[2px] bg-[#050505]" />
-            </div>
-          ))}
-        </div>
-        {/* Film strip — bottom */}
-        <div className="absolute bottom-0 inset-x-0 h-[22px] bg-[#0c0c0c] border-t border-[#1a1a1a] flex items-center z-20 overflow-hidden">
-          {Array.from({ length: 48 }).map((_, i) => (
-            <div key={i} className="shrink-0 flex-1 px-[3px]">
-              <div className="h-[13px] rounded-[2px] bg-[#050505]" />
-            </div>
-          ))}
-        </div>
-
-        {/* Glow flush with nav */}
+      {/* ── Header ── */}
+      <div className="relative overflow-hidden" style={{ background: '#080808', borderBottom: '1px solid #111' }}>
+        {/* Ambient purple glow from top */}
         <div className="absolute inset-0 pointer-events-none"
-          style={{ background: 'radial-gradient(ellipse 60% 80% at 50% 0%, rgba(124,93,189,0.22) 0%, rgba(124,93,189,0.06) 45%, transparent 75%)' }} />
-
-        {/* Spotlight beams */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute" style={{ top: 0, left: '50%', width: 500, height: '110%', transform: 'translateX(-80%) rotate(-18deg)', transformOrigin: 'top center', background: 'linear-gradient(to bottom, rgba(255,255,255,0.028) 0%, transparent 65%)' }} />
-          <div className="absolute" style={{ top: 0, left: '50%', width: 500, height: '110%', transform: 'translateX(-20%) rotate(18deg)', transformOrigin: 'top center', background: 'linear-gradient(to bottom, rgba(255,255,255,0.028) 0%, transparent 65%)' }} />
-        </div>
-
-        {/* Side curtains */}
-        <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-black/70 to-transparent pointer-events-none" />
-        <div className="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-black/70 to-transparent pointer-events-none" />
+          style={{ background: 'radial-gradient(ellipse 70% 100% at 50% -10%, rgba(124,93,189,0.18) 0%, transparent 70%)' }} />
 
         {/* Content */}
-        <div className="relative z-10 flex flex-col items-center justify-center text-center py-10 px-6" style={{ paddingTop: 48, paddingBottom: 40 }}>
-          {/* NOW SCREENING badge */}
-          <div className="flex items-center gap-2 mb-4">
-            <div className="h-px w-12 bg-gradient-to-r from-transparent to-[#7C5DBD]/60" />
-            <span className="text-[11px] font-bold tracking-[0.25em] text-[#7C5DBD] uppercase" style={{ fontFamily: "'Courier New', monospace" }}>
-              Now Screening
-            </span>
-            <span className="w-1.5 h-1.5 rounded-full bg-[#7C5DBD] animate-pulse" />
-            <div className="h-px w-12 bg-gradient-to-l from-transparent to-[#7C5DBD]/60" />
-          </div>
-
-          <h1 style={{ fontFamily: "'Playfair Display', Georgia, 'Times New Roman', serif", fontStyle: 'italic', fontWeight: 700, fontSize: 'clamp(1.8rem, 3.5vw, 2.8rem)', color: '#fff', textShadow: '0 2px 24px rgba(0,0,0,0.8)', letterSpacing: '-0.01em', lineHeight: 1.15 }}>
-            The Screening Room
+        <div className="relative z-10 flex flex-col items-start justify-end px-6 pt-10 pb-6">
+          <span className="text-[10px] font-bold tracking-[0.28em] uppercase mb-3" style={{ color: 'rgba(124,93,189,0.7)' }}>
+            Social
+          </span>
+          <h1 className="text-white font-bold leading-none mb-1" style={{ fontSize: 'clamp(1.6rem, 4vw, 2.2rem)', letterSpacing: '-0.025em' }}>
+            Activity
           </h1>
-          <p className="mt-2 text-gray-400" style={{ fontFamily: "'Playfair Display', Georgia, serif", fontStyle: 'italic', fontSize: '1rem', letterSpacing: '0.03em' }}>
-            Share your take on what you've watched.
+          <p className="text-gray-600 text-sm">
+            See what your friends are watching.
           </p>
-
-          <div className="flex items-center gap-3 mt-4">
-            <div className="h-px w-12 bg-gradient-to-r from-transparent to-[#7C5DBD]/50" />
-            <span className="text-[#7C5DBD]/60 text-xs tracking-widest">✦</span>
-            <div className="h-px w-12 bg-gradient-to-l from-transparent to-[#7C5DBD]/50" />
-          </div>
         </div>
       </div>
 
@@ -1736,18 +1791,31 @@ export function SocialTab() {
             )}
 
             {/* Posts */}
-            <div>
+            <div className="pt-3">
               {loading
-                ? <p className="text-gray-500 text-center py-16">Loading feed…</p>
+                ? Array.from({ length: 4 }).map((_, i) => <ActivitySkeleton key={i} />)
                 : displayedPosts.length === 0
-                  ? <p className="text-gray-500 text-center py-16">
-                      {feedMode === 'friends' ? 'No posts from friends yet. Add some friends!' : 'No posts yet. Be the first to share!'}
-                    </p>
-                  : displayedPosts.map(post => (
-                      <PostCard key={post.post_id} post={post} currentUserId={currentUserId}
-                        currentUsername={currentUser?.username ?? ''}
-                        onLike={handleLike} onDelete={handleDelete}
-                        onOpenProfile={setProfileUserId} />
+                  ? (
+                    <div className="flex flex-col items-center justify-center py-20 gap-3">
+                      <Popcorn className="w-8 h-8 text-gray-700" />
+                      <p className="text-gray-600 text-sm text-center">
+                        {feedMode === 'friends' ? 'No posts from friends yet. Add some friends!' : 'No posts yet. Be the first to share!'}
+                      </p>
+                    </div>
+                  )
+                  : displayedPosts.map((post, idx) => (
+                      <div
+                        key={post.post_id}
+                        style={{
+                          animation: 'feedCardIn 0.32s var(--ease-out-strong, cubic-bezier(0.23,1,0.32,1)) both',
+                          animationDelay: `${Math.min(idx * 50, 300)}ms`,
+                        }}
+                      >
+                        <ActivityCard post={post} currentUserId={currentUserId}
+                          currentUsername={currentUser?.username ?? ''}
+                          onLike={handleLike} onDelete={handleDelete}
+                          onOpenProfile={setProfileUserId} />
+                      </div>
                     ))
               }
             </div>

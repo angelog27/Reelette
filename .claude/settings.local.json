@@ -7,7 +7,8 @@
       "Bash(sed -n '79,95p' \"c:\\\\4330DEV\\\\Reelette\\\\REACT PAGES\\\\src\\\\app\\\\services\\\\api.ts\")",
       "Bash(xargs cat *)",
       "Bash(pnpm exec *)",
-      "Bash(node_modules/.bin/vite build *)"
+      "Bash(node_modules/.bin/vite build *)",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); deps={**d.get\\('dependencies',{}\\),**d.get\\('devDependencies',{}\\)}; [print\\(k,v\\) for k,v in sorted\\(deps.items\\(\\)\\)]\")"
     ]
   }
 }
