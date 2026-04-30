@@ -400,6 +400,7 @@ export function HomePage() {
             </NavLink>
           ))}
         </nav>
+        
 
         <div className="flex-1" />
 
