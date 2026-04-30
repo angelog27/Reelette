@@ -144,7 +144,7 @@ export function DiscoverProvider({ children }: { children: React.ReactNode }) {
         .then(ids => _setWatchlistIds(ids))
         .catch(() => {});
 
-      getWatchedMovies(user.user_id)
+      getWatchedMovies(user.user_id, 200)
         .then(watched => {
           if (!watched.length) {
             // No watch history — nothing to base recommendations on

@@ -216,8 +216,9 @@ function PersonalizedHeroSkeleton() {
   );
 }
 
-function PersonalizedHero({ slots, onOpenModal, onToggleWatchlist, watchlistIds, hasUser }: {
+function PersonalizedHero({ slots, backdropOverrides = {}, onOpenModal, onToggleWatchlist, watchlistIds, hasUser }: {
   slots: PersonalizedSlot[];
+  backdropOverrides?: Record<string, string>;
   onOpenModal: (id: string) => void;
   onToggleWatchlist: (movie: Movie) => void;
   watchlistIds: string[];
@@ -245,16 +246,13 @@ function PersonalizedHero({ slots, onOpenModal, onToggleWatchlist, watchlistIds,
     <div className="full-bleed relative overflow-hidden" style={{ height: 520, marginTop: -32 }}>
       {/* Backdrop layers */}
       {slots.map((s, i) => {
-        const sBg = s.movie.backdrop || s.movie.poster || '';
-        const sBlur = !s.movie.backdrop && !!s.movie.poster;
+        const bg = backdropOverrides[s.movie.id] || s.movie.backdrop || '';
         return (
           <div key={i} className="absolute inset-0 transition-opacity duration-1000 ease-in-out"
             style={{ opacity: i === current ? 1 : 0, zIndex: i === current ? 1 : 0 }}>
-            {sBg
-              ? <img src={sBg} alt={s.movie.title} className="w-full h-full object-cover"
-                  style={sBlur ? { filter: 'blur(18px) brightness(0.65) saturate(1.3)', transform: 'scale(1.08)' } : undefined}
-                  loading={i === 0 ? 'eager' : 'lazy'} />
-              : <div className="w-full h-full bg-[#141414]" />
+            {bg
+              ? <img src={bg} alt={s.movie.title} className="w-full h-full object-cover" loading={i === 0 ? 'eager' : 'lazy'} />
+              : <div className="w-full h-full" style={{ background: 'linear-gradient(135deg, #160e30 0%, #0e0825 40%, #0a0a12 100%)' }} />
             }
           </div>
         );
@@ -423,8 +421,12 @@ export function DiscoverTab() {
         const friendIds = new Set(friends.map((f: { friend_id: string }) => f.friend_id));
         const post = posts.find(p => friendIds.has(p.user_id) && !!p.movie_id && p.message.trim().length > 10);
         if (!post) return;
-        let backdrop = post.movie_poster ?? '';
-        try { const d = await getMovieDetails(post.movie_id); backdrop = (d.backdrop as string) || backdrop; } catch {}
+        let backdrop = '';
+        try {
+          const d = await getMovieDetails(post.movie_id);
+          backdrop = (d.backdrop as string) ||
+            (d.backdrop_path ? `https://image.tmdb.org/t/p/w1280${d.backdrop_path}` : '');
+        } catch {}
         let friendAvatar: string | undefined;
         try { const pr = await getUserPublicProfile(post.user_id); friendAvatar = pr?.avatarUrl; } catch {}
         if (!cancelled) setFriendSlot({
@@ -489,9 +491,10 @@ export function DiscoverTab() {
   // ── Derived ────────────────────────────────────────────────────
   const top10 = useMemo<Movie[]>(() =>
     [...userWatched]
+      .filter(w => (w.user_rating ?? 0) > 0)          // only rated movies qualify
       .sort((a, b) => (b.user_rating ?? 0) - (a.user_rating ?? 0))
       .slice(0, 10)
-      .map(watchedToMovie),
+      .map(w => ({ ...watchedToMovie(w), rating: w.user_rating ?? 0 })),  // show personal rating in the card
     [userWatched]);
 
   // Build the personalized hero slots in priority order
@@ -506,6 +509,22 @@ export function DiscoverTab() {
     }
     return slots;
   }, [friendSlot, recommended, heroMovies, top10, userWatched]);
+
+  // Fetch backdrops for any slot whose movie doesn't already have one
+  const [backdropOverrides, setBackdropOverrides] = useState<Record<string, string>>({});
+  const fetchedBackdropsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    heroSlots.forEach(slot => {
+      const id = slot.movie.id;
+      if (slot.movie.backdrop || !id || fetchedBackdropsRef.current.has(id)) return;
+      fetchedBackdropsRef.current.add(id);
+      getMovieDetails(id).then(d => {
+        const bd = (d.backdrop as string) ||
+          (d.backdrop_path ? `https://image.tmdb.org/t/p/w1280${d.backdrop_path}` : '');
+        if (bd) setBackdropOverrides(prev => ({ ...prev, [id]: bd }));
+      }).catch(() => {});
+    });
+  }, [heroSlots]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const providerWatched = useMemo<Movie[]>(() => {
     if (activeProvider === 'all' || !user) return [];
@@ -538,6 +557,7 @@ export function DiscoverTab() {
       ) : (
         <PersonalizedHero
           slots={heroSlots}
+          backdropOverrides={backdropOverrides}
           onOpenModal={setSelectedMovieId}
           onToggleWatchlist={handleToggleWatchlist}
           watchlistIds={watchlistIds}
