@@ -871,6 +871,44 @@ function AccountDetailsSection({
   );
 }
 
+const personalityMap: Record<string, { title: string; description: string; emoji: string }> = {
+  action:    { title: 'The Action Seeker',    emoji: '⚡', description: 'You live for adrenaline and intensity. High stakes, fast pace, and explosive moments are your cinematic comfort zone.' },
+  drama:     { title: 'The Emotional Voyager', emoji: '🎭', description: 'Deep feelings and complex characters speak to your soul. You find meaning in the quiet moments that linger long after.' },
+  adventure: { title: 'The Fantasy Dreamer',  emoji: '🌍', description: 'You crave exploration and wonder. New worlds, hidden secrets, and epic journeys fuel your imagination.' },
+  thriller:  { title: 'The Mystery Maven',    emoji: '🔍', description: 'Puzzles and plot twists are your playground. You thrive on suspense and the thrill of piecing together clues.' },
+  comedy:    { title: 'The Comedy Chaos',     emoji: '😂', description: 'Laughter is your love language. You find joy in wit, absurdity, and the perfect comedic timing.' },
+};
+
+function MoviePersonalityCard({ topGenre }: { topGenre: string }) {
+  if (!topGenre) return null;
+  const personality = personalityMap[topGenre];
+  if (!personality) return null;
+
+  return (
+    <div className="bg-zinc-900/50 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-zinc-800/50">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-1 h-6 bg-red-600 rounded-full"></div>
+          <h2 className="text-white uppercase tracking-wider">Movie Personality</h2>
+        </div>
+        <Film size={20} className="text-zinc-600" />
+      </div>
+      <div className="flex items-center gap-6">
+        <div className="w-16 h-16 rounded-full bg-red-600/20 border border-red-600/40 flex items-center justify-center text-3xl flex-shrink-0">
+          {personality.emoji}
+        </div>
+        <div>
+          <div className="inline-block px-3 py-1 rounded-full text-xs font-medium bg-red-600/20 text-red-400 border border-red-600/30 mb-2 capitalize">
+            {topGenre}
+          </div>
+          <h3 className="text-white text-lg font-medium mb-1">{personality.title}</h3>
+          <p className="text-zinc-400 text-sm leading-relaxed">{personality.description}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── ProfileTab (Main Component) ─────────────────────────────
 
 export function ProfileTab() {
@@ -882,6 +920,7 @@ export function ProfileTab() {
     phone: '',
     avatarUrl: '',
     profileBannerBg: 'default',
+    topGenre: '',
   });
 
   const [draftProfile, setDraftProfile] = useState({
@@ -968,6 +1007,7 @@ export function ProfileTab() {
           phone:       profileRes.phone       || '',
           avatarUrl:   profileRes.avatarUrl   || '',
           profileBannerBg: profileRes.profileBannerBg || 'default',
+          topGenre:    profileRes.topGenre    || '',
         };
         setProfile(loadedProfile);
         setDraftProfile(loadedProfile);
@@ -1269,6 +1309,7 @@ export function ProfileTab() {
         />
 
         <div className="px-8 pb-16 space-y-6">
+          <MoviePersonalityCard topGenre={profile.topGenre} />
           <ProfileInfoSection
             profile={profile}
             draftProfile={draftProfile}
