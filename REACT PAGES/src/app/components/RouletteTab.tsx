@@ -5,7 +5,6 @@ import { RouletteWheelModal, getWheelColor } from "./RouletteWheelModal";
 import { Switch } from "./ui/switch";
 import { Slider } from "./ui/slider";
 import { Input } from "./ui/input";
-import reeletteLogo from "../../assets/Reelette_LOGO_upscaled.png";
 import { PROVIDER_LOGOS } from "../constants/providers";
 import {
   discoverMovies,
@@ -218,11 +217,8 @@ export function RouletteTab() {
       {/* ── Cinema Hero — full-bleed, flush with nav ── */}
       <div
         className="full-bleed relative overflow-hidden"
-        style={{ marginTop: -32, marginBottom: 0 }}
+        style={{ marginBottom: 0 }}
       >
-        {/* Film strips top + bottom */}
-        <FilmStrip position="top" />
-        <FilmStrip position="bottom" />
 
         {/* Dynamic glow that connects directly to the nav tab indicator */}
         <div
@@ -259,41 +255,16 @@ export function RouletteTab() {
         <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-black/70 to-transparent pointer-events-none" />
 
         {/* Content */}
-        <div className="relative z-10 flex flex-col items-center justify-center py-14 px-6 text-center" style={{ paddingTop: 56, paddingBottom: 48 }}>
-
-          {/* "NOW PLAYING" marquee badge */}
-          <div className="flex items-center gap-2 mb-5">
-            <div className="h-px w-12 bg-gradient-to-r from-transparent to-[#7C5DBD]/60" />
-            <span
-              className="text-[11px] font-bold tracking-[0.25em] text-[#7C5DBD] uppercase"
-              style={{ fontFamily: "'Courier New', monospace" }}
-            >
-              Now Playing
-            </span>
-            <span className="w-1.5 h-1.5 rounded-full bg-[#7C5DBD] animate-pulse" />
-            <div className="h-px w-12 bg-gradient-to-l from-transparent to-[#7C5DBD]/60" />
-          </div>
-
-          {/* Reelette logo */}
-          <img
-            src={reeletteLogo}
-            alt="Reelette"
-            className="h-20 w-auto mb-5"
-            style={{
-              filter: `drop-shadow(0 0 24px ${btnColor}99) drop-shadow(0 0 60px ${btnColor}44)`,
-              transition: "filter 0.7s ease",
-            }}
-          />
+        <div className="relative z-10 flex flex-col items-center justify-center px-6 text-center" style={{ paddingTop: 28, paddingBottom: 36 }}>
 
           {/* Main tagline */}
           <h1
             style={{
               fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-              fontWeight: 700,
+              fontWeight: 400,
               fontSize: "clamp(1.8rem, 3.5vw, 3rem)",
               lineHeight: 1.15,
               color: "#fff",
-              textShadow: "0 2px 24px rgba(0,0,0,0.8)",
               letterSpacing: "-0.01em",
             }}
           >

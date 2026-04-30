@@ -1859,10 +1859,12 @@ export function SocialTab() {
             </div>
 
             {/* Compose */}
-            <ComposeBox currentUser={currentUser ? { ...currentUser, avatarUrl: currentUserAvatarUrl } : null} onPostCreated={handlePostCreated} />
+            <div className="px-4">
+              <ComposeBox currentUser={currentUser ? { ...currentUser, avatarUrl: currentUserAvatarUrl } : null} onPostCreated={handlePostCreated} />
+            </div>
 
             {/* Posts */}
-            <div>
+            <div className="px-4">
               {loading
                 ? Array.from({ length: 5 }).map((_, i) => <ActivitySkeleton key={i} />)
                 : displayedPosts.length === 0
