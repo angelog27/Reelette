@@ -3,7 +3,7 @@ import { X, Bookmark, BookmarkCheck, Star, Play, ChevronDown, ChevronUp } from '
 import {
   getMovieDetails, getWatchedMovie, addWatchedMovie, updateWatchedMovie,
   getUser, getWatchLater, watchMovieLater, removeFromWatchLater,
-  getFeed, getFriends,
+  getFriends,
 } from '../services/api';
 import type { WatchedMovie } from '../services/api';
 
@@ -39,17 +39,17 @@ export function MovieDetailModal({ movieId, onClose, onWatchedChange }: Props) {
 
   useEffect(() => {
     if (!user) return;
-    Promise.all([getFeed(50), getFriends(user.user_id)]).then(([posts, friends]) => {
-      const friendIds = new Set(friends.map(f => f.friend_id));
-      const reviews: FriendReview[] = posts
-        .filter(p => p.movie_id === String(movieId) && friendIds.has(p.user_id) && p.rating > 0)
-        .map(p => ({
-          username: p.username,
-          avatarUrl: p.avatarUrl,
-          rating: p.rating,
-          message: p.message,
-        }));
-      setFriendReviews(reviews);
+    getFriends(user.user_id).then(async friends => {
+      const entries = await Promise.all(
+        friends.map(f =>
+          getWatchedMovie(f.friend_id, movieId).then(entry =>
+            entry && (entry.user_rating ?? 0) > 0
+              ? { username: f.friend_username, avatarUrl: f.avatarUrl, rating: entry.user_rating ?? 0, message: entry.comment ?? '' }
+              : null
+          ).catch(() => null)
+        )
+      );
+      setFriendReviews(entries.filter(e => e !== null) as FriendReview[]);
     }).catch(() => {});
   }, [movieId]);
 
@@ -256,6 +256,34 @@ export function MovieDetailModal({ movieId, onClose, onWatchedChange }: Props) {
         <X className="w-5 h-5" />
       </button>
 
+      {/* ── Friends Ratings — absolute top right ─────────────────── */}
+      {friendReviews.length > 0 && (
+        <div className="absolute top-16 right-8 z-20 w-68 max-h-[60vh] overflow-y-auto">
+          <p className="text-gray-400 text-xs font-semibold uppercase tracking-widest mb-3">
+            Friends Ratings
+          </p>
+          <div className="space-y-2.5">
+            {friendReviews.map((fr, i) => (
+              <div key={i} className="flex items-start gap-2">
+                <span className="text-gray-500 text-xs font-mono mt-1 w-4 flex-shrink-0">{i + 1}.</span>
+                <div className="bg-black/60 border border-white/10 rounded-xl px-3 py-2.5 flex-1 backdrop-blur-md">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-white text-sm font-semibold">@{fr.username}</span>
+                    <div className="flex items-center gap-1 bg-yellow-400/10 border border-yellow-400/20 rounded-full px-2 py-0.5">
+                      <Star className="w-2.5 h-2.5 fill-yellow-400 text-yellow-400" />
+                      <span className="text-yellow-400 text-xs font-bold">{fr.rating}/10</span>
+                    </div>
+                  </div>
+                  {fr.message && (
+                    <p className="text-gray-400 text-xs leading-relaxed italic">"{fr.message}"</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ── Layout: content centered vertically, strip pinned to bottom ── */}
       <div className="relative z-10 h-full flex flex-col">
 
@@ -263,8 +291,7 @@ export function MovieDetailModal({ movieId, onClose, onWatchedChange }: Props) {
         <div className="flex-1" />
 
         {/* ── Info block ───────────────────────────────────────── */}
-        <div className="px-10 md:px-16 pb-8 flex items-end gap-10">
-        <div className="max-w-2xl flex-shrink-0">
+        <div className="px-10 md:px-16 pb-8 max-w-2xl">
 
           {/* Genre badge */}
           <span className="inline-block bg-[#7C5DBD] text-white text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded mb-4">
@@ -468,36 +495,6 @@ export function MovieDetailModal({ movieId, onClose, onWatchedChange }: Props) {
               </div>
             </div>
           )}
-        </div>
-
-        {/* ── Friends Ratings panel ────────────────────────────── */}
-        {friendReviews.length > 0 && (
-          <div className="flex-shrink-0 w-72 mb-2 self-end">
-            <p className="text-gray-400 text-xs font-semibold uppercase tracking-widest mb-3">
-              Friends Ratings
-            </p>
-            <div className="space-y-3">
-              {friendReviews.map((fr, i) => (
-                <div key={i} className="flex items-start gap-2">
-                  <span className="text-gray-500 text-xs font-mono mt-0.5 w-4 flex-shrink-0">{i + 1}.</span>
-                  <div className="bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 flex-1 backdrop-blur-sm">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-white text-sm font-semibold">@{fr.username}</span>
-                      <div className="flex items-center gap-1 bg-yellow-400/10 border border-yellow-400/20 rounded-full px-2 py-0.5">
-                        <Star className="w-2.5 h-2.5 fill-yellow-400 text-yellow-400" />
-                        <span className="text-yellow-400 text-xs font-bold">{fr.rating}</span>
-                      </div>
-                    </div>
-                    {fr.message && (
-                      <p className="text-gray-400 text-xs leading-relaxed italic">"{fr.message}"</p>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         </div>
 
         {/* ── Similar movies strip — pinned to very bottom ─────── */}
