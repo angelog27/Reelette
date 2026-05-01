@@ -191,7 +191,7 @@ export function MyStuffTab() {
 
           <h1
             style={{
-              fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+              fontFamily: "SanFran, system-ui, sans-serif",
               fontWeight: 100,
               fontSize: 'clamp(1.6rem, 3vw, 2.4rem)',
               color: '#fff',
@@ -202,8 +202,6 @@ export function MyStuffTab() {
           </h1>
 
           <div className="flex items-center gap-3 mt-3">
-            <div className="h-px w-8 bg-gradient-to-r from-transparent to-[#7C5DBD]/40" />
-            <div className="h-px w-8 bg-gradient-to-l from-transparent to-[#7C5DBD]/40" />
           </div>
         </div>
       </div>
@@ -320,7 +318,7 @@ export function MyStuffTab() {
                   <div className="mt-2 px-0.5">
                     <p
                       className="text-white text-sm leading-snug line-clamp-1"
-                      style={{ fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", fontWeight: 600 }}
+                      style={{ fontFamily: "SanFran, system-ui, sans-serif", fontWeight: 600 }}
                     >
                       {m.title}
                     </p>
@@ -397,7 +395,7 @@ export function MyStuffTab() {
                   <div className="mt-2 px-0.5">
                     <p
                       className="text-white text-sm leading-snug line-clamp-1"
-                      style={{ fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", fontWeight: 600 }}
+                      style={{ fontFamily: "SanFran, system-ui, sans-serif", fontWeight: 600 }}
                     >
                       {m.title}
                     </p>

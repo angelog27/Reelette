@@ -285,7 +285,7 @@ function PersonalizedHero({ slots, backdropOverrides = {}, onOpenModal, onToggle
           )}
 
           <h1 className="text-white leading-none mb-3"
-            style={{ fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", fontWeight: 100, fontSize: 'clamp(2.2rem, 4.5vw, 4rem)' }}>
+            style={{ fontFamily: "SanFran, system-ui, sans-serif", fontWeight: 100, fontSize: 'clamp(2.2rem, 4.5vw, 4rem)' }}>
             {slot.movie.title}
           </h1>
 

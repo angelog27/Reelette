@@ -260,7 +260,7 @@ export function RouletteTab() {
           {/* Main tagline */}
           <h1
             style={{
-              fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+              fontFamily: "SanFran, system-ui, sans-serif",
               fontWeight: 100,
               fontSize: "clamp(1.8rem, 3.5vw, 3rem)",
               lineHeight: 1.15,
@@ -275,7 +275,7 @@ export function RouletteTab() {
           <p
             className="mt-3 text-gray-400 font-medium"
             style={{
-              fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+              fontFamily: "SanFran, system-ui, sans-serif",
               fontSize: "1.1rem",
               letterSpacing: "0.04em",
               fontWeight: 100,
@@ -284,12 +284,7 @@ export function RouletteTab() {
             Let fate decide.
           </p>
 
-          {/* Decorative rule */}
-          <div className="flex items-center gap-3 mt-5">
-            <div className="h-px w-16 bg-gradient-to-r from-transparent to-[#7C5DBD]/50" />
-            <span className="text-[#7C5DBD]/60 text-xs tracking-widest">✦</span>
-            <div className="h-px w-16 bg-gradient-to-l from-transparent to-[#7C5DBD]/50" />
-          </div>
+        
 
           {/* Pool size badge */}
           {poolSize !== null && (
@@ -305,7 +300,7 @@ export function RouletteTab() {
       </div>
 
       {/* ── Main three-column layout ── */}
-      <div className="grid grid-cols-1 md:grid-cols-[280px_1fr_280px] gap-6 items-start px-2 md:px-6 pt-8 pb-12">
+      <div className="grid grid-cols-1 md:grid-cols-[280px_1fr_280px] gap-6 items-start px-2 md:px-6 pt-0 pb-12">
 
         {/* ── Left: My Recent Spins ── */}
         <aside className="hidden md:flex flex-col gap-1">
@@ -490,7 +485,7 @@ export function RouletteTab() {
                 style={{
                   backgroundColor: btnColor,
                   boxShadow: `0 8px 40px ${btnColor}60`,
-                  fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+                  fontFamily: "SanFran, system-ui, sans-serif",
                   fontWeight: 700,
                   fontSize: "1.3rem",
                   letterSpacing: "0.01em",
@@ -543,7 +538,7 @@ export function RouletteTab() {
                 <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
                   <p
                     className="text-white font-bold leading-snug line-clamp-2"
-                    style={{ fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", fontSize: '1rem' }}
+                    style={{ fontFamily: "SanFran, system-ui, sans-serif", fontSize: '1rem' }}
                   >
                     {pendingMovie.title}
                   </p>
@@ -563,7 +558,7 @@ export function RouletteTab() {
 
               <p
                 className="text-[11px] text-gray-600 text-center italic px-5 pb-3"
-                style={{ fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}
+                style={{ fontFamily: "SanFran, system-ui, sans-serif" }}
               >
                 Fate has spoken. Your verdict?
               </p>
