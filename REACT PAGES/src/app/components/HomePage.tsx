@@ -100,6 +100,9 @@ export function HomePage() {
   const [filterMyServices, setFilterMyServices] = useState(false);
   const filterRef                             = useRef<HTMLDivElement>(null);
   const [searchVisible, setSearchVisible]     = useState(false);
+  const [navHidden, setNavHidden]             = useState(false);
+  const lastScrollY                           = useRef(0);
+  const scrollStopTimer                       = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const hasActiveFilter = filterGenre !== '' || filterRating > 0 || filterYearIdx > 0 || filterMyServices;
 
@@ -164,6 +167,21 @@ export function HomePage() {
       .then(d => { if (d?.avatarUrl) setNavAvatarUrl(d.avatarUrl); })
       .catch(() => {});
   }, [currentUserId]);
+
+  // Hide nav on scroll down, reveal on scroll up or stop
+  useEffect(() => {
+    const onScroll = () => {
+      const current = window.scrollY;
+      const delta = current - lastScrollY.current;
+      if (delta > 6 && current > 60) setNavHidden(true);
+      else if (delta < -6) setNavHidden(false);
+      lastScrollY.current = current;
+      if (scrollStopTimer.current) clearTimeout(scrollStopTimer.current);
+      scrollStopTimer.current = setTimeout(() => setNavHidden(false), 1000);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   // Close avatar dropdown on outside click
   useEffect(() => {
@@ -338,7 +356,7 @@ export function HomePage() {
     <div className="min-h-[100dvh] bg-[#0A0A0A] text-white flex flex-col">
 
       {/* ── Top nav bar ──────────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 flex items-center px-5 h-[62px] bg-[#0A0A0A]/95 backdrop-blur-sm">
+      <header className={`sticky top-0 z-50 flex items-center px-5 h-[62px] bg-[#0A0A0A]/95 backdrop-blur-sm transition-transform duration-300 ease-in-out ${navHidden ? '-translate-y-full' : 'translate-y-0'}`}>
 
         {/* ── Left: avatar + wordmark ── */}
         <div className="flex items-center gap-3 shrink-0">

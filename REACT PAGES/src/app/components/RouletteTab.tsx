@@ -214,48 +214,9 @@ export function RouletteTab() {
   return (
     <div className="flex flex-col">
 
-      {/* ── Cinema Hero — full-bleed, flush with nav ── */}
-      <div
-        className="full-bleed relative overflow-hidden"
-        style={{ marginBottom: 0 }}
-      >
-
-        {/* Dynamic glow that connects directly to the nav tab indicator */}
-        <div
-          className="absolute inset-0 pointer-events-none transition-all duration-700"
-          style={{
-            background: `radial-gradient(ellipse 60% 80% at 50% 0%, ${btnColor}30 0%, ${btnColor}08 45%, transparent 75%)`,
-          }}
-        />
-
-        {/* Spotlight beams — two faint cones from top center */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div
-            className="absolute"
-            style={{
-              top: 0, left: "50%", width: 500, height: "110%",
-              transform: "translateX(-80%) rotate(-18deg)",
-              transformOrigin: "top center",
-              background: "linear-gradient(to bottom, rgba(255,255,255,0.032) 0%, transparent 65%)",
-            }}
-          />
-          <div
-            className="absolute"
-            style={{
-              top: 0, left: "50%", width: 500, height: "110%",
-              transform: "translateX(-20%) rotate(18deg)",
-              transformOrigin: "top center",
-              background: "linear-gradient(to bottom, rgba(255,255,255,0.032) 0%, transparent 65%)",
-            }}
-          />
-        </div>
-
-        {/* Side curtain gradients */}
-        <div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-black/70 to-transparent pointer-events-none" />
-        <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-black/70 to-transparent pointer-events-none" />
-
-        {/* Content */}
-        <div className="relative z-10 flex flex-col items-center justify-center px-6 text-center" style={{ paddingBottom: 36 }}>
+      {/* ── Hero ── */}
+      <div className="full-bleed">
+        <div className="flex flex-col items-center justify-center px-6 text-center" style={{ paddingBottom: 36 }}>
 
           {/* Main tagline */}
           <h1
