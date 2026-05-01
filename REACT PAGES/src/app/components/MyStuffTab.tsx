@@ -183,11 +183,7 @@ export function MyStuffTab() {
         {/* Content */}
         <div className="relative z-10 flex flex-col items-center justify-center text-center px-6" style={{ paddingTop: 42, paddingBottom: 32 }}>
           {/* Badge */}
-          <div className="flex items-center gap-2 mb-3">
-            <div className="h-px w-10 bg-gradient-to-r from-transparent to-[#7C5DBD]/50" />
-          
-            <div className="h-px w-10 bg-gradient-to-l from-transparent to-[#7C5DBD]/50" />
-          </div>
+          <div className="flex items-center gap-2 mb-3"></div>
 
           <h1
             style={{

@@ -300,7 +300,7 @@ export function RouletteTab() {
       </div>
 
       {/* ── Main three-column layout ── */}
-      <div className="grid grid-cols-1 md:grid-cols-[280px_1fr_280px] gap-6 items-start px-2 md:px-6 pt-0 pb-12">
+      <div className="grid grid-cols-1 md:grid-cols-[280px_1fr_280px] gap-6 items-start px-2 md:px-6 pt-8 pb-12">
 
         {/* ── Left: My Recent Spins ── */}
         <aside className="hidden md:flex flex-col gap-1">

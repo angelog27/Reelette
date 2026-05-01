@@ -647,7 +647,7 @@ export function HomePage() {
       </header>
 
       {/* Page content */}
-      <main className="flex-1 px-6 py-8">
+      <main className="flex-1 px-6 py-0">
         <DiscoverProvider>
           <Suspense fallback={
             <div className="flex items-center justify-center py-24 text-gray-500">Loading…</div>
