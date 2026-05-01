@@ -4,6 +4,7 @@ import { BASE_URL, getFriends, getUserPublicProfile, saveSocialSettings } from '
 import type { Friend } from '../services/api';
 import { UserProfileModal } from './UserProfileModal';
 import { useTheme } from './ThemeContext';
+import { useNavigate } from 'react-router-dom'
 import {
   Camera,
   Edit2,
@@ -720,9 +721,40 @@ const personalityMap: Record<string, { title: string; description: string; emoji
 };
 
 function MoviePersonalityCard({ topGenre }: { topGenre: string }) {
-  if (!topGenre) return null;
-  const personality = personalityMap[topGenre];
-  if (!personality) return null;
+  const navigate = useNavigate()
+  const uid = localStorage.getItem('user_id')
+
+  function handleRetake() {
+    if (uid) {
+      localStorage.removeItem(`quiz_done_${uid}`)
+      localStorage.setItem(`quiz_retake_${uid}`, 'true')
+    }
+    navigate('/quiz')
+  }
+
+  if (!topGenre) return (
+    <div className="bg-zinc-900/50 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-zinc-800/50">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-1 h-6 bg-red-600 rounded-full"></div>
+          <h2 className="text-white uppercase tracking-wider">Movie Personality</h2>
+        </div>
+        <Film size={20} className="text-zinc-600" />
+      </div>
+      <div className="flex items-center justify-between">
+        <p className="text-zinc-400 text-sm">Haven't taken your quiz yet? Find out your movie personality now!</p>
+        <button
+          onClick={handleRetake}
+          className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm transition-all"
+        >
+          Take Quiz
+        </button>
+      </div>
+    </div>
+  )
+
+  const personality = personalityMap[topGenre]
+  if (!personality) return null
 
   return (
     <div className="bg-zinc-900/50 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-zinc-800/50">
@@ -733,20 +765,28 @@ function MoviePersonalityCard({ topGenre }: { topGenre: string }) {
         </div>
         <Film size={20} className="text-zinc-600" />
       </div>
-      <div className="flex items-center gap-6">
-        <div className="w-16 h-16 rounded-full bg-red-600/20 border border-red-600/40 flex items-center justify-center text-3xl flex-shrink-0">
-          {personality.emoji}
-        </div>
-        <div>
-          <div className="inline-block px-3 py-1 rounded-full text-xs font-medium bg-red-600/20 text-red-400 border border-red-600/30 mb-2 capitalize">
-            {topGenre}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-6">
+          <div className="w-16 h-16 rounded-full bg-red-600/20 border border-red-600/40 flex items-center justify-center text-3xl flex-shrink-0">
+            {personality.emoji}
           </div>
-          <h3 className="text-white text-lg font-medium mb-1">{personality.title}</h3>
-          <p className="text-zinc-400 text-sm leading-relaxed">{personality.description}</p>
+          <div>
+            <div className="inline-block px-3 py-1 rounded-full text-xs font-medium bg-red-600/20 text-red-400 border border-red-600/30 mb-2 capitalize">
+              {topGenre}
+            </div>
+            <h3 className="text-white text-lg font-medium mb-1">{personality.title}</h3>
+            <p className="text-zinc-400 text-sm leading-relaxed">{personality.description}</p>
+          </div>
         </div>
+        <button
+          onClick={handleRetake}
+          className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-sm transition-all border border-zinc-700 ml-4 flex-shrink-0"
+        >
+          Retake
+        </button>
       </div>
     </div>
-  );
+  )
 }
 
 // ─── ProfileTab (Main Component) ─────────────────────────────
