@@ -80,6 +80,7 @@ export function HomePage() {
     { id: 'roulette', label: 'Home',     path: '/home/roulette', icon: Home     },
     { id: 'discover', label: 'Discover', path: '/home/discover', icon: Film     },
     { id: 'social',   label: 'Social',   path: '/home/social',   icon: Users    },
+    { id: 'mystuff',  label: 'My Stuff', path: '/home/mystuff',  icon: Star     },
     { id: 'profile',  label: 'Settings', path: '/home/profile',  icon: Settings },
   ];
 

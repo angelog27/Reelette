@@ -9,7 +9,14 @@
       "Bash(pnpm exec *)",
       "Bash(node_modules/.bin/vite build *)",
       "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); deps={**d.get\\('dependencies',{}\\),**d.get\\('devDependencies',{}\\)}; [print\\(k,v\\) for k,v in sorted\\(deps.items\\(\\)\\)]\")",
-      "Bash(npx --yes tsc --noEmit)"
+      "Bash(npx --yes tsc --noEmit)",
+      "Bash(node scripts/runSeed.js)",
+      "Bash(node scripts/seedDC.js)",
+      "Bash(node -e ' *)",
+      "Bash(firebase deploy *)",
+      "Bash(npx firebase *)",
+      "PowerShell(firebase login --no-localhost 2>&1)",
+      "Bash(node -e \"console.log\\(require\\('path'\\).resolve\\(__dirname, '../../config.py'\\)\\)\")"
     ]
   }
 }
