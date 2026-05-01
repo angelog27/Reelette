@@ -2,7 +2,8 @@
 import { ChevronLeft, ChevronRight, Star, Bookmark, BookmarkCheck, Info, Layers, Sparkles } from 'lucide-react';
 import { MovieDetailModal } from './MovieDetailModal';
 import {
-  discoverMovies, watchMovieLater, removeFromWatchLater, getUser, getServices,
+  discoverMovies, fetchProviderCategory,
+  watchMovieLater, removeFromWatchLater, getUser, getServices,
   getFeed, getFriends, getMovieDetails, getUserPublicProfile,
 } from '../services/api';
 import type { Movie, WatchedMovie } from '../services/api';
@@ -49,6 +50,71 @@ const PROVIDER_KEY: Record<string, string> = {
 const ROW_LIMIT = 14;
 const CARD_W    = 156;
 const SKELETON_COUNT = 8;
+
+type ProviderFilter = Parameters<typeof discoverMovies>[0];
+
+interface ProviderSpecRow { title: string; filters: ProviderFilter; }
+interface ProviderSpecConfig { specificLabel: string; specificRows: ProviderSpecRow[]; }
+
+const PROVIDER_SPEC: Record<string, ProviderSpecConfig> = {
+  'Netflix': {
+    specificLabel: 'Netflix Originals',
+    specificRows: [
+      { title: 'Netflix Originals', filters: { services_filter: { netflix: true }, sort_by: 'rating', min_rating: 7 } },
+      { title: 'Netflix Thrillers', filters: { services_filter: { netflix: true }, genre_id: '53', sort_by: 'popularity' } },
+    ],
+  },
+  'Disney+': {
+    specificLabel: 'Disney+ Collections',
+    specificRows: [
+      { title: 'Marvel on Disney+',    filters: { services_filter: { disneyPlus: true }, genre_id: '28|878', sort_by: 'popularity' } },
+      { title: 'Star Wars on Disney+', filters: { services_filter: { disneyPlus: true }, genre_id: '878|12', sort_by: 'popularity' } },
+      { title: 'Pixar on Disney+',     filters: { services_filter: { disneyPlus: true }, genre_id: '16',     sort_by: 'popularity' } },
+    ],
+  },
+  'Hulu': {
+    specificLabel: 'Hulu Spotlight',
+    specificRows: [
+      { title: 'Drama on Hulu',   filters: { services_filter: { hulu: true }, genre_id: '18', sort_by: 'popularity' } },
+      { title: 'Comedy on Hulu',  filters: { services_filter: { hulu: true }, genre_id: '35', sort_by: 'popularity' } },
+    ],
+  },
+  'Max': {
+    specificLabel: 'DC Universe',
+    specificRows: [
+      { title: 'DC on Max',      filters: { services_filter: { hboMax: true }, genre_id: '28|878', sort_by: 'popularity' } },
+      { title: 'Max Originals',  filters: { services_filter: { hboMax: true }, sort_by: 'rating', min_rating: 7.5 } },
+    ],
+  },
+  'Prime Video': {
+    specificLabel: 'Amazon Picks',
+    specificRows: [
+      { title: 'Amazon Originals',           filters: { services_filter: { amazonPrime: true }, sort_by: 'newest' } },
+      { title: 'Acclaimed on Prime Video',   filters: { services_filter: { amazonPrime: true }, sort_by: 'rating', min_rating: 7.5 } },
+    ],
+  },
+  'Paramount+': {
+    specificLabel: 'Paramount+ Exclusives',
+    specificRows: [
+      { title: 'Paramount+ Exclusives', filters: { services_filter: { paramount: true }, sort_by: 'newest' } },
+      { title: 'Action on Paramount+',  filters: { services_filter: { paramount: true }, genre_id: '28', sort_by: 'popularity' } },
+    ],
+  },
+  'Apple TV+': {
+    specificLabel: 'Apple TV+ Acclaimed',
+    specificRows: [
+      { title: 'Apple TV+ Originals', filters: { services_filter: { appleTV: true }, sort_by: 'rating', min_rating: 8 } },
+      { title: 'Drama on Apple TV+',  filters: { services_filter: { appleTV: true }, genre_id: '18', sort_by: 'popularity' } },
+    ],
+  },
+  'Peacock': {
+    specificLabel: 'Peacock Originals',
+    specificRows: [
+      { title: 'Peacock Originals', filters: { services_filter: { peacock: true }, sort_by: 'popularity' } },
+      { title: 'Comedy on Peacock', filters: { services_filter: { peacock: true }, genre_id: '35', sort_by: 'popularity' } },
+    ],
+  },
+};
 
 // ── Helpers ───────────────────────────────────────────────────────
 
@@ -451,42 +517,69 @@ export function DiscoverTab() {
   );
 
   // ── Provider rows ──────────────────────────────────────────────
-  const [providerLoading,  setProviderLoading]  = useState(false);
-  const [providerPopular,  setProviderPopular]  = useState<Movie[]>([]);
-  const [providerTopRated, setProviderTopRated] = useState<Movie[]>([]);
-  const [providerNew,      setProviderNew]      = useState<Movie[]>([]);
+  const [providerSubTab,   setProviderSubTab]   = useState(0);
+  const [providerPopular,  setProviderPopular]  = useState<Movie[] | null>(null);
+  const [providerNew,      setProviderNew]      = useState<Movie[] | null>(null);
+  const [providerSpecific, setProviderSpecific] = useState<Movie[][] | null>(null);
 
   useEffect(() => {
     if (activeProvider === 'all') return;
-    // Serve from context cache if we've fetched this provider before
+    setProviderSubTab(0);
+
     const cached = providerCache[activeProvider];
     if (cached) {
       setProviderPopular(cached.popular);
-      setProviderTopRated(cached.topRated);
       setProviderNew(cached.newMovies);
+      setProviderSpecific(cached.specificRows);
       return;
     }
+
+    setProviderPopular(null);
+    setProviderNew(null);
+    setProviderSpecific(null);
+
     const key = PROVIDER_KEY[activeProvider];
     if (!key) return;
-    setProviderLoading(true);
     const sf = { [key]: true };
-    Promise.all([
-      discoverMovies({ services_filter: sf, sort_by: 'popularity' }).catch(() => [] as Movie[]),
-      discoverMovies({ services_filter: sf, sort_by: 'rating'     }).catch(() => [] as Movie[]),
-      discoverMovies({ services_filter: sf, sort_by: 'newest'     }).catch(() => [] as Movie[]),
-    ]).then(([pop, top, newM]) => {
-      const rows: ProviderRows = {
-        popular:   pop.slice(0, ROW_LIMIT),
-        topRated:  top.slice(0, ROW_LIMIT),
-        newMovies: newM.slice(0, ROW_LIMIT),
-      };
-      cacheProvider(activeProvider, rows);
-      setProviderPopular(rows.popular);
-      setProviderTopRated(rows.topRated);
-      setProviderNew(rows.newMovies);
-      setProviderLoading(false);
-    });
-  }, [activeProvider, providerCache, cacheProvider]);
+    const spec = PROVIDER_SPEC[activeProvider];
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const [pop, newM] = await Promise.all([
+          fetchProviderCategory(key, 'popular', { services_filter: sf, sort_by: 'popularity' }),
+          fetchProviderCategory(key, 'new',     { services_filter: sf, sort_by: 'newest'     }),
+        ]);
+        if (cancelled) return;
+        setProviderPopular(pop.slice(0, ROW_LIMIT));
+        setProviderNew(newM.slice(0, ROW_LIMIT));
+
+        const specificData: Movie[][] = [];
+        if (spec) {
+          for (const row of spec.specificRows) {
+            if (cancelled) return;
+            try {
+              const movies = await fetchProviderCategory(key, row.title, row.filters);
+              specificData.push(movies.slice(0, ROW_LIMIT));
+            } catch { specificData.push([]); }
+            await new Promise(r => setTimeout(r, 300));
+          }
+        }
+        if (cancelled) return;
+        setProviderSpecific(specificData);
+
+        const rows: ProviderRows = {
+          popular:      pop.slice(0, ROW_LIMIT),
+          newMovies:    newM.slice(0, ROW_LIMIT),
+          specificRows: specificData,
+        };
+        cacheProvider(activeProvider, rows);
+      } catch {
+        if (!cancelled) { setProviderPopular([]); setProviderNew([]); setProviderSpecific([]); }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [activeProvider, providerCache, cacheProvider]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Derived ────────────────────────────────────────────────────
   const top10 = useMemo<Movie[]>(() =>
@@ -612,20 +705,64 @@ export function DiscoverTab() {
 
       {/* ── Movie rows ── */}
       <div>
-        {isProviderView ? (
-          providerLoading ? (
-            <div className="text-gray-500 text-center py-16 text-sm">Loading {activeProvider}…</div>
-          ) : (
+        {isProviderView ? (() => {
+          const spec = PROVIDER_SPEC[activeProvider];
+          const subLabels = [
+            `Popular`,
+            `New`,
+            `Your Watches${providerWatched.length > 0 ? ` (${providerWatched.length})` : ''}`,
+            spec?.specificLabel ?? 'Collection',
+          ];
+          const color = PROVIDER_COLOR[activeProvider] ?? '#7C5DBD';
+          return (
             <>
-              <MovieRow title={`Popular on ${activeProvider}`}   movies={providerPopular}  onMovieClick={setSelectedMovieId} />
-              <MovieRow title={`Top Rated on ${activeProvider}`} movies={providerTopRated} onMovieClick={setSelectedMovieId} />
-              <MovieRow title={`New on ${activeProvider}`}       movies={providerNew}      onMovieClick={setSelectedMovieId} />
-              {providerWatched.length > 0 && (
-                <MovieRow title={`Your Watches on ${activeProvider}`} movies={providerWatched} onMovieClick={setSelectedMovieId} />
+              {/* Sub-tab pills */}
+              <div className="flex gap-2 mb-8 flex-wrap">
+                {subLabels.map((label, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setProviderSubTab(i)}
+                    className="px-4 py-2 rounded-full text-sm font-medium transition-all duration-200"
+                    style={{
+                      background: providerSubTab === i ? color : 'rgba(255,255,255,0.08)',
+                      color: providerSubTab === i ? '#fff' : '#9ca3af',
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Tab 0 — Popular */}
+              {providerSubTab === 0 && (
+                <MovieRow title={`Popular on ${activeProvider}`} movies={providerPopular} onMovieClick={setSelectedMovieId} />
+              )}
+
+              {/* Tab 1 — New */}
+              {providerSubTab === 1 && (
+                <MovieRow title={`New on ${activeProvider}`} movies={providerNew} onMovieClick={setSelectedMovieId} />
+              )}
+
+              {/* Tab 2 — Your Watches */}
+              {providerSubTab === 2 && (
+                providerWatched.length > 0
+                  ? <MovieRow title={`Your Watches on ${activeProvider}`} movies={providerWatched} onMovieClick={setSelectedMovieId} />
+                  : <div className="text-gray-500 text-center py-16 text-sm">You haven't logged any movies on {activeProvider} yet.</div>
+              )}
+
+              {/* Tab 3 — Service-specific */}
+              {providerSubTab === 3 && (
+                providerSpecific === null
+                  ? <SkeletonRow title={spec?.specificLabel ?? 'Loading…'} />
+                  : spec
+                    ? spec.specificRows.map((row, i) => (
+                        <MovieRow key={i} title={row.title} movies={providerSpecific[i] ?? null} onMovieClick={setSelectedMovieId} />
+                      ))
+                    : <MovieRow title={`${activeProvider} Collection`} movies={providerSpecific[0] ?? null} onMovieClick={setSelectedMovieId} />
               )}
             </>
-          )
-        ) : (
+          );
+        })() : (
           <>
             {user && top10.length > 0 && (
               <MovieRow title="Your Top 10"           movies={top10}          onMovieClick={setSelectedMovieId} />

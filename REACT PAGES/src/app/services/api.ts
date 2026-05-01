@@ -293,6 +293,30 @@ export function discoverMovies(filters: {
   });
 }
 
+export async function fetchProviderCategory(
+  providerKey: string,
+  category: string,
+  filters: Parameters<typeof discoverMovies>[0],
+): Promise<Movie[]> {
+  const storageKey = `reelette_prov_${providerKey}_${category}`;
+  const raw = localStorage.getItem(storageKey);
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw) as { data: Movie[]; expires: number };
+      if (parsed.expires > Date.now()) return parsed.data;
+    } catch {}
+    localStorage.removeItem(storageKey);
+  }
+  const movies = await discoverMovies(filters);
+  try {
+    localStorage.setItem(storageKey, JSON.stringify({
+      data: movies,
+      expires: Date.now() + 14 * 24 * 60 * 60 * 1000,
+    }));
+  } catch {}
+  return movies;
+}
+
 
 export function getMovieDetails(movie_id: string): Promise<Record<string, unknown>> {
   return fromCache(`movie:${movie_id}`, TTL.MOVIE, async () => {

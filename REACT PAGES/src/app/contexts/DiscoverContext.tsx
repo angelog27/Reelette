@@ -20,9 +20,9 @@ function spinToMovie(s: RouletteSpin): Movie {
 }
 
 export interface ProviderRows {
-  popular:  Movie[];
-  topRated: Movie[];
-  newMovies: Movie[];
+  popular:      Movie[];
+  newMovies:    Movie[];
+  specificRows: Movie[][];
 }
 
 interface DiscoverContextValue {
