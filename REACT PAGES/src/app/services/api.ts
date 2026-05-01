@@ -279,6 +279,12 @@ export function discoverMovies(filters: {
   sort_by?: string;
   services_filter?: Record<string, boolean>;
   page?: number;
+  with_keywords?: string;
+  with_networks?: string;
+  with_companies?: string;
+  with_watch_providers?: string;
+  watch_region?: string;
+  vote_count_gte?: number;
 }): Promise<Movie[]> {
   // Stable cache key regardless of property insertion order
   const key = `discover:${JSON.stringify(Object.fromEntries(Object.entries(filters).sort()))}`;

@@ -60,58 +60,59 @@ const PROVIDER_SPEC: Record<string, ProviderSpecConfig> = {
   'Netflix': {
     specificLabel: 'Netflix Originals',
     specificRows: [
-      { title: 'Netflix Originals', filters: { services_filter: { netflix: true }, sort_by: 'rating', min_rating: 7 } },
-      { title: 'Netflix Thrillers', filters: { services_filter: { netflix: true }, genre_id: '53', sort_by: 'popularity' } },
+      { title: 'Netflix Originals', filters: { with_watch_providers: '8', with_networks: '213', with_companies: '6194', watch_region: 'US', vote_count_gte: 50, sort_by: 'popularity' } },
+      { title: 'Netflix Thrillers', filters: { services_filter: { netflix: true }, genre_id: '53', watch_region: 'US', vote_count_gte: 50, sort_by: 'popularity' } },
     ],
   },
   'Disney+': {
     specificLabel: 'Disney+ Collections',
     specificRows: [
-      { title: 'Marvel on Disney+',    filters: { services_filter: { disneyPlus: true }, genre_id: '28|878', sort_by: 'popularity' } },
-      { title: 'Star Wars on Disney+', filters: { services_filter: { disneyPlus: true }, genre_id: '878|12', sort_by: 'popularity' } },
-      { title: 'Pixar on Disney+',     filters: { services_filter: { disneyPlus: true }, genre_id: '16',     sort_by: 'popularity' } },
+      { title: 'Marvel',          filters: { with_watch_providers: '337', with_keywords: '180547', watch_region: 'US', vote_count_gte: 50, sort_by: 'popularity' } },
+      { title: 'Star Wars',       filters: { with_watch_providers: '337', with_keywords: '667',    watch_region: 'US', vote_count_gte: 50, sort_by: 'popularity' } },
+      { title: 'Pixar',           filters: { with_watch_providers: '337', with_keywords: '9717',   watch_region: 'US', vote_count_gte: 50, sort_by: 'popularity' } },
+      { title: 'Disney Classics', filters: { with_watch_providers: '337', with_companies: '2',     watch_region: 'US', vote_count_gte: 50, sort_by: 'popularity' } },
     ],
   },
   'Hulu': {
     specificLabel: 'Hulu Spotlight',
     specificRows: [
-      { title: 'Drama on Hulu',   filters: { services_filter: { hulu: true }, genre_id: '18', sort_by: 'popularity' } },
-      { title: 'Comedy on Hulu',  filters: { services_filter: { hulu: true }, genre_id: '35', sort_by: 'popularity' } },
+      { title: 'Drama on Hulu',  filters: { services_filter: { hulu: true }, genre_id: '18', watch_region: 'US', vote_count_gte: 50, sort_by: 'popularity' } },
+      { title: 'Comedy on Hulu', filters: { services_filter: { hulu: true }, genre_id: '35', watch_region: 'US', vote_count_gte: 50, sort_by: 'popularity' } },
     ],
   },
   'Max': {
     specificLabel: 'DC Universe',
     specificRows: [
-      { title: 'DC on Max',      filters: { services_filter: { hboMax: true }, genre_id: '28|878', sort_by: 'popularity' } },
-      { title: 'Max Originals',  filters: { services_filter: { hboMax: true }, sort_by: 'rating', min_rating: 7.5 } },
+      { title: 'DC Universe', filters: { with_watch_providers: '384', with_keywords: '849', watch_region: 'US', vote_count_gte: 50, sort_by: 'popularity' } },
+      { title: 'Max Dramas',  filters: { services_filter: { hboMax: true }, genre_id: '18', watch_region: 'US', vote_count_gte: 50, sort_by: 'popularity' } },
     ],
   },
   'Prime Video': {
     specificLabel: 'Amazon Picks',
     specificRows: [
-      { title: 'Amazon Originals',           filters: { services_filter: { amazonPrime: true }, sort_by: 'newest' } },
-      { title: 'Acclaimed on Prime Video',   filters: { services_filter: { amazonPrime: true }, sort_by: 'rating', min_rating: 7.5 } },
+      { title: 'Amazon Originals',         filters: { services_filter: { amazonPrime: true }, watch_region: 'US', vote_count_gte: 50, sort_by: 'newest' } },
+      { title: 'Acclaimed on Prime Video', filters: { services_filter: { amazonPrime: true }, watch_region: 'US', vote_count_gte: 50, sort_by: 'rating', min_rating: 7.5 } },
     ],
   },
   'Paramount+': {
     specificLabel: 'Paramount+ Exclusives',
     specificRows: [
-      { title: 'Paramount+ Exclusives', filters: { services_filter: { paramount: true }, sort_by: 'newest' } },
-      { title: 'Action on Paramount+',  filters: { services_filter: { paramount: true }, genre_id: '28', sort_by: 'popularity' } },
+      { title: 'Paramount+ New',    filters: { services_filter: { paramount: true }, watch_region: 'US', vote_count_gte: 50, sort_by: 'newest' } },
+      { title: 'Action on P+',     filters: { services_filter: { paramount: true }, genre_id: '28', watch_region: 'US', vote_count_gte: 50, sort_by: 'popularity' } },
     ],
   },
   'Apple TV+': {
     specificLabel: 'Apple TV+ Acclaimed',
     specificRows: [
-      { title: 'Apple TV+ Originals', filters: { services_filter: { appleTV: true }, sort_by: 'rating', min_rating: 8 } },
-      { title: 'Drama on Apple TV+',  filters: { services_filter: { appleTV: true }, genre_id: '18', sort_by: 'popularity' } },
+      { title: 'Apple TV+ Originals', filters: { services_filter: { appleTV: true }, watch_region: 'US', vote_count_gte: 50, sort_by: 'rating', min_rating: 8 } },
+      { title: 'Drama on Apple TV+',  filters: { services_filter: { appleTV: true }, genre_id: '18', watch_region: 'US', vote_count_gte: 50, sort_by: 'popularity' } },
     ],
   },
   'Peacock': {
     specificLabel: 'Peacock Originals',
     specificRows: [
-      { title: 'Peacock Originals', filters: { services_filter: { peacock: true }, sort_by: 'popularity' } },
-      { title: 'Comedy on Peacock', filters: { services_filter: { peacock: true }, genre_id: '35', sort_by: 'popularity' } },
+      { title: 'Peacock Featured', filters: { services_filter: { peacock: true }, watch_region: 'US', vote_count_gte: 50, sort_by: 'popularity' } },
+      { title: 'Comedy on Peacock', filters: { services_filter: { peacock: true }, genre_id: '35', watch_region: 'US', vote_count_gte: 50, sort_by: 'popularity' } },
     ],
   },
 };
@@ -547,8 +548,8 @@ export function DiscoverTab() {
     (async () => {
       try {
         const [pop, newM] = await Promise.all([
-          fetchProviderCategory(key, 'popular', { services_filter: sf, sort_by: 'popularity' }),
-          fetchProviderCategory(key, 'new',     { services_filter: sf, sort_by: 'newest'     }),
+          fetchProviderCategory(key, 'popular', { services_filter: sf, watch_region: 'US', vote_count_gte: 50, sort_by: 'popularity' }),
+          fetchProviderCategory(key, 'new',     { services_filter: sf, watch_region: 'US', vote_count_gte: 50, sort_by: 'newest'     }),
         ]);
         if (cancelled) return;
         setProviderPopular(pop.slice(0, ROW_LIMIT));
