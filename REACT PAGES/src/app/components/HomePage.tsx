@@ -2,10 +2,9 @@ import { Suspense, useState, useEffect, useRef, useCallback } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
   Bell, Heart, MessageCircle, Film, Users, UserPlus, SlidersHorizontal,
-  X, Star, ChevronDown, Bookmark, User, Tv, LogOut,
+  X, Star, ChevronDown, User, LogOut, Home, Search, Settings,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import reeletteLogo from '../../assets/Reelette_LOGO_upscaled.png';
 import {
   BASE_URL, getNotifications, markNotificationRead, markAllNotificationsRead,
   getUser, clearUser, clearServices, timeAgo,
@@ -78,10 +77,10 @@ export function HomePage() {
   const navigate = useNavigate();
 
   const tabs: TabLink[] = [
-    { id: 'roulette', label: 'Reelette', path: '/home/roulette', imageLogo: reeletteLogo },
-    { id: 'discover', label: 'Discover', path: '/home/discover', icon: Tv },
-    { id: 'mystuff',  label: 'My Stuff', path: '/home/mystuff',  icon: Bookmark },
-    { id: 'social',   label: 'Social',   path: '/home/social',   icon: Users },
+    { id: 'roulette', label: 'Home',     path: '/home/roulette', icon: Home     },
+    { id: 'discover', label: 'Discover', path: '/home/discover', icon: Film     },
+    { id: 'social',   label: 'Social',   path: '/home/social',   icon: Users    },
+    { id: 'profile',  label: 'Settings', path: '/home/profile',  icon: Settings },
   ];
 
   // ── Search state ────────────────────────────────────────────────
@@ -100,6 +99,7 @@ export function HomePage() {
   const [filterYearIdx, setFilterYearIdx]     = useState(0);
   const [filterMyServices, setFilterMyServices] = useState(false);
   const filterRef                             = useRef<HTMLDivElement>(null);
+  const [searchVisible, setSearchVisible]     = useState(false);
 
   const hasActiveFilter = filterGenre !== '' || filterRating > 0 || filterYearIdx > 0 || filterMyServices;
 
@@ -338,110 +338,96 @@ export function HomePage() {
     <div className="min-h-[100dvh] bg-[#0A0A0A] text-white flex flex-col">
 
       {/* ── Top nav bar ──────────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 flex items-center gap-2 px-5 h-[52px] bg-[#0A0A0A]/95 backdrop-blur-sm border-b border-[#1C1C1C]">
+      <header className="sticky top-0 z-50 flex items-center px-5 h-[62px] bg-[#0A0A0A]/95 backdrop-blur-sm">
 
-        {/* Avatar circle — profile dropdown */}
-        <div className="relative shrink-0 mr-3" ref={avatarMenuRef}>
-          <button
-            onClick={() => setAvatarMenuOpen(o => !o)}
-            className="w-8 h-8 rounded-full overflow-hidden border border-white/10 hover:border-white/30 transition-all duration-150 active:scale-95"
-            title="Profile"
-          >
-            {navAvatarUrl ? (
-              <img src={navAvatarUrl} alt="Profile" className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full bg-[#2A2A2A] flex items-center justify-center text-[10px] font-semibold text-white/60">
-                {currentUser?.username?.slice(0, 2).toUpperCase() ?? '?'}
+        {/* ── Left: avatar + wordmark ── */}
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="relative shrink-0" ref={avatarMenuRef}>
+            <button
+              onClick={() => setAvatarMenuOpen(o => !o)}
+              className="w-9 h-9 rounded-full overflow-hidden border border-white/10 hover:border-white/30 transition-all duration-150 active:scale-95"
+              title="Profile"
+            >
+              {navAvatarUrl ? (
+                <img src={navAvatarUrl} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-[#2A2A2A] flex items-center justify-center text-[11px] font-semibold text-white/60">
+                  {currentUser?.username?.slice(0, 2).toUpperCase() ?? '?'}
+                </div>
+              )}
+            </button>
+
+            {avatarMenuOpen && (
+              <div className="absolute left-0 top-11 w-52 bg-[#141414] border border-[#2A2A2A] rounded-2xl shadow-2xl z-[110] overflow-hidden panel-enter">
+                <div className="px-4 py-3 border-b border-[#2A2A2A]">
+                  <p className="text-white text-sm font-semibold truncate">
+                    {(currentUser as { displayName?: string; username?: string })?.displayName || currentUser?.username || 'User'}
+                  </p>
+                  {currentUser?.username && (
+                    <p className="text-zinc-500 text-xs">@{currentUser.username}</p>
+                  )}
+                </div>
+                <NavLink to="/home/profile" onClick={() => setAvatarMenuOpen(false)}>
+                  <div className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-white/[0.04] transition-colors cursor-pointer">
+                    <User className="w-4 h-4 text-zinc-400" />
+                    <span className="text-sm text-zinc-300">Profile & settings</span>
+                  </div>
+                </NavLink>
+                <div className="border-t border-[#2A2A2A]" />
+                <button
+                  onClick={handleNavLogout}
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 hover:bg-white/[0.04] transition-colors text-left"
+                >
+                  <LogOut className="w-4 h-4 text-zinc-400" />
+                  <span className="text-sm text-zinc-300">Log out</span>
+                </button>
               </div>
             )}
-          </button>
+          </div>
 
-          {avatarMenuOpen && (
-            <div className="absolute left-0 top-10 w-52 bg-[#141414] border border-[#2A2A2A] rounded-2xl shadow-2xl z-[110] overflow-hidden panel-enter">
-              <div className="px-4 py-3 border-b border-[#2A2A2A]">
-                <p className="text-white text-sm font-semibold truncate">
-                  {(currentUser as { displayName?: string; username?: string })?.displayName || currentUser?.username || 'User'}
-                </p>
-                {currentUser?.username && (
-                  <p className="text-zinc-500 text-xs">@{currentUser.username}</p>
-                )}
-              </div>
-              <NavLink to="/home/profile" onClick={() => setAvatarMenuOpen(false)}>
-                <div className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-white/[0.04] transition-colors cursor-pointer">
-                  <User className="w-4 h-4 text-zinc-400" />
-                  <span className="text-sm text-zinc-300">Profile & settings</span>
-                </div>
-              </NavLink>
-              <div className="border-t border-[#2A2A2A]" />
-              <button
-                onClick={handleNavLogout}
-                className="w-full flex items-center gap-2.5 px-4 py-2.5 hover:bg-white/[0.04] transition-colors text-left"
-              >
-                <LogOut className="w-4 h-4 text-zinc-400" />
-                <span className="text-sm text-zinc-300">Log out</span>
-              </button>
-            </div>
-          )}
+          <span style={{ fontFamily: 'SanFran, system-ui, sans-serif', fontWeight: 100, fontSize: 17, letterSpacing: '0.04em' }}
+            className="text-white select-none">
+            Reelette
+          </span>
         </div>
 
-        {/* Nav tabs */}
-        <nav className="flex items-center gap-0.5">
+        {/* ── Center: tabs (absolutely centered) ── */}
+        <nav className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1">
           {tabs.map(tab => (
             <NavLink key={tab.id} to={tab.path}>
               {({ isActive }) => (
-                <div
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer select-none transition-all duration-150 whitespace-nowrap ${
-                    isActive
-                      ? 'text-white bg-white/[0.08]'
-                      : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.04]'
-                  }`}
-                  style={{ fontSize: 13, fontWeight: 100, fontFamily: "SanFran, system-ui, sans-serif" }}
-                >
-                  {tab.imageLogo ? (
-                    <img
-                      src={tab.imageLogo}
-                      alt={tab.label}
-                      className="h-[15px] w-[15px] rounded shrink-0"
-                      style={{ filter: isActive ? 'none' : 'brightness(0.35) saturate(0.2)', transition: 'filter 150ms ease-out' }}
-                    />
-                  ) : tab.icon ? (
-                    <tab.icon className="w-[15px] h-[15px] shrink-0" />
-                  ) : null}
-                  <span>{tab.label}</span>
+                <div className="relative flex flex-col items-center gap-1 px-4 py-2 cursor-pointer select-none transition-all duration-150 whitespace-nowrap group"
+                  style={{ fontFamily: 'SanFran, system-ui, sans-serif', fontWeight: 100 }}>
+                  <div className={`flex items-center gap-2 transition-colors duration-150 ${isActive ? 'text-white' : 'text-zinc-500 group-hover:text-zinc-200'}`}>
+                    {tab.icon && <tab.icon className="w-[22px] h-[22px] shrink-0" />}
+                    <span style={{ fontSize: 15 }}>{tab.label}</span>
+                  </div>
+                  {isActive && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#7C5DBD]" />}
                 </div>
               )}
             </NavLink>
           ))}
         </nav>
-        
 
         <div className="flex-1" />
 
-          {/* Search + filter */}
-          <div className="relative flex items-center gap-1" ref={searchRef}>
-            <div className="relative" style={{ width: 240 }}>
+        {/* ── Right: search + filter ── */}
+        <div className="flex items-center gap-2" ref={searchRef}>
+
+          {/* Expanding search */}
+          <div className="flex items-center gap-2">
+            {searchVisible && (
               <label style={{
-                position: 'relative',
-                display: 'block',
-                borderRadius: '10px',
-                border: '2px solid #5e5757',
-                padding: '7px 44px 7px 12px',
-                boxShadow: '10px 10px 40px #7C5DBD, -10px -10px 40px rgba(255,255,255,0.25)',
+                position: 'relative', display: 'block', borderRadius: '10px',
+                border: '2px solid #5e5757', padding: '6px 44px 6px 12px',
+                boxShadow: '8px 8px 30px #7C5DBD, -8px -8px 30px rgba(255,255,255,0.2)',
                 cursor: 'text',
               }}>
                 <span style={{
-                  position: 'absolute',
-                  top: '50%',
-                  right: '8px',
-                  transform: 'translateY(-50%)',
-                  color: '#c5c5c5',
-                  backgroundColor: '#5e5757',
-                  padding: '3px 5px',
-                  borderRadius: '6px',
-                  fontSize: '11px',
-                  lineHeight: 1,
-                  userSelect: 'none',
-                  pointerEvents: 'none',
+                  position: 'absolute', top: '50%', right: '8px', transform: 'translateY(-50%)',
+                  color: '#c5c5c5', backgroundColor: '#5e5757', padding: '3px 5px',
+                  borderRadius: '6px', fontSize: '11px', lineHeight: 1,
+                  userSelect: 'none', pointerEvents: 'none',
                 }}>⌘K</span>
                 <input
                   ref={searchInputRef}
@@ -450,37 +436,39 @@ export function HomePage() {
                   onChange={e => handleSearchChange(e.target.value)}
                   onFocus={() => { if (navSearch.trim() || hasActiveFilter) setSearchOpen(true); }}
                   placeholder="Search movies, shows..."
-                  style={{
-                    backgroundColor: 'transparent',
-                    border: 'none',
-                    outline: 'none',
-                    fontSize: '13px',
-                    color: 'rgb(190, 195, 200)',
-                    width: '100%',
-                  }}
+                  autoFocus
+                  style={{ backgroundColor: 'transparent', border: 'none', outline: 'none', fontSize: '13px', color: 'rgb(190,195,200)', width: 200 }}
                 />
+                {navSearch && (
+                  <button onClick={clearSearch} className="absolute right-10 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </label>
-              {navSearch && (
-                <button onClick={clearSearch}
-                  className="absolute right-10 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors">
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
+            )}
+            <button
+              onClick={() => { setSearchVisible(v => !v); if (!searchVisible) setTimeout(() => searchInputRef.current?.focus(), 50); }}
+              className="flex items-center justify-center w-[38px] h-[38px] rounded-full border transition-all active:scale-95"
+              style={searchVisible ? { background: 'rgba(124,93,189,0.2)', borderColor: '#7C5DBD' } : { background: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.1)' }}
+              title="Search (⌘K)"
+            >
+              <Search className="w-4 h-4 text-white" />
+            </button>
+          </div>
 
-            {/* Filter button */}
-            <div className="relative" ref={filterRef}>
-              <button
-                onClick={() => setFilterOpen(o => !o)}
-                title="Filter results"
-                className="flex items-center justify-center w-[35px] h-[35px] rounded-full border transition active:scale-[0.97]"
-                style={hasActiveFilter
-                  ? { background: 'var(--reel-accent-hex)', borderColor: 'var(--reel-accent-hex)' }
-                  : { background: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.12)' }
-                }
-              >
-                <SlidersHorizontal className="w-4 h-4 text-white" />
-              </button>
+          {/* Filter button */}
+          <div className="relative" ref={filterRef}>
+            <button
+              onClick={() => setFilterOpen(o => !o)}
+              title="Filter results"
+              className="flex items-center justify-center w-[38px] h-[38px] rounded-full border transition-all active:scale-95"
+              style={hasActiveFilter
+                ? { background: 'var(--reel-accent-hex)', borderColor: 'var(--reel-accent-hex)' }
+                : { background: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.1)' }
+              }
+            >
+              <SlidersHorizontal className="w-4 h-4 text-white" />
+            </button>
 
               {filterOpen && (
                 <div className="absolute right-0 top-[42px] w-72 bg-[#141414] border border-[#2A2A2A] rounded-2xl shadow-2xl z-[110] p-4 flex flex-col gap-4 panel-enter">
