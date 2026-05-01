@@ -204,10 +204,9 @@ export function MyStuffTab() {
           <h1
             style={{
               fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-              fontWeight: 700,
+              fontWeight: 100,
               fontSize: 'clamp(1.6rem, 3vw, 2.4rem)',
               color: '#fff',
-              textShadow: '0 2px 20px rgba(0,0,0,0.7)',
               lineHeight: 1.15,
             }}
           >

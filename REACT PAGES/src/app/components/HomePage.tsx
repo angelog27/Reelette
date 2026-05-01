@@ -382,7 +382,7 @@ export function HomePage() {
                       ? 'text-white bg-white/[0.08]'
                       : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.04]'
                   }`}
-                  style={{ fontSize: 13, fontWeight: isActive ? 600 : 400 }}
+                  style={{ fontSize: 13, fontWeight: 100, fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}
                 >
                   {tab.imageLogo ? (
                     <img

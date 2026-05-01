@@ -12,7 +12,7 @@ import {
   getUserGroups, createGroup, getGroup, addGroupMember, removeGroupMember,
   addToGroupWatchlist, removeFromGroupWatchlist, deleteGroup,
   getGroupMemberProfiles, getGroupMemberServices,
-  updateLastSeen, searchMovies, discoverMovies,
+  updateLastSeen, searchMovies, discoverMovies, getMovieDetails,
   getReplies, addReply,
   getGroupChat, sendGroupMessage,
   getTrendingMovies, getWatchedMovies,
@@ -686,6 +686,17 @@ function ActivityCard({ post, currentUserId, currentUsername, onLike, onDelete, 
   const [submittingReply, setSubmittingReply] = useState(false);
   const [localReplyCount, setLocalReplyCount] = useState(post.reply_count ?? 0);
   const [likeAnim, setLikeAnim] = useState(false);
+  const [movieMeta, setMovieMeta] = useState<{ year: string; genres: string[]; runtime: number } | null>(null);
+
+  useEffect(() => {
+    if (!post.movie_id) return;
+    getMovieDetails(post.movie_id).then(d => {
+      const year = d.release_date ? String(d.release_date).slice(0, 4) : '';
+      const genres = Array.isArray(d.genres) ? (d.genres as { name: string }[]).slice(0, 2).map(g => g.name) : [];
+      const runtime = typeof d.runtime === 'number' ? d.runtime : 0;
+      setMovieMeta({ year, genres, runtime });
+    }).catch(() => {});
+  }, [post.movie_id]);
 
   const loadReplies = useCallback(async () => {
     setLoadingReplies(true);
@@ -769,16 +780,27 @@ function ActivityCard({ post, currentUserId, currentUsername, onLike, onDelete, 
 
           {/* Movie card */}
           {post.movie_title && (
-            <div className="flex items-center gap-3 bg-[#141416] border border-[#2a2a2e] rounded-xl p-2.5 mb-2">
+            <div className="flex gap-3 bg-[#141416] border border-[#2a2a2e] rounded-xl p-2.5 mb-2">
               {post.movie_poster
-                ? <img src={post.movie_poster} alt={post.movie_title} className="w-9 h-[54px] object-cover rounded-lg shrink-0" />
-                : <div className="w-9 h-[54px] bg-[#2a2a2e] rounded-lg shrink-0 flex items-center justify-center"><Film className="w-4 h-4 text-zinc-600" /></div>}
-              <div className="flex-1 min-w-0">
-                <p className="text-white text-sm font-semibold truncate">{post.movie_title}</p>
-                {post.rating > 0 && (
-                  <div className="flex items-center gap-1 mt-0.5">
-                    <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                    <span className="text-yellow-400 text-xs font-bold">{post.rating}/10</span>
+                ? <img src={post.movie_poster} alt={post.movie_title} className="w-10 h-[60px] object-cover rounded-lg shrink-0" />
+                : <div className="w-10 h-[60px] bg-[#2a2a2e] rounded-lg shrink-0 flex items-center justify-center"><Film className="w-4 h-4 text-zinc-600" /></div>}
+              <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
+                <p className="text-white text-sm font-medium leading-snug line-clamp-2">{post.movie_title}</p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {movieMeta?.year && <span className="text-zinc-500 text-xs">{movieMeta.year}</span>}
+                  {movieMeta?.runtime > 0 && <span className="text-zinc-600 text-xs">{movieMeta.runtime}m</span>}
+                  {post.rating > 0 && (
+                    <div className="flex items-center gap-0.5">
+                      <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                      <span className="text-yellow-400 text-xs font-semibold">{post.rating}/10</span>
+                    </div>
+                  )}
+                </div>
+                {movieMeta?.genres && movieMeta.genres.length > 0 && (
+                  <div className="flex gap-1 flex-wrap">
+                    {movieMeta.genres.map(g => (
+                      <span key={g} className="text-[10px] px-2 py-0.5 rounded-full bg-[#7C5DBD]/10 text-[#9B7BD7] border border-[#7C5DBD]/20">{g}</span>
+                    ))}
                   </div>
                 )}
               </div>
@@ -1738,9 +1760,7 @@ export function SocialTab() {
       setPosts(prev => prev.map(p => {
         if (p.post_id !== post_id) return p;
         const liked = p.liked_by.includes(currentUserId);
-        const updated = { ...p, likes: liked ? p.likes - 1 : p.likes + 1, liked_by: liked ? p.liked_by.filter(id => id !== currentUserId) : [...p.liked_by, currentUserId] };
-        _feedCache.set(post_id, updated);
-        return updated;
+        return { ...p, likes: liked ? p.likes - 1 : p.likes + 1, liked_by: liked ? p.liked_by.filter(id => id !== currentUserId) : [...p.liked_by, currentUserId] };
       }));
     }
   };
@@ -1861,12 +1881,12 @@ export function SocialTab() {
             </div>
 
             {/* Compose */}
-            <div className="px-4">
+            <div className="px-6">
               <ComposeBox currentUser={currentUser ? { ...currentUser, avatarUrl: currentUserAvatarUrl } : null} onPostCreated={handlePostCreated} />
             </div>
 
             {/* Posts */}
-            <div className="px-4">
+            <div className="px-6">
               {loading
                 ? Array.from({ length: 5 }).map((_, i) => <ActivitySkeleton key={i} />)
                 : displayedPosts.length === 0

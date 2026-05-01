@@ -255,13 +255,13 @@ export function RouletteTab() {
         <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-black/70 to-transparent pointer-events-none" />
 
         {/* Content */}
-        <div className="relative z-10 flex flex-col items-center justify-center px-6 text-center" style={{ paddingTop: 0, paddingBottom: 36 }}>
+        <div className="relative z-10 flex flex-col items-center justify-center px-6 text-center" style={{ paddingTop: 28, paddingBottom: 36 }}>
 
           {/* Main tagline */}
           <h1
             style={{
               fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-              fontWeight: 100,
+              fontWeight: 400,
               fontSize: "clamp(1.8rem, 3.5vw, 3rem)",
               lineHeight: 1.15,
               color: "#fff",
