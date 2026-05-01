@@ -13,9 +13,16 @@ export default function QuizGate({}: QuizGateProps) {
 useEffect(() => {
     if (!uid) { navigate('/'); return }
     
-    // If they've already dismissed the quiz this session, skip it
     const quizDone = localStorage.getItem(`quiz_done_${uid}`)
     if (quizDone) { setNeedsQuiz(false); return }
+
+    // If they got here via retake button, always show quiz
+    const retaking = localStorage.getItem(`quiz_retake_${uid}`)
+    if (retaking) {
+      localStorage.removeItem(`quiz_retake_${uid}`)
+      setNeedsQuiz(true)
+      return
+    }
 
     fetch(`/api/user/${uid}/profile`)
       .then(r => r.json())
