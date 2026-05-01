@@ -43,3 +43,14 @@ export async function discoverPage(
   });
   return res.data.results ?? [];
 }
+
+export async function fetchCollection(
+  apiKey: string,
+  collectionId: number,
+): Promise<TmdbMovie[]> {
+  const res = await axios.get<{ parts: TmdbMovie[] }>(`${TMDB_BASE}/collection/${collectionId}`, {
+    params: { api_key: apiKey, language: 'en-US' },
+    timeout: 15_000,
+  });
+  return (res.data.parts ?? []).filter(m => m.release_date);
+}

@@ -1,7 +1,7 @@
 import * as admin from 'firebase-admin';
 import * as logger from 'firebase-functions/logger';
 import { SERVICES, ServiceDef, CategoryDef } from './config';
-import { discoverPage, tmdbMovieToDoc, TmdbMovie } from './tmdbClient';
+import { discoverPage, fetchCollection, tmdbMovieToDoc, TmdbMovie } from './tmdbClient';
 
 const PAGES_PER_CATEGORY  = 5;
 const PAGE_SIZE            = 20;
@@ -75,29 +75,46 @@ async function seedCategory(
     Object.assign(params, category.extraParams);
   }
 
-  if (category.exportLookup) {
-    const lookupKey = `${category.exportLookup.kind}:${category.exportLookup.name}`;
+  // ── Fetch from TMDB ───────────────────────────────────────────────
+  const allMovies: TmdbMovie[] = [];
+
+  if (category.exportLookup?.kind === 'collection') {
+    // Collections are fetched via /collection/{id} — discover doesn't support collection filtering
+    const lookupKey = `collection:${category.exportLookup.name}`;
     const id = exportIds.get(lookupKey);
     if (id == null) {
       logger.error(`${service.id}/${category.id}: no export ID for "${category.exportLookup.name}" — skipping`);
       return;
     }
-    const paramKey = category.exportLookup.kind === 'collection' ? 'with_collection' : 'with_companies';
-    params[paramKey] = id;
-  }
-
-  // ── Fetch from TMDB ───────────────────────────────────────────────
-  const allMovies: TmdbMovie[] = [];
-  for (let page = 1; page <= PAGES_PER_CATEGORY; page++) {
     try {
-      const results = await discoverPage(apiKey, { ...params, page });
-      allMovies.push(...results);
-      logger.info(`  ${service.id}/${category.id} p${page}: ${results.length} results`);
-      if (results.length < PAGE_SIZE) break;
-      if (page < PAGES_PER_CATEGORY) await delay(DELAY_MS);
+      const parts = await fetchCollection(apiKey, id);
+      allMovies.push(...parts);
+      logger.info(`  ${service.id}/${category.id}: ${parts.length} collection parts`);
     } catch (err) {
-      logger.error(`  ${service.id}/${category.id} p${page} error:`, err);
-      break;
+      logger.error(`  ${service.id}/${category.id} collection fetch error:`, err);
+    }
+  } else {
+    if (category.exportLookup?.kind === 'company') {
+      const lookupKey = `company:${category.exportLookup.name}`;
+      const id = exportIds.get(lookupKey);
+      if (id == null) {
+        logger.error(`${service.id}/${category.id}: no export ID for "${category.exportLookup.name}" — skipping`);
+        return;
+      }
+      params['with_companies'] = id;
+    }
+
+    for (let page = 1; page <= PAGES_PER_CATEGORY; page++) {
+      try {
+        const results = await discoverPage(apiKey, { ...params, page });
+        allMovies.push(...results);
+        logger.info(`  ${service.id}/${category.id} p${page}: ${results.length} results`);
+        if (results.length < PAGE_SIZE) break;
+        if (page < PAGES_PER_CATEGORY) await delay(DELAY_MS);
+      } catch (err) {
+        logger.error(`  ${service.id}/${category.id} p${page} error:`, err);
+        break;
+      }
     }
   }
 

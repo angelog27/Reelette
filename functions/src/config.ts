@@ -26,9 +26,9 @@ export const SERVICES: ServiceDef[] = [
     categories: [
       { id: 'popular',   name: 'Popular on Disney+' },
       { id: 'new',       name: 'New on Disney+',       isNew: true },
-      { id: 'marvel',    name: 'Marvel',                exportLookup: { kind: 'collection', name: 'Marvel Cinematic Universe' } },
+      { id: 'marvel',    name: 'Marvel',                extraParams: { with_companies: '420' } },
       { id: 'star_wars', name: 'Star Wars',             exportLookup: { kind: 'collection', name: 'Star Wars Collection' } },
-      { id: 'pixar',     name: 'Pixar',                 exportLookup: { kind: 'collection', name: 'Pixar Collection' } },
+      { id: 'pixar',     name: 'Pixar',                 extraParams: { with_companies: '3' } },
       { id: 'classics',  name: 'Disney Classics',       exportLookup: { kind: 'company',    name: 'Walt Disney Pictures' } },
     ],
   },
@@ -39,7 +39,7 @@ export const SERVICES: ServiceDef[] = [
     categories: [
       { id: 'popular',   name: 'Popular on Netflix' },
       { id: 'new',       name: 'New on Netflix',        isNew: true },
-      { id: 'originals', name: 'Netflix Originals',     exportLookup: { kind: 'company', name: 'Netflix Productions' } },
+      { id: 'originals', name: 'Netflix Originals',     extraParams: { with_networks: '213' } },
       { id: 'action',    name: 'Action',                 extraParams: { with_genres: '28' } },
       { id: 'comedy',    name: 'Comedy',                 extraParams: { with_genres: '35' } },
       { id: 'thriller',  name: 'Thriller',               extraParams: { with_genres: '53' } },
@@ -48,11 +48,11 @@ export const SERVICES: ServiceDef[] = [
   {
     id: 'max',
     name: 'Max',
-    providerId: 384,
+    providerId: 1899,
     categories: [
       { id: 'popular',   name: 'Popular on Max' },
       { id: 'new',       name: 'New on Max',             isNew: true },
-      { id: 'dc',        name: 'DC Universe',            exportLookup: { kind: 'collection', name: 'DC Extended Universe' } },
+      { id: 'dc',        name: 'DC Universe',            extraParams: { with_companies: '184898' } },
       { id: 'drama',     name: 'Drama',                  extraParams: { with_genres: '18' } },
       { id: 'action',    name: 'Action',                  extraParams: { with_genres: '28' } },
       { id: 'top_rated', name: 'Top Rated',              extraParams: { sort_by: 'vote_average.desc', 'vote_count.gte': 1000 } },
