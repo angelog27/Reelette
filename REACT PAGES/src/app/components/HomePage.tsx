@@ -1,7 +1,7 @@
 import { Suspense, useState, useEffect, useRef, useCallback } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
-  Bell, Heart, MessageCircle, Film, Users, UserPlus, Search, SlidersHorizontal,
+  Bell, Heart, MessageCircle, Film, Users, UserPlus, SlidersHorizontal,
   X, Star, ChevronDown, Bookmark, User, Tv, LogOut,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -90,6 +90,7 @@ export function HomePage() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchOpen, setSearchOpen]       = useState(false);
   const searchRef                         = useRef<HTMLDivElement>(null);
+  const searchInputRef                    = useRef<HTMLInputElement>(null);
   const debounceRef                       = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Filter state ────────────────────────────────────────────────
@@ -175,6 +176,18 @@ export function HomePage() {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [avatarMenuOpen]);
+
+  // ⌘K / Ctrl+K focuses the search bar
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, []);
 
   function handleNavLogout() {
     clearUser();
@@ -406,23 +419,50 @@ export function HomePage() {
 
           {/* Search + filter */}
           <div className="relative flex items-center gap-1" ref={searchRef}>
-            <div className="relative" style={{ width: 210 }}>
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-white/40" />
-              <input
-                type="text"
-                value={navSearch}
-                onChange={e => handleSearchChange(e.target.value)}
-                onFocus={() => {
-                  if (navSearch.trim() || hasActiveFilter) setSearchOpen(true);
-                }}
-                placeholder="Search movies, shows..."
-                className="w-full h-[35px] pl-9 pr-8 rounded-full text-sm text-white placeholder:text-white/35 bg-white/[0.08] border border-white/[0.12] focus:bg-white/[0.13] focus:border-white/[0.38] focus:outline-none transition-all duration-150"
-              />
+            <div className="relative" style={{ width: 240 }}>
+              <label style={{
+                position: 'relative',
+                display: 'block',
+                borderRadius: '10px',
+                border: '2px solid #5e5757',
+                padding: '7px 44px 7px 12px',
+                boxShadow: '10px 10px 40px #7C5DBD, -10px -10px 40px rgba(255,255,255,0.25)',
+                cursor: 'text',
+              }}>
+                <span style={{
+                  position: 'absolute',
+                  top: '50%',
+                  right: '8px',
+                  transform: 'translateY(-50%)',
+                  color: '#c5c5c5',
+                  backgroundColor: '#5e5757',
+                  padding: '3px 5px',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  lineHeight: 1,
+                  userSelect: 'none',
+                  pointerEvents: 'none',
+                }}>⌘K</span>
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={navSearch}
+                  onChange={e => handleSearchChange(e.target.value)}
+                  onFocus={() => { if (navSearch.trim() || hasActiveFilter) setSearchOpen(true); }}
+                  placeholder="Search movies, shows..."
+                  style={{
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    outline: 'none',
+                    fontSize: '13px',
+                    color: 'rgb(190, 195, 200)',
+                    width: '100%',
+                  }}
+                />
+              </label>
               {navSearch && (
-                <button
-                  onClick={clearSearch}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors"
-                >
+                <button onClick={clearSearch}
+                  className="absolute right-10 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors">
                   <X className="w-3.5 h-3.5" />
                 </button>
               )}
