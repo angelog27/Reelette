@@ -1738,7 +1738,9 @@ export function SocialTab() {
       setPosts(prev => prev.map(p => {
         if (p.post_id !== post_id) return p;
         const liked = p.liked_by.includes(currentUserId);
-        return { ...p, likes: liked ? p.likes - 1 : p.likes + 1, liked_by: liked ? p.liked_by.filter(id => id !== currentUserId) : [...p.liked_by, currentUserId] };
+        const updated = { ...p, likes: liked ? p.likes - 1 : p.likes + 1, liked_by: liked ? p.liked_by.filter(id => id !== currentUserId) : [...p.liked_by, currentUserId] };
+        _feedCache.set(post_id, updated);
+        return updated;
       }));
     }
   };
