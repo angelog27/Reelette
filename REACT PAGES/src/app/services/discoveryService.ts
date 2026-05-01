@@ -92,9 +92,6 @@ export async function getServiceCategoryMovies(
     const pageMovies = snap.docs.map(docToMovie);
     allMovies.push(...pageMovies);
 
-    // Cache each page as it loads (layer 2 spec)
-    lsWrite(serviceId, `${categoryId}_p${page}`, pageMovies);
-
     cursor = snap.docs[snap.docs.length - 1] as QueryDocumentSnapshot<DocumentData>;
     if (pageMovies.length < PAGE_SIZE) break;
   }

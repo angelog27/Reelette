@@ -4,14 +4,18 @@ import requests
 import os
 import tempfile
 import json
+import resend 
 from firebase_admin import credentials, firestore, auth
 from datetime import datetime
 
+BASE_URL = "https://Reelette-Movie.com"
+
 try:
-    from config import FIREBASE_CREDENTIALS_PATH, FIREBASE_WEB_API_KEY
+    from config import FIREBASE_CREDENTIALS_PATH, FIREBASE_WEB_API_KEY, RESEND_API_KEY
 except ImportError:
     FIREBASE_CREDENTIALS_PATH = os.environ.get("FIREBASE_CREDENTIALS_PATH", "firebase-credentials.json")
     FIREBASE_WEB_API_KEY = os.environ.get("FIREBASE_WEB_API_KEY", "")
+    RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
 
 # Initialize Firebase Admin
 if not firebase_admin._apps:
@@ -587,6 +591,14 @@ def delete_post(post_id, user_id):
         return {'success': False, 'message': str(e)}
 
 
+def get_post(post_id):
+    try:
+        doc = db.collection('posts').document(post_id).get()
+        return doc.to_dict() if doc.exists else None
+    except Exception:
+        return None
+
+
 # ── User Profile ──────────────────────────────────────────────────
 
 def update_user_profile(user_id, data):
@@ -1103,6 +1115,295 @@ def mark_all_notifications_read(user_id):
         return {'success': True}
     except Exception as e:
         return {'success': False, 'message': str(e)}
+    
+
+
+def _build_email(label: str, heading: str, body_html: str, cta_text: str, cta_url: str) -> str:
+    """Shared base template for all Reelette transactional emails."""
+    return f"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8"/>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    </head>
+    <body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 16px;">
+        <tr>
+          <td align="center">
+            <table width="520" cellpadding="0" cellspacing="0"
+              style="max-width:520px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e4e4e7;">
+
+              <!-- Header -->
+              <tr>
+                <td style="background:#0a0a0a;padding:20px 32px;">
+                  <table cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td style="width:28px;height:28px;background:#e50914;border-radius:6px;text-align:center;vertical-align:middle;">
+                        <div style="width:12px;height:12px;border:2px solid white;border-radius:50%;margin:auto;"></div>
+                      </td>
+                      <td style="padding-left:10px;color:#ffffff;font-size:15px;font-weight:600;letter-spacing:0.5px;">
+                        Reelette
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+
+              <!-- Body -->
+              <tr>
+                <td style="padding:32px;">
+                  <p style="margin:0 0 10px;font-size:11px;color:#71717a;text-transform:uppercase;letter-spacing:1px;">
+                    {label}
+                  </p>
+                  <h1 style="margin:0 0 12px;font-size:22px;font-weight:600;color:#09090b;line-height:1.3;">
+                    {heading}
+                  </h1>
+                  {body_html}
+                  <table cellpadding="0" cellspacing="0" style="margin-top:28px;">
+                    <tr>
+                      <td style="background:#e50914;border-radius:8px;">
+                        <a href="{cta_url}"
+                          style="display:inline-block;padding:12px 24px;color:#ffffff;
+                            font-size:14px;font-weight:500;text-decoration:none;">
+                          {cta_text}
+                        </a>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+
+              <!-- Footer -->
+              <tr>
+                <td style="border-top:1px solid #e4e4e7;padding:20px 32px;">
+                  <table width="100%" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td style="font-size:12px;color:#a1a1aa;">
+                        Reelette &middot; You're receiving this because you have an account.
+                      </td>
+                      <td align="right">
+                        <a href="{BASE_URL}/settings"
+                          style="font-size:12px;color:#a1a1aa;text-decoration:underline;">
+                          Unsubscribe
+                        </a>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+    """
+
+
+
+#resend email verification
+resend.api_key = RESEND_API_KEY
+FROM_EMAIL = "Reelette <noreply@reelette-movie.com>"
+
+def _get_user_email(user_id):
+    try:
+        doc = db.collection('users').document(user_id).get(field_paths=['email'])
+        if doc.exists:
+            return doc.to_dict().get('email')
+        return None 
+    except Exception as e:
+        print(f"Error fetching user email: {e}")
+        return None
+def send_welcome_email(user_id):
+    #sending a welcome email to a user once they are newly registered
+    try:
+        email = _get_user_email(user_id)
+        if not email:
+            return {'success': False, 'message': 'User email not found'}
+        
+        resend.Emails.send({
+            "from": FROM_EMAIL,
+            "to": email,
+            "subject": "Welcome to Reelette!🎬",
+            "html": f"""
+                <h1>Welcome to Reelette, {email.split('@')[0]}! 🎉</h1>
+                <p>Thanks for signing up. We're excited to have you join our movie loving community!</p>
+                <p>Here are some tips to get started:</p>
+                <ul>
+                    <li><strong>Reelette Page:</strong> Dont know what to watch, simply pick your services and spin the wheel to get a random movie.</li>
+                    <li><strong>Discover Page:</strong> Search or browse movies from all of your streaming services. View exclusives to each service as well</li>
+                    <li><strong>Social Page:</strong> Post reviews and ratings to share your opinions with the community.</li>
+                    <li><strong>My Stuff:</strong> Manage your watchlist, ratings, and personalized stats.</li>
+                </ul>
+                <p>If you have any questions or need help, feel free to email reeletteofficial@gmail.com. Happy watching! 🍿</p>
+            """
+        })
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+def get_user_id_by_username(username: str):
+    try:
+        docs = (db.collection('users')
+                  .where('username', '==', username.lower())
+                  .limit(1)
+                  .stream())
+        for doc in docs:
+            return doc.id
+        return None
+    except Exception:
+        return None
+
+
+def send_tagged_in_post_email(to_user_id: str, tagger_username: str,
+                               post_id: str, movie_title: str) -> dict:
+    try:
+        email = _get_user_email(to_user_id)
+        if not email:
+            return {'success': False, 'message': 'User email not found'}
+
+        resend.Emails.send({
+            "from": FROM_EMAIL,
+            "to": email,
+            "subject": f"{tagger_username} mentioned you in a post 📣",
+            "html": f"""
+                <div style="font-family:sans-serif;max-width:480px;margin:auto;">
+                    <h2>You were mentioned in a post!</h2>
+                    <p><strong>{tagger_username}</strong> tagged you in a post about
+                        <strong>{movie_title}</strong> on Reelette.</p>
+                    <a href="{BASE_URL}/feed?post={post_id}" style="display:inline-block;
+                        padding:10px 20px;background:#e50914;color:#fff;border-radius:6px;text-decoration:none;">
+                        View Post
+                    </a>
+                </div>
+            """
+        })
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+
+def send_post_reply_email(to_user_id: str, replier_username: str, post_id: str,
+                          movie_title: str, reply_preview: str) -> dict:
+    try:
+        email = _get_user_email(to_user_id)
+        if not email:
+            return {'success': False, 'message': 'User email not found'}
+
+        resend.Emails.send({
+            "from": FROM_EMAIL,
+            "to": email,
+            "subject": f"{replier_username} replied to your post 💬",
+            "html": f"""
+                <div style="font-family:sans-serif;max-width:480px;margin:auto;">
+                    <h2>New Reply on Your Post</h2>
+                    <p><strong>{replier_username}</strong> replied to your post about
+                        <strong>{movie_title}</strong>:</p>
+                    <blockquote style="border-left:3px solid #e50914;padding-left:12px;color:#555;margin:16px 0;">
+                        {reply_preview[:120]}{'...' if len(reply_preview) > 120 else ''}
+                    </blockquote>
+                    <a href="{BASE_URL}/feed?post={post_id}" style="display:inline-block;
+                        padding:10px 20px;background:#e50914;color:#fff;border-radius:6px;text-decoration:none;">
+                        View Post
+                    </a>
+                </div>
+            """
+        })
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+
+LIKE_MILESTONE = 5
+def send_like_milestone_email(to_user_id: str, like_count: int, post_id: str,
+                               movie_title: str) -> dict:
+    try:
+        if like_count % LIKE_MILESTONE != 0:
+            return {'success': False, 'message': 'Not a milestone'}
+
+        email = _get_user_email(to_user_id)
+        if not email:
+            return {'success': False, 'message': 'User email not found'}
+
+        resend.Emails.send({
+            "from": FROM_EMAIL,
+            "to": email,
+            "subject": f"Your post just hit {like_count} likes! ❤️",
+            "html": f"""
+                <div style="font-family:sans-serif;max-width:480px;margin:auto;">
+                    <h2>People are loving your post!</h2>
+                    <p>Your post about <strong>{movie_title}</strong> has reached
+                        <strong>{like_count} likes</strong> on Reelette.</p>
+                    <a href="{BASE_URL}/feed?post={post_id}" style="display:inline-block;
+                        padding:10px 20px;background:#e50914;color:#fff;border-radius:6px;text-decoration:none;">
+                        See Your Post
+                    </a>
+                </div>
+            """
+        })
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+
+def send_friend_request_email(to_user_id: str, from_username: str) -> dict:
+    try:
+        email = _get_user_email(to_user_id)
+        if not email:
+            return {'success': False, 'message': 'User email not found'}
+
+        resend.Emails.send({
+            "from": FROM_EMAIL,
+            "to": email,
+            "subject": f"{from_username} sent you a friend request 🤝",
+            "html": f"""
+                <div style="font-family:sans-serif;max-width:480px;margin:auto;">
+                    <h2>New Friend Request</h2>
+                    <p><strong>{from_username}</strong> wants to connect with you on Reelette.</p>
+                    <a href="{BASE_URL}/friends" style="display:inline-block;
+                        padding:10px 20px;background:#e50914;color:#fff;border-radius:6px;text-decoration:none;">
+                        View Request
+                    </a>
+                </div>
+            """
+        })
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+
+def send_group_added_email(to_user_id: str, added_by_username: str, group_name: str,
+                           group_id: str) -> dict:
+    try:
+        email = _get_user_email(to_user_id)
+        if not email:
+            return {'success': False, 'message': 'User email not found'}
+
+        resend.Emails.send({
+            "from": FROM_EMAIL,
+            "to": email,
+            "subject": f"You've been added to '{group_name}' 🎬",
+            "html": f"""
+                <div style="font-family:sans-serif;max-width:480px;margin:auto;">
+                    <h2>You're in a new group!</h2>
+                    <p><strong>{added_by_username}</strong> added you to
+                        <strong>{group_name}</strong> on Reelette.</p>
+                    <p style="color:#555;">Check out the group's watchlist and spin the roulette
+                        together.</p>
+                    <a href="{BASE_URL}/groups/{group_id}" style="display:inline-block;
+                        padding:10px 20px;background:#e50914;color:#fff;border-radius:6px;text-decoration:none;">
+                        View Group
+                    </a>
+                </div>
+            """
+        })
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+    
+
 
 
 # ── Group Chat ────────────────────────────────────────────────────

@@ -4,6 +4,7 @@ from flask_cors import CORS
 import os
 import time
 import json
+import threading
 from datetime import datetime, timezone
 
 try:
@@ -33,6 +34,10 @@ from firebase_helper import (
     get_or_create_conversation, get_conversations, get_messages, send_message, mark_conversation_read,
     get_group_chat, send_group_message,
     update_user_email, delete_user_account,
+    get_post, get_user_id_by_username,
+    send_welcome_email, send_tagged_in_post_email,
+    send_post_reply_email, send_like_milestone_email,
+    send_friend_request_email, send_group_added_email,
 )
 from tmdb_api import (
     search_movies, discover_movies, get_popular_movies, get_movie_details,
@@ -215,6 +220,8 @@ def register():
     if not email or not password or not username:
         return jsonify({'success': False, 'message': 'Email, password, and username are required'}), 400
     result = create_user(email, password, username)
+    if result.get('success'):
+        threading.Thread(target=send_welcome_email, args=(result['user_id'],), daemon=True).start()
     return jsonify(result)
 
 @app.route('/api/auth/forgot-password', methods=['POST'])
@@ -597,9 +604,15 @@ def create_feed_post():
         return jsonify({'success': False, 'message': 'user_id, username, message, and movie_title are required'}), 400
     result = create_post(user_id, username, message, movie_title, movie_id, movie_poster, rating)
     if result.get('success'):
-        # Bust feed caches so the new post is visible immediately
         for key in [k for k in _cache if k.startswith('feed:')]:
             _cache.pop(key, None)
+        def _notify_tagged(_uname=username, _msg=message, _pid=result['post_id'], _title=movie_title, _uid=user_id):
+            mentions = set(re.findall(r'@(\w+)', _msg))
+            for handle in mentions:
+                tagged_id = get_user_id_by_username(handle)
+                if tagged_id and tagged_id != _uid:
+                    send_tagged_in_post_email(tagged_id, _uname, _pid, _title)
+        threading.Thread(target=_notify_tagged, daemon=True).start()
     return jsonify(result)
 
 @app.route('/api/feed/<post_id>/like', methods=['POST'])
@@ -608,7 +621,14 @@ def like_feed_post(post_id):
     user_id = data.get('user_id', '').strip()
     if not user_id:
         return jsonify({'success': False, 'message': 'user_id required'}), 400
-    return jsonify(like_post(post_id, user_id))
+    result = like_post(post_id, user_id)
+    if result.get('action') == 'liked':
+        def _check_milestone(_pid=post_id):
+            post = get_post(_pid)
+            if post:
+                send_like_milestone_email(post['user_id'], post.get('likes', 0), _pid, post.get('movie_title', ''))
+        threading.Thread(target=_check_milestone, daemon=True).start()
+    return jsonify(result)
 
 @app.route('/api/feed/<post_id>/replies', methods=['GET'])
 def get_post_replies(post_id):
@@ -622,7 +642,14 @@ def reply_to_post(post_id):
     message  = data.get('message', '').strip()
     if not all([user_id, username, message]):
         return jsonify({'success': False, 'message': 'user_id, username, and message are required'}), 400
-    return jsonify(add_reply(post_id, user_id, username, message))
+    result = add_reply(post_id, user_id, username, message)
+    if result.get('success'):
+        def _notify_poster(_pid=post_id, _uname=username, _msg=message, _sender=user_id):
+            post = get_post(_pid)
+            if post and post.get('user_id') != _sender:
+                send_post_reply_email(post['user_id'], _uname, _pid, post.get('movie_title', ''), _msg)
+        threading.Thread(target=_notify_poster, daemon=True).start()
+    return jsonify(result)
 
 @app.route('/api/feed/<post_id>', methods=['DELETE'])
 def delete_feed_post(post_id):
@@ -731,7 +758,10 @@ def send_request(user_id):
     from_username = data.get('from_username', '').strip()
     if not from_user_id or not from_username:
         return jsonify({'success': False, 'message': 'from_user_id and from_username required'}), 400
-    return jsonify(send_friend_request(from_user_id, from_username, user_id))
+    result = send_friend_request(from_user_id, from_username, user_id)
+    if result.get('success'):
+        threading.Thread(target=send_friend_request_email, args=(user_id, from_username), daemon=True).start()
+    return jsonify(result)
 
 @app.route('/api/friends/<user_id>/request/<from_id>/accept', methods=['POST'])
 def accept_request(user_id, from_id):
@@ -824,6 +854,7 @@ def add_member(group_id):
     data = request.get_json() or {}
     new_member_id = data.get('user_id', '').strip()
     new_member_username = data.get('username', '').strip()
+    added_by_username = data.get('added_by_username', '').strip()
     if not new_member_id or not new_member_username:
         return jsonify({'success': False, 'message': 'user_id and username are required'}), 400
     result = add_group_member(group_id, new_member_id, new_member_username)
@@ -831,6 +862,12 @@ def add_member(group_id):
         _cache.pop(f'groups:{new_member_id}', None)
         _cache.pop(f'member_profiles:{group_id}', None)
         _cache.pop(f'services:{group_id}', None)
+        if added_by_username:
+            def _notify_member(_gid=group_id, _mid=new_member_id, _adder=added_by_username):
+                grp = get_group(_gid)
+                if grp:
+                    send_group_added_email(_mid, _adder, grp['name'], _gid)
+            threading.Thread(target=_notify_member, daemon=True).start()
     return jsonify(result)
 
 @app.route('/api/groups/<group_id>/members/<member_id>', methods=['DELETE'])

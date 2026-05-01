@@ -573,15 +573,15 @@ export function DiscoverTab() {
         setProviderPopular(pop.slice(0, ROW_LIMIT));
         setProviderNew(newM.slice(0, ROW_LIMIT));
 
-        const specificData: Movie[][] = [];
-        for (const cat of catalog.specificCategories) {
-          if (cancelled) return;
-          try {
-            const movies = await getServiceCategoryMovies(catalog.firestoreServiceId, cat.firestoreId);
-            specificData.push(movies.slice(0, ROW_LIMIT));
-          } catch { specificData.push([]); }
-        }
+        const specificResults = await Promise.all(
+          catalog.specificCategories.map(cat =>
+            getServiceCategoryMovies(catalog.firestoreServiceId, cat.firestoreId)
+              .then(movies => movies.slice(0, ROW_LIMIT))
+              .catch(() => [] as Movie[])
+          )
+        );
         if (cancelled) return;
+        const specificData = specificResults;
         setProviderSpecific(specificData);
 
         cacheProvider(activeProvider, {
