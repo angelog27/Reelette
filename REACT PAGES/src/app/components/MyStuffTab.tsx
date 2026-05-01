@@ -169,13 +169,6 @@ export function MyStuffTab() {
       {/* ── Subtle cinema header ── */}
       <div className="full-bleed relative overflow-hidden" style={{ marginBottom: 0 }}>
         {/* Film strip — top only (subtle: just one strip) */}
-        <div className="absolute top-0 inset-x-0 h-[20px] bg-[#0c0c0c] border-b border-[#181818] flex items-center z-10 overflow-hidden">
-          {FILM_HOLES.map((_, i) => (
-            <div key={i} className="shrink-0 flex-1 px-[3px]">
-              <div className="h-[12px] rounded-[2px] bg-[#050505]" />
-            </div>
-          ))}
-        </div>
 
         {/* Subtle glow from nav — softer than Roulette/Social */}
         <div
@@ -192,12 +185,7 @@ export function MyStuffTab() {
           {/* Badge */}
           <div className="flex items-center gap-2 mb-3">
             <div className="h-px w-10 bg-gradient-to-r from-transparent to-[#7C5DBD]/50" />
-            <span
-              className="text-[10px] font-bold tracking-[0.25em] text-[#7C5DBD] uppercase"
-              style={{ fontFamily: "'Courier New', monospace" }}
-            >
-              My Collection
-            </span>
+          
             <div className="h-px w-10 bg-gradient-to-l from-transparent to-[#7C5DBD]/50" />
           </div>
 
@@ -215,7 +203,6 @@ export function MyStuffTab() {
 
           <div className="flex items-center gap-3 mt-3">
             <div className="h-px w-8 bg-gradient-to-r from-transparent to-[#7C5DBD]/40" />
-            <span className="text-[#7C5DBD]/50 text-xs">✦</span>
             <div className="h-px w-8 bg-gradient-to-l from-transparent to-[#7C5DBD]/40" />
           </div>
         </div>

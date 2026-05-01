@@ -671,6 +671,19 @@ function ComposeBox({ currentUser, onPostCreated }: {
   );
 }
 
+// ── Reaction helpers (module-level so they survive tab switches) ─
+const _reactionsCache = new Map<string, Record<string, string[]>>();
+const REACTION_EMOJIS = ['😂', '❤️', '😮', '🔥', '👏', '😢'];
+
+function loadReactions(postId: string): Record<string, string[]> {
+  if (_reactionsCache.has(postId)) return _reactionsCache.get(postId)!;
+  try { const r = localStorage.getItem(`reelette_rxn_${postId}`); const d = r ? JSON.parse(r) : {}; _reactionsCache.set(postId, d); return d; } catch { return {}; }
+}
+function saveReactions(postId: string, data: Record<string, string[]>) {
+  _reactionsCache.set(postId, data);
+  try { localStorage.setItem(`reelette_rxn_${postId}`, JSON.stringify(data)); } catch {}
+}
+
 // ── Activity Card ─────────────────────────────────────────────
 function ActivityCard({ post, currentUserId, currentUsername, onLike, onDelete, onOpenProfile }: {
   post: FeedPost; currentUserId: string; currentUsername: string;
@@ -686,7 +699,11 @@ function ActivityCard({ post, currentUserId, currentUsername, onLike, onDelete, 
   const [submittingReply, setSubmittingReply] = useState(false);
   const [localReplyCount, setLocalReplyCount] = useState(post.reply_count ?? 0);
   const [likeAnim, setLikeAnim] = useState(false);
-  const [movieMeta, setMovieMeta] = useState<{ year: string; genres: string[]; runtime: number } | null>(null);
+  const [movieMeta, setMovieMeta] = useState<{ year: string; genres: string[]; runtime: number; voteAverage: number; overview: string } | null>(null);
+  const [reactions, setReactions] = useState<Record<string, string[]>>(() => loadReactions(post.post_id));
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [openMovieId, setOpenMovieId] = useState<string | null>(null);
+  const emojiRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!post.movie_id) return;
@@ -694,9 +711,32 @@ function ActivityCard({ post, currentUserId, currentUsername, onLike, onDelete, 
       const year = d.release_date ? String(d.release_date).slice(0, 4) : '';
       const genres = Array.isArray(d.genres) ? (d.genres as { name: string }[]).slice(0, 2).map(g => g.name) : [];
       const runtime = typeof d.runtime === 'number' ? d.runtime : 0;
-      setMovieMeta({ year, genres, runtime });
+      const voteAverage = typeof d.vote_average === 'number' ? d.vote_average : 0;
+      const overview = typeof d.overview === 'string' ? d.overview : '';
+      setMovieMeta({ year, genres, runtime, voteAverage, overview });
     }).catch(() => {});
   }, [post.movie_id]);
+
+  useEffect(() => {
+    if (!showEmojiPicker) return;
+    const handler = (e: MouseEvent) => { if (emojiRef.current && !emojiRef.current.contains(e.target as Node)) setShowEmojiPicker(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showEmojiPicker]);
+
+  const handleReact = (emoji: string) => {
+    const next = { ...reactions };
+    const users = next[emoji] ?? [];
+    if (users.includes(currentUserId)) {
+      next[emoji] = users.filter(id => id !== currentUserId);
+      if (next[emoji].length === 0) delete next[emoji];
+    } else {
+      next[emoji] = [...users, currentUserId];
+    }
+    setReactions(next);
+    saveReactions(post.post_id, next);
+    setShowEmojiPicker(false);
+  };
 
   const loadReplies = useCallback(async () => {
     setLoadingReplies(true);
@@ -780,22 +820,27 @@ function ActivityCard({ post, currentUserId, currentUsername, onLike, onDelete, 
 
           {/* Movie card */}
           {post.movie_title && (
-            <div className="flex gap-3 bg-[#141416] border border-[#2a2a2e] rounded-xl p-2.5 mb-2">
+            <div className="flex gap-3 mb-3">
               {post.movie_poster
-                ? <img src={post.movie_poster} alt={post.movie_title} className="w-10 h-[60px] object-cover rounded-lg shrink-0" />
-                : <div className="w-10 h-[60px] bg-[#2a2a2e] rounded-lg shrink-0 flex items-center justify-center"><Film className="w-4 h-4 text-zinc-600" /></div>}
-              <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
+                ? <img src={post.movie_poster} alt={post.movie_title}
+                    className="w-[76px] h-[114px] object-cover rounded-xl shrink-0 cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={() => setOpenMovieId(post.movie_id)} />
+                : <div className="w-[76px] h-[114px] bg-[#1a1a1e] rounded-xl shrink-0 flex items-center justify-center cursor-pointer" onClick={() => setOpenMovieId(post.movie_id)}>
+                    <Film className="w-6 h-6 text-zinc-600" />
+                  </div>}
+              <div className="flex-1 min-w-0 flex flex-col justify-start gap-1.5 pt-0.5">
                 <p className="text-white text-sm font-medium leading-snug line-clamp-2">{post.movie_title}</p>
-                <div className="flex items-center gap-2 flex-wrap">
-                  {movieMeta?.year && <span className="text-zinc-500 text-xs">{movieMeta.year}</span>}
-                  {movieMeta?.runtime > 0 && <span className="text-zinc-600 text-xs">{movieMeta.runtime}m</span>}
-                  {post.rating > 0 && (
-                    <div className="flex items-center gap-0.5">
-                      <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                      <span className="text-yellow-400 text-xs font-semibold">{post.rating}/10</span>
-                    </div>
-                  )}
+                <div className="flex items-center gap-2 text-xs flex-wrap">
+                  {movieMeta?.year && <span className="text-zinc-500">{movieMeta.year}</span>}
+                  {movieMeta?.runtime > 0 && <span className="text-zinc-600">{movieMeta.runtime}m</span>}
                 </div>
+                {movieMeta && movieMeta.voteAverage > 0 && (
+                  <div className="flex items-center gap-1">
+                    <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                    <span className="text-amber-400 text-xs font-semibold">{movieMeta.voteAverage.toFixed(1)}</span>
+                    <span className="text-zinc-600 text-[11px]">Fan Rating</span>
+                  </div>
+                )}
                 {movieMeta?.genres && movieMeta.genres.length > 0 && (
                   <div className="flex gap-1 flex-wrap">
                     {movieMeta.genres.map(g => (
@@ -803,12 +848,16 @@ function ActivityCard({ post, currentUserId, currentUsername, onLike, onDelete, 
                     ))}
                   </div>
                 )}
+                {movieMeta?.overview && (
+                  <p className="text-zinc-500 text-[11px] leading-relaxed line-clamp-3">{movieMeta.overview}</p>
+                )}
               </div>
             </div>
           )}
+          {openMovieId && <MovieDetailModal movieId={openMovieId} onClose={() => setOpenMovieId(null)} />}
 
           {/* Action row */}
-          <div className="flex items-center gap-0.5 -ml-2">
+          <div className="flex items-center gap-0.5 -ml-2 flex-wrap">
             <button onClick={toggleReplies}
               className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-blue-500/[0.08] hover:text-blue-400 ${showReplies ? 'text-blue-400' : 'text-zinc-600'}`}>
               <MessageCircle className="w-[14px] h-[14px]" />
@@ -822,6 +871,33 @@ function ActivityCard({ post, currentUserId, currentUsername, onLike, onDelete, 
               <Heart className={`w-[14px] h-[14px] ${isLiked ? 'fill-[#7C5DBD]' : ''}`} />
               {post.likes > 0 && <span className="tabular-nums">{post.likes}</span>}
             </button>
+
+            {/* Emoji reaction trigger */}
+            <div className="relative" ref={emojiRef}>
+              <button onClick={() => setShowEmojiPicker(s => !s)}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-zinc-600 hover:text-zinc-300 hover:bg-white/[0.04] transition-colors">
+                <span className="text-sm leading-none">😊</span>
+              </button>
+              {showEmojiPicker && (
+                <div className="absolute bottom-full left-0 mb-1 flex items-center gap-1 bg-[#1a1a1e] border border-[#2a2a2e] rounded-xl px-2 py-1.5 shadow-xl z-20">
+                  {REACTION_EMOJIS.map(e => (
+                    <button key={e} onClick={() => handleReact(e)}
+                      className={`text-base hover:scale-125 transition-transform px-0.5 rounded ${reactions[e]?.includes(currentUserId) ? 'opacity-100' : 'opacity-70 hover:opacity-100'}`}>
+                      {e}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Reaction pills */}
+            {Object.entries(reactions).filter(([, users]) => users.length > 0).map(([emoji, users]) => (
+              <button key={emoji} onClick={() => handleReact(emoji)}
+                className={`flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs border transition-all ${users.includes(currentUserId) ? 'bg-[#7C5DBD]/15 border-[#7C5DBD]/30 text-[#9B7BD7]' : 'bg-white/[0.03] border-white/[0.07] text-zinc-400 hover:border-white/20'}`}>
+                <span className="text-sm leading-none">{emoji}</span>
+                <span className="tabular-nums">{users.length}</span>
+              </button>
+            ))}
           </div>
         </div>
       </div>
@@ -1881,12 +1957,12 @@ export function SocialTab() {
             </div>
 
             {/* Compose */}
-            <div className="px-6">
+            <div className="px-8">
               <ComposeBox currentUser={currentUser ? { ...currentUser, avatarUrl: currentUserAvatarUrl } : null} onPostCreated={handlePostCreated} />
             </div>
 
             {/* Posts */}
-            <div className="px-6">
+            <div className="px-8">
               {loading
                 ? Array.from({ length: 5 }).map((_, i) => <ActivitySkeleton key={i} />)
                 : displayedPosts.length === 0
