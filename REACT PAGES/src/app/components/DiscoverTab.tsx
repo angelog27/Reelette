@@ -2,10 +2,10 @@
 import { ChevronLeft, ChevronRight, Star, Bookmark, BookmarkCheck, Info, Layers, Sparkles } from 'lucide-react';
 import { MovieDetailModal } from './MovieDetailModal';
 import {
-  discoverMovies, fetchProviderCategory,
   watchMovieLater, removeFromWatchLater, getUser, getServices,
   getFeed, getFriends, getMovieDetails, getUserPublicProfile,
 } from '../services/api';
+import { getServiceCategoryMovies } from '../services/discoveryService';
 import type { Movie, WatchedMovie } from '../services/api';
 import { PROVIDER_LOGOS } from '../constants/providers';
 import { useDiscover, type ProviderRows } from '../contexts/DiscoverContext';
@@ -51,68 +51,88 @@ const ROW_LIMIT = 14;
 const CARD_W    = 156;
 const SKELETON_COUNT = 8;
 
-type ProviderFilter = Parameters<typeof discoverMovies>[0];
+interface ServiceCategoryEntry { firestoreId: string; title: string; }
+interface ServiceCatalogEntry  { firestoreServiceId: string; specificLabel: string; specificCategories: ServiceCategoryEntry[]; }
 
-interface ProviderSpecRow { title: string; filters: ProviderFilter; }
-interface ProviderSpecConfig { specificLabel: string; specificRows: ProviderSpecRow[]; }
-
-const PROVIDER_SPEC: Record<string, ProviderSpecConfig> = {
+const SERVICE_CATALOG: Record<string, ServiceCatalogEntry> = {
   'Netflix': {
+    firestoreServiceId: 'netflix',
     specificLabel: 'Netflix Originals',
-    specificRows: [
-      { title: 'Netflix Originals', filters: { with_watch_providers: '8', with_networks: '213', with_companies: '6194', watch_region: 'US', vote_count_gte: 50, sort_by: 'popularity' } },
-      { title: 'Netflix Thrillers', filters: { services_filter: { netflix: true }, genre_id: '53', watch_region: 'US', vote_count_gte: 50, sort_by: 'popularity' } },
+    specificCategories: [
+      { firestoreId: 'originals', title: 'Netflix Originals' },
+      { firestoreId: 'action',    title: 'Action' },
+      { firestoreId: 'comedy',    title: 'Comedy' },
+      { firestoreId: 'thriller',  title: 'Thriller' },
     ],
   },
   'Disney+': {
+    firestoreServiceId: 'disney_plus',
     specificLabel: 'Disney+ Collections',
-    specificRows: [
-      { title: 'Marvel',          filters: { with_watch_providers: '337', with_keywords: '180547', watch_region: 'US', vote_count_gte: 50, sort_by: 'popularity' } },
-      { title: 'Star Wars',       filters: { with_watch_providers: '337', with_keywords: '667',    watch_region: 'US', vote_count_gte: 50, sort_by: 'popularity' } },
-      { title: 'Pixar',           filters: { with_watch_providers: '337', with_keywords: '9717',   watch_region: 'US', vote_count_gte: 50, sort_by: 'popularity' } },
-      { title: 'Disney Classics', filters: { with_watch_providers: '337', with_companies: '2',     watch_region: 'US', vote_count_gte: 50, sort_by: 'popularity' } },
+    specificCategories: [
+      { firestoreId: 'marvel',    title: 'Marvel' },
+      { firestoreId: 'star_wars', title: 'Star Wars' },
+      { firestoreId: 'pixar',     title: 'Pixar' },
+      { firestoreId: 'classics',  title: 'Disney Classics' },
     ],
   },
   'Hulu': {
+    firestoreServiceId: 'hulu',
     specificLabel: 'Hulu Spotlight',
-    specificRows: [
-      { title: 'Drama on Hulu',  filters: { services_filter: { hulu: true }, genre_id: '18', watch_region: 'US', vote_count_gte: 50, sort_by: 'popularity' } },
-      { title: 'Comedy on Hulu', filters: { services_filter: { hulu: true }, genre_id: '35', watch_region: 'US', vote_count_gte: 50, sort_by: 'popularity' } },
+    specificCategories: [
+      { firestoreId: 'horror',   title: 'Horror' },
+      { firestoreId: 'comedy',   title: 'Comedy' },
+      { firestoreId: 'scifi',    title: 'Sci-Fi' },
+      { firestoreId: 'thriller', title: 'Thriller' },
     ],
   },
   'Max': {
+    firestoreServiceId: 'max',
     specificLabel: 'DC Universe',
-    specificRows: [
-      { title: 'DC Universe', filters: { with_watch_providers: '384', with_keywords: '849', watch_region: 'US', vote_count_gte: 50, sort_by: 'popularity' } },
-      { title: 'Max Dramas',  filters: { services_filter: { hboMax: true }, genre_id: '18', watch_region: 'US', vote_count_gte: 50, sort_by: 'popularity' } },
+    specificCategories: [
+      { firestoreId: 'dc',        title: 'DC Universe' },
+      { firestoreId: 'drama',     title: 'Drama' },
+      { firestoreId: 'action',    title: 'Action' },
+      { firestoreId: 'top_rated', title: 'Top Rated' },
     ],
   },
   'Prime Video': {
+    firestoreServiceId: 'amazon_prime',
     specificLabel: 'Amazon Picks',
-    specificRows: [
-      { title: 'Amazon Originals',         filters: { services_filter: { amazonPrime: true }, watch_region: 'US', vote_count_gte: 50, sort_by: 'newest' } },
-      { title: 'Acclaimed on Prime Video', filters: { services_filter: { amazonPrime: true }, watch_region: 'US', vote_count_gte: 50, sort_by: 'rating', min_rating: 7.5 } },
+    specificCategories: [
+      { firestoreId: 'action',        title: 'Action' },
+      { firestoreId: 'comedy',        title: 'Comedy' },
+      { firestoreId: 'drama',         title: 'Drama' },
+      { firestoreId: 'international', title: 'International' },
     ],
   },
   'Paramount+': {
+    firestoreServiceId: 'paramount_plus',
     specificLabel: 'Paramount+ Exclusives',
-    specificRows: [
-      { title: 'Paramount+ New',    filters: { services_filter: { paramount: true }, watch_region: 'US', vote_count_gte: 50, sort_by: 'newest' } },
-      { title: 'Action on P+',     filters: { services_filter: { paramount: true }, genre_id: '28', watch_region: 'US', vote_count_gte: 50, sort_by: 'popularity' } },
+    specificCategories: [
+      { firestoreId: 'mission_impossible', title: 'Mission: Impossible' },
+      { firestoreId: 'action',             title: 'Action' },
+      { firestoreId: 'drama',              title: 'Drama' },
+      { firestoreId: 'comedy',             title: 'Comedy' },
     ],
   },
   'Apple TV+': {
+    firestoreServiceId: 'apple_tv_plus',
     specificLabel: 'Apple TV+ Acclaimed',
-    specificRows: [
-      { title: 'Apple TV+ Originals', filters: { services_filter: { appleTV: true }, watch_region: 'US', vote_count_gte: 50, sort_by: 'rating', min_rating: 8 } },
-      { title: 'Drama on Apple TV+',  filters: { services_filter: { appleTV: true }, genre_id: '18', watch_region: 'US', vote_count_gte: 50, sort_by: 'popularity' } },
+    specificCategories: [
+      { firestoreId: 'originals', title: 'Apple TV+ Originals' },
+      { firestoreId: 'drama',     title: 'Drama' },
+      { firestoreId: 'scifi',     title: 'Sci-Fi' },
+      { firestoreId: 'thriller',  title: 'Thriller' },
     ],
   },
   'Peacock': {
+    firestoreServiceId: 'peacock',
     specificLabel: 'Peacock Originals',
-    specificRows: [
-      { title: 'Peacock Featured', filters: { services_filter: { peacock: true }, watch_region: 'US', vote_count_gte: 50, sort_by: 'popularity' } },
-      { title: 'Comedy on Peacock', filters: { services_filter: { peacock: true }, genre_id: '35', watch_region: 'US', vote_count_gte: 50, sort_by: 'popularity' } },
+    specificCategories: [
+      { firestoreId: 'comedy',  title: 'Comedy' },
+      { firestoreId: 'horror',  title: 'The Conjuring Universe' },
+      { firestoreId: 'action',  title: 'Action' },
+      { firestoreId: 'drama',   title: 'Drama' },
     ],
   },
 };
@@ -539,42 +559,36 @@ export function DiscoverTab() {
     setProviderNew(null);
     setProviderSpecific(null);
 
-    const key = PROVIDER_KEY[activeProvider];
-    if (!key) return;
-    const sf = { [key]: true };
-    const spec = PROVIDER_SPEC[activeProvider];
+    const catalog = SERVICE_CATALOG[activeProvider];
+    if (!catalog) return;
 
     let cancelled = false;
     (async () => {
       try {
         const [pop, newM] = await Promise.all([
-          fetchProviderCategory(key, 'popular', { services_filter: sf, watch_region: 'US', vote_count_gte: 50, sort_by: 'popularity' }),
-          fetchProviderCategory(key, 'new',     { services_filter: sf, watch_region: 'US', vote_count_gte: 50, sort_by: 'newest'     }),
+          getServiceCategoryMovies(catalog.firestoreServiceId, 'popular'),
+          getServiceCategoryMovies(catalog.firestoreServiceId, 'new'),
         ]);
         if (cancelled) return;
         setProviderPopular(pop.slice(0, ROW_LIMIT));
         setProviderNew(newM.slice(0, ROW_LIMIT));
 
         const specificData: Movie[][] = [];
-        if (spec) {
-          for (const row of spec.specificRows) {
-            if (cancelled) return;
-            try {
-              const movies = await fetchProviderCategory(key, row.title, row.filters);
-              specificData.push(movies.slice(0, ROW_LIMIT));
-            } catch { specificData.push([]); }
-            await new Promise(r => setTimeout(r, 300));
-          }
+        for (const cat of catalog.specificCategories) {
+          if (cancelled) return;
+          try {
+            const movies = await getServiceCategoryMovies(catalog.firestoreServiceId, cat.firestoreId);
+            specificData.push(movies.slice(0, ROW_LIMIT));
+          } catch { specificData.push([]); }
         }
         if (cancelled) return;
         setProviderSpecific(specificData);
 
-        const rows: ProviderRows = {
+        cacheProvider(activeProvider, {
           popular:      pop.slice(0, ROW_LIMIT),
           newMovies:    newM.slice(0, ROW_LIMIT),
           specificRows: specificData,
-        };
-        cacheProvider(activeProvider, rows);
+        });
       } catch {
         if (!cancelled) { setProviderPopular([]); setProviderNew([]); setProviderSpecific([]); }
       }
@@ -707,12 +721,12 @@ export function DiscoverTab() {
       {/* ── Movie rows ── */}
       <div>
         {isProviderView ? (() => {
-          const spec = PROVIDER_SPEC[activeProvider];
+          const catalog = SERVICE_CATALOG[activeProvider];
           const subLabels = [
-            `Popular`,
-            `New`,
+            'Popular',
+            'New',
             `Your Watches${providerWatched.length > 0 ? ` (${providerWatched.length})` : ''}`,
-            spec?.specificLabel ?? 'Collection',
+            catalog?.specificLabel ?? 'Collection',
           ];
           const color = PROVIDER_COLOR[activeProvider] ?? '#7C5DBD';
           return (
@@ -754,12 +768,12 @@ export function DiscoverTab() {
               {/* Tab 3 — Service-specific */}
               {providerSubTab === 3 && (
                 providerSpecific === null
-                  ? <SkeletonRow title={spec?.specificLabel ?? 'Loading…'} />
-                  : spec
-                    ? spec.specificRows.map((row, i) => (
-                        <MovieRow key={i} title={row.title} movies={providerSpecific[i] ?? null} onMovieClick={setSelectedMovieId} />
-                      ))
-                    : <MovieRow title={`${activeProvider} Collection`} movies={providerSpecific[0] ?? null} onMovieClick={setSelectedMovieId} />
+                  ? (catalog?.specificCategories ?? []).map(cat => (
+                      <SkeletonRow key={cat.firestoreId} title={cat.title} />
+                    ))
+                  : (catalog?.specificCategories ?? []).map((cat, i) => (
+                      <MovieRow key={cat.firestoreId} title={cat.title} movies={providerSpecific[i] ?? null} onMovieClick={setSelectedMovieId} />
+                    ))
               )}
             </>
           );
