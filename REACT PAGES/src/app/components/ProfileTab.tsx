@@ -1041,7 +1041,7 @@ export function ProfileTab() {
 
   if (isLoadingProfile) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center text-zinc-400">
+      <div className="min-h-screen flex items-center justify-center text-zinc-400">
         Loading profile...
       </div>
     );
@@ -1049,7 +1049,7 @@ export function ProfileTab() {
 
   if (loadError) {
     return (
-      <div className="min-h-screen bg-black flex flex-col items-center justify-center gap-3">
+      <div className="min-h-screen flex flex-col items-center justify-center gap-3">
         <p className="text-red-400 font-medium">{loadError}</p>
         <button
           onClick={() => { setIsLoadingProfile(true); setRetryCount(c => c + 1); }}
@@ -1064,7 +1064,7 @@ export function ProfileTab() {
   const userId = localStorage.getItem('user_id') ?? '';
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen">
       {viewingProfileId && (
         <UserProfileModal userId={viewingProfileId} onClose={() => setViewingProfileId(null)} />
       )}
@@ -1073,7 +1073,7 @@ export function ProfileTab() {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-red-950/10 via-transparent to-transparent -z-10"></div>
       <div className="absolute inset-0 opacity-[0.02] bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZmlsdGVyIGlkPSJub2lzZSI+PGZlVHVyYnVsZW5jZSB0eXBlPSJmcmFjdGFsTm9pc2UiIGJhc2VGcmVxdWVuY3k9IjAuOSIgbnVtT2N0YXZlcz0iNCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNub2lzZSkiIG9wYWNpdHk9IjEiLz48L3N2Zz4=')] -z-10"></div>
 
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-6x1 mx-auto">
         <ProfileHeader
           profile={profile}
           avatarUrl={profile.avatarUrl}
