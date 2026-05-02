@@ -84,8 +84,8 @@ function ProfileHeader({
 
   return (
     <div className="relative">
-      <div className="px-8 pt-12 pb-8">
-        <h1 className="text-2xl tracking-tight text-white relative inline-block">
+      <div className="px-2 pt-2 pb-8">
+        <h1 className="text-2xl font-bold text-white relative inline-block">
           Profile
           <div className="absolute -bottom-2 left-0 right-0 h-[2px] bg-gradient-to-r from-red-600 via-red-500 to-transparent shadow-[0_0_15px_rgba(220,38,38,0.4)]"></div>
         </h1>
