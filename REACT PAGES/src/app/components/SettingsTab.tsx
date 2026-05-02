@@ -135,11 +135,6 @@ export function SettingsTab() {
         <div className="absolute bottom-32 left-1/4 w-40 h-40 border-2 border-zinc-700 rounded-full"></div>
       </div>
 
-
-      {/* Subtle red glow vignette */}
-      <div className="absolute inset-0 bg-gradient-to-br from-red-950/10 via-transparent to-transparent pointer-events-none"></div>
-
-
       <div className="relative z-10 w-full px-0 py-0">
         {/* Header */}
         <div className="mb-12">
