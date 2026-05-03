@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
-import { clearUser, clearServices } from '../services/api';
+import { clearUser, clearServices, getUser, getNotificationSettings, saveNotificationSettings } from '../services/api';
 import {
   Bell,
   Film,
@@ -121,8 +121,31 @@ export function SettingsTab() {
   };
 
 
-  const toggleSetting = (key: keyof typeof settings) => {
-    setSettings(prev => ({ ...prev, [key]: !prev[key] }));
+  const currentUser = getUser();
+  const currentUserId = currentUser?.user_id ?? '';
+
+  useEffect(() => {
+    async function loadSettings() {
+      if (!currentUserId) return;
+
+      const savedSettings = await getNotificationSettings(currentUserId);
+      setSettings(savedSettings);
+    }
+
+    loadSettings();
+  }, [currentUserId]);
+
+  const toggleSetting = async (key: keyof typeof settings) => {
+    const updatedSettings = {
+      ...settings,
+      [key]: !settings[key],
+    };
+
+    setSettings(updatedSettings);
+
+    if (currentUserId) {
+      await saveNotificationSettings(currentUserId, updatedSettings);
+    }
   };
 
 

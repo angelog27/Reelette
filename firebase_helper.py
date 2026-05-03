@@ -1,4 +1,3 @@
-# firebase_helper.py
 import firebase_admin
 import requests
 import os
@@ -1087,7 +1086,70 @@ def mark_all_notifications_read(user_id):
         return {'success': True}
     except Exception as e:
         return {'success': False, 'message': str(e)}
+    
 
+def create_streaming_change_notification(user_id, movie_id, movie_title, old_services, new_services):
+    try:
+        notif_ref = db.collection('users').document(user_id).collection('notifications').document()
+
+        notif_ref.set({
+            'notification_id': notif_ref.id,
+            'type': 'streaming_change',
+            'actor_user_id': 'system',
+            'actor_username': 'Reelette',
+            'data': {
+                'movie_id': str(movie_id),
+                'movie_title': movie_title,
+                'old_services': old_services,
+                'new_services': new_services
+            },
+            'read': False,
+            'created_at': datetime.now()
+        })
+
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+
+def get_movie_provider_snapshot(user_id, movie_id):
+    try:
+        doc = (
+            db.collection('users')
+            .document(user_id)
+            .collection('providerSnapshots')
+            .document(str(movie_id))
+            .get()
+        )
+
+        if doc.exists:
+            return doc.to_dict()
+
+        return None
+    except Exception as e:
+        print(f"Error getting provider snapshot: {e}")
+        return None
+
+
+def save_movie_provider_snapshot(user_id, movie_id, movie_title, providers):
+    try:
+        (
+            db.collection('users')
+            .document(user_id)
+            .collection('providerSnapshots')
+            .document(str(movie_id))
+            .set({
+                'movie_id': str(movie_id),
+                'movie_title': movie_title,
+                'providers': providers,
+                'updated_at': datetime.now()
+            })
+        )
+
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+    
 
 # ── Quiz ──────────────────────────────────────────────────────────
 def save_quiz_result(uid, top_genre, answers):
