@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, type ChangeEvent } from 'react';
 import {
   Heart, MessageCircle, Plus, Star, Trash2, Users, UserPlus, UserMinus,
   Search, Check, X, Film, ChevronRight, Shuffle, Popcorn, Crown, LogOut,
@@ -478,6 +478,31 @@ function PostMovieSearch({
   );
 }
 
+// ── Mention-aware message renderer ────────────────────────────
+function renderMessage(message: string, onOpenProfile: (userId: string) => void) {
+  const parts = message.split(/(@\w+)/g);
+  return parts.map((part, i) => {
+    if (/^@\w+$/.test(part)) {
+      const uname = part.slice(1);
+      return (
+        <button
+          key={i}
+          onClick={async () => {
+            const results = await searchUsers(uname, '');
+            const match = results.find((r: { username: string; user_id: string }) => r.username.toLowerCase() === uname.toLowerCase());
+            if (match) onOpenProfile(match.user_id);
+          }}
+          className="text-[#C0392B] font-semibold hover:underline cursor-pointer"
+          style={{ background: 'none', border: 'none', padding: 0 }}
+        >
+          {part}
+        </button>
+      );
+    }
+    return <span key={i}>{part}</span>;
+  });
+}
+
 // ── Post Card ──────────────────────────────────────────────────
 function PostCard({
   post,
@@ -500,6 +525,7 @@ function PostCard({
   const [loadingReplies, setLoadingReplies] = useState(false);
   const [replyText, setReplyText] = useState('');
   const [submittingReply, setSubmittingReply] = useState(false);
+  const [localReplyCount, setLocalReplyCount] = useState(post.reply_count ?? 0);
 
   const loadReplies = useCallback(async () => {
     setLoadingReplies(true);
@@ -526,6 +552,7 @@ function PostCard({
     const result = await addReply(post.post_id, currentUserId, currentUsername, replyText.trim());
     if (result.success) {
       setReplyText('');
+      setLocalReplyCount((c: number) => c + 1);
       loadReplies();
     }
     setSubmittingReply(false);
@@ -622,7 +649,9 @@ function PostCard({
               }`}
             >
               <MessageCircle className="w-5 h-5" />
-              {replies.length > 0 && <span className="text-sm">{replies.length}</span>}
+              {(showReplies ? replies.length : localReplyCount) > 0 && (
+                <span className="text-sm">{showReplies ? replies.length : localReplyCount}</span>
+              )}
             </button>
           </div>
 
@@ -1531,6 +1560,10 @@ export function SocialTab() {
   const [posting, setPosting] = useState(false);
   const [postError, setPostError] = useState('');
   const [profileUserId, setProfileUserId] = useState<string | null>(null);
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionResults, setMentionResults] = useState<{ user_id: string; username: string; displayName: string }[]>([]);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const mentionDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const currentUser = getUser();
   const currentUserId = currentUser?.user_id ?? '';
@@ -1596,6 +1629,46 @@ export function SocialTab() {
     if (!currentUserId) return;
     const result = await deletePost(post_id, currentUserId);
     if (result.success) setPosts((prev) => prev.filter((p) => p.post_id !== post_id));
+  };
+
+  const handleMessageChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    setNewMessage(val);
+    const cursor = e.target.selectionStart ?? val.length;
+    const before = val.slice(0, cursor);
+    const match = before.match(/@(\w*)$/);
+    if (match) {
+      const q = match[1];
+      setMentionQuery(q);
+      if (mentionDebounceRef.current) clearTimeout(mentionDebounceRef.current);
+      mentionDebounceRef.current = setTimeout(async () => {
+        if (!q) { setMentionResults([]); return; }
+        const results = await searchUsers(q, currentUserId);
+        setMentionResults(results.slice(0, 5));
+      }, 300);
+    } else {
+      setMentionQuery(null);
+      setMentionResults([]);
+    }
+  };
+
+  const handleMentionSelect = (username: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    const cursor = textarea.selectionStart ?? newMessage.length;
+    const before = newMessage.slice(0, cursor);
+    const match = before.match(/@(\w*)$/);
+    if (!match) return;
+    const start = cursor - match[0].length;
+    const newText = newMessage.slice(0, start) + `@${username} ` + newMessage.slice(cursor);
+    setNewMessage(newText);
+    setMentionQuery(null);
+    setMentionResults([]);
+    setTimeout(() => {
+      textarea.focus();
+      const pos = start + username.length + 2;
+      textarea.setSelectionRange(pos, pos);
+    }, 0);
   };
 
   const handleCreatePost = async () => {

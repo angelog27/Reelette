@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import type { WatchedMovie } from '../services/api';
+import type { WatchedMovie, RouletteSpin } from '../services/api';
 import { getPersonPhoto } from '../services/api';
 import { PROVIDER_LOGOS } from '../constants/providers';
 
 interface Props {
   movies: WatchedMovie[];
+  recentSpins?: RouletteSpin[];
   onMovieClick?: (movieId: string) => void;
 }
 
@@ -137,7 +138,7 @@ function PersonCard({
   );
 }
 
-export function StatsTab({ movies, onMovieClick }: Props) {
+export function StatsTab({ movies, recentSpins = [], onMovieClick }: Props) {
   const [photoMap, setPhotoMap] = useState<Record<string, string | null>>({});
 
   const top10 = [...movies]
@@ -145,15 +146,9 @@ export function StatsTab({ movies, onMovieClick }: Props) {
     .slice(0, 10);
 
   const actorCounts: Record<string, number> = {};
-  movies.forEach((movie) =>
-    (movie.actors ?? []).forEach((actor) => {
-      if (actor) actorCounts[actor] = (actorCounts[actor] || 0) + 1;
-    })
-  );
-
-  const topActors = Object.entries(actorCounts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 4);
+  movies.forEach((m) => (m.actors ?? []).forEach((a) => { if (a) actorCounts[a] = (actorCounts[a] || 0) + 1; }));
+  const topActors = Object.entries(actorCounts).sort((a, b) => b[1] - a[1]).slice(0, 4);
+  
 
   const directorCounts: Record<string, number> = {};
   movies.forEach((movie) => {
@@ -214,6 +209,12 @@ export function StatsTab({ movies, onMovieClick }: Props) {
   const topGenreName = topGenres[0]?.[0] ?? '—';
   const tags = deriveTags(topGenres, movies.length);
 
+  const watchedIds = new Set(movies.map((m) => m.movie_id));
+  const spinWatchPct = recentSpins.length > 0
+    ? Math.round((recentSpins.filter((s) => watchedIds.has(s.movie_id)).length / recentSpins.length) * 100)
+    : null;
+
+  // ── Fetch actor/director profile photos ─────────────────────────
   useEffect(() => {
     if (movies.length === 0) return;
 
@@ -273,6 +274,18 @@ export function StatsTab({ movies, onMovieClick }: Props) {
             </p>
           </div>
         ))}
+        {spinWatchPct !== null && (
+          <div className="rounded-xl p-4 border border-[#1f1f1f] col-span-2 md:col-span-4" style={{ backgroundColor: '#111' }}>
+            <p className="text-gray-500 text-xs mb-1">Watched from Last {recentSpins.length} Spins</p>
+            <div className="flex items-end gap-3">
+              <p className="text-2xl font-bold leading-tight" style={{ color: ACCENT }}>{spinWatchPct}%</p>
+              <p className="text-gray-500 text-sm mb-0.5">{recentSpins.filter((s) => watchedIds.has(s.movie_id)).length} of {recentSpins.length} actually watched</p>
+            </div>
+            <div className="mt-2 h-2 rounded-full" style={{ backgroundColor: '#1f1f1f' }}>
+              <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.max(spinWatchPct, 2)}%`, backgroundColor: ACCENT }} />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Taste profile */}
