@@ -8,37 +8,36 @@ interface MovieCardProps {
 }
 
 export function MovieCard({ movie, onClick }: MovieCardProps) {
-
   return (
     <div
       onClick={() => onClick?.(movie)}
-      className={`bg-[#1C1C1C] rounded-xl overflow-hidden border border-[#2A2A2A] hover:border-[#C0392B]/50 transition-all duration-300 hover:scale-105 group ${
+      className={`group overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-sm transition-all duration-300 hover:scale-105 hover:border-red-600/50 hover:shadow-md ${
         onClick ? 'cursor-pointer' : ''
       }`}
     >
       {/* Poster */}
-      <div className="relative aspect-[2/3] overflow-hidden bg-[#141414]">
+      <div className="relative aspect-[2/3] overflow-hidden bg-muted">
         {movie.poster ? (
           <img
             src={movie.poster}
             alt={movie.title}
-            className="w-full h-full object-cover"
+            className="h-full w-full object-cover"
             loading="lazy"
             decoding="async"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-700 text-xs px-2 text-center">
+          <div className="flex h-full w-full items-center justify-center px-2 text-center text-xs text-muted-foreground">
             {movie.title}
           </div>
         )}
 
         {/* Streaming Badge — official provider logo */}
         {movie.streamingService && PROVIDER_LOGOS[movie.streamingService] && (
-          <div className="absolute top-2 right-2 w-9 h-9 rounded-lg overflow-hidden shadow-lg ring-1 ring-white/10">
+          <div className="absolute right-2 top-2 h-9 w-9 overflow-hidden rounded-lg bg-background shadow-lg ring-1 ring-border">
             <img
               src={PROVIDER_LOGOS[movie.streamingService]}
               alt={movie.streamingService}
-              className="w-full h-full object-cover"
+              className="h-full w-full object-cover"
             />
           </div>
         )}
@@ -46,15 +45,18 @@ export function MovieCard({ movie, onClick }: MovieCardProps) {
 
       {/* Info */}
       <div className="p-4">
-        <h3 className="text-white font-semibold mb-1 line-clamp-1">{movie.title}</h3>
-        <p className="text-gray-500 text-sm mb-3">{movie.year}</p>
+        <h3 className="mb-1 line-clamp-1 font-semibold text-foreground">
+          {movie.title}
+        </h3>
+
+        <p className="mb-3 text-sm text-muted-foreground">{movie.year}</p>
 
         {/* Genres */}
-        <div className="flex flex-wrap gap-1.5 mb-3">
+        <div className="mb-3 flex flex-wrap gap-1.5">
           {movie.genres.slice(0, 3).map((genre) => (
             <span
               key={genre}
-              className="text-xs bg-[#2A2A2A] text-gray-400 px-2.5 py-1 rounded-full"
+              className="rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground"
             >
               {genre}
             </span>
@@ -63,9 +65,11 @@ export function MovieCard({ movie, onClick }: MovieCardProps) {
 
         {/* Rating */}
         <div className="flex items-center gap-1.5">
-          <Star className="w-4 h-4 fill-yellow-500 text-yellow-500" />
-          <span className="text-white font-medium">{movie.rating.toFixed(1)}</span>
-          <span className="text-gray-600 text-sm">/10</span>
+          <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
+          <span className="font-medium text-foreground">
+            {movie.rating.toFixed(1)}
+          </span>
+          <span className="text-sm text-muted-foreground">/10</span>
         </div>
       </div>
     </div>
