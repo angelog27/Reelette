@@ -119,7 +119,10 @@ export function SettingsTab() {
   const handleLogout = () => {
     clearUser();
     clearServices();
-    navigate('/');
+    localStorage.removeItem('user_id');
+    localStorage.removeItem('email');
+    localStorage.removeItem('username');
+    navigate('/login');
   };
 
   const toggleSetting = (key: keyof typeof settings) => {
