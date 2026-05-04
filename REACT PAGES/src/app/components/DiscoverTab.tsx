@@ -36,58 +36,108 @@ export function DiscoverTab() {
   const [catalogMode, _setCatalogMode] = useState(_store.catalogMode);
   const [searchQuery, _setSearchQuery] = useState(_store.searchQuery);
   const [filtersOpen, _setFiltersOpen] = useState(_store.filtersOpen);
-  const [movies,      _setMovies]      = useState<Movie[]>(_store.movies);
-  const [loading,     _setLoading]     = useState(_store.loading);
+  const [movies, _setMovies] = useState<Movie[]>(_store.movies);
+  const [loading, _setLoading] = useState(_store.loading);
   const [selectedMovieId, setSelectedMovieId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   // Write-through setters keep the module store in sync
   const setCatalogMode = (m: DiscoverStore['catalogMode']) => { _store.catalogMode = m; _setCatalogMode(m); };
-  const setSearchQuery = (q: string)  => { _store.searchQuery = q; _setSearchQuery(q); };
+  const setSearchQuery = (q: string) => { _store.searchQuery = q; _setSearchQuery(q); };
   const setFiltersOpen = (v: boolean) => { _store.filtersOpen = v; _setFiltersOpen(v); };
-  const setMovies      = (m: Movie[]) => { _store.movies = m;      _setMovies(m); };
-  const setLoading     = (v: boolean) => { _store.loading = v;     _setLoading(v); };
+  const setMovies = (m: Movie[]) => { _store.movies = m; _setMovies(m); };
+  const setLoading = (v: boolean) => { _store.loading = v; _setLoading(v); };
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const hasFilters   = !!(f.actor || f.director || f.yearFrom || f.yearTo || f.genre || f.minRating[0] > 0 || f.filterStreaming);
+  const hasFilters = !!(f.actor || f.director || f.yearFrom || f.yearTo || f.genre || f.minRating[0] > 0 || f.filterStreaming);
   const isSearchMode = !!searchQuery || hasFilters;
 
   // Unified fetch effect
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
+    const handleError = (error: unknown) => {
+      console.error('Failed to load movies:', error);
+
+      setMovies([]);
+      setError(
+        error instanceof Error
+          ? error.message
+          : 'Could not load movies. Please try again.'
+      );
+    };
+
     if (!isSearchMode) {
       // Catalog: fetch immediately on mode change
       setLoading(true);
+      setError(null);
+
       const fetcher =
-        catalogMode === 'popular'  ? getPopularMovies :
-        catalogMode === 'trending' ? () => getTrendingMovies('week') :
-        getTopRatedMovies;
-      fetcher().then((m) => { setMovies(m); setLoading(false); });
+        catalogMode === 'popular'
+          ? getPopularMovies
+          : catalogMode === 'trending'
+            ? () => getTrendingMovies('week')
+            : getTopRatedMovies;
+
+      fetcher()
+        .then((movies) => {
+          setMovies(movies);
+        })
+        .catch(handleError)
+        .finally(() => {
+          setLoading(false);
+        });
+
       return;
     }
 
     // Search/filter: debounced
     debounceRef.current = setTimeout(() => {
       setLoading(true);
-      if (searchQuery) {
-        searchMovies(searchQuery).then((m) => { setMovies(m); setLoading(false); });
-      } else {
-        discoverMovies({
-          genre_id:   f.genre     || undefined,
-          year_from:  f.yearFrom  || undefined,
-          year_to:    f.yearTo    || undefined,
+      setError(null);
+
+      const request = searchQuery
+        ? searchMovies(searchQuery)
+        : discoverMovies({
+          genre_id: f.genre || undefined,
+          year_from: f.yearFrom || undefined,
+          year_to: f.yearTo || undefined,
           min_rating: f.minRating[0] > 0 ? f.minRating[0] : undefined,
-          actor:      f.actor     || undefined,
-          director:   f.director  || undefined,
-          sort_by:    f.sortBy,
-          services_filter: f.filterStreaming && f.hasServices ? f.userServices : undefined,
-        }).then((m) => { setMovies(m); setLoading(false); });
-      }
+          actor: f.actor || undefined,
+          director: f.director || undefined,
+          sort_by: f.sortBy,
+          services_filter:
+            f.filterStreaming && f.hasServices ? f.userServices : undefined,
+        });
+
+      request
+        .then((movies) => {
+          setMovies(movies);
+        })
+        .catch(handleError)
+        .finally(() => {
+          setLoading(false);
+        });
     }, 500);
 
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [catalogMode, searchQuery, f.actor, f.director, f.yearFrom, f.yearTo, f.genre, f.minRating, f.sortBy, f.filterStreaming]);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [
+    catalogMode,
+    searchQuery,
+    f.actor,
+    f.director,
+    f.yearFrom,
+    f.yearTo,
+    f.genre,
+    f.minRating[0],
+    f.sortBy,
+    f.filterStreaming,
+    f.hasServices,
+    f.userServices,
+  ]);
 
   const displayedMovies =
     f.filterStreaming && f.activeServiceNames.length > 0 && searchQuery
@@ -125,11 +175,10 @@ export function DiscoverTab() {
         <button
           onClick={() => setFiltersOpen(!filtersOpen)}
           title="Filters"
-          className={`w-14 h-14 rounded-full flex-shrink-0 flex items-center justify-center transition-all duration-200 ${
-            filtersOpen || hasFilters
+          className={`w-14 h-14 rounded-full flex-shrink-0 flex items-center justify-center transition-all duration-200 ${filtersOpen || hasFilters
               ? 'bg-[#C0392B] text-white shadow-lg shadow-[#C0392B]/30'
               : 'bg-[#1C1C1C] text-gray-400 hover:bg-[#252525] hover:text-white border border-[#2A2A2A]'
-          }`}
+            }`}
         >
           <SlidersHorizontal className="w-5 h-5" />
         </button>
@@ -229,11 +278,10 @@ export function DiscoverTab() {
               setSearchQuery('');
               f.clearFilters();
             }}
-            className={`px-6 py-2 rounded-full transition-all font-medium text-sm ${
-              catalogMode === mode && !isSearchMode
+            className={`px-6 py-2 rounded-full transition-all font-medium text-sm ${catalogMode === mode && !isSearchMode
                 ? 'bg-[#C0392B] text-white'
                 : 'bg-[#2A2A2A] text-white hover:bg-[#333333]'
-            }`}
+              }`}
           >
             {mode === 'popular' ? 'Trending' : mode === 'trending' ? 'New Releases' : 'Classics'}
           </button>
@@ -241,19 +289,26 @@ export function DiscoverTab() {
       </div>
 
       {/* ── Result count (search mode) ── */}
-      {isSearchMode && !loading && (
-        <div className="text-sm text-gray-500">
+      {isSearchMode && !loading && !error && (
+        <div className="text-sm text-muted-foreground">
           {displayedMovies.length} result{displayedMovies.length !== 1 ? 's' : ''}
         </div>
       )}
 
-      {/* ── Movie grid ── */}
+      {error && (
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">
+          {error}
+        </div>
+      )}
+
       {loading ? (
-        <div className="text-gray-500 text-center py-16">
+        <div className="text-muted-foreground text-center py-16">
           {isSearchMode ? 'Searching…' : 'Loading…'}
         </div>
-      ) : displayedMovies.length === 0 && isSearchMode ? (
-        <div className="text-gray-500 text-center py-16">No movies found. Try adjusting your search or filters.</div>
+      ) : error ? null : displayedMovies.length === 0 && isSearchMode ? (
+        <div className="text-muted-foreground text-center py-16">
+          No movies found. Try adjusting your search or filters.
+        </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
           {displayedMovies.map((movie) => (

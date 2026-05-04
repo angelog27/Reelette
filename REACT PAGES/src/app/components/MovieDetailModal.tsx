@@ -25,7 +25,7 @@ export function MovieDetailModal({ movieId, onClose, onWatchedChange }: Props) {
   const [watchLaterLoading, setWatchLaterLoading] = useState(false);
   const [overviewExpanded, setOverviewExpanded]   = useState(false);
   const [relatedMovieId, setRelatedMovieId]       = useState<string | null>(null);
-
+  const [error, setError] = useState<string | null>(null);
   const user = getUser();
 
   useEffect(() => {

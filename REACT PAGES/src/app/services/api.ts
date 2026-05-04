@@ -1,4 +1,66 @@
-export const BASE_URL = (import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000') + '/api';
+export const BASE_URL =
+  (import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000') + '/api';
+
+type ApiErrorPayload = {
+  success?: false;
+  message?: string;
+  error?: string;
+};
+export class ApiError extends Error {
+  status: number;
+  payload: unknown;
+
+  constructor(message: string, status: number, payload?: unknown) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.payload = payload;
+  }
+}
+
+async function apiFetch<T>(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<T> {
+  let response: Response;
+
+  try {
+    response = await fetch(`${BASE_URL}${endpoint}`, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+    });
+  } catch {
+    throw new ApiError(
+      'Could not connect to the server. Please check your connection and try again.',
+      0
+    );
+  }
+
+  let data: unknown = null;
+
+  try {
+    data = await response.json();
+  } catch {
+    data = null;
+  }
+
+  if (!response.ok) {
+    const errorData = data as ApiErrorPayload;
+
+    throw new ApiError(
+      errorData?.message ||
+        errorData?.error ||
+        `Request failed with status ${response.status}`,
+      response.status,
+      data
+    );
+  }
+
+  return data as T;
+}
 
 
 // ── Simple in-memory TTL cache ───────────────────────────────────
@@ -125,36 +187,26 @@ export function hasServicesConfigured(services: Record<string, boolean>): boolea
 
 
 export async function login(email: string, password: string) {
-  const res = await fetch(`${BASE_URL}/auth/login`, {
+   return apiFetch('/auth/login', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
   });
-  return res.json();
 }
 
 
 export async function register(email: string, password: string, username: string) {
-  const res = await fetch(`${BASE_URL}/auth/register`, {
+   return apiFetch('/auth/register', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password, username }),
   });
-  return res.json();
 }
 
 export async function forgotPassword(email: string) {
-  const res = await fetch(`${BASE_URL}/auth/forgot-password`, {
+  return apiFetch('/auth/forgot-password', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
     body: JSON.stringify({ email }),
   });
-
-  return res.json();
 }
-
 // ── User streaming services ──────────────────────────────────────
 
 
@@ -179,8 +231,10 @@ export async function updateUserStreaming(user_id: string, services: Record<stri
 
 export function getPopularMovies(page = 1): Promise<Movie[]> {
   return fromCache(`popular:${page}`, TTL.CATALOG, async () => {
-    const res = await fetch(`${BASE_URL}/movies/popular?page=${page}`);
-    const data = await res.json();
+   const data = await apiFetch<{ movies?: Movie[] }>(
+      `/movies/popular?page=${page}`
+    );
+
     return data.movies ?? [];
   });
 }
@@ -188,8 +242,10 @@ export function getPopularMovies(page = 1): Promise<Movie[]> {
 
 export function getTrendingMovies(window = 'week'): Promise<Movie[]> {
   return fromCache(`trending:${window}`, TTL.CATALOG, async () => {
-    const res = await fetch(`${BASE_URL}/movies/trending?window=${window}`);
-    const data = await res.json();
+   const data = await apiFetch<{ movies?: Movie[] }>(
+      `/movies/trending?window=${window}`
+    );
+
     return data.movies ?? [];
   });
 }
@@ -197,16 +253,20 @@ export function getTrendingMovies(window = 'week'): Promise<Movie[]> {
 
 export function getTopRatedMovies(page = 1): Promise<Movie[]> {
   return fromCache(`toprated:${page}`, TTL.CATALOG, async () => {
-    const res = await fetch(`${BASE_URL}/movies/top_rated?page=${page}`);
-    const data = await res.json();
+    const data = await apiFetch<{ movies?: Movie[] }>(
+      `/movies/top_rated?page=${page}`
+    );
+
     return data.movies ?? [];
   });
 }
 
 
 export async function searchMovies(query: string, page = 1): Promise<Movie[]> {
-  const res = await fetch(`${BASE_URL}/movies/search?q=${encodeURIComponent(query)}&page=${page}`);
-  const data = await res.json();
+   const data = await apiFetch<{ movies?: Movie[] }>(
+    `/movies/search?q=${encodeURIComponent(query)}&page=${page}`
+  );
+
   return data.movies ?? [];
 }
 
@@ -225,12 +285,11 @@ export function discoverMovies(filters: {
   // Stable cache key regardless of property insertion order
   const key = `discover:${JSON.stringify(Object.fromEntries(Object.entries(filters).sort()))}`;
   return fromCache(key, TTL.CATALOG, async () => {
-    const res = await fetch(`${BASE_URL}/movies/discover`, {
+     const data = await apiFetch<{ movies?: Movie[] }>('/movies/discover', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(filters),
     });
-    const data = await res.json();
+
     return data.movies ?? [];
   });
 }
@@ -238,8 +297,7 @@ export function discoverMovies(filters: {
 
 export function getMovieDetails(movie_id: string): Promise<Record<string, unknown>> {
   return fromCache(`movie:${movie_id}`, TTL.MOVIE, async () => {
-    const res = await fetch(`${BASE_URL}/movies/${movie_id}`);
-    return res.json();
+    return apiFetch<Record<string, unknown>>(`/movies/${movie_id}`);
   });
 }
 
