@@ -5,6 +5,7 @@ import logoImage from '../../assets/Full_Reelette_upscaled.png';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { StreamingSetup } from './StreamingSetup';
+import { Eye, EyeOff } from 'lucide-react';
 import {
   login,
   register,
@@ -77,6 +78,8 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false);
 
   // Forgot password form
   const [forgotEmail, setForgotEmail] = useState('');
@@ -135,13 +138,13 @@ export function LoginPage() {
         return;
       }
 
-     // Save user info locally for app usage
-    localStorage.setItem('user_id', result.user_id);
-    localStorage.setItem('email', result.email);
-    localStorage.setItem('username', result.username);
+      // Save user info locally for app usage
+      localStorage.setItem('user_id', result.user_id);
+      localStorage.setItem('email', result.email);
+      localStorage.setItem('username', result.username);
 
 
-    saveUser({ user_id: result.user_id, username: result.username, email: result.email });
+      saveUser({ user_id: result.user_id, username: result.username, email: result.email });
 
       // Fetch + cache their streaming services
       const services = await getUserStreaming(result.user_id);
@@ -422,236 +425,270 @@ export function LoginPage() {
           {scrollingSection}
 
           <div className="login-side w-full lg:w-1/2 flex items-center justify-center p-8">
-          <Spotlight
-            className="-top-40 left-0 md:-top-20 md:left-60"
-            fill="#ff9933"
-          />
-          <div className="relative z-10 w-full max-w-md flex flex-col items-center">
-            <div className="logo-container mb-6">
+            <Spotlight
+              className="-top-40 left-0 md:-top-20 md:left-60"
+              fill="#ff9933"
+            />
+            <div className="relative z-10 w-full max-w-md flex flex-col items-center">
+              <div className="logo-container mb-6">
                 <img src={logoImage} alt="Reelette" className="reelette-logo h-56 w-auto scale-[2] origin-top pointer-events-none" />
-            </div>
-            <p className="text-center mb-10 px-4 text-lg">
-              <span className="text-[#fbbf24]">
-                The ultimate way to discover, rate, and share movies
-              </span>
-              <span className="text-[#f5f5f5]/70"> with friends.</span>
-            </p>
+              </div>
+              <p className="text-center mb-10 px-4 text-lg">
+                <span className="text-[#fbbf24]">
+                  The ultimate way to discover, rate, and share movies
+                </span>
+                <span className="text-[#f5f5f5]/70"> with friends.</span>
+              </p>
 
-            {/* ── Login ── */}
-            {view === 'login' && (
-              <div className="w-full bg-[rgba(15,15,15,0.75)] backdrop-blur-[12px] border border-[rgba(255,87,34,0.2)] rounded-2xl p-8 shadow-2xl">
-                <form onSubmit={handleLogin} className="space-y-6">
-                  <div className="space-y-2">
-                    <label className="text-sm text-gray-400">Email</label>
-                    <Input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="Enter your email"
-                      className="reel-input w-full bg-[#0f0f0f] border-gray-700 text-white placeholder:text-gray-500 rounded-lg h-12"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm text-gray-400">Password</label>
-                    <Input
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Enter your password"
-                      className="reel-input w-full bg-[#0f0f0f] border-gray-700 text-white placeholder:text-gray-500 rounded-lg h-12"
-                      required
-                    />
-                  </div>
-                  {loginError && <p className="text-red-400 text-sm text-center">{loginError}</p>}
-                  <Button
-                    type="submit"
-                    disabled={loginLoading}
-                    className="w-full bg-gradient-to-r from-[#ff5722] to-[#dc2626] hover:from-[#ff6d3a] hover:to-[#ef4444] text-white h-12 rounded-lg transition-all duration-200 disabled:opacity-50"
-                  >
-                    {loginLoading ? 'Signing in...' : 'Login'}
-                  </Button>
-                  <div className="text-center pt-4 border-t border-[rgba(255,87,34,0.15)]">
-                    <p className="text-sm text-gray-400">
-                      Don't have an account?{' '}
-                      <button
-                        type="button"
-                        onClick={() => setView('register')}
-                        className="text-[#fbbf24] hover:text-[#ff5722] transition-colors"
-                      >
-                        Sign up
-                      </button>
-                    </p>
-
-                    <div className="mt-3">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setForgotEmail(email);
-                          setForgotError('');
-                          setForgotMessage('');
-                          setView('forgot-password');
-                        }}
-                        className="text-sm text-[#fbbf24] hover:text-[#ff5722] transition-colors"
-                      >
-                        Forgot your password?
-                      </button>
+              {/* ── Login ── */}
+              {view === 'login' && (
+                <div className="w-full bg-[rgba(15,15,15,0.75)] backdrop-blur-[12px] border border-[rgba(255,87,34,0.2)] rounded-2xl p-8 shadow-2xl">
+                  <form onSubmit={handleLogin} className="space-y-6">
+                    <div className="space-y-2">
+                      <label className="text-sm text-gray-400">Email</label>
+                      <Input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="Enter your email"
+                        className="reel-input w-full bg-[#0f0f0f] border-gray-700 text-white placeholder:text-gray-500 rounded-lg h-12"
+                        required
+                      />
                     </div>
-                  </div>
-                </form>
-              </div>
-            )}
+                    <div className="space-y-2">
+                      <label className="text-sm text-gray-400">Password</label>
 
-            {/* ── Register ── */}
-            {view === 'register' && (
-              <div className="w-full bg-[rgba(15,15,15,0.75)] backdrop-blur-[12px] border border-[rgba(255,87,34,0.2)] rounded-2xl p-8 shadow-2xl">
-                <h2 className="text-white text-xl font-semibold mb-6 text-center">Create Account</h2>
-                <form onSubmit={handleRegister} className="space-y-5">
-                  <div className="space-y-2">
-                    <label className="text-sm text-gray-400">Username</label>
-                    <Input
-                      type="text"
-                      value={regUsername}
-                      onChange={(e) => setRegUsername(e.target.value)}
-                      placeholder="Choose a username"
-                      className="reel-input w-full bg-[#0f0f0f] border-gray-700 text-white placeholder:text-gray-500 rounded-lg h-12"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm text-gray-400">Email</label>
-                    <Input
-                      type="email"
-                      value={regEmail}
-                      onChange={(e) => setRegEmail(e.target.value)}
-                      placeholder="Enter your email"
-                      className="reel-input w-full bg-[#0f0f0f] border-gray-700 text-white placeholder:text-gray-500 rounded-lg h-12"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm text-gray-400">Password</label>
-                    <Input
-                      type="password"
-                      value={regPassword}
-                      onChange={(e) => setRegPassword(e.target.value)}
-                      placeholder="Choose a password"
-                      className="reel-input w-full bg-[#0f0f0f] border-gray-700 text-white placeholder:text-gray-500 rounded-lg h-12"
-                      required
-                    />
-                  </div>
-                  {regError && <p className="text-red-400 text-sm text-center">{regError}</p>}
-                  <Button
-                    type="submit"
-                    disabled={regLoading}
-                    className="w-full bg-gradient-to-r from-[#ff5722] to-[#dc2626] hover:from-[#ff6d3a] hover:to-[#ef4444] text-white h-12 rounded-lg transition-all duration-200 disabled:opacity-50"
-                  >
-                    {regLoading ? 'Creating account...' : 'Sign Up'}
-                  </Button>
-                  <div className="text-center pt-4 border-t border-[rgba(255,87,34,0.15)]">
-                    <p className="text-sm text-gray-400">
-                      Already have an account?{' '}
-                      <button
-                        type="button"
-                        onClick={() => setView('login')}
-                        className="text-[#fbbf24] hover:text-[#ff5722] transition-colors"
-                      >
-                        Log in
-                      </button>
-                    </p>
-                  </div>
-                </form>
-              </div>
-            )}
+                      <div className="relative">
+                        <Input
+                          type={showLoginPassword ? 'text' : 'password'}
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder="Enter your password"
+                          className="reel-input w-full bg-[#0f0f0f] border-gray-700 text-white placeholder:text-gray-500 rounded-lg h-12 pr-11"
+                          required
+                        />
 
-            {view === 'forgot-password' && (
-              <div className="w-full bg-[rgba(15,15,15,0.75)] backdrop-blur-[12px] border border-[rgba(255,87,34,0.2)] rounded-2xl p-8 shadow-2xl">
-                <h2 className="text-white text-xl font-semibold mb-6 text-center">Reset Password</h2>
-                <form onSubmit={handleForgotPassword} className="space-y-5">
-                  <div className="space-y-2">
-                    <label className="text-sm text-gray-400">Email</label>
-                    <Input
-                      type="email"
-                      value={forgotEmail}
-                      onChange={(e) => setForgotEmail(e.target.value)}
-                      placeholder="Enter your email"
-                      className="reel-input w-full bg-[#0f0f0f] border-gray-700 text-white placeholder:text-gray-500 rounded-lg h-12"
-                      required
-                    />
-                  </div>
+                        <button
+                          type="button"
+                          onClick={() => setShowLoginPassword((prev) => !prev)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition-colors hover:text-white"
+                          aria-label={showLoginPassword ? 'Hide password' : 'Show password'}
+                          title={showLoginPassword ? 'Hide password' : 'Show password'}
+                        >
+                          {showLoginPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                    {loginError && <p className="text-red-400 text-sm text-center">{loginError}</p>}
+                    <Button
+                      type="submit"
+                      disabled={loginLoading}
+                      className="w-full bg-gradient-to-r from-[#ff5722] to-[#dc2626] hover:from-[#ff6d3a] hover:to-[#ef4444] text-white h-12 rounded-lg transition-all duration-200 disabled:opacity-50"
+                    >
+                      {loginLoading ? 'Signing in...' : 'Login'}
+                    </Button>
+                    <div className="text-center pt-4 border-t border-[rgba(255,87,34,0.15)]">
+                      <p className="text-sm text-gray-400">
+                        Don't have an account?{' '}
+                        <button
+                          type="button"
+                          onClick={() => setView('register')}
+                          className="text-[#fbbf24] hover:text-[#ff5722] transition-colors"
+                        >
+                          Sign up
+                        </button>
+                      </p>
 
-                  <p className="text-sm text-gray-400 text-center">
-                    Enter your email and we’ll send you a reset link. Make sure to check spam folder.
-                  </p>
-
-                  {forgotError && <p className="text-red-400 text-sm text-center">{forgotError}</p>}
-                  {forgotMessage && <p className="text-green-400 text-sm text-center">{forgotMessage}</p>}
-
-                  <Button
-                    type="submit"
-                    disabled={forgotLoading}
-                    className="w-full bg-gradient-to-r from-[#ff5722] to-[#dc2626] hover:from-[#ff6d3a] hover:to-[#ef4444] text-white h-12 rounded-lg transition-all duration-200 disabled:opacity-50"
-                  >
-                    {forgotLoading ? 'Sending...' : 'Send Reset Email'}
-                  </Button>
-
-                  <div className="text-center pt-4 border-t border-[rgba(255,87,34,0.15)]">
-                    <p className="text-sm text-gray-400">
-                      Remember your password?{' '}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setForgotError('');
-                          setForgotMessage('');
-                          setView('login');
-                        }}
-                        className="text-[#fbbf24] hover:text-[#ff5722] transition-colors"
-                      >
-                        Log in
-                      </button>
-                    </p>
-                  </div>
-                </form>
-              </div>
-            )}
-
-            {/* ── Ask existing user about services ── */}
-            {view === 'ask-streaming' && (
-              <div className="w-full bg-[rgba(15,15,15,0.75)] backdrop-blur-[12px] border border-[rgba(255,87,34,0.2)] rounded-2xl p-8 shadow-2xl text-center">
-                <h2 className="text-white text-xl font-semibold mb-3">
-                  Welcome back, {pendingUsername}!
-                </h2>
-                <p className="text-gray-400 mb-8">
-                  Would you like to update your streaming service preferences?
-                </p>
-                <div className="flex gap-3">
-                  <button
-                    onClick={goQuiz}
-                    className="flex-1 bg-[#2A2A2A] hover:bg-[#333333] text-white px-6 py-3 rounded-lg transition-colors font-medium"
-                  >
-                    No, go to app
-                  </button>
-                  <button
-                    onClick={() => setView('setup-streaming')}
-                    className="flex-1 bg-gradient-to-r from-[#ff5722] to-[#dc2626] hover:from-[#ff6d3a] hover:to-[#ef4444] text-white px-6 py-3 rounded-lg transition-all duration-200 font-medium"
-                  >
-                    Yes, update
-                  </button>
+                      <div className="mt-3">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setForgotEmail(email);
+                            setForgotError('');
+                            setForgotMessage('');
+                            setView('forgot-password');
+                          }}
+                          className="text-sm text-[#fbbf24] hover:text-[#ff5722] transition-colors"
+                        >
+                          Forgot your password?
+                        </button>
+                      </div>
+                    </div>
+                  </form>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* ── Streaming setup ── */}
-            {view === 'setup-streaming' && (
-              <StreamingSetup
-                userId={pendingUserId}
-                initialServices={existingServices}
-                onDone={goQuiz}
-                onSkip={goQuiz}
-              />
-            )}
+              {/* ── Register ── */}
+              {view === 'register' && (
+                <div className="w-full bg-[rgba(15,15,15,0.75)] backdrop-blur-[12px] border border-[rgba(255,87,34,0.2)] rounded-2xl p-8 shadow-2xl">
+                  <h2 className="text-white text-xl font-semibold mb-6 text-center">Create Account</h2>
+                  <form onSubmit={handleRegister} className="space-y-5">
+                    <div className="space-y-2">
+                      <label className="text-sm text-gray-400">Username</label>
+                      <Input
+                        type="text"
+                        value={regUsername}
+                        onChange={(e) => setRegUsername(e.target.value)}
+                        placeholder="Choose a username"
+                        className="reel-input w-full bg-[#0f0f0f] border-gray-700 text-white placeholder:text-gray-500 rounded-lg h-12"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm text-gray-400">Email</label>
+                      <Input
+                        type="email"
+                        value={regEmail}
+                        onChange={(e) => setRegEmail(e.target.value)}
+                        placeholder="Enter your email"
+                        className="reel-input w-full bg-[#0f0f0f] border-gray-700 text-white placeholder:text-gray-500 rounded-lg h-12"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm text-gray-400">Password</label>
+
+                      <div className="relative">
+                        <Input
+                          type={showRegisterPassword ? 'text' : 'password'}
+                          value={regPassword}
+                          onChange={(e) => setRegPassword(e.target.value)}
+                          placeholder="Choose a password"
+                          className="reel-input w-full bg-[#0f0f0f] border-gray-700 text-white placeholder:text-gray-500 rounded-lg h-12 pr-11"
+                          required
+                        />
+
+                        <button
+                          type="button"
+                          onClick={() => setShowRegisterPassword((prev) => !prev)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition-colors hover:text-white"
+                          aria-label={showRegisterPassword ? 'Hide password' : 'Show password'}
+                          title={showRegisterPassword ? 'Hide password' : 'Show password'}
+                        >
+                          {showRegisterPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                    {regError && <p className="text-red-400 text-sm text-center">{regError}</p>}
+                    <Button
+                      type="submit"
+                      disabled={regLoading}
+                      className="w-full bg-gradient-to-r from-[#ff5722] to-[#dc2626] hover:from-[#ff6d3a] hover:to-[#ef4444] text-white h-12 rounded-lg transition-all duration-200 disabled:opacity-50"
+                    >
+                      {regLoading ? 'Creating account...' : 'Sign Up'}
+                    </Button>
+                    <div className="text-center pt-4 border-t border-[rgba(255,87,34,0.15)]">
+                      <p className="text-sm text-gray-400">
+                        Already have an account?{' '}
+                        <button
+                          type="button"
+                          onClick={() => setView('login')}
+                          className="text-[#fbbf24] hover:text-[#ff5722] transition-colors"
+                        >
+                          Log in
+                        </button>
+                      </p>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              {view === 'forgot-password' && (
+                <div className="w-full bg-[rgba(15,15,15,0.75)] backdrop-blur-[12px] border border-[rgba(255,87,34,0.2)] rounded-2xl p-8 shadow-2xl">
+                  <h2 className="text-white text-xl font-semibold mb-6 text-center">Reset Password</h2>
+                  <form onSubmit={handleForgotPassword} className="space-y-5">
+                    <div className="space-y-2">
+                      <label className="text-sm text-gray-400">Email</label>
+                      <Input
+                        type="email"
+                        value={forgotEmail}
+                        onChange={(e) => setForgotEmail(e.target.value)}
+                        placeholder="Enter your email"
+                        className="reel-input w-full bg-[#0f0f0f] border-gray-700 text-white placeholder:text-gray-500 rounded-lg h-12"
+                        required
+                      />
+                    </div>
+
+                    <p className="text-sm text-gray-400 text-center">
+                      Enter your email and we’ll send you a reset link. Make sure to check spam folder.
+                    </p>
+
+                    {forgotError && <p className="text-red-400 text-sm text-center">{forgotError}</p>}
+                    {forgotMessage && <p className="text-green-400 text-sm text-center">{forgotMessage}</p>}
+
+                    <Button
+                      type="submit"
+                      disabled={forgotLoading}
+                      className="w-full bg-gradient-to-r from-[#ff5722] to-[#dc2626] hover:from-[#ff6d3a] hover:to-[#ef4444] text-white h-12 rounded-lg transition-all duration-200 disabled:opacity-50"
+                    >
+                      {forgotLoading ? 'Sending...' : 'Send Reset Email'}
+                    </Button>
+
+                    <div className="text-center pt-4 border-t border-[rgba(255,87,34,0.15)]">
+                      <p className="text-sm text-gray-400">
+                        Remember your password?{' '}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setForgotError('');
+                            setForgotMessage('');
+                            setView('login');
+                          }}
+                          className="text-[#fbbf24] hover:text-[#ff5722] transition-colors"
+                        >
+                          Log in
+                        </button>
+                      </p>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              {/* ── Ask existing user about services ── */}
+              {view === 'ask-streaming' && (
+                <div className="w-full bg-[rgba(15,15,15,0.75)] backdrop-blur-[12px] border border-[rgba(255,87,34,0.2)] rounded-2xl p-8 shadow-2xl text-center">
+                  <h2 className="text-white text-xl font-semibold mb-3">
+                    Welcome back, {pendingUsername}!
+                  </h2>
+                  <p className="text-gray-400 mb-8">
+                    Would you like to update your streaming service preferences?
+                  </p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={goQuiz}
+                      className="flex-1 bg-[#2A2A2A] hover:bg-[#333333] text-white px-6 py-3 rounded-lg transition-colors font-medium"
+                    >
+                      No, go to app
+                    </button>
+                    <button
+                      onClick={() => setView('setup-streaming')}
+                      className="flex-1 bg-gradient-to-r from-[#ff5722] to-[#dc2626] hover:from-[#ff6d3a] hover:to-[#ef4444] text-white px-6 py-3 rounded-lg transition-all duration-200 font-medium"
+                    >
+                      Yes, update
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Streaming setup ── */}
+              {view === 'setup-streaming' && (
+                <StreamingSetup
+                  userId={pendingUserId}
+                  initialServices={existingServices}
+                  onDone={goQuiz}
+                  onSkip={goQuiz}
+                />
+              )}
+            </div>
           </div>
-        </div>
         </div>
       </div>
     </>
