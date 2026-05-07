@@ -80,7 +80,7 @@ export function SearchTab() {
           services_filter: f.filterStreaming && f.hasServices ? f.userServices : undefined,
         }).then((m) => { setMovies(m); setLoading(false); });
       }
-    }, 500);
+    }, 1000);
 
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [searchQuery, f.actor, f.director, f.yearFrom, f.yearTo, f.genre, f.minRating, f.sortBy, f.filterStreaming]);

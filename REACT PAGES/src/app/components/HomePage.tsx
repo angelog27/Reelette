@@ -319,13 +319,21 @@ export function HomePage() {
   const handleSearchChange = (val: string) => {
     setNavSearch(val);
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => runSearch(val), 300);
+    debounceRef.current = setTimeout(() => runSearch(val), 1000);
+  };
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && navSearch.trim()) {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      setSearchOpen(false);
+      navigate(`/home/search?q=${encodeURIComponent(navSearch.trim())}`);
+    }
   };
 
   useEffect(() => {
     if (navSearch.trim() || hasActiveFilter) {
       if (debounceRef.current) clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(() => runSearch(navSearch), 300);
+      debounceRef.current = setTimeout(() => runSearch(navSearch), 1000);
     }
   }, [filterGenre, filterRating, filterYearIdx, filterMyServices]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -453,6 +461,7 @@ export function HomePage() {
                   type="text"
                   value={navSearch}
                   onChange={e => handleSearchChange(e.target.value)}
+                  onKeyDown={handleSearchKeyDown}
                   onFocus={() => { if (navSearch.trim() || hasActiveFilter) setSearchOpen(true); }}
                   placeholder="Search movies, shows..."
                   autoFocus
