@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight, Star, Bookmark, BookmarkCheck, Info, Layers,
 import { MovieDetailModal } from './MovieDetailModal';
 import {
   watchMovieLater, removeFromWatchLater, getUser, getServices,
-  getFeed, getFriends, getMovieDetails, getUserPublicProfile,
+  getFeed, getFriends, getMovieDetails, getShowDetails, getWatchedMovies, getUserPublicProfile,
   getTrendingShows, getPopularShows, getTopRatedShows, discoverShows,
 } from '../services/api';
 import { getServiceCategoryMovies } from '../services/discoveryService';
@@ -182,6 +182,20 @@ const POSTER_H = Math.round(CARD_W * 1.5); // 234 px — keeps aspect 2/3
 
 function CompactCard({ movie, onClick }: { movie: Movie; onClick: () => void }) {
   const [hovered, setHovered] = useState(false);
+  const [liveOverview, setLiveOverview] = useState(movie.overview ?? '');
+  const overviewFetchedRef = useRef(false);
+
+  useEffect(() => {
+    if (hovered && !liveOverview && !overviewFetchedRef.current) {
+      overviewFetchedRef.current = true;
+      const fetchFn = movie.type === 'show' ? getShowDetails : getMovieDetails;
+      fetchFn(movie.id).then((d: Record<string, unknown>) => {
+        const ov = d.overview as string | undefined;
+        if (ov) setLiveOverview(ov);
+      }).catch(() => {});
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hovered]);
 
   return (
     <div
@@ -289,10 +303,10 @@ function CompactCard({ movie, onClick }: { movie: Movie; onClick: () => void }) 
           )}
 
           {/* Description */}
-          {movie.overview && (
+          {liveOverview && (
             <p style={{ color: '#6b7280', fontSize: 11, lineHeight: 1.55, margin: 0, flex: 1,
               display: '-webkit-box', WebkitLineClamp: 6, WebkitBoxOrient: 'vertical', overflow: 'hidden' } as React.CSSProperties}>
-              {movie.overview}
+              {liveOverview}
             </p>
           )}
 
@@ -377,12 +391,14 @@ function MovieRow({ title, movies, onMovieClick }: {
 
 type PersonalizedSlot =
   | { kind: 'friend';      movie: Movie; friendName: string; friendAvatar?: string; friendRating: number; friendReview: string }
+  | { kind: 'friendWatch'; movie: Movie; friendName: string; friendAvatar?: string }
   | { kind: 'recommended'; movie: Movie }
   | { kind: 'tonight';     movie: Movie }
   | { kind: 'topPick';     movie: Movie; yourRating: number };
 
 const SLOT_META: Record<PersonalizedSlot['kind'], { label: string; color: string }> = {
-  friend:      { label: 'Your Friends Are Watching', color: '#9B7BD7' },
+  friend:      { label: 'Recently Posted About',     color: '#9B7BD7' },
+  friendWatch: { label: 'Your Friends Are Watching', color: '#7EC8C8' },
   recommended: { label: 'Recommended for You',       color: '#9B7BD7' },
   tonight:     { label: "Tonight's Pick",             color: 'rgba(255,255,255,0.75)' },
   topPick:     { label: 'Your Top Pick',              color: '#fbbf24' },
@@ -429,7 +445,7 @@ function PersonalizedHero({ slots, backdropOverrides = {}, onOpenModal, onToggle
   const isInWatchlist = watchlistIds.includes(slot.movie.id);
 
   return (
-    <div className="full-bleed relative overflow-hidden" style={{ height: 520, marginTop: -32 }}>
+    <div className="full-bleed relative overflow-hidden group/hero" style={{ height: 520, marginTop: -32 }}>
       {/* Backdrop layers */}
       {slots.map((s, i) => {
         const bg = backdropOverrides[s.movie.id] || s.movie.backdrop || '';
@@ -533,6 +549,26 @@ function PersonalizedHero({ slots, backdropOverrides = {}, onOpenModal, onToggle
             </div>
           )}
 
+          {slot.kind === 'friendWatch' && (
+            <div className="bg-black/55 backdrop-blur-sm rounded-2xl p-5 border border-white/10 w-[260px]">
+              <div className="flex items-center gap-3 mb-3">
+                {slot.friendAvatar
+                  ? <img src={slot.friendAvatar} className="w-10 h-10 rounded-full object-cover border border-white/20 shrink-0" alt="" />
+                  : <div className="w-10 h-10 rounded-full bg-[#2A2A2A] border border-white/10 flex items-center justify-center text-sm font-bold text-white/70 shrink-0">
+                      {slot.friendName.slice(0, 2).toUpperCase()}
+                    </div>
+                }
+                <div className="min-w-0">
+                  <p className="text-white text-sm font-semibold truncate">@{slot.friendName}</p>
+                  <p className="text-[#7EC8C8] text-[11px] mt-0.5">recently watched this</p>
+                </div>
+              </div>
+              <p className="text-gray-400 text-xs leading-relaxed">
+                See what your friends have been watching and discover new films through their recent activity.
+              </p>
+            </div>
+          )}
+
           {slot.kind === 'recommended' && (
             <div className="bg-black/55 backdrop-blur-sm rounded-2xl p-5 border border-white/10 w-[240px]">
               <div className="flex items-center gap-2 mb-3">
@@ -562,6 +598,28 @@ function PersonalizedHero({ slots, backdropOverrides = {}, onOpenModal, onToggle
           )}
         </div>
       </div>
+
+      {/* Left / Right nav arrows */}
+      {total > 1 && (
+        <>
+          <button
+            onClick={() => { setCurrent(c => (c - 1 + total) % total); startInterval(); }}
+            className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 opacity-0 hover:opacity-100 group-hover/hero:opacity-60 hover:!opacity-100"
+            style={{ zIndex: 3, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)', border: '1px solid rgba(255,255,255,0.12)' }}
+            aria-label="Previous"
+          >
+            <ChevronLeft className="w-5 h-5 text-white" />
+          </button>
+          <button
+            onClick={() => { setCurrent(c => (c + 1) % total); startInterval(); }}
+            className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 opacity-0 hover:opacity-100 group-hover/hero:opacity-60 hover:!opacity-100"
+            style={{ zIndex: 3, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)', border: '1px solid rgba(255,255,255,0.12)' }}
+            aria-label="Next"
+          >
+            <ChevronRight className="w-5 h-5 text-white" />
+          </button>
+        </>
+      )}
 
       {/* Slot indicator dots */}
       {total > 1 && (
@@ -655,6 +713,40 @@ export function DiscoverTab() {
     return () => { cancelled = true; };
   }, [user?.user_id]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Friend watch slot (most recently watched movie by any friend) ─
+  const [friendWatchSlot, setFriendWatchSlot] = useState<Extract<PersonalizedSlot, { kind: 'friendWatch' }> | null>(null);
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    getFriends(user.user_id).then(async (friends: { friend_id: string }[]) => {
+      if (cancelled || !friends.length) return;
+      for (const friend of friends.slice(0, 6)) {
+        try {
+          const watched = await getWatchedMovies(friend.friend_id, 1);
+          if (cancelled) return;
+          if (!watched.length) continue;
+          const w = watched[0];
+          let backdrop = '';
+          try {
+            const d = await getMovieDetails(w.movie_id);
+            backdrop = (d.backdrop as string) || (d.backdrop_path ? `https://image.tmdb.org/t/p/w1280${d.backdrop_path}` : '');
+          } catch {}
+          const friendProfile = await getUserPublicProfile(friend.friend_id).catch(() => null);
+          if (!cancelled) {
+            setFriendWatchSlot({
+              kind: 'friendWatch',
+              movie: { id: w.movie_id, title: w.title, year: w.year ?? 0, genres: w.genres ?? [], rating: w.tmdb_rating ?? 0, poster: w.poster ?? '', backdrop, streamingService: w.services?.[0] ?? '' },
+              friendName: friendProfile?.username ?? friend.friend_id,
+              friendAvatar: friendProfile?.avatarUrl,
+            });
+          }
+          return;
+        } catch {}
+      }
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [user?.user_id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const [userServices, setUserServices] = useState<Record<string, boolean>>(getServices);
   useEffect(() => {
     const handler = () => setUserServices(getServices());
@@ -668,40 +760,47 @@ export function DiscoverTab() {
   );
 
   // ── Provider rows ──────────────────────────────────────────────
-  const [providerSubTab,   setProviderSubTab]   = useState(0);
-  const [providerPopular,  setProviderPopular]  = useState<Movie[] | null>(null);
-  const [providerNew,      setProviderNew]      = useState<Movie[] | null>(null);
-  const [providerSpecific, setProviderSpecific] = useState<Movie[][] | null>(null);
+  const [providerPopular,      setProviderPopular]      = useState<Movie[] | null>(null);
+  const [providerNew,          setProviderNew]          = useState<Movie[] | null>(null);
+  const [providerSpecific,     setProviderSpecific]     = useState<Movie[][] | null>(null);
+  const [providerShowsPopular, setProviderShowsPopular] = useState<Movie[] | null>(null);
 
   useEffect(() => {
     if (activeProvider === 'all') return;
-    setProviderSubTab(0);
 
     const cached = providerCache[activeProvider];
     if (cached) {
       setProviderPopular(cached.popular);
       setProviderNew(cached.newMovies);
       setProviderSpecific(cached.specificRows);
+      setProviderShowsPopular(cached.showsPopular ?? []);
       return;
     }
 
     setProviderPopular(null);
     setProviderNew(null);
     setProviderSpecific(null);
+    setProviderShowsPopular(null);
 
     const catalog = SERVICE_CATALOG[activeProvider];
     if (!catalog) return;
 
+    const providerKey = PROVIDER_KEY[activeProvider];
+
     let cancelled = false;
     (async () => {
       try {
-        const [pop, newM] = await Promise.all([
+        const [pop, newM, shows] = await Promise.all([
           getServiceCategoryMovies(catalog.firestoreServiceId, 'popular'),
           getServiceCategoryMovies(catalog.firestoreServiceId, 'new'),
+          providerKey
+            ? discoverShows({ services_filter: { [providerKey]: true }, sort_by: 'popularity' })
+            : Promise.resolve([] as Movie[]),
         ]);
         if (cancelled) return;
         setProviderPopular(pop.slice(0, ROW_LIMIT));
         setProviderNew(newM.slice(0, ROW_LIMIT));
+        setProviderShowsPopular(shows.slice(0, ROW_LIMIT));
 
         const specificResults = await Promise.all(
           catalog.specificCategories.map(cat =>
@@ -718,9 +817,10 @@ export function DiscoverTab() {
           popular:      pop.slice(0, ROW_LIMIT),
           newMovies:    newM.slice(0, ROW_LIMIT),
           specificRows: specificData,
+          showsPopular: shows.slice(0, ROW_LIMIT),
         });
       } catch {
-        if (!cancelled) { setProviderPopular([]); setProviderNew([]); setProviderSpecific([]); }
+        if (!cancelled) { setProviderPopular([]); setProviderNew([]); setProviderSpecific([]); setProviderShowsPopular([]); }
       }
     })();
     return () => { cancelled = true; };
@@ -739,6 +839,7 @@ export function DiscoverTab() {
   const heroSlots = useMemo<PersonalizedSlot[]>(() => {
     const slots: PersonalizedSlot[] = [];
     if (friendSlot) slots.push(friendSlot);
+    if (friendWatchSlot) slots.push(friendWatchSlot);
     if (recommended?.length) slots.push({ kind: 'recommended', movie: recommended[0] });
     if (heroMovies?.length)  slots.push({ kind: 'tonight',     movie: heroMovies[0] });
     if (top10.length) {
@@ -746,7 +847,7 @@ export function DiscoverTab() {
       if (watched?.user_rating) slots.push({ kind: 'topPick', movie: top10[0], yourRating: watched.user_rating });
     }
     return slots;
-  }, [friendSlot, recommended, heroMovies, top10, userWatched]);
+  }, [friendSlot, friendWatchSlot, recommended, heroMovies, top10, userWatched]);
 
   // Fetch backdrops for any slot whose movie doesn't already have one
   const [backdropOverrides, setBackdropOverrides] = useState<Record<string, string>>({});
@@ -879,59 +980,19 @@ export function DiscoverTab() {
       <div>
         {isProviderView ? (() => {
           const catalog = SERVICE_CATALOG[activeProvider];
-          const subLabels = [
-            'Popular',
-            'New',
-            `Your Watches${providerWatched.length > 0 ? ` (${providerWatched.length})` : ''}`,
-            catalog?.specificLabel ?? 'Collection',
-          ];
-          const color = PROVIDER_COLOR[activeProvider] ?? '#7C5DBD';
           return (
             <>
-              {/* Sub-tab pills */}
-              <div className="flex gap-2 mb-8 flex-wrap">
-                {subLabels.map((label, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setProviderSubTab(i)}
-                    className="px-4 py-2 rounded-full text-sm font-medium transition-all duration-200"
-                    style={{
-                      background: providerSubTab === i ? color : 'rgba(255,255,255,0.08)',
-                      color: providerSubTab === i ? '#fff' : '#9ca3af',
-                    }}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Tab 0 — Popular */}
-              {providerSubTab === 0 && (
-                <MovieRow title={`Popular on ${activeProvider}`} movies={providerPopular} onMovieClick={setSelectedMovieId} />
+              <MovieRow title={`Popular on ${activeProvider}`} movies={providerPopular} onMovieClick={setSelectedMovieId} />
+              <MovieRow title={`New on ${activeProvider}`} movies={providerNew} onMovieClick={setSelectedMovieId} />
+              {providerWatched.length > 0 && (
+                <MovieRow title={`Your Watches on ${activeProvider}`} movies={providerWatched} onMovieClick={setSelectedMovieId} />
               )}
-
-              {/* Tab 1 — New */}
-              {providerSubTab === 1 && (
-                <MovieRow title={`New on ${activeProvider}`} movies={providerNew} onMovieClick={setSelectedMovieId} />
-              )}
-
-              {/* Tab 2 — Your Watches */}
-              {providerSubTab === 2 && (
-                providerWatched.length > 0
-                  ? <MovieRow title={`Your Watches on ${activeProvider}`} movies={providerWatched} onMovieClick={setSelectedMovieId} />
-                  : <div className="text-gray-500 text-center py-16 text-sm">You haven't logged any movies on {activeProvider} yet.</div>
-              )}
-
-              {/* Tab 3 — Service-specific */}
-              {providerSubTab === 3 && (
+              {(catalog?.specificCategories ?? []).map((cat, i) =>
                 providerSpecific === null
-                  ? (catalog?.specificCategories ?? []).map(cat => (
-                      <SkeletonRow key={cat.firestoreId} title={cat.title} />
-                    ))
-                  : (catalog?.specificCategories ?? []).map((cat, i) => (
-                      <MovieRow key={cat.firestoreId} title={cat.title} movies={providerSpecific[i] ?? null} onMovieClick={setSelectedMovieId} />
-                    ))
+                  ? <SkeletonRow key={cat.firestoreId} title={cat.title} />
+                  : <MovieRow key={cat.firestoreId} title={cat.title} movies={providerSpecific[i] ?? null} onMovieClick={setSelectedMovieId} />
               )}
+              <MovieRow title={`Popular Shows on ${activeProvider}`} movies={providerShowsPopular} onMovieClick={(id) => openModal(id, 'show')} />
             </>
           );
         })() : mediaType === 'show' ? (

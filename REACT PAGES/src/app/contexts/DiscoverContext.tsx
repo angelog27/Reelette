@@ -23,6 +23,7 @@ export interface ProviderRows {
   popular:      Movie[];
   newMovies:    Movie[];
   specificRows: Movie[][];
+  showsPopular?: Movie[];
 }
 
 interface DiscoverContextValue {
