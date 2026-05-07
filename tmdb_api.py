@@ -359,3 +359,177 @@ def watch_later(user_id, movie_id):
     # Implementation for watch later functionality
     pass
 
+
+# ── TV Show Functions ─────────────────────────────────────────────
+
+def search_tv_shows(query, page=1):
+    cache_key = f"tv_search:{query}:{page}"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
+    url = f"{TMDB_BASE_URL}/search/tv"
+    params = {"api_key": TMDB_API_KEY, "query": query, "language": "en-US", "page": page, "include_adult": False}
+    try:
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        result = response.json()
+        _cache_set(cache_key, result, 300)
+        return result
+    except requests.exceptions.RequestException as e:
+        print(f"Error searching TV shows: {e}")
+        return None
+
+
+def get_popular_tv_shows(page=1):
+    cache_key = f"tv_popular:{page}"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
+    url = f"{TMDB_BASE_URL}/tv/popular"
+    params = {"api_key": TMDB_API_KEY, "language": "en-US", "page": page}
+    try:
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        result = response.json()
+        _cache_set(cache_key, result, 1200)
+        return result
+    except requests.exceptions.RequestException as e:
+        print(f"Error getting popular TV shows: {e}")
+        return None
+
+
+def get_top_rated_tv_shows(page=1):
+    cache_key = f"tv_top_rated:{page}"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
+    url = f"{TMDB_BASE_URL}/tv/top_rated"
+    params = {"api_key": TMDB_API_KEY, "language": "en-US", "page": page}
+    try:
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        result = response.json()
+        _cache_set(cache_key, result, 1200)
+        return result
+    except requests.exceptions.RequestException as e:
+        print(f"Error getting top rated TV shows: {e}")
+        return None
+
+
+def get_trending_tv_shows(time_window="week"):
+    cache_key = f"tv_trending:{time_window}"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
+    url = f"{TMDB_BASE_URL}/trending/tv/{time_window}"
+    params = {"api_key": TMDB_API_KEY}
+    try:
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        result = response.json()
+        _cache_set(cache_key, result, 1200)
+        return result
+    except requests.exceptions.RequestException as e:
+        print(f"Error getting trending TV shows: {e}")
+        return None
+
+
+def get_tv_show_details(show_id):
+    cache_key = f"tv_detail:{show_id}"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
+    url = f"{TMDB_BASE_URL}/tv/{show_id}"
+    params = {
+        "api_key": TMDB_API_KEY,
+        "language": "en-US",
+        "append_to_response": "credits,videos,watch/providers,similar,aggregate_credits",
+    }
+    try:
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        result = response.json()
+        _cache_set(cache_key, result, 43200)  # 12 h
+        return result
+    except requests.exceptions.RequestException as e:
+        print(f"Error getting TV show details: {e}")
+        return None
+
+
+def discover_tv_shows(genre_id=None, year_from=None, year_to=None,
+                      min_rating=None, min_vote_count=None,
+                      with_watch_providers=None, watch_region="US",
+                      sort_by="popularity.desc", page=1):
+    cache_key = (f"tv_discover:{genre_id}:{year_from}:{year_to}:{min_rating}:"
+                 f"{min_vote_count}:{with_watch_providers}:{watch_region}:{sort_by}:{page}")
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
+    url = f"{TMDB_BASE_URL}/discover/tv"
+    params = {
+        "api_key": TMDB_API_KEY,
+        "language": "en-US",
+        "sort_by": sort_by,
+        "include_adult": False,
+        "page": page,
+    }
+    if genre_id:
+        params["with_genres"] = genre_id
+    if year_from:
+        params["first_air_date.gte"] = f"{year_from}-01-01"
+    if year_to:
+        params["first_air_date.lte"] = f"{year_to}-12-31"
+    if min_rating:
+        params["vote_average.gte"] = min_rating
+    if min_vote_count:
+        params["vote_count.gte"] = min_vote_count
+    if with_watch_providers:
+        params["with_watch_providers"] = with_watch_providers
+        params["watch_region"] = watch_region
+    try:
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        result = response.json()
+        _cache_set(cache_key, result, 300)
+        return result
+    except requests.exceptions.RequestException as e:
+        print(f"Error discovering TV shows: {e}")
+        return None
+
+
+def get_tv_genres():
+    cache_key = "tv_genres"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
+    url = f"{TMDB_BASE_URL}/genre/tv/list"
+    params = {"api_key": TMDB_API_KEY, "language": "en-US"}
+    try:
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        result = response.json()
+        _cache_set(cache_key, result, 86400)  # 24 h — genres rarely change
+        return result
+    except requests.exceptions.RequestException as e:
+        print(f"Error getting TV genres: {e}")
+        return None
+
+
+def get_tv_streaming_providers(show_id):
+    cache_key = f"tv_providers:{show_id}"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
+    url = f"{TMDB_BASE_URL}/tv/{show_id}/watch/providers"
+    params = {"api_key": TMDB_API_KEY}
+    try:
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        data = response.json()
+        result = data.get('results', {}).get('US', {})
+        _cache_set(cache_key, result, 21600)  # 6 h
+        return result
+    except requests.exceptions.RequestException as e:
+        print(f"Error getting TV streaming providers: {e}")
+        return None
+

@@ -4,6 +4,7 @@ import { MovieDetailModal } from './MovieDetailModal';
 import {
   watchMovieLater, removeFromWatchLater, getUser, getServices,
   getFeed, getFriends, getMovieDetails, getUserPublicProfile,
+  getTrendingShows, getPopularShows, getTopRatedShows, discoverShows,
 } from '../services/api';
 import { getServiceCategoryMovies } from '../services/discoveryService';
 import type { Movie, WatchedMovie } from '../services/api';
@@ -177,38 +178,136 @@ function SkeletonRow({ title }: { title: string }) {
 
 // ── Compact landscape card ────────────────────────────────────────
 
+const POSTER_H = Math.round(CARD_W * 1.5); // 234 px — keeps aspect 2/3
+
 function CompactCard({ movie, onClick }: { movie: Movie; onClick: () => void }) {
+  const [hovered, setHovered] = useState(false);
+
   return (
     <div
-      className="cursor-pointer group flex-shrink-0"
-      style={{ width: CARD_W }}
+      className="flex-shrink-0 cursor-pointer"
+      style={{
+        width: hovered ? CARD_W * 2 : CARD_W,
+        transition: 'width 0.25s ease',
+        position: 'relative',
+        zIndex: hovered ? 20 : 1,
+      }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       onClick={onClick}
     >
+      {/* Expanding card body — poster left, details right */}
       <div
-        className="relative overflow-hidden rounded-md bg-[#1a1a1a]"
-        style={{ aspectRatio: '2/3' }}
+        style={{
+          display: 'flex',
+          flexDirection: 'row',
+          overflow: 'hidden',
+          borderRadius: 6,
+          height: POSTER_H,
+          background: '#1a1a1a',
+          boxShadow: hovered ? '0 8px 40px rgba(0,0,0,0.75)' : 'none',
+          transition: 'box-shadow 0.25s ease',
+        }}
       >
-        {movie.poster ? (
-          <img
-            src={movie.poster}
-            alt={movie.title}
-            className="w-full h-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
-            loading="lazy"
-            decoding="async"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-700 text-[10px] text-center px-2">
+        {/* ── Poster (left, fixed width) ── */}
+        <div style={{ width: CARD_W, flexShrink: 0, position: 'relative' }}>
+          {movie.poster ? (
+            <img
+              src={movie.poster}
+              alt={movie.title}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center',
+                transition: 'transform 0.25s ease',
+                transform: hovered ? 'scale(1.04)' : 'scale(1)' }}
+              loading="lazy"
+              decoding="async"
+            />
+          ) : (
+            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center',
+              justifyContent: 'center', color: '#4b5563', fontSize: 10, textAlign: 'center', padding: '0 8px' }}>
+              {movie.title}
+            </div>
+          )}
+
+          {/* Dark tint on hover */}
+          <div style={{ position: 'absolute', inset: 0, background: hovered ? 'rgba(0,0,0,0.25)' : 'transparent',
+            transition: 'background 0.25s ease', pointerEvents: 'none' }} />
+
+          {/* Provider badge */}
+          {movie.streamingService && PROVIDER_LOGOS[movie.streamingService] && (
+            <div style={{ position: 'absolute', top: 6, right: 6, width: 26, height: 26,
+              borderRadius: 5, overflow: 'hidden', background: 'rgba(0,0,0,0.55)' }}>
+              <img src={PROVIDER_LOGOS[movie.streamingService]} alt={movie.streamingService}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </div>
+          )}
+        </div>
+
+        {/* ── Details panel (right, slides in) ── */}
+        <div
+          style={{
+            flex: 1,
+            minWidth: 0,
+            padding: '14px 12px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 7,
+            overflow: 'hidden',
+            opacity: hovered ? 1 : 0,
+            transform: hovered ? 'translateX(0)' : 'translateX(-10px)',
+            transition: 'opacity 0.2s ease 0.1s, transform 0.2s ease 0.1s',
+          }}
+        >
+          {/* Title */}
+          <p style={{ color: '#fff', fontWeight: 700, fontSize: 13, lineHeight: 1.35, margin: 0,
+            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' } as React.CSSProperties}>
             {movie.title}
+          </p>
+
+          {/* Year + Rating */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            {movie.year > 0 && (
+              <span style={{ color: '#9ca3af', fontSize: 11 }}>{movie.year}</span>
+            )}
+            {movie.rating > 0 && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 11, color: '#facc15', fontWeight: 600 }}>
+                <Star className="w-2.5 h-2.5 fill-yellow-400 text-yellow-400" />
+                {movie.rating.toFixed(1)}<span style={{ color: '#6b7280', fontWeight: 400 }}>/10</span>
+              </span>
+            )}
           </div>
-        )}
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-200" />
-        {movie.streamingService && PROVIDER_LOGOS[movie.streamingService] && (
-          <div className="absolute top-1.5 right-1.5 w-7 h-7 rounded-md overflow-hidden bg-black/60">
-            <img src={PROVIDER_LOGOS[movie.streamingService]} alt={movie.streamingService} className="w-full h-full object-cover" />
-          </div>
-        )}
+
+          {/* Genres */}
+          {movie.genres.length > 0 && (
+            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+              {movie.genres.slice(0, 3).map(g => (
+                <span key={g} style={{ background: '#2a2a2a', color: '#9ca3af', fontSize: 10,
+                  padding: '2px 7px', borderRadius: 99, whiteSpace: 'nowrap' }}>
+                  {g}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Description */}
+          {movie.overview && (
+            <p style={{ color: '#6b7280', fontSize: 11, lineHeight: 1.55, margin: 0, flex: 1,
+              display: '-webkit-box', WebkitLineClamp: 6, WebkitBoxOrient: 'vertical', overflow: 'hidden' } as React.CSSProperties}>
+              {movie.overview}
+            </p>
+          )}
+
+          {/* Streaming service label */}
+          {movie.streamingService && (
+            <p style={{ color: '#4b5563', fontSize: 10, margin: 0, marginTop: 'auto' }}>
+              {movie.streamingService}
+            </p>
+          )}
+        </div>
       </div>
-      <div className="mt-2 px-0.5">
+
+      {/* ── Below-card text — fades out on hover ── */}
+      <div style={{ marginTop: 8, paddingLeft: 2, opacity: hovered ? 0 : 1,
+        transition: 'opacity 0.15s ease', pointerEvents: 'none' }}>
         <p className="text-white text-[13px] font-medium line-clamp-1 leading-snug">{movie.title}</p>
         {movie.year > 0 && <p className="text-gray-500 text-[11px] mt-0.5">{movie.year}</p>}
         {movie.rating > 0 && (
@@ -493,9 +592,40 @@ export function DiscoverTab() {
     providerCache, cacheProvider,
   } = useDiscover();
 
-  const [selectedMovieId, setSelectedMovieId] = useState<string | null>(null);
-  const [activeProvider,  setActiveProvider]   = useState('all');
-  const [hoveredProvider, setHoveredProvider]  = useState<string | null>(null);
+  const [selectedMovieId,  setSelectedMovieId]  = useState<string | null>(null);
+  const [selectedItemType, setSelectedItemType] = useState<'movie' | 'show'>('movie');
+  const [activeProvider,   setActiveProvider]   = useState('all');
+  const [hoveredProvider,  setHoveredProvider]  = useState<string | null>(null);
+  const [mediaType,        setMediaType]        = useState<'movie' | 'show'>('movie');
+
+  // ── Shows rows (loaded lazily on first switch to Shows mode) ───
+  const showsLoadedRef = useRef(false);
+  const [showsTrending,  setShowsTrending]  = useState<Movie[] | null>(null);
+  const [showsPopular,   setShowsPopular]   = useState<Movie[] | null>(null);
+  const [showsTopRated,  setShowsTopRated]  = useState<Movie[] | null>(null);
+  const [showsDrama,     setShowsDrama]     = useState<Movie[] | null>(null);
+  const [showsComedy,    setShowsComedy]    = useState<Movie[] | null>(null);
+  const [showsCrime,     setShowsCrime]     = useState<Movie[] | null>(null);
+  const [showsScifi,     setShowsScifi]     = useState<Movie[] | null>(null);
+  const [showsAnimation, setShowsAnimation] = useState<Movie[] | null>(null);
+
+  useEffect(() => {
+    if (mediaType !== 'show' || showsLoadedRef.current) return;
+    showsLoadedRef.current = true;
+    getTrendingShows().then(setShowsTrending).catch(() => setShowsTrending([]));
+    getPopularShows().then(setShowsPopular).catch(() => setShowsPopular([]));
+    getTopRatedShows().then(setShowsTopRated).catch(() => setShowsTopRated([]));
+    discoverShows({ genre_id: '18' }).then(setShowsDrama).catch(() => setShowsDrama([]));
+    discoverShows({ genre_id: '35' }).then(setShowsComedy).catch(() => setShowsComedy([]));
+    discoverShows({ genre_id: '80' }).then(setShowsCrime).catch(() => setShowsCrime([]));
+    discoverShows({ genre_id: '10765' }).then(setShowsScifi).catch(() => setShowsScifi([]));
+    discoverShows({ genre_id: '16' }).then(setShowsAnimation).catch(() => setShowsAnimation([]));
+  }, [mediaType]);
+
+  const openModal = (id: string, type: 'movie' | 'show' = 'movie') => {
+    setSelectedMovieId(id);
+    setSelectedItemType(type);
+  };
 
   // ── Friend hero slot ───────────────────────────────────────────
   const [friendSlot, setFriendSlot] = useState<Extract<PersonalizedSlot, { kind: 'friend' }> | null>(null);
@@ -673,10 +803,37 @@ export function DiscoverTab() {
         />
       )}
 
+      {/* ── Movies / Shows pill toggle ── */}
+      <div className="flex justify-center mt-10 mb-2">
+        <div
+          className="flex items-center p-1 rounded-full"
+          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
+        >
+          <button
+            onClick={() => setMediaType('movie')}
+            className="px-6 py-1.5 rounded-full text-sm font-semibold transition-all duration-200"
+            style={mediaType === 'movie'
+              ? { background: 'rgba(124,93,189,0.85)', color: '#fff' }
+              : { color: '#6b7280' }}
+          >
+            Movies
+          </button>
+          <button
+            onClick={() => setMediaType('show')}
+            className="px-6 py-1.5 rounded-full text-sm font-semibold transition-all duration-200"
+            style={mediaType === 'show'
+              ? { background: 'rgba(124,93,189,0.85)', color: '#fff' }
+              : { color: '#6b7280' }}
+          >
+            Shows
+          </button>
+        </div>
+      </div>
+
       {/* ── Provider tab bar ── */}
-      <div className="mt-14 mb-8">
+      <div className="mt-6 mb-8">
         <p className="text-xs font-semibold uppercase tracking-widest text-gray-500 text-center mb-5">
-          Your Providers
+          {mediaType === 'show' ? 'Browse Shows' : 'Your Providers'}
         </p>
         <div
           className="hide-scrollbar flex gap-3 justify-evenly"
@@ -777,7 +934,18 @@ export function DiscoverTab() {
               )}
             </>
           );
-        })() : (
+        })() : mediaType === 'show' ? (
+          <>
+            <MovieRow title="Trending Shows"          movies={showsTrending}  onMovieClick={(id) => openModal(id, 'show')} />
+            <MovieRow title="Popular Shows"           movies={showsPopular}   onMovieClick={(id) => openModal(id, 'show')} />
+            <MovieRow title="Top Rated Shows"         movies={showsTopRated}  onMovieClick={(id) => openModal(id, 'show')} />
+            <MovieRow title="Drama"                   movies={showsDrama}     onMovieClick={(id) => openModal(id, 'show')} />
+            <MovieRow title="Comedy"                  movies={showsComedy}    onMovieClick={(id) => openModal(id, 'show')} />
+            <MovieRow title="Crime"                   movies={showsCrime}     onMovieClick={(id) => openModal(id, 'show')} />
+            <MovieRow title="Sci-Fi & Fantasy"        movies={showsScifi}     onMovieClick={(id) => openModal(id, 'show')} />
+            <MovieRow title="Animation"               movies={showsAnimation} onMovieClick={(id) => openModal(id, 'show')} />
+          </>
+        ) : (
           <>
             {user && top10.length > 0 && (
               <MovieRow title="Your Top 10"           movies={top10}          onMovieClick={setSelectedMovieId} />
@@ -803,7 +971,7 @@ export function DiscoverTab() {
       </div>
 
       {selectedMovieId && (
-        <MovieDetailModal movieId={selectedMovieId} onClose={() => setSelectedMovieId(null)} />
+        <MovieDetailModal movieId={selectedMovieId} type={selectedItemType} onClose={() => setSelectedMovieId(null)} />
       )}
     </div>
   );

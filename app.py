@@ -45,6 +45,8 @@ from tmdb_api import (
     get_streaming_providers, get_genres, get_trending_movies, get_top_rated_movies,
     get_poster_url, get_backdrop_url, search_person,
     get_now_playing_movies, get_movie_recommendations, get_upcoming_movies,
+    search_tv_shows, get_popular_tv_shows, get_top_rated_tv_shows, get_trending_tv_shows,
+    get_tv_show_details, discover_tv_shows, get_tv_genres, get_tv_streaming_providers,
 )
 
 app = Flask(__name__)
@@ -60,7 +62,7 @@ CORS(app, origins=_cors_origins)
 
 app.secret_key = SECRET_KEY
 
-# ── Genre cache ──────────────────────────────────────────────────
+# ── Genre caches ─────────────────────────────────────────────────
 _genre_cache = {}
 
 def get_genre_map():
@@ -70,6 +72,16 @@ def get_genre_map():
         if result and 'genres' in result:
             _genre_cache = {g['id']: g['name'] for g in result['genres']}
     return _genre_cache
+
+_tv_genre_cache = {}
+
+def get_tv_genre_map():
+    global _tv_genre_cache
+    if not _tv_genre_cache:
+        result = get_tv_genres()
+        if result and 'genres' in result:
+            _tv_genre_cache = {g['id']: g['name'] for g in result['genres']}
+    return _tv_genre_cache
 
 # ── Streaming provider constants ─────────────────────────────────
 # Maps Firebase service keys → TMDB provider IDs
@@ -95,7 +107,7 @@ PROVIDER_DISPLAY = {
     386:  'Peacock',
 }
 
-#Formats our movies to the shape our frontend expects, and attaches streaming service info in parallel
+# Formats our movies to the shape our frontend expects, and attaches streaming service info in parallel
 def format_movie(movie_data, streaming_service=''):
     genre_map = get_genre_map()
 
@@ -118,6 +130,30 @@ def format_movie(movie_data, streaming_service=''):
         'backdrop': get_backdrop_url(movie_data.get('backdrop_path')) or '',
         'overview': movie_data.get('overview', ''),
         'streamingService': streaming_service,
+        'type': 'movie',
+    }
+
+def format_show(show_data, streaming_service=''):
+    tv_genre_map = get_tv_genre_map()
+    genre_ids = show_data.get('genre_ids', [])
+    if genre_ids:
+        genres = [tv_genre_map.get(gid, '') for gid in genre_ids if gid in tv_genre_map]
+    else:
+        genres = [g['name'] for g in show_data.get('genres', [])]
+    first_air = show_data.get('first_air_date', '')
+    year = int(first_air[:4]) if first_air and len(first_air) >= 4 else 0
+    return {
+        'id': str(show_data['id']),
+        'title': show_data.get('name', show_data.get('title', '')),
+        'year': year,
+        'genres': [g for g in genres if g],
+        'rating': round(show_data.get('vote_average', 0), 1),
+        'poster': get_poster_url(show_data.get('poster_path'), 'w185') or '',
+        'backdrop': get_backdrop_url(show_data.get('backdrop_path')) or '',
+        'overview': show_data.get('overview', ''),
+        'streamingService': streaming_service,
+        'type': 'show',
+        'seasons': show_data.get('number_of_seasons', 0),
     }
 
 # ── Shared thread pool ───────────────────────────────────────────
@@ -189,6 +225,39 @@ def fetch_movies_with_streaming(movies_data):
         except Exception:
             service_map[movie['id']] = ''
     return [format_movie(m, service_map.get(m['id'], '')) for m in movies_data]
+
+_tv_provider_cache: dict = {}
+
+def _fetch_streaming_for_show(show_data):
+    show_id = show_data['id']
+    cached = _tv_provider_cache.get(show_id)
+    if cached and time.time() < cached[1]:
+        return cached[0]
+    try:
+        providers = get_tv_streaming_providers(show_id)
+        if not providers:
+            _tv_provider_cache[show_id] = ('', time.time() + _PROVIDER_TTL)
+            return ''
+        for p in providers.get('flatrate', []):
+            name = PROVIDER_DISPLAY.get(p.get('provider_id'))
+            if name:
+                _tv_provider_cache[show_id] = (name, time.time() + _PROVIDER_TTL)
+                return name
+    except Exception:
+        pass
+    _tv_provider_cache[show_id] = ('', time.time() + _PROVIDER_TTL)
+    return ''
+
+def fetch_shows_with_streaming(shows_data):
+    futures = {_executor.submit(_fetch_streaming_for_show, s): s for s in shows_data}
+    service_map = {}
+    for future in as_completed(futures):
+        show = futures[future]
+        try:
+            service_map[show['id']] = future.result()
+        except Exception:
+            service_map[show['id']] = ''
+    return [format_show(s, service_map.get(s['id'], '')) for s in shows_data]
 
 # Recursively converts any Firestore DatetimeWithNanoseconds objects in the data to ISO strings for JSON serialization.
 def serialize_timestamps(obj):
@@ -434,6 +503,133 @@ def movie_providers(movie_id):
 def genres():
     data = get_genres()
     return jsonify(data or {'genres': []})
+
+@app.route('/api/genres/tv', methods=['GET'])
+def tv_genres_route():
+    data = get_tv_genres()
+    return jsonify(data or {'genres': []})
+
+# ── TV Show Routes ───────────────────────────────────────────────
+
+TV_SORT_MAP = {
+    'popularity': 'popularity.desc',
+    'rating':     'vote_average.desc',
+    'newest':     'first_air_date.desc',
+    'oldest':     'first_air_date.asc',
+}
+
+@app.route('/api/shows/popular', methods=['GET'])
+def popular_shows():
+    page = request.args.get('page', 1, type=int)
+    cache_key = f'tv_popular:{page}'
+    cached = _cache_get(cache_key)
+    if cached:
+        return jsonify({'movies': cached})
+    data = get_popular_tv_shows(page=page)
+    if not data:
+        return jsonify({'movies': []})
+    shows = fetch_shows_with_streaming(data.get('results', []))
+    _cache_set(cache_key, shows, _MOVIE_LIST_TTL)
+    return jsonify({'movies': shows})
+
+@app.route('/api/shows/trending', methods=['GET'])
+def trending_shows():
+    time_window = request.args.get('window', 'week')
+    cache_key = f'tv_trending:{time_window}'
+    cached = _cache_get(cache_key)
+    if cached:
+        return jsonify({'movies': cached})
+    data = get_trending_tv_shows(time_window=time_window)
+    if not data:
+        return jsonify({'movies': []})
+    shows = fetch_shows_with_streaming(data.get('results', []))
+    _cache_set(cache_key, shows, _MOVIE_LIST_TTL)
+    return jsonify({'movies': shows})
+
+@app.route('/api/shows/top_rated', methods=['GET'])
+def top_rated_shows():
+    page = request.args.get('page', 1, type=int)
+    cache_key = f'tv_top_rated:{page}'
+    cached = _cache_get(cache_key)
+    if cached:
+        return jsonify({'movies': cached})
+    data = get_top_rated_tv_shows(page=page)
+    if not data:
+        return jsonify({'movies': []})
+    shows = fetch_shows_with_streaming(data.get('results', []))
+    _cache_set(cache_key, shows, _MOVIE_LIST_TTL)
+    return jsonify({'movies': shows})
+
+@app.route('/api/shows/search', methods=['GET'])
+def search_shows():
+    query = request.args.get('q', '').strip()
+    page = request.args.get('page', 1, type=int)
+    if not query:
+        return jsonify({'movies': []})
+    cache_key = f'tv_search:{query.lower()}:{page}'
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return jsonify({'movies': cached})
+    data = search_tv_shows(query, page=page)
+    if not data:
+        return jsonify({'movies': []})
+    shows = fetch_shows_with_streaming(data.get('results', []))
+    _cache_set(cache_key, shows, _MOVIE_LIST_TTL)
+    return jsonify({'movies': shows})
+
+@app.route('/api/shows/discover', methods=['POST'])
+def discover_shows():
+    data = request.get_json() or {}
+    cache_key = f'tv_discover:{json.dumps(data, sort_keys=True, default=str)}'
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return jsonify({'movies': cached})
+
+    genre_id   = data.get('genre_id') or None
+    year_from  = data.get('year_from') or None
+    year_to    = data.get('year_to') or None
+    min_rating = data.get('min_rating') or None
+    sort_by    = TV_SORT_MAP.get(data.get('sort_by', 'popularity'), 'popularity.desc')
+    page       = data.get('page', 1)
+
+    services_filter = data.get('services_filter') or {}
+    active_provider_ids = [
+        str(STREAMING_PROVIDER_IDS[key])
+        for key, enabled in services_filter.items()
+        if enabled and key in STREAMING_PROVIDER_IDS
+    ]
+    with_watch_providers = '|'.join(active_provider_ids) if active_provider_ids else None
+    min_vote_count = 50 if min_rating else None
+
+    result = discover_tv_shows(
+        genre_id=genre_id,
+        year_from=year_from,
+        year_to=year_to,
+        min_rating=min_rating,
+        min_vote_count=min_vote_count,
+        with_watch_providers=with_watch_providers,
+        sort_by=sort_by,
+        page=page,
+    )
+
+    if not result:
+        return jsonify({'movies': []})
+    shows = fetch_shows_with_streaming(result.get('results', []))
+    _cache_set(cache_key, shows, _MOVIE_LIST_TTL)
+    return jsonify({'movies': shows})
+
+@app.route('/api/shows/<int:show_id>', methods=['GET'])
+def show_details(show_id):
+    cache_key = f'tv_detail:{show_id}'
+    cached = _cache_get(cache_key)
+    if cached:
+        return jsonify(cached)
+    data = get_tv_show_details(show_id)
+    if not data:
+        return jsonify({'error': 'Show not found'}), 404
+    data['media_type'] = 'tv'
+    _cache_set(cache_key, data, _MOVIE_DETAIL_TTL)
+    return jsonify(data)
 
 @app.route('/api/person/search', methods=['GET'])
 def person_search_route():

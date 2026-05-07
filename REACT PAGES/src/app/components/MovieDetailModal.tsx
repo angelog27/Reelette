@@ -1,7 +1,7 @@
 ﻿import { useState, useEffect } from 'react';
 import { X, Bookmark, BookmarkCheck, Star, Play, ChevronDown, ChevronUp } from 'lucide-react';
 import {
-  getMovieDetails, getWatchedMovie, addWatchedMovie, updateWatchedMovie,
+  getMovieDetails, getShowDetails, getWatchedMovie, addWatchedMovie, updateWatchedMovie,
   getUser, getWatchLater, watchMovieLater, removeFromWatchLater,
   getFriends,
 } from '../services/api';
@@ -16,11 +16,12 @@ interface FriendReview {
 
 interface Props {
   movieId: string;
+  type?: 'movie' | 'show';
   onClose: () => void;
   onWatchedChange?: () => void;
 }
 
-export function MovieDetailModal({ movieId, onClose, onWatchedChange }: Props) {
+export function MovieDetailModal({ movieId, type = 'movie', onClose, onWatchedChange }: Props) {
   const [movie, setMovie]                   = useState<any>(null);
   const [loading, setLoading]               = useState(true);
   const [watchEntry, setWatchEntry]         = useState<WatchedMovie | null>(null);
@@ -32,7 +33,8 @@ export function MovieDetailModal({ movieId, onClose, onWatchedChange }: Props) {
   const [inWatchLater, setInWatchLater]     = useState(false);
   const [watchLaterLoading, setWatchLaterLoading] = useState(false);
   const [overviewExpanded, setOverviewExpanded]   = useState(false);
-  const [relatedMovieId, setRelatedMovieId]       = useState<string | null>(null);
+  const [relatedMovieId,   setRelatedMovieId]   = useState<string | null>(null);
+  const [relatedItemType,  setRelatedItemType]  = useState<'movie' | 'show'>('movie');
   const [friendReviews, setFriendReviews]         = useState<FriendReview[]>([]);
 
   const user = getUser();
@@ -61,7 +63,7 @@ export function MovieDetailModal({ movieId, onClose, onWatchedChange }: Props) {
     setInWatchLater(false);
     setOverviewExpanded(false);
 
-    getMovieDetails(movieId).then((data) => {
+    (type === 'show' ? getShowDetails(movieId) : getMovieDetails(movieId)).then((data) => {
       setMovie(data);
       setLoading(false);
     });
@@ -98,11 +100,15 @@ export function MovieDetailModal({ movieId, onClose, onWatchedChange }: Props) {
     const rating = parseFloat(ratingInput);
     if (isNaN(rating) || rating < 0 || rating > 10) return;
 
-    const director   = movie.credits?.crew?.find((c: any) => c.job === 'Director');
-    const actors     = (movie.credits?.cast ?? []).slice(0, 6).map((c: any) => c.name);
+    const isShowEntry = type === 'show' || movie.media_type === 'tv';
+    const directorEntry = isShowEntry
+      ? (movie.created_by as any[])?.[0]?.name ?? ''
+      : movie.credits?.crew?.find((c: any) => c.job === 'Director')?.name ?? '';
+    const actors     = (movie.credits?.cast ?? (movie.aggregate_credits?.cast ?? [])).slice(0, 6).map((c: any) => c.name);
     const genres: { id: number; name: string }[] = movie.genres ?? [];
     const providers: any[] = movie['watch/providers']?.results?.US?.flatrate ?? [];
-    const year       = movie.release_date ? parseInt(movie.release_date.slice(0, 4)) : 0;
+    const rawDate    = isShowEntry ? (movie.first_air_date as string) : (movie.release_date as string);
+    const year       = rawDate ? parseInt(rawDate.slice(0, 4)) : 0;
     const posterUrl  = movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : '';
 
     setSaving(true);
@@ -114,12 +120,12 @@ export function MovieDetailModal({ movieId, onClose, onWatchedChange }: Props) {
         user.user_id,
         {
           movie_id: String(movie.id),
-          title: movie.title,
+          title: isShowEntry ? (movie.name ?? movie.title) : movie.title,
           year,
           rating: movie.vote_average ?? 0,
           overview: movie.overview ?? '',
           poster: posterUrl,
-          director: director?.name ?? '',
+          director: directorEntry,
           actors,
           genres: genres.map((g) => g.name),
           services: providers.map((p: any) => {
@@ -167,8 +173,9 @@ export function MovieDetailModal({ movieId, onClose, onWatchedChange }: Props) {
     );
   }
 
+  const isShow = type === 'show' || movie.media_type === 'tv';
   const genres: { id: number; name: string }[] = movie.genres ?? [];
-  const primaryGenre = genres[0]?.name ?? 'MOVIE';
+  const primaryGenre = genres[0]?.name ?? (isShow ? 'SERIES' : 'MOVIE');
   const providers: any[] = movie['watch/providers']?.results?.US?.flatrate ?? [];
   const similar: any[]   = movie.similar?.results ?? movie.recommendations?.results ?? [];
 
@@ -179,10 +186,19 @@ export function MovieDetailModal({ movieId, onClose, onWatchedChange }: Props) {
     ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
     : null;
 
-  const year    = movie.release_date ? movie.release_date.slice(0, 4) : '';
-  const runtime = movie.runtime
-    ? `${Math.floor(movie.runtime / 60)}h ${String(movie.runtime % 60).padStart(2, '0')}m`
-    : null;
+  const displayTitle = isShow ? (movie.name ?? movie.title) : movie.title;
+  const year = isShow
+    ? (movie.first_air_date ? (movie.first_air_date as string).slice(0, 4) : '')
+    : (movie.release_date ? (movie.release_date as string).slice(0, 4) : '');
+  const runtime = isShow
+    ? (movie.number_of_seasons
+        ? `${movie.number_of_seasons} season${(movie.number_of_seasons as number) !== 1 ? 's' : ''}`
+        : null)
+    : (movie.runtime
+        ? `${Math.floor((movie.runtime as number) / 60)}h ${String((movie.runtime as number) % 60).padStart(2, '0')}m`
+        : null);
+  const creators: any[] = isShow ? (movie.created_by ?? []) : [];
+  const networks: any[] = isShow ? (movie.networks ?? []) : [];
 
   const overviewText   = movie.overview ?? '';
   const isLongOverview = overviewText.length > 180;
@@ -201,32 +217,33 @@ export function MovieDetailModal({ movieId, onClose, onWatchedChange }: Props) {
   const justwatchUrl: string | null = movie['watch/providers']?.results?.US?.link ?? null;
 
   // Per-provider search URLs as a best-effort fallback
+  const searchTitle = encodeURIComponent(displayTitle as string ?? '');
   const PROVIDER_SEARCH: Record<number, string> = {
-    8:   `https://www.netflix.com/search?q=${encodeURIComponent(movie.title)}`,
-    15:  `https://www.hulu.com/search?q=${encodeURIComponent(movie.title)}`,
-    337: `https://www.disneyplus.com/search?q=${encodeURIComponent(movie.title)}`,
-    384: `https://www.max.com/search?q=${encodeURIComponent(movie.title)}`,
-    9:   `https://www.amazon.com/s?k=${encodeURIComponent(movie.title)}&i=instant-video`,
-    350: `https://tv.apple.com/search?term=${encodeURIComponent(movie.title)}`,
-    531: `https://www.paramountplus.com/search/?q=${encodeURIComponent(movie.title)}`,
-    386: `https://www.peacocktv.com/search?q=${encodeURIComponent(movie.title)}`,
+    8:   `https://www.netflix.com/search?q=${searchTitle}`,
+    15:  `https://www.hulu.com/search?q=${searchTitle}`,
+    337: `https://www.disneyplus.com/search?q=${searchTitle}`,
+    384: `https://www.max.com/search?q=${searchTitle}`,
+    9:   `https://www.amazon.com/s?k=${searchTitle}&i=instant-video`,
+    350: `https://tv.apple.com/search?term=${searchTitle}`,
+    531: `https://www.paramountplus.com/search/?q=${searchTitle}`,
+    386: `https://www.peacocktv.com/search?q=${searchTitle}`,
   };
 
   function providerUrl(p: any): string {
     return PROVIDER_SEARCH[p.provider_id as number]
-      ?? `https://www.justwatch.com/us/search?q=${encodeURIComponent(movie.title)}`;
+      ?? `https://www.justwatch.com/us/search?q=${searchTitle}`;
   }
 
-  // "Play Now" destination: JustWatch movie page > first provider search > generic JustWatch
   const playNowUrl: string =
     justwatchUrl
     ?? (providers.length > 0 ? providerUrl(providers[0]) : null)
-    ?? `https://www.justwatch.com/us/search?q=${encodeURIComponent(movie.title)}`;
+    ?? `https://www.justwatch.com/us/search?q=${searchTitle}`;
 
   if (relatedMovieId) {
     return (
       <MovieDetailModal
         movieId={relatedMovieId}
+        type={relatedItemType}
         onClose={() => setRelatedMovieId(null)}
       />
     );
@@ -238,9 +255,9 @@ export function MovieDetailModal({ movieId, onClose, onWatchedChange }: Props) {
       {/* ── Background ───────────────────────────────────────────── */}
       <div className="absolute inset-0">
         {backdropUrl ? (
-          <img src={backdropUrl} alt={movie.title} className="w-full h-full object-cover" draggable={false} />
+          <img src={backdropUrl} alt={displayTitle as string} className="w-full h-full object-cover" draggable={false} />
         ) : posterUrl ? (
-          <img src={posterUrl} alt={movie.title} className="w-full h-full object-cover blur-sm scale-105" draggable={false} />
+          <img src={posterUrl} alt={displayTitle as string} className="w-full h-full object-cover blur-sm scale-105" draggable={false} />
         ) : (
           <div className="w-full h-full bg-[#0A0A0A]" />
         )}
@@ -300,7 +317,7 @@ export function MovieDetailModal({ movieId, onClose, onWatchedChange }: Props) {
 
           {/* Title */}
           <h1 className="text-4xl md:text-6xl font-bold text-white leading-tight mb-3 drop-shadow-lg">
-            {movie.title}
+            {displayTitle}
           </h1>
 
           {/* Meta row */}
@@ -337,18 +354,47 @@ export function MovieDetailModal({ movieId, onClose, onWatchedChange }: Props) {
             </div>
           )}
 
-          {/*cast and director*/}
-          <div className="mb-5">  
-          {movie.credits?.crew && (
-            <p className="text-gray-400 text-sm mb-1">
-              Directed by <span className="text-white">{movie.credits.crew.find((c: any) => c.job === 'Director')?.name}</span>
-            </p>
-          )}
-          {movie.credits?.cast && (
-            <p className="text-gray-400 text-sm">
-              Starring <span className="text-white">{movie.credits.cast.slice(0, 6).map((c: any) => c.name).join(', ')}</span>
-            </p>
-          )}
+          {/* Cast / creator / networks */}
+          <div className="mb-5">
+            {isShow ? (
+              <>
+                {creators.length > 0 && (
+                  <p className="text-gray-400 text-sm mb-1">
+                    Created by <span className="text-white">{creators.map((c: any) => c.name).join(', ')}</span>
+                  </p>
+                )}
+                {networks.length > 0 && (
+                  <p className="text-gray-400 text-sm mb-1">
+                    Network <span className="text-white">{networks.map((n: any) => n.name).join(', ')}</span>
+                  </p>
+                )}
+                {movie.number_of_episodes && (
+                  <p className="text-gray-400 text-sm mb-1">
+                    <span className="text-white">{movie.number_of_episodes as number}</span> episodes
+                  </p>
+                )}
+                {(movie.aggregate_credits?.cast ?? movie.credits?.cast) && (
+                  <p className="text-gray-400 text-sm">
+                    Starring <span className="text-white">
+                      {((movie.aggregate_credits?.cast ?? movie.credits?.cast) as any[]).slice(0, 6).map((c: any) => c.name).join(', ')}
+                    </span>
+                  </p>
+                )}
+              </>
+            ) : (
+              <>
+                {movie.credits?.crew && (
+                  <p className="text-gray-400 text-sm mb-1">
+                    Directed by <span className="text-white">{(movie.credits.crew as any[]).find((c: any) => c.job === 'Director')?.name}</span>
+                  </p>
+                )}
+                {movie.credits?.cast && (
+                  <p className="text-gray-400 text-sm">
+                    Starring <span className="text-white">{(movie.credits.cast as any[]).slice(0, 6).map((c: any) => c.name).join(', ')}</span>
+                  </p>
+                )}
+              </>
+            )}
           </div>
 
           {/* ── Action buttons ──────────────────────────────────── */}
@@ -419,7 +465,7 @@ export function MovieDetailModal({ movieId, onClose, onWatchedChange }: Props) {
                       className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#7C5DBD] hover:bg-[#9B7BD7] text-white text-sm font-medium transition-colors shadow-lg shadow-[#7C5DBD]/30"
                     >
                       <Star className="w-4 h-4" />
-                      Mark as Watched
+                      {isShow ? 'Mark as Seen' : 'Mark as Watched'}
                     </button>
                   )
                 )}
@@ -454,7 +500,7 @@ export function MovieDetailModal({ movieId, onClose, onWatchedChange }: Props) {
             /* Rating form */
             <div className="bg-black/60 backdrop-blur-md border border-white/10 rounded-2xl p-5 max-w-sm">
               <p className="text-white font-medium mb-4 text-sm">
-                {watchEntry ? 'Update your rating' : 'Rate this movie'}
+                {watchEntry ? 'Update your rating' : `Rate this ${isShow ? 'show' : 'movie'}`}
               </p>
               <div className="space-y-3">
                 <div>
@@ -501,14 +547,14 @@ export function MovieDetailModal({ movieId, onClose, onWatchedChange }: Props) {
         {similar.length > 0 && (
           <div className="border-t border-white/10 bg-black/50 backdrop-blur-sm px-10 md:px-16 py-4">
             <p className="text-gray-400 text-xs font-semibold uppercase tracking-widest mb-3">
-              Related Movies
+              {isShow ? 'Similar Shows' : 'Related Movies'}
             </p>
             <div className="flex gap-3 overflow-x-auto pb-1">
               {similar.slice(0, 10).map((m: any) => (
                 m.poster_path && (
                   <div
                     key={m.id}
-                    onClick={() => setRelatedMovieId(String(m.id))}
+                    onClick={() => { setRelatedMovieId(String(m.id)); setRelatedItemType(isShow ? 'show' : 'movie'); }}
                     className="flex-shrink-0 w-16 md:w-20 cursor-pointer hover:scale-105 transition-transform rounded-lg overflow-hidden ring-1 ring-white/10 hover:ring-[#7C5DBD]/60"
                     title={m.title}
                   >

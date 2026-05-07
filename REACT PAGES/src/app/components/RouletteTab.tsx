@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect, useRef } from "react";
-import { Shuffle, ChevronDown, ThumbsUp, ThumbsDown, Film, SlidersHorizontal } from "lucide-react";
+import { Shuffle, ChevronDown, ThumbsUp, ThumbsDown, Film, Tv, SlidersHorizontal } from "lucide-react";
 import { MovieDetailModal } from "./MovieDetailModal";
 import { RouletteWheelModal, getWheelColor } from "./RouletteWheelModal";
 import { Switch } from "./ui/switch";
@@ -8,6 +8,7 @@ import { Input } from "./ui/input";
 import { PROVIDER_LOGOS } from "../constants/providers";
 import {
   discoverMovies,
+  discoverShows,
   getServices,
   hasServicesConfigured,
   getUser,
@@ -50,6 +51,27 @@ const MOODS = [
   { label: "Action",      genre: "28"    },
 ];
 
+const TV_GENRES = [
+  { label: "Action & Adventure", value: "10759" },
+  { label: "Animation",          value: "16"    },
+  { label: "Comedy",             value: "35"    },
+  { label: "Crime",              value: "80"    },
+  { label: "Documentary",        value: "99"    },
+  { label: "Drama",              value: "18"    },
+  { label: "Family",             value: "10751" },
+  { label: "Mystery",            value: "9648"  },
+  { label: "Sci-Fi & Fantasy",   value: "10765" },
+  { label: "Western",            value: "37"    },
+];
+
+const TV_MOODS = [
+  { label: "Drama",   genre: "18"    },
+  { label: "Cozy",    genre: "35"    },
+  { label: "Sci-Fi",  genre: "10765" },
+  { label: "Crime",   genre: "80"    },
+  { label: "Action",  genre: "10759" },
+];
+
 // Film strip holes — rendered as a static row
 const FILM_HOLES = Array.from({ length: 48 });
 
@@ -85,7 +107,28 @@ async function buildPool(
     [...pages].map(page => discoverMovies({ ...filters, page }).catch(() => [] as Movie[])),
   );
 
-  const seen       = new Set<string>();
+  const seen        = new Set<string>();
+  const dislikedSet = new Set(dislikedIds);
+  const pool: Movie[] = [];
+  for (const page of results)
+    for (const m of page)
+      if (!seen.has(m.id) && !dislikedSet.has(m.id)) { seen.add(m.id); pool.push(m); }
+  return pool;
+}
+
+async function buildShowPool(
+  filters: Parameters<typeof discoverShows>[0],
+  dislikedIds: string[],
+): Promise<Movie[]> {
+  const pages = new Set<number>();
+  pages.add(1);
+  while (pages.size < 3) pages.add(Math.floor(Math.random() * 8) + 1);
+
+  const results = await Promise.all(
+    [...pages].map(page => discoverShows({ ...filters, page }).catch(() => [] as Movie[])),
+  );
+
+  const seen        = new Set<string>();
   const dislikedSet = new Set(dislikedIds);
   const pool: Movie[] = [];
   for (const page of results)
@@ -95,6 +138,7 @@ async function buildPool(
 }
 
 export function RouletteTab() {
+  const [mediaType, setMediaType]              = useState<'movie' | 'show'>('movie');
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   const [filterStreaming, setFilterStreaming]  = useState(false);
   const [genre, setGenre]                      = useState("");
@@ -171,11 +215,17 @@ export function RouletteTab() {
     const dislikedIds = user ? getRoulettePrefs(user.user_id).disliked : [];
 
     try {
-      let pool = await buildPool(filters, dislikedIds);
-      if (pool.length === 0) pool = await buildPool(filters, []);
+      let pool = mediaType === 'show'
+        ? await buildShowPool(filters, dislikedIds)
+        : await buildPool(filters, dislikedIds);
+      if (pool.length === 0) {
+        pool = mediaType === 'show'
+          ? await buildShowPool(filters, [])
+          : await buildPool(filters, []);
+      }
 
       if (pool.length === 0) {
-        setError("No movies found — try loosening your filters.");
+        setError(`No ${mediaType === 'show' ? 'shows' : 'movies'} found — try loosening your filters.`);
         setSpinning(false);
         return;
       }
@@ -247,14 +297,39 @@ export function RouletteTab() {
 
         
 
+          {/* Movies / Shows toggle */}
+          <div
+            className="mt-5 flex items-center p-1 rounded-full"
+            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
+          >
+            <button
+              onClick={() => { setMediaType('movie'); setGenre(''); setActiveMood(''); }}
+              className="flex items-center gap-1.5 px-5 py-1.5 rounded-full text-sm font-semibold transition-all duration-200"
+              style={mediaType === 'movie'
+                ? { background: 'rgba(124,93,189,0.85)', color: '#fff' }
+                : { color: '#6b7280' }}
+            >
+              <Film className="w-3.5 h-3.5" /> Movies
+            </button>
+            <button
+              onClick={() => { setMediaType('show'); setGenre(''); setActiveMood(''); }}
+              className="flex items-center gap-1.5 px-5 py-1.5 rounded-full text-sm font-semibold transition-all duration-200"
+              style={mediaType === 'show'
+                ? { background: 'rgba(124,93,189,0.85)', color: '#fff' }
+                : { color: '#6b7280' }}
+            >
+              <Tv className="w-3.5 h-3.5" /> Shows
+            </button>
+          </div>
+
           {/* Pool size badge */}
           {poolSize !== null && (
             <div
               className="mt-4 flex items-center gap-1.5 border px-3 py-1.5 rounded-full text-xs text-gray-400 animate-in fade-in duration-300"
               style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.09)" }}
             >
-              <Film className="w-3 h-3" />
-              Picking from <span className="text-white font-semibold mx-0.5">{poolSize}</span> movies
+              {mediaType === 'show' ? <Tv className="w-3 h-3" /> : <Film className="w-3 h-3" />}
+              Picking from <span className="text-white font-semibold mx-0.5">{poolSize}</span> {mediaType === 'show' ? 'shows' : 'movies'}
             </div>
           )}
         </div>
@@ -309,7 +384,7 @@ export function RouletteTab() {
         {/* ── Center: Wheel + controls ── */}
         <div className="flex flex-col items-center gap-5">
 
-          {/* Mood chips — always visible, primary filter */}
+          {/* Mood chips — swap to TV moods when in shows mode */}
           <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-0.5" style={{ maxWidth: 400, width: '100%' }}>
             <button
               onClick={() => { setActiveMood(""); setGenre(""); }}
@@ -322,7 +397,7 @@ export function RouletteTab() {
             >
               Any
             </button>
-            {MOODS.map(mood => {
+            {(mediaType === 'show' ? TV_MOODS : MOODS).map(mood => {
               const isActive = activeMood === mood.label;
               const moodColor = getWheelColor(mood.genre);
               return (
@@ -391,7 +466,7 @@ export function RouletteTab() {
                       className="w-full bg-[#0a0a0a] border border-[#252525] text-white text-xs rounded-lg px-2.5 py-2 focus:outline-none"
                     >
                       <option value="">Any Genre</option>
-                      {GENRES.map(g => <option key={g.value} value={g.value}>{g.label}</option>)}
+                      {(mediaType === 'show' ? TV_GENRES : GENRES).map(g => <option key={g.value} value={g.value}>{g.label}</option>)}
                     </select>
                   </div>
 
@@ -607,7 +682,7 @@ export function RouletteTab() {
       </div>
 
       {selectedMovieId && (
-        <MovieDetailModal movieId={selectedMovieId} onClose={() => setSelectedMovieId(null)} />
+        <MovieDetailModal movieId={selectedMovieId} type={mediaType} onClose={() => setSelectedMovieId(null)} />
       )}
     </div>
   );

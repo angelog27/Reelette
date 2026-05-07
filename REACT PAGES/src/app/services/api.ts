@@ -47,6 +47,8 @@ export interface Movie {
   backdrop?: string;
   overview?: string;
   streamingService: string;
+  type?: 'movie' | 'show';
+  seasons?: number;
 }
 
 
@@ -328,6 +330,66 @@ export function getMovieDetails(movie_id: string): Promise<Record<string, unknow
   return fromCache(`movie:${movie_id}`, TTL.MOVIE, async () => {
     const res = await fetch(`${BASE_URL}/movies/${movie_id}`);
     return res.json();
+  });
+}
+
+export function getShowDetails(show_id: string): Promise<Record<string, unknown>> {
+  return fromCache(`show:${show_id}`, TTL.MOVIE, async () => {
+    const res = await fetch(`${BASE_URL}/shows/${show_id}`);
+    return res.json();
+  });
+}
+
+export function getTrendingShows(): Promise<Movie[]> {
+  return fromCache('tv_trending:week', TTL.CATALOG, async () => {
+    const res = await fetch(`${BASE_URL}/shows/trending`);
+    const data = await res.json();
+    return data.movies ?? [];
+  });
+}
+
+export function getPopularShows(): Promise<Movie[]> {
+  return fromCache('tv_popular:1', TTL.CATALOG, async () => {
+    const res = await fetch(`${BASE_URL}/shows/popular`);
+    const data = await res.json();
+    return data.movies ?? [];
+  });
+}
+
+export function getTopRatedShows(): Promise<Movie[]> {
+  return fromCache('tv_top_rated:1', TTL.CATALOG, async () => {
+    const res = await fetch(`${BASE_URL}/shows/top_rated`);
+    const data = await res.json();
+    return data.movies ?? [];
+  });
+}
+
+export function searchShows(query: string, page = 1): Promise<Movie[]> {
+  return fromCache(`tv_search:${query.toLowerCase().trim()}:${page}`, TTL.CATALOG, async () => {
+    const res = await fetch(`${BASE_URL}/shows/search?q=${encodeURIComponent(query)}&page=${page}`);
+    const data = await res.json();
+    return data.movies ?? [];
+  });
+}
+
+export function discoverShows(filters: {
+  genre_id?: string;
+  year_from?: string;
+  year_to?: string;
+  min_rating?: number;
+  sort_by?: string;
+  services_filter?: Record<string, boolean>;
+  page?: number;
+}): Promise<Movie[]> {
+  const key = `tv_discover:${JSON.stringify(Object.fromEntries(Object.entries(filters).sort()))}`;
+  return fromCache(key, TTL.CATALOG, async () => {
+    const res = await fetch(`${BASE_URL}/shows/discover`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(filters),
+    });
+    const data = await res.json();
+    return data.movies ?? [];
   });
 }
 
