@@ -55,7 +55,7 @@ git clone https://github.com/angelog27/reelette.git .
 
 > **Already have the project?** Just open your existing `Reelette` folder in VS Code, open the terminal, and pull the latest changes:
 > ```bash
-> git pull origin FrontEnd-v1
+> git pull origin MAIN-DEPLOY
 > ```
 
 ### 2. Set up Firebase credentials
@@ -127,6 +127,10 @@ In your current VS Code terminal, type:
 ```bash
 python app.py
 ```
+If you are on mac type:
+```bash
+python3 app.py
+```
 
 **Terminal 2 — start the React frontend:**
 
@@ -151,4 +155,5 @@ After a few seconds, Vite will print a URL in the terminal that looks something 
 - Filter by actor, director, genre, year, and rating
 - Streaming service preferences per user
 - Watchlist and watched movie tracking with ratings
+- Stats page within your mystuff page.
 - Social feed — create posts, like, and reply
