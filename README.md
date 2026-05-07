@@ -2,16 +2,21 @@
 
 A movie discovery web app built with Flask and React. Search for movies, track what you've watched, build watchlists, and see what your friends are watching.
 
-##Developers + Roles
+## Developers + Roles
 Angelo Gonzales - Software Architect
 Danielle Williams - SCRUM Master
 Jordan Helaire - SENIOR DEV
 Taylor Wall - Product Tester
 Martin Obrocki - UI/UX Designer
 
-##Code Works on 
+## Code Works on 
 The code should be able to run on any MacOS device as well as any Windows device.
 If you are on mac and run into any issues attempt to use Chrome, if that doesnt work try to use a windows device.
+
+## Links:
+
+Here is our Kanban URL: https://app.clickup.com/9017997209/v/l/8cr7dwt-457?nocache=1775440372835
+For any other design informaiton contact me @ gonzales12098@gmail.com , I have pictures of our design mock ups, UI mock ups, task work and ideas. 
 
 ## Deployment Link
 
