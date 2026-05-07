@@ -31,6 +31,7 @@ from firebase_helper import (
     get_user_public_profile, get_group_member_profiles, get_members_streaming_services,
     log_roulette_spin, get_roulette_history, get_friends_roulette_history, save_quiz_result,
     get_notifications, mark_notification_read, mark_all_notifications_read,
+    get_notification_prefs, set_notification_prefs,
     get_or_create_conversation, get_conversations, get_messages, send_message, mark_conversation_read,
     get_group_chat, send_group_message,
     update_user_email, delete_user_account,
@@ -798,6 +799,18 @@ def get_user_notifications(user_id):
     result = serialize_timestamps(notifs)
     _cache_set(cache_key, result, _NOTIF_TTL)
     return jsonify({'notifications': result})
+
+@app.route('/api/user/<user_id>/notification-prefs', methods=['GET'])
+def get_notif_prefs(user_id):
+    return jsonify(get_notification_prefs(user_id))
+
+@app.route('/api/user/<user_id>/notification-prefs', methods=['PUT'])
+def set_notif_prefs(user_id):
+    prefs = request.get_json() or {}
+    result = set_notification_prefs(user_id, prefs)
+    if result.get('success'):
+        _cache.pop(f'user:{user_id}', None)
+    return jsonify(result)
 
 @app.route('/api/user/<user_id>/notifications/read-all', methods=['PUT'])
 def read_all_notifications(user_id):

@@ -1586,6 +1586,7 @@ function RightSidebar({ currentUserId, currentUsername, onOpenProfile }: {
   const [friendAvatars, setFriendAvatars] = useState<Record<string, string>>({});
   const [reqAvatars, setReqAvatars] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
+  const [showAllFriends, setShowAllFriends] = useState(false);
 
   const load = useCallback(async () => {
     if (!currentUserId) return;
@@ -1609,7 +1610,9 @@ function RightSidebar({ currentUserId, currentUsername, onOpenProfile }: {
 
     const friendSet = new Set(f.map(fr => fr.friend_id));
     try {
-      const users = await searchUsers('a', currentUserId);
+      const letters = 'abcdefghijklmnopqrstuvwxyz';
+      const seed = letters[Math.floor(Math.random() * letters.length)];
+      const users = await searchUsers(seed, currentUserId);
       const filtered = users.filter(u => !friendSet.has(u.user_id)).slice(0, 4);
       const suggestProfiles = await Promise.all(filtered.map(u => getUserPublicProfile(u.user_id)));
       setSuggested(filtered.map((u, i) => ({ ...u, avatarUrl: suggestProfiles[i]?.avatarUrl })));
@@ -1633,6 +1636,7 @@ function RightSidebar({ currentUserId, currentUsername, onOpenProfile }: {
   const handleFollow = async (userId: string) => {
     await sendFriendRequest(userId, currentUserId, currentUsername);
     setSentTo(prev => new Set(prev).add(userId));
+    setSuggested(prev => prev.filter(u => u.user_id !== userId));
   };
 
   if (loading) return (
@@ -1675,14 +1679,24 @@ function RightSidebar({ currentUserId, currentUsername, onOpenProfile }: {
 
       {/* Friends */}
       <section className="px-4 pt-5 pb-4">
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600 mb-3">
-          Friends {friends.length > 0 && <span className="text-zinc-700 normal-case tracking-normal font-normal">({friends.length})</span>}
-        </p>
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600">
+            Friends {friends.length > 0 && <span className="text-zinc-700 normal-case tracking-normal font-normal">({friends.length})</span>}
+          </p>
+          {friends.length > 6 && (
+            <button
+              onClick={() => setShowAllFriends(v => !v)}
+              className="text-[10px] text-zinc-500 hover:text-zinc-300 transition-colors font-medium"
+            >
+              {showAllFriends ? 'Show less' : 'Show all'}
+            </button>
+          )}
+        </div>
         {friends.length === 0 ? (
           <p className="text-zinc-700 text-xs">No friends yet.</p>
         ) : (
           <div className="space-y-2.5">
-            {friends.slice(0, 6).map(f => (
+            {(showAllFriends ? friends : friends.slice(0, 6)).map(f => (
               <button key={f.friend_id} onClick={() => onOpenProfile(f.friend_id)}
                 className="w-full flex items-center gap-2.5 hover:bg-white/[0.03] rounded-xl p-1.5 -mx-1.5 transition-colors text-left">
                 <UserAvatar username={f.friend_username} avatarUrl={friendAvatars[f.friend_id]} size={34} />
@@ -1836,7 +1850,9 @@ export function SocialTab() {
       setPosts(prev => prev.map(p => {
         if (p.post_id !== post_id) return p;
         const liked = p.liked_by.includes(currentUserId);
-        return { ...p, likes: liked ? p.likes - 1 : p.likes + 1, liked_by: liked ? p.liked_by.filter(id => id !== currentUserId) : [...p.liked_by, currentUserId] };
+        const updated = { ...p, likes: liked ? p.likes - 1 : p.likes + 1, liked_by: liked ? p.liked_by.filter(id => id !== currentUserId) : [...p.liked_by, currentUserId] };
+        _feedCache.set(post_id, updated);
+        return updated;
       }));
     }
   };
@@ -1844,7 +1860,10 @@ export function SocialTab() {
   const handleDelete = async (post_id: string) => {
     if (!currentUserId) return;
     const result = await deletePost(post_id, currentUserId);
-    if (result.success) setPosts(prev => prev.filter(p => p.post_id !== post_id));
+    if (result.success) {
+      _feedCache.delete(post_id);
+      setPosts(prev => prev.filter(p => p.post_id !== post_id));
+    }
   };
 
   const handleRefresh = useCallback(async () => {

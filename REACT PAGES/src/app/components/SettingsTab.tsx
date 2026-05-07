@@ -104,7 +104,11 @@ export function SettingsTab() {
     newMovieAlerts: true,
     friendActivity: false,
     groupChat: true,
-    newPost: false
+    newPost: false,
+    emailNewMovieAlerts: true,
+    emailFriendActivity: false,
+    emailGroupChat: false,
+    emailNewPost: false,
   });
 
 
@@ -154,9 +158,9 @@ export function SettingsTab() {
 
 
         {/* Settings Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Notifications Section */}
-          <SettingsSection title="Notifications">
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+          {/* In-App Notifications Section */}
+          <SettingsSection title="In-App Notifications">
             <SettingItem
               icon={<Film size={20} />}
               label="New Movie Alerts"
@@ -177,11 +181,38 @@ export function SettingsTab() {
             />
             <SettingItem
               icon={<Sparkles size={20} />}
-              label= "New Post in the Community"
+              label="New Post in the Community"
               enabled={settings.newPost}
               onToggle={() => toggleSetting('newPost')}
             />
+          </SettingsSection>
 
+          {/* Email Notifications Section */}
+          <SettingsSection title="Email Notifications">
+            <SettingItem
+              icon={<Film size={20} />}
+              label="New Movie Alerts"
+              enabled={settings.emailNewMovieAlerts}
+              onToggle={() => toggleSetting('emailNewMovieAlerts')}
+            />
+            <SettingItem
+              icon={<Users size={20} />}
+              label="Friend Activity"
+              enabled={settings.emailFriendActivity}
+              onToggle={() => toggleSetting('emailFriendActivity')}
+            />
+            <SettingItem
+              icon={<MessageSquare size={20} />}
+              label="Group Chat Notifications"
+              enabled={settings.emailGroupChat}
+              onToggle={() => toggleSetting('emailGroupChat')}
+            />
+            <SettingItem
+              icon={<Sparkles size={20} />}
+              label="New Post in the Community"
+              enabled={settings.emailNewPost}
+              onToggle={() => toggleSetting('emailNewPost')}
+            />
           </SettingsSection>
 
 

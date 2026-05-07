@@ -12,9 +12,10 @@ import {
   BASE_URL, getUser, clearUser, clearServices, saveServices,
   getFriends, getUserPublicProfile, saveSocialSettings,
   getNotifications, markNotificationRead, markAllNotificationsRead,
+  getNotifPrefs, saveNotifPrefs,
   updateUserAvatar, updateUserEmail, deleteUserAccount,
   updateUserStreaming,
-  type AppNotification, type Friend,
+  type AppNotification, type Friend, type NotifPrefs,
 } from '../services/api';
 
 // ── Film grain texture ────────────────────────────────────────────
@@ -248,6 +249,26 @@ export function ProfileandSettingsTab() {
   // ── Notifications ─────────────────────────────────────────────────
   const [notifs, setNotifs]               = useState<AppNotification[]>([]);
   const [notifsLoading, setNotifsLoading] = useState(false);
+  const [notifPrefs, setNotifPrefs] = useState<NotifPrefs>({
+    inApp: { friendActivity: true, groupChat: true, newPost: false, newMovieAlerts: true },
+    email: { friendActivity: false, groupChat: false, newPost: false, newMovieAlerts: true },
+  });
+  const [notifPrefsLoading, setNotifPrefsLoading] = useState(false);
+
+  async function toggleNotifPref(channel: 'inApp' | 'email', key: string) {
+    const next: NotifPrefs = {
+      ...notifPrefs,
+      [channel]: { ...notifPrefs[channel], [key]: !notifPrefs[channel][key as keyof NotifPrefs['inApp']] },
+    };
+    setNotifPrefs(next);
+    try {
+      await saveNotifPrefs(userId, next);
+    } catch {
+      // revert on failure
+      setNotifPrefs(notifPrefs);
+      toast.error('Failed to save notification preferences');
+    }
+  }
 
   // ── Security ──────────────────────────────────────────────────────
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -288,11 +309,13 @@ export function ProfileandSettingsTab() {
     });
   }, [activeTab, friendsLoaded, userId]);
 
-  // ── Load notifications (on Notifications tab) ─────────────────────
+  // ── Load notifications + prefs (on Notifications tab) ─────────────
   useEffect(() => {
     if (activeTab !== 'notifications' || !userId) return;
     setNotifsLoading(true);
+    setNotifPrefsLoading(true);
     getNotifications(userId).then(n => { setNotifs(n); setNotifsLoading(false); });
+    getNotifPrefs(userId).then(p => { setNotifPrefs(p); setNotifPrefsLoading(false); });
   }, [activeTab, userId]);
 
   // ── Profile handlers ──────────────────────────────────────────────
@@ -732,9 +755,64 @@ export function ProfileandSettingsTab() {
         {/* NOTIFICATIONS TAB                                           */}
         {/* ═══════════════════════════════════════════════════════════ */}
         {activeTab === 'notifications' && (
+          <div className="space-y-5">
+          {/* Notification preferences */}
+          <Card>
+            <SectionTitle label="Notification Preferences" icon={<Bell size={16} />} />
+            {notifPrefsLoading ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="w-5 h-5 animate-spin" style={{ color: 'var(--reel-accent-hex)' }} />
+              </div>
+            ) : (
+            <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-6">
+              {/* In-App column */}
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500 mb-3">In-App</p>
+                <div className="space-y-3">
+                  {[
+                    { key: 'friendActivity', label: 'Friend Activity' },
+                    { key: 'groupChat',      label: 'Group Chat' },
+                    { key: 'newPost',        label: 'Community Posts' },
+                    { key: 'newMovieAlerts', label: 'New Movie Alerts' },
+                  ].map(({ key, label }) => (
+                    <div key={key} className="flex items-center justify-between">
+                      <span className="text-sm text-zinc-400">{label}</span>
+                      <Toggle
+                        checked={notifPrefs.inApp[key as keyof typeof notifPrefs.inApp]}
+                        onChange={() => toggleNotifPref('inApp', key)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {/* Email column */}
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500 mb-3">Email</p>
+                <div className="space-y-3">
+                  {[
+                    { key: 'friendActivity', label: 'Friend Activity' },
+                    { key: 'groupChat',      label: 'Group Chat' },
+                    { key: 'newPost',        label: 'Community Posts' },
+                    { key: 'newMovieAlerts', label: 'New Movie Alerts' },
+                  ].map(({ key, label }) => (
+                    <div key={key} className="flex items-center justify-between">
+                      <span className="text-sm text-zinc-400">{label}</span>
+                      <Toggle
+                        checked={notifPrefs.email[key as keyof typeof notifPrefs.email]}
+                        onChange={() => toggleNotifPref('email', key)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            )}
+          </Card>
+
+          {/* Notification feed */}
           <Card>
             <div className="flex items-center justify-between mb-5">
-              <SectionTitle label="Notifications" icon={<Bell size={16} />} />
+              <SectionTitle label="Recent Notifications" icon={<Bell size={16} />} />
               {notifs.some(n => !n.read) && (
                 <button
                   onClick={handleMarkAllRead}
@@ -780,6 +858,7 @@ export function ProfileandSettingsTab() {
               </div>
             )}
           </Card>
+          </div>
         )}
 
         {/* ═══════════════════════════════════════════════════════════ */}

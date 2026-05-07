@@ -1075,6 +1075,43 @@ def get_friends_roulette_history(user_id, limit=1):
         print(f"Error getting friends roulette history: {e}")
         return []
     
+# ── Notification Preferences ─────────────────────────────────────
+
+_DEFAULT_NOTIF_PREFS = {
+    'inApp': {'friendActivity': True,  'groupChat': True,  'newPost': False, 'newMovieAlerts': True},
+    'email': {'friendActivity': False, 'groupChat': False, 'newPost': False, 'newMovieAlerts': True},
+}
+
+def get_notification_prefs(user_id):
+    try:
+        doc = db.collection('users').document(user_id).get(field_paths=['notificationPrefs'])
+        if doc.exists:
+            stored = doc.to_dict().get('notificationPrefs')
+            if stored:
+                return stored
+        return _DEFAULT_NOTIF_PREFS
+    except Exception as e:
+        print(f"Error getting notification prefs: {e}")
+        return _DEFAULT_NOTIF_PREFS
+
+def set_notification_prefs(user_id, prefs):
+    try:
+        db.collection('users').document(user_id).update({'notificationPrefs': prefs})
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+def _email_pref_enabled(user_id, key):
+    """Return True if the user has email notifications enabled for `key`."""
+    try:
+        doc = db.collection('users').document(user_id).get(field_paths=['notificationPrefs'])
+        if doc.exists:
+            prefs = doc.to_dict().get('notificationPrefs', {})
+            return prefs.get('email', {}).get(key, _DEFAULT_NOTIF_PREFS['email'].get(key, False))
+        return _DEFAULT_NOTIF_PREFS['email'].get(key, False)
+    except Exception:
+        return _DEFAULT_NOTIF_PREFS['email'].get(key, False)
+
 # ── Notifications ────────────────────────────────────────────────
 def get_notifications(user_id, limit=30):
     """Return the most recent notifications for a user, newest first."""
@@ -1260,6 +1297,8 @@ def get_user_id_by_username(username: str):
 def send_tagged_in_post_email(to_user_id: str, tagger_username: str,
                                post_id: str, movie_title: str) -> dict:
     try:
+        if not _email_pref_enabled(to_user_id, 'newPost'):
+            return {'success': False, 'message': 'Email notifications disabled'}
         email = _get_user_email(to_user_id)
         if not email:
             return {'success': False, 'message': 'User email not found'}
@@ -1288,6 +1327,8 @@ def send_tagged_in_post_email(to_user_id: str, tagger_username: str,
 def send_post_reply_email(to_user_id: str, replier_username: str, post_id: str,
                           movie_title: str, reply_preview: str) -> dict:
     try:
+        if not _email_pref_enabled(to_user_id, 'newPost'):
+            return {'success': False, 'message': 'Email notifications disabled'}
         email = _get_user_email(to_user_id)
         if not email:
             return {'success': False, 'message': 'User email not found'}
@@ -1322,7 +1363,8 @@ def send_like_milestone_email(to_user_id: str, like_count: int, post_id: str,
     try:
         if like_count % LIKE_MILESTONE != 0:
             return {'success': False, 'message': 'Not a milestone'}
-
+        if not _email_pref_enabled(to_user_id, 'newPost'):
+            return {'success': False, 'message': 'Email notifications disabled'}
         email = _get_user_email(to_user_id)
         if not email:
             return {'success': False, 'message': 'User email not found'}
@@ -1350,6 +1392,8 @@ def send_like_milestone_email(to_user_id: str, like_count: int, post_id: str,
 
 def send_friend_request_email(to_user_id: str, from_username: str) -> dict:
     try:
+        if not _email_pref_enabled(to_user_id, 'friendActivity'):
+            return {'success': False, 'message': 'Email notifications disabled'}
         email = _get_user_email(to_user_id)
         if not email:
             return {'success': False, 'message': 'User email not found'}
@@ -1377,6 +1421,8 @@ def send_friend_request_email(to_user_id: str, from_username: str) -> dict:
 def send_group_added_email(to_user_id: str, added_by_username: str, group_name: str,
                            group_id: str) -> dict:
     try:
+        if not _email_pref_enabled(to_user_id, 'groupChat'):
+            return {'success': False, 'message': 'Email notifications disabled'}
         email = _get_user_email(to_user_id)
         if not email:
             return {'success': False, 'message': 'User email not found'}

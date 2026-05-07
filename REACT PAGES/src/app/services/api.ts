@@ -967,6 +967,25 @@ export async function markAllNotificationsRead(user_id: string) {
   return res.json();
 }
 
+export interface NotifPrefs {
+  inApp: { friendActivity: boolean; groupChat: boolean; newPost: boolean; newMovieAlerts: boolean };
+  email: { friendActivity: boolean; groupChat: boolean; newPost: boolean; newMovieAlerts: boolean };
+}
+
+export async function getNotifPrefs(user_id: string): Promise<NotifPrefs> {
+  const res = await fetch(`${BASE_URL}/user/${user_id}/notification-prefs`);
+  return res.json();
+}
+
+export async function saveNotifPrefs(user_id: string, prefs: NotifPrefs) {
+  const res = await fetch(`${BASE_URL}/user/${user_id}/notification-prefs`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(prefs),
+  });
+  return res.json();
+}
+
 export async function updateUserEmail(user_id: string, email: string) {
   const res = await fetch(`${BASE_URL}/user/${user_id}/email`, {
     method: 'PUT',
