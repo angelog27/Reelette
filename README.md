@@ -2,9 +2,21 @@
 
 A movie discovery web app built with Flask and React. Search for movies, track what you've watched, build watchlists, and see what your friends are watching.
 
+##Developers + Roles
+Angelo Gonzales - Software Architect
+Danielle Williams - SCRUM Master
+Jordan Helaire - SENIOR DEV
+Taylor Wall - Product Tester
+Martin Obrocki - UI/UX Designer
+
+##Code Works on 
+The code should be able to run on any MacOS device as well as any Windows device.
+If you are on mac and run into any issues attempt to use Chrome, if that doesnt work try to use a windows device.
+
 ## Deployment Link
 
 Here is the link to the current deployed version of the project: https://reelette-movie.com/
+
 
 ## Tech Stack
 
