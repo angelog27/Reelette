@@ -750,7 +750,8 @@ export type NotificationType =
   | 'post_like'
   | 'post_reply'
   | 'friend_watched'
-  | 'group_invite';
+  | 'group_invite'
+  | 'streaming_change';
 
 export interface AppNotification {
   notification_id: string;
@@ -765,6 +766,8 @@ export interface AppNotification {
     post_id?: string;
     group_id?: string;
     group_name?: string;
+    old_services?: string[];
+    new_services?: string[];
   };
   read: boolean;
   created_at: string;
@@ -787,6 +790,36 @@ export async function markAllNotificationsRead(user_id: string) {
   const res = await fetch(`${BASE_URL}/user/${user_id}/notifications/read-all`, {
     method: 'PUT',
   });
+  return res.json();
+}
+
+export async function getNotificationSettings(user_id: string) {
+  const res = await fetch(`${BASE_URL}/user/${user_id}/notification-settings`);
+  const data = await res.json();
+
+  return data.settings ?? {
+    newMovieAlerts: true,
+    friendActivity: false,
+    groupChat: true,
+    newPost: false,
+  };
+}
+
+export async function saveNotificationSettings(
+  user_id: string,
+  settings: {
+    newMovieAlerts: boolean;
+    friendActivity: boolean;
+    groupChat: boolean;
+    newPost: boolean;
+  }
+) {
+  const res = await fetch(`${BASE_URL}/user/${user_id}/notification-settings`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(settings),
+  });
+
   return res.json();
 }
 

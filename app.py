@@ -27,7 +27,8 @@ from firebase_helper import (
     update_user_avatar, update_user_last_seen,
     get_user_public_profile, get_group_member_profiles, get_members_streaming_services,
     log_roulette_spin, get_roulette_history, get_friends_roulette_history, save_quiz_result,
-    get_notifications, mark_notification_read, mark_all_notifications_read,
+    get_notifications, mark_notification_read, mark_all_notifications_read, create_streaming_change_notification,
+    get_movie_provider_snapshot, save_movie_provider_snapshot, db
 )
 from tmdb_api import (
     search_movies, discover_movies, get_popular_movies, get_movie_details,
@@ -701,6 +702,37 @@ def get_user_notifications(user_id):
     _cache_set(cache_key, result, _NOTIF_TTL)
     return jsonify({'notifications': result})
 
+@app.route('/api/user/<user_id>/notification-settings', methods=['GET'])
+def get_user_notification_settings(user_id):
+    default_settings = {
+        'newMovieAlerts': True,
+        'friendActivity': False,
+        'groupChat': True,
+        'newPost': False
+    }
+
+    data = get_user_data(user_id)
+
+    if not data:
+        return jsonify({'settings': default_settings})
+
+    return jsonify({
+        'settings': data.get('notificationSettings', default_settings)
+    })
+
+
+@app.route('/api/user/<user_id>/notification-settings', methods=['PUT'])
+def update_user_notification_settings(user_id):
+    settings = request.get_json() or {}
+
+    result = update_user_profile(user_id, {
+        'notificationSettings': settings
+    })
+
+    _cache.pop(f'user:{user_id}', None)
+
+    return jsonify(result)
+
 @app.route('/api/user/<user_id>/notifications/read-all', methods=['PUT'])
 def read_all_notifications(user_id):
     return jsonify(mark_all_notifications_read(user_id))
@@ -845,6 +877,69 @@ def friends_roulette_history_route(user_id):
     result = serialize_timestamps(friends_history)
     _cache_set(cache_key, result, _FRIENDS_HISTORY_TTL)
     return jsonify({'friendsHistory': result})
+
+@app.route('/api/admin/check-streaming-changes', methods=['POST'])
+def check_streaming_changes():
+    checked = 0
+    notifications_created = 0
+
+    users = db.collection('users').stream()
+
+    for user_doc in users:
+        user_id = user_doc.id
+        user_data = user_doc.to_dict()
+
+        notification_settings = user_data.get('notificationSettings', {})
+        if notification_settings.get('newMovieAlerts', True) is False:
+            continue
+
+        watchlist = get_watchlist(user_id)
+
+        for movie_id in watchlist:
+            checked += 1
+
+            details = get_movie_details(int(movie_id))
+            if not details:
+                continue
+
+            movie_title = details.get('title', 'Unknown Movie')
+
+            providers = get_streaming_providers(int(movie_id))
+            new_services = []
+
+            if providers and 'flatrate' in providers:
+                for p in providers['flatrate']:
+                    name = PROVIDER_DISPLAY.get(p.get('provider_id'))
+                    if name:
+                        new_services.append(name)
+
+            new_services = sorted(new_services)
+
+            old_snapshot = get_movie_provider_snapshot(user_id, movie_id)
+
+            if old_snapshot is None:
+                save_movie_provider_snapshot(user_id, movie_id, movie_title, new_services)
+                continue
+
+            old_services = old_snapshot.get('providers', [])
+
+            if old_services != new_services:
+                create_streaming_change_notification(
+                    user_id,
+                    movie_id,
+                    movie_title,
+                    old_services,
+                    new_services
+                )
+
+                save_movie_provider_snapshot(user_id, movie_id, movie_title, new_services)
+                notifications_created += 1
+
+    return jsonify({
+        'success': True,
+        'checked': checked,
+        'notifications_created': notifications_created
+    })
 
 
 if __name__ == '__main__':
