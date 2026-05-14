@@ -17,11 +17,12 @@ interface FriendReview {
 interface Props {
   movieId: string;
   type?: 'movie' | 'show';
+  knownTitle?: string;
   onClose: () => void;
   onWatchedChange?: () => void;
 }
 
-export function MovieDetailModal({ movieId, type = 'movie', onClose, onWatchedChange }: Props) {
+export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose, onWatchedChange }: Props) {
   const [movie, setMovie]                   = useState<any>(null);
   const [loading, setLoading]               = useState(true);
   const [watchEntry, setWatchEntry]         = useState<WatchedMovie | null>(null);
@@ -81,9 +82,11 @@ export function MovieDetailModal({ movieId, type = 'movie', onClose, onWatchedCh
 
     const fetchMedia = type === 'show'
       ? getShowDetails(movieId)
-      : getMovieDetails(movieId).then(async (d) => {
-          // Auto-detect: if TMDB movie endpoint returned show data (has name, no title)
-          if (!d || d.success === false || (!d.title && (d.name || d.first_air_date))) {
+      : getMovieDetails(movieId).then(async (d: any) => {
+          const isError = !d || d.success === false || d.error || !d.title;
+          const titleMismatch = knownTitle && d?.title &&
+            d.title.toLowerCase() !== knownTitle.toLowerCase();
+          if (isError || titleMismatch) {
             return getShowDetails(movieId);
           }
           return d;
@@ -106,7 +109,7 @@ export function MovieDetailModal({ movieId, type = 'movie', onClose, onWatchedCh
         setInWatchLater(ids.includes(String(movieId)));
       });
     }
-  }, [movieId]);
+  }, [movieId, type]);
 
   async function handleToggleWatchLater() {
     if (!user) return;

@@ -75,6 +75,7 @@ export function MyStuffTab() {
   const [page, setPage]                       = useState(1);
   const [selectedMovieId, setSelectedMovieId]   = useState<string | null>(null);
   const [selectedItemType, setSelectedItemType] = useState<'movie' | 'show'>('movie');
+  const [selectedItemTitle, setSelectedItemTitle] = useState<string | undefined>(undefined);
   const [mediaFilter, setMediaFilter]           = useState<MediaFilter>('all');
   const [sortMode, setSortMode]                 = useState<SortMode>('rating-desc');
   const [sortOpen, setSortOpen]               = useState(false);
@@ -326,7 +327,7 @@ export function MyStuffTab() {
               {pagedMovies.map(m => (
                 <button
                   key={m.movie_id}
-                  onClick={() => { setSelectedMovieId(m.movie_id); setSelectedItemType(m.media_type === 'show' ? 'show' : 'movie'); }}
+                  onClick={() => { setSelectedMovieId(m.movie_id); setSelectedItemType(m.media_type === 'show' ? 'show' : 'movie'); setSelectedItemTitle(m.title); }}
                   className="text-left group focus:outline-none"
                 >
                   <div className="relative rounded-xl overflow-hidden bg-[#111] border border-[#1e1e1e] group-hover:border-[#7C5DBD]/50 transition-colors">
@@ -404,7 +405,7 @@ export function MyStuffTab() {
               {sortedWatchLater.map(m => (
                 <button
                   key={m.movie_id}
-                  onClick={() => { setSelectedMovieId(m.movie_id); setSelectedItemType(m.media_type ?? 'movie'); }}
+                  onClick={() => { setSelectedMovieId(m.movie_id); setSelectedItemType(m.media_type ?? 'movie'); setSelectedItemTitle(m.title); }}
                   className="text-left group focus:outline-none"
                 >
                   <div className="relative rounded-xl overflow-hidden bg-[#111] border border-[#1e1e1e] group-hover:border-[#7C5DBD]/50 transition-colors">
@@ -444,6 +445,7 @@ export function MyStuffTab() {
         <MovieDetailModal
           movieId={selectedMovieId}
           type={selectedItemType}
+          knownTitle={selectedItemTitle}
           onClose={() => {
             setSelectedMovieId(null);
             if (activeTab === 'watched') loadWatched();
