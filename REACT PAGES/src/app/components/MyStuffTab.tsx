@@ -1,6 +1,6 @@
 ﻿import { useState, useEffect, useRef } from 'react';
 import { Star, Bookmark, BarChart2, ArrowUpDown, Check } from 'lucide-react';
-import { getWatchedMovies, getWatchLater, getMovieDetails, getMovieProvider, getUser, getRouletteHistory } from '../services/api';
+import { getWatchedMovies, getWatchLater, getMovieDetails, getShowDetails, getMovieProvider, getUser, getRouletteHistory } from '../services/api';
 import type { WatchedMovie, RouletteSpin } from '../services/api';
 import { MovieDetailModal } from './MovieDetailModal';
 import { PROVIDER_LOGOS } from '../constants/providers';
@@ -16,6 +16,7 @@ interface WatchLaterMovie {
   year: string;
   poster: string | null;
   streamingService: string;
+  media_type: 'movie' | 'show';
 }
 
 const SORT_OPTIONS: { value: SortMode; label: string; watchedOnly?: boolean }[] = [
@@ -115,13 +116,21 @@ export function MyStuffTab() {
         ids.map((id) => {
           const strId = String(id);
           if (cache.has(strId)) return Promise.resolve(cache.get(strId)!);
-          return Promise.all([getMovieDetails(strId), getMovieProvider(strId)]).then(([d, svc]) => {
+          return Promise.all([getMovieDetails(strId), getMovieProvider(strId)]).then(async ([d, svc]) => {
+            let details = d as any;
+            let mediaType: 'movie' | 'show' = 'movie';
+            if (!details?.title && (details?.name || details?.first_air_date)) {
+              details = await getShowDetails(strId).catch(() => d) as any;
+              mediaType = 'show';
+            }
             const entry: WatchLaterMovie = {
               movie_id: strId,
-              title:    (d as any)?.title ?? 'Unknown',
-              year:     (d as any)?.release_date ? String((d as any).release_date).slice(0, 4) : '',
-              poster:   (d as any)?.poster_path ? `https://image.tmdb.org/t/p/w500${(d as any).poster_path}` : null,
+              title:    details?.title ?? details?.name ?? 'Unknown',
+              year:     details?.release_date ? String(details.release_date).slice(0, 4)
+                        : details?.first_air_date ? String(details.first_air_date).slice(0, 4) : '',
+              poster:   details?.poster_path ? `https://image.tmdb.org/t/p/w500${details.poster_path}` : null,
               streamingService: svc,
+              media_type: mediaType,
             };
             cache.set(strId, entry);
             return entry;
@@ -395,7 +404,7 @@ export function MyStuffTab() {
               {sortedWatchLater.map(m => (
                 <button
                   key={m.movie_id}
-                  onClick={() => setSelectedMovieId(m.movie_id)}
+                  onClick={() => { setSelectedMovieId(m.movie_id); setSelectedItemType(m.media_type ?? 'movie'); }}
                   className="text-left group focus:outline-none"
                 >
                   <div className="relative rounded-xl overflow-hidden bg-[#111] border border-[#1e1e1e] group-hover:border-[#7C5DBD]/50 transition-colors">

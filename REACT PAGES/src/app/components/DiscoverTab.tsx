@@ -369,7 +369,7 @@ function CompactCard({ movie, onClick }: { movie: Movie; onClick: () => void }) 
 function MovieRow({ title, movies, onMovieClick }: {
   title: string;
   movies: Movie[] | null;
-  onMovieClick: (id: string) => void;
+  onMovieClick: (id: string, type?: 'movie' | 'show') => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   if (movies === null) return <SkeletonRow title={title} />;
@@ -401,7 +401,7 @@ function MovieRow({ title, movies, onMovieClick }: {
           }}
         >
           {movies.map(movie => (
-            <CompactCard key={movie.id} movie={movie} onClick={() => onMovieClick(movie.id)} />
+            <CompactCard key={movie.id} movie={movie} onClick={() => onMovieClick(movie.id, movie.type ?? 'movie')} />
           ))}
         </div>
         <button
@@ -450,7 +450,7 @@ function PersonalizedHeroSkeleton() {
 function PersonalizedHero({ slots, backdropOverrides = {}, onOpenModal, onToggleWatchlist, watchlistIds, hasUser }: {
   slots: PersonalizedSlot[];
   backdropOverrides?: Record<string, string>;
-  onOpenModal: (id: string) => void;
+  onOpenModal: (id: string, type?: 'movie' | 'show') => void;
   onToggleWatchlist: (movie: Movie) => void;
   watchlistIds: string[];
   hasUser: boolean;
@@ -539,7 +539,7 @@ function PersonalizedHero({ slots, backdropOverrides = {}, onOpenModal, onToggle
           )}
 
           <div className="flex flex-wrap gap-3">
-            <button onClick={() => onOpenModal(slot.movie.id)}
+            <button onClick={() => onOpenModal(slot.movie.id, slot.movie.type ?? 'movie')}
               className="flex items-center gap-2 px-6 py-2.5 bg-white/90 text-zinc-900 font-semibold rounded-lg text-sm hover:bg-white transition-colors duration-150">
               <Info className="w-4 h-4" /> More Info
             </button>
@@ -947,7 +947,7 @@ export function DiscoverTab() {
         <PersonalizedHero
           slots={heroSlots}
           backdropOverrides={backdropOverrides}
-          onOpenModal={setSelectedMovieId}
+          onOpenModal={openModal}
           onToggleWatchlist={handleToggleWatchlist}
           watchlistIds={watchlistIds}
           hasUser={!!user}
@@ -1032,17 +1032,18 @@ export function DiscoverTab() {
           const catalog = SERVICE_CATALOG[activeProvider];
           return (
             <>
-              <MovieRow title={`Popular on ${activeProvider}`} movies={providerPopular} onMovieClick={setSelectedMovieId} />
-              <MovieRow title={`New on ${activeProvider}`} movies={providerNew} onMovieClick={setSelectedMovieId} />
+              <MovieRow title={`Popular on ${activeProvider}`} movies={providerPopular} onMovieClick={openModal} />
+              <MovieRow title={`New on ${activeProvider}`} movies={providerNew} onMovieClick={openModal} />
               {providerWatched.length > 0 && (
-                <MovieRow title={`Your Watches on ${activeProvider}`} movies={providerWatched} onMovieClick={setSelectedMovieId} />
+                <MovieRow title={`Your Watches on ${activeProvider}`} movies={providerWatched} onMovieClick={openModal} />
               )}
-              {(catalog?.specificCategories ?? []).map((cat, i) =>
-                providerSpecific === null
+              {(catalog?.specificCategories ?? []).map((cat, i) => {
+                const rowMovies: Movie[] | null = providerSpecific ? (providerSpecific[i] ?? null) : null;
+                return rowMovies === null && providerSpecific === null
                   ? <SkeletonRow key={cat.firestoreId} title={cat.title} />
-                  : <MovieRow key={cat.firestoreId} title={cat.title} movies={providerSpecific[i] ?? null} onMovieClick={setSelectedMovieId} />
-              )}
-              <MovieRow title={`Popular Shows on ${activeProvider}`} movies={providerShowsPopular} onMovieClick={(id) => openModal(id, 'show')} />
+                  : <MovieRow key={cat.firestoreId} title={cat.title} movies={rowMovies} onMovieClick={openModal} />;
+              })}
+              <MovieRow title={`Popular Shows on ${activeProvider}`} movies={providerShowsPopular} onMovieClick={openModal} />
             </>
           );
         })() : mediaType === 'show' ? (
@@ -1059,24 +1060,24 @@ export function DiscoverTab() {
         ) : (
           <>
             {user && top10.length > 0 && (
-              <MovieRow title="Your Top 10"           movies={top10}          onMovieClick={setSelectedMovieId} />
+              <MovieRow title="Your Top 10"           movies={top10}          onMovieClick={openModal} />
             )}
             {user && recentSpins !== null && recentSpins.length > 0 && (
-              <MovieRow title="Your Recent Spins"     movies={recentSpins}    onMovieClick={setSelectedMovieId} />
+              <MovieRow title="Your Recent Spins"     movies={recentSpins}    onMovieClick={openModal} />
             )}
             {user && (
-              <MovieRow title="Recommended Watches"   movies={recommended}    onMovieClick={setSelectedMovieId} />
+              <MovieRow title="Recommended Watches"   movies={recommended}    onMovieClick={openModal} />
             )}
-            <MovieRow title="Trending Now"            movies={trendingMovies} onMovieClick={setSelectedMovieId} />
-            <MovieRow title="New Releases"            movies={newReleases}    onMovieClick={setSelectedMovieId} />
-            <MovieRow title="Top Rated"               movies={topRated}       onMovieClick={setSelectedMovieId} />
-            <MovieRow title="Classics"                movies={classics}       onMovieClick={setSelectedMovieId} />
-            <MovieRow title="Action & Adventure"      movies={actionMovies}   onMovieClick={setSelectedMovieId} />
-            <MovieRow title="Comedy"                  movies={comedyMovies}   onMovieClick={setSelectedMovieId} />
-            <MovieRow title="Horror"                  movies={horrorMovies}   onMovieClick={setSelectedMovieId} />
-            <MovieRow title="Sci-Fi"                  movies={scifiMovies}    onMovieClick={setSelectedMovieId} />
-            <MovieRow title="Critically Acclaimed"    movies={acclaimed}      onMovieClick={setSelectedMovieId} />
-            <MovieRow title="Coming Soon"             movies={comingSoon}     onMovieClick={setSelectedMovieId} />
+            <MovieRow title="Trending Now"            movies={trendingMovies} onMovieClick={openModal} />
+            <MovieRow title="New Releases"            movies={newReleases}    onMovieClick={openModal} />
+            <MovieRow title="Top Rated"               movies={topRated}       onMovieClick={openModal} />
+            <MovieRow title="Classics"                movies={classics}       onMovieClick={openModal} />
+            <MovieRow title="Action & Adventure"      movies={actionMovies}   onMovieClick={openModal} />
+            <MovieRow title="Comedy"                  movies={comedyMovies}   onMovieClick={openModal} />
+            <MovieRow title="Horror"                  movies={horrorMovies}   onMovieClick={openModal} />
+            <MovieRow title="Sci-Fi"                  movies={scifiMovies}    onMovieClick={openModal} />
+            <MovieRow title="Critically Acclaimed"    movies={acclaimed}      onMovieClick={openModal} />
+            <MovieRow title="Coming Soon"             movies={comingSoon}     onMovieClick={openModal} />
           </>
         )}
       </div>
