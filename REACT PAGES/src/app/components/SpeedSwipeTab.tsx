@@ -114,8 +114,8 @@ interface SwipeCardProps {
   movie:         Movie;
   stackIndex:    number; // 0 = top, 1 = peeking behind
   friendAvatars: FriendAvatar[];
-  onSwipeLeft:   () => void;
-  onSwipeRight:  () => void;
+  onSwipeLeft:   (movie: Movie) => void;
+  onSwipeRight:  (movie: Movie) => void;
   onInfo:        () => void;
 }
 
@@ -138,10 +138,10 @@ function SwipeCard({ movie, stackIndex, friendAvatars, onSwipeLeft, onSwipeRight
   const triggerExit = useCallback((dir: 'left' | 'right') => {
     setExitDir(dir);
     setTimeout(() => {
-      if (dir === 'right') onSwipeRight();
-      else onSwipeLeft();
+      if (dir === 'right') onSwipeRight(movie);
+      else onSwipeLeft(movie);
     }, 280);
-  }, [onSwipeLeft, onSwipeRight]);
+  }, [onSwipeLeft, onSwipeRight, movie]);
 
   // Pointer events (unified mouse + touch)
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -406,6 +406,9 @@ export function SpeedSwipeTab() {
   const watchLaterIds = useRef<Set<string>>(new Set());
   // Tracks which discover page to hit next during refills
   const refillPage = useRef(2);
+  // Mirror of `index` as a ref so async callbacks always read the current value
+  const indexRef = useRef(0);
+  indexRef.current = index;
 
   // Modal
   const [modalMovieId,   setModalMovieId]   = useState<string | null>(null);
@@ -596,10 +599,10 @@ export function SpeedSwipeTab() {
   // ── Swipe handlers ────────────────────────────────────────────────
   const currentMovie = deck[index] ?? null;
 
-  const handleSwipeRight = () => {
-    if (!currentMovie) return;
-    const movie         = currentMovie;
-    const capturedIndex = index;
+  // movie arg is passed directly from SwipeCard at gesture time — immune to deck mutations
+  const handleSwipeRight = (movie: Movie) => {
+    if (!movie) return;
+    const capturedIndex = indexRef.current;
     const nextIdx       = capturedIndex + 1;
 
     applyAffinity(movie, 'right');
@@ -627,26 +630,30 @@ export function SpeedSwipeTab() {
       showToast(`Added "${movie.title}" to Watch Later`);
     }
 
-    // Background: inject top unseen rec as the very next card
+    // Background: inject top unseen rec behind the current top card.
+    // Always uses indexRef so it never displaces whichever card is on top right now.
     getMovieRecommendations(movie.id).then(recs => {
       const fresh = recs.find(r => !seenIds.current.has(r.id));
       if (!fresh) return;
       seenIds.current.add(fresh.id);
-      setDeck(prev => [
-        ...prev.slice(0, nextIdx),
-        fresh,
-        ...prev.slice(nextIdx),
-      ]);
+      setDeck(prev => {
+        const insertAt = indexRef.current + 1;
+        return [
+          ...prev.slice(0, insertAt),
+          fresh,
+          ...prev.slice(insertAt),
+        ];
+      });
     }).catch(() => {});
   };
 
-  const handleSwipeLeft = () => {
-    if (!currentMovie) return;
-    applyAffinity(currentMovie, 'left');
-    setHistory(h => [...h, index]);
-    const nextIdx = index + 1;
-    rerank(nextIdx - 1);
-    setIndex(nextIdx);
+  const handleSwipeLeft = (movie: Movie) => {
+    if (!movie) return;
+    const capturedIndex = indexRef.current;
+    applyAffinity(movie, 'left');
+    setHistory(h => [...h, capturedIndex]);
+    rerank(capturedIndex);
+    setIndex(capturedIndex + 1);
   };
 
   const handleUndo = () => {

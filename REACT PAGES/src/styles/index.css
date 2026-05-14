@@ -3,11 +3,36 @@
 @import './theme.css';
 
 html, body {
-    overscroll-behavior-x: none;
-    overscroll-behavior-y: none;
+  overscroll-behavior-x: none;
+  overscroll-behavior-y: none;
 }
 html {
-    overflow-x: hidden;
+  overflow-x: hidden;
+}
+
+/* ── iOS / mobile touch optimizations ───────────────────── */
+
+/* Remove 300ms tap delay and the grey flash on tap */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button, a, [role="button"], input, select, textarea {
+  touch-action: manipulation;
+}
+
+/* Prevent text size adjustment when rotating on iOS */
+body {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Safe-area bottom padding utility — used by bottom nav and modals */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 /* Breaks out of the px-6 content padding only — does not bleed into the sidebar */

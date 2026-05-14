@@ -298,14 +298,18 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
       {/* ── Close button ─────────────────────────────────────────── */}
       <button
         onClick={onClose}
-        className="absolute top-5 right-5 z-20 bg-black/50 hover:bg-black/80 backdrop-blur-sm text-white p-2.5 rounded-full transition-colors border border-white/10"
+        className="absolute z-20 bg-black/50 hover:bg-black/80 backdrop-blur-sm text-white p-3 rounded-full transition-colors border border-white/10"
+        style={{
+          top: 'max(1.25rem, calc(env(safe-area-inset-top, 0px) + 0.75rem))',
+          right: '1.25rem',
+        }}
       >
         <X className="w-5 h-5" />
       </button>
 
-      {/* ── Friends Ratings — absolute top right ─────────────────── */}
+      {/* ── Friends Ratings — desktop only, top right ────────────── */}
       {friendReviews.length > 0 && (
-        <div className="absolute top-16 right-8 z-20 w-68 max-h-[60vh] overflow-y-auto">
+        <div className="hidden md:block absolute top-16 right-8 z-20 w-68 max-h-[60vh] overflow-y-auto">
           <p className="text-gray-400 text-xs font-semibold uppercase tracking-widest mb-3">
             Friends Ratings
           </p>
@@ -338,7 +342,7 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
         <div className="flex-1" />
 
         {/* ── Info block ───────────────────────────────────────── */}
-        <div className="px-10 md:px-16 pb-8 max-w-2xl">
+        <div className="px-5 md:px-16 pb-6 md:pb-8 max-w-2xl pb-safe">
 
           {/* Genre badge */}
           <span className="inline-block bg-[#7C5DBD] text-white text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded mb-4">
@@ -346,7 +350,7 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
           </span>
 
           {/* Title */}
-          <h1 className="text-4xl md:text-6xl font-bold text-white leading-tight mb-3 drop-shadow-lg">
+          <h1 className="text-3xl md:text-6xl font-bold text-white leading-tight mb-3 drop-shadow-lg">
             {displayTitle}
           </h1>
 

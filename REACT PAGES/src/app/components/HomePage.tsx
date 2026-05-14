@@ -418,8 +418,8 @@ export function HomePage() {
           </span>
         </div>
 
-        {/* ── Center: tabs (absolutely centered) ── */}
-        <nav className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1">
+        {/* ── Center: tabs (absolutely centered) — desktop only ── */}
+        <nav className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-1">
           {tabs.map(tab => (
             <NavLink key={tab.id} to={tab.path}>
               {({ isActive }) => (
@@ -450,7 +450,7 @@ export function HomePage() {
                 boxShadow: '8px 8px 30px #7C5DBD, -8px -8px 30px rgba(255,255,255,0.2)',
                 cursor: 'text',
               }}>
-                <span style={{
+                <span className="hidden md:inline" style={{
                   position: 'absolute', top: '50%', right: '8px', transform: 'translateY(-50%)',
                   color: '#c5c5c5', backgroundColor: '#5e5757', padding: '3px 5px',
                   borderRadius: '6px', fontSize: '11px', lineHeight: 1,
@@ -465,7 +465,7 @@ export function HomePage() {
                   onFocus={() => { if (navSearch.trim() || hasActiveFilter) setSearchOpen(true); }}
                   placeholder="Search movies, shows..."
                   autoFocus
-                  style={{ backgroundColor: 'transparent', border: 'none', outline: 'none', fontSize: '13px', color: 'rgb(190,195,200)', width: 200 }}
+                  style={{ backgroundColor: 'transparent', border: 'none', outline: 'none', fontSize: '13px', color: 'rgb(190,195,200)', width: 'min(200px, calc(100vw - 190px))' }}
                 />
                 {navSearch && (
                   <button onClick={clearSearch} className="absolute right-10 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors">
@@ -475,8 +475,13 @@ export function HomePage() {
               </label>
             )}
             <button
-              onClick={() => { setSearchVisible(v => !v); if (!searchVisible) setTimeout(() => searchInputRef.current?.focus(), 50); }}
-              className="flex items-center justify-center w-[38px] h-[38px] rounded-full border transition-all active:scale-95"
+              onClick={() => {
+                // On mobile go straight to the dedicated Search tab
+                if (window.innerWidth < 768) { setSearchOpen(false); navigate('/home/search'); return; }
+                setSearchVisible(v => !v);
+                if (!searchVisible) setTimeout(() => searchInputRef.current?.focus(), 50);
+              }}
+              className="flex items-center justify-center w-10 h-10 md:w-[38px] md:h-[38px] rounded-full border transition-all active:scale-95"
               style={searchVisible ? { background: 'rgba(124,93,189,0.2)', borderColor: '#7C5DBD' } : { background: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.1)' }}
               title="Search (⌘K)"
             >
@@ -499,7 +504,7 @@ export function HomePage() {
             </button>
 
               {filterOpen && (
-                <div className="absolute right-0 top-[42px] w-72 bg-[#141414] border border-[#2A2A2A] rounded-2xl shadow-2xl z-[110] p-4 flex flex-col gap-4 panel-enter">
+                <div className="absolute right-0 top-[42px] w-72 max-w-[calc(100vw-1rem)] bg-[#141414] border border-[#2A2A2A] rounded-2xl shadow-2xl z-[110] p-4 flex flex-col gap-4 panel-enter">
                   <div>
                     <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Genre</p>
                     <div className="relative">
@@ -590,7 +595,7 @@ export function HomePage() {
 
             {/* Search results dropdown */}
             {searchOpen && (navSearch.trim() || hasActiveFilter) && (
-              <div className="absolute right-0 top-[42px] w-[340px] max-h-[480px] flex flex-col bg-[#141414] border border-[#2A2A2A] rounded-2xl shadow-2xl z-[100] overflow-hidden panel-enter">
+              <div className="absolute right-0 top-[42px] w-[340px] max-w-[calc(100vw-1rem)] max-h-[480px] flex flex-col bg-[#141414] border border-[#2A2A2A] rounded-2xl shadow-2xl z-[100] overflow-hidden panel-enter">
                 <div className="px-4 py-2.5 border-b border-[#2A2A2A] shrink-0 flex items-center justify-between">
                   <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
                     {navSearch.trim() ? `Results for "${navSearch}"` : 'Filtered Results'}
@@ -656,7 +661,7 @@ export function HomePage() {
             </button>
 
             {notifOpen && (
-              <div className="absolute right-0 top-11 w-80 max-h-[480px] flex flex-col bg-[#141414] border border-[#2A2A2A] rounded-2xl shadow-2xl z-[100] overflow-hidden panel-enter">
+              <div className="absolute right-0 top-11 w-80 max-w-[calc(100vw-1rem)] max-h-[60vh] flex flex-col bg-[#141414] border border-[#2A2A2A] rounded-2xl shadow-2xl z-[100] overflow-hidden panel-enter">
                 <div className="flex items-center justify-between px-4 py-3 border-b border-[#2A2A2A] shrink-0">
                   <span className="text-sm font-semibold text-white">Notifications</span>
                   {unreadCount > 0 && (
@@ -702,8 +707,8 @@ export function HomePage() {
 
       </header>
 
-      {/* Page content */}
-      <main className="flex-1 px-6 py-0">
+      {/* Page content — extra bottom padding on mobile so bottom nav doesn't cover content */}
+      <main className="flex-1 px-3 md:px-6 py-0 pb-[calc(4rem+env(safe-area-inset-bottom,0px))] md:pb-0">
         <DiscoverProvider>
           <Suspense fallback={
             <div className="flex items-center justify-center py-24 text-gray-500">Loading…</div>
@@ -712,6 +717,37 @@ export function HomePage() {
           </Suspense>
         </DiscoverProvider>
       </main>
+
+      {/* ── Mobile bottom nav bar — hidden on md+ ── */}
+      <nav
+        className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0A0A0A]/97 backdrop-blur-md border-t border-white/[0.06]"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      >
+        <div className="flex items-stretch justify-around">
+          {tabs.map(tab => (
+            <NavLink key={tab.id} to={tab.path} className="flex-1">
+              {({ isActive }) => (
+                <div className="flex flex-col items-center justify-center gap-0.5 py-2 min-h-[52px]">
+                  {tab.icon && (
+                    <tab.icon
+                      className={`w-[22px] h-[22px] transition-colors duration-150 ${isActive ? 'text-[#7C5DBD]' : 'text-zinc-500'}`}
+                    />
+                  )}
+                  <span
+                    className={`text-[10px] transition-colors duration-150 ${isActive ? 'text-[#7C5DBD]' : 'text-zinc-500'}`}
+                    style={{ fontFamily: 'SanFran, system-ui, sans-serif', fontWeight: 400 }}
+                  >
+                    {tab.label}
+                  </span>
+                  {isActive && (
+                    <span className="w-1 h-1 rounded-full bg-[#7C5DBD]" />
+                  )}
+                </div>
+              )}
+            </NavLink>
+          ))}
+        </div>
+      </nav>
 
       {modalMovieId && (
         <MovieDetailModal movieId={modalMovieId} onClose={() => setModalMovieId(null)} />
