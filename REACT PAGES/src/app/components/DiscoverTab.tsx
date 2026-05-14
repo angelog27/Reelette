@@ -369,7 +369,7 @@ function CompactCard({ movie, onClick }: { movie: Movie; onClick: () => void }) 
 function MovieRow({ title, movies, onMovieClick }: {
   title: string;
   movies: Movie[] | null;
-  onMovieClick: (id: string, type?: 'movie' | 'show') => void;
+  onMovieClick: (id: string, type?: 'movie' | 'show', title?: string) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   if (movies === null) return <SkeletonRow title={title} />;
@@ -401,7 +401,7 @@ function MovieRow({ title, movies, onMovieClick }: {
           }}
         >
           {movies.map(movie => (
-            <CompactCard key={movie.id} movie={movie} onClick={() => onMovieClick(movie.id, movie.type ?? 'movie')} />
+            <CompactCard key={movie.id} movie={movie} onClick={() => onMovieClick(movie.id, movie.type ?? 'movie', movie.title)} />
           ))}
         </div>
         <button
@@ -450,7 +450,7 @@ function PersonalizedHeroSkeleton() {
 function PersonalizedHero({ slots, backdropOverrides = {}, onOpenModal, onToggleWatchlist, watchlistIds, hasUser }: {
   slots: PersonalizedSlot[];
   backdropOverrides?: Record<string, string>;
-  onOpenModal: (id: string, type?: 'movie' | 'show') => void;
+  onOpenModal: (id: string, type?: 'movie' | 'show', title?: string) => void;
   onToggleWatchlist: (movie: Movie) => void;
   watchlistIds: string[];
   hasUser: boolean;
@@ -539,7 +539,7 @@ function PersonalizedHero({ slots, backdropOverrides = {}, onOpenModal, onToggle
           )}
 
           <div className="flex flex-wrap gap-3">
-            <button onClick={() => onOpenModal(slot.movie.id, slot.movie.type ?? 'movie')}
+            <button onClick={() => onOpenModal(slot.movie.id, slot.movie.type ?? 'movie', slot.movie.title)}
               className="flex items-center gap-2 px-6 py-2.5 bg-white/90 text-zinc-900 font-semibold rounded-lg text-sm hover:bg-white transition-colors duration-150">
               <Info className="w-4 h-4" /> More Info
             </button>
@@ -681,6 +681,7 @@ export function DiscoverTab() {
 
   const [selectedMovieId,  setSelectedMovieId]  = useState<string | null>(null);
   const [selectedItemType, setSelectedItemType] = useState<'movie' | 'show'>('movie');
+  const [selectedItemTitle, setSelectedItemTitle] = useState<string | undefined>(undefined);
   const [activeProvider,   setActiveProvider]   = useState('all');
   const [hoveredProvider,  setHoveredProvider]  = useState<string | null>(null);
   const [mediaType,        setMediaType]        = useState<'movie' | 'show'>('movie');
@@ -709,9 +710,10 @@ export function DiscoverTab() {
     discoverShows({ genre_id: '16' }).then(setShowsAnimation).catch(() => setShowsAnimation([]));
   }, [mediaType]);
 
-  const openModal = (id: string, type: 'movie' | 'show' = 'movie') => {
+  const openModal = (id: string, type: 'movie' | 'show' = 'movie', title?: string) => {
     setSelectedMovieId(id);
     setSelectedItemType(type);
+    setSelectedItemTitle(title);
   };
 
   // ── Friend hero slot ───────────────────────────────────────────
@@ -1048,14 +1050,14 @@ export function DiscoverTab() {
           );
         })() : mediaType === 'show' ? (
           <>
-            <MovieRow title="Trending Shows"          movies={showsTrending}  onMovieClick={(id) => openModal(id, 'show')} />
-            <MovieRow title="Popular Shows"           movies={showsPopular}   onMovieClick={(id) => openModal(id, 'show')} />
-            <MovieRow title="Top Rated Shows"         movies={showsTopRated}  onMovieClick={(id) => openModal(id, 'show')} />
-            <MovieRow title="Drama"                   movies={showsDrama}     onMovieClick={(id) => openModal(id, 'show')} />
-            <MovieRow title="Comedy"                  movies={showsComedy}    onMovieClick={(id) => openModal(id, 'show')} />
-            <MovieRow title="Crime"                   movies={showsCrime}     onMovieClick={(id) => openModal(id, 'show')} />
-            <MovieRow title="Sci-Fi & Fantasy"        movies={showsScifi}     onMovieClick={(id) => openModal(id, 'show')} />
-            <MovieRow title="Animation"               movies={showsAnimation} onMovieClick={(id) => openModal(id, 'show')} />
+            <MovieRow title="Trending Shows"          movies={showsTrending}  onMovieClick={(id, _t, title) => openModal(id, 'show', title)} />
+            <MovieRow title="Popular Shows"           movies={showsPopular}   onMovieClick={(id, _t, title) => openModal(id, 'show', title)} />
+            <MovieRow title="Top Rated Shows"         movies={showsTopRated}  onMovieClick={(id, _t, title) => openModal(id, 'show', title)} />
+            <MovieRow title="Drama"                   movies={showsDrama}     onMovieClick={(id, _t, title) => openModal(id, 'show', title)} />
+            <MovieRow title="Comedy"                  movies={showsComedy}    onMovieClick={(id, _t, title) => openModal(id, 'show', title)} />
+            <MovieRow title="Crime"                   movies={showsCrime}     onMovieClick={(id, _t, title) => openModal(id, 'show', title)} />
+            <MovieRow title="Sci-Fi & Fantasy"        movies={showsScifi}     onMovieClick={(id, _t, title) => openModal(id, 'show', title)} />
+            <MovieRow title="Animation"               movies={showsAnimation} onMovieClick={(id, _t, title) => openModal(id, 'show', title)} />
           </>
         ) : (
           <>
@@ -1083,7 +1085,7 @@ export function DiscoverTab() {
       </div>
 
       {selectedMovieId && (
-        <MovieDetailModal movieId={selectedMovieId} type={selectedItemType} onClose={() => setSelectedMovieId(null)} />
+        <MovieDetailModal movieId={selectedMovieId} type={selectedItemType} knownTitle={selectedItemTitle} onClose={() => setSelectedMovieId(null)} />
       )}
     </div>
   );
