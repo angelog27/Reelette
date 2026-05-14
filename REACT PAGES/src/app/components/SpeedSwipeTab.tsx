@@ -4,10 +4,15 @@ import { Heart, X, Info, Shuffle, RotateCcw, ArrowLeft, CheckCircle } from 'luci
 import {
   discoverMovies,
   watchMovieLater,
+  getWatchedMovies,
+  getWatchLater,
+  getMovieRecommendations,
+  getTrendingMovies,
   getUser,
   getfriendsRouletteHistory,
   getRoulettePrefs,
   type Movie,
+  type WatchedMovie,
 } from '../services/api';
 import { MovieDetailModal } from './MovieDetailModal';
 
@@ -67,7 +72,7 @@ function rerankDeck(movies: Movie[], affinity: Record<string, number>): Movie[] 
 }
 
 // ─────────────────────────────────────────────────────────────
-// Pool loader (mirrors RouletteTab's buildPool)
+// Pool loader (mirrors RouletteTab's buildPool — used for mood changes)
 // ─────────────────────────────────────────────────────────────
 
 async function loadPool(genreId: string, dislikedIds: string[]): Promise<Movie[]> {
@@ -96,7 +101,6 @@ async function loadPool(genreId: string, dislikedIds: string[]): Promise<Movie[]
         pool.push(m);
       }
 
-  // Initial shuffle
   return pool.sort(() => Math.random() - 0.5);
 }
 
@@ -346,10 +350,10 @@ function SwipeCard({ movie, stackIndex, friendAvatars, onSwipeLeft, onSwipeRight
 // Toast
 // ─────────────────────────────────────────────────────────────
 
-function Toast({ message, visible }: { message: string; visible: boolean }) {
+function Toast({ message, visible, onAction }: { message: string; visible: boolean; onAction?: () => void }) {
   return (
     <div
-      className="fixed bottom-28 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2.5 rounded-full z-50 pointer-events-none"
+      className="fixed bottom-28 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2.5 rounded-full z-50"
       style={{
         background: 'rgba(22,22,28,0.96)',
         border: '1px solid rgba(74,222,128,0.3)',
@@ -357,10 +361,20 @@ function Toast({ message, visible }: { message: string; visible: boolean }) {
         transition: 'opacity 0.25s, transform 0.25s',
         opacity: visible ? 1 : 0,
         transform: `translateX(-50%) translateY(${visible ? 0 : 10}px)`,
+        pointerEvents: onAction ? 'auto' : 'none',
       }}
     >
       <CheckCircle className="w-4 h-4 shrink-0" style={{ color: '#4ade80' }} />
       <span className="text-white text-sm font-medium">{message}</span>
+      {onAction && (
+        <button
+          onClick={onAction}
+          className="ml-1 px-2.5 py-0.5 rounded-full text-xs font-semibold"
+          style={{ background: 'rgba(74,222,128,0.2)', color: '#4ade80', border: '1px solid rgba(74,222,128,0.3)' }}
+        >
+          View
+        </button>
+      )}
     </div>
   );
 }
@@ -370,57 +384,149 @@ function Toast({ message, visible }: { message: string; visible: boolean }) {
 // ─────────────────────────────────────────────────────────────
 
 export function SpeedSwipeTab() {
-  const navigate  = useNavigate();
-  const user      = getUser();
+  const navigate = useNavigate();
+  const user     = getUser();
 
   // Deck state
   const [deck,    setDeck]    = useState<Movie[]>([]);
   const [index,   setIndex]   = useState(0);
   const [loading, setLoading] = useState(true);
-  const [history, setHistory] = useState<number[]>([]);  // indices for undo
+  const [history, setHistory] = useState<number[]>([]);
 
   // Filter
   const [activeMood, setActiveMood] = useState(MOODS[0]);
 
-  // Recommendation: affinity per genre, consecutive left-swipe counter per genre
-  const affinity        = useRef<Record<string, number>>({});
-  const leftStreaks      = useRef<Record<string, number>>({});
+  // Affinity engine
+  const affinity    = useRef<Record<string, number>>({});
+  const leftStreaks = useRef<Record<string, number>>({});
+
+  // Session dedup sets — reset on mount, never persisted
+  const seenIds       = useRef<Set<string>>(new Set());
+  const watchedIds    = useRef<Set<string>>(new Set());
+  const watchLaterIds = useRef<Set<string>>(new Set());
+  // Tracks which discover page to hit next during refills
+  const refillPage = useRef(2);
 
   // Modal
-  const [modalMovieId,  setModalMovieId]  = useState<string | null>(null);
+  const [modalMovieId,   setModalMovieId]   = useState<string | null>(null);
   const [modalMovieType, setModalMovieType] = useState<'movie' | 'show'>('movie');
 
   // Toast
-  const [toastMsg, setToastMsg]   = useState('');
-  const [toastShow, setToastShow] = useState(false);
+  const [toastMsg,    setToastMsg]    = useState('');
+  const [toastShow,   setToastShow]   = useState(false);
+  const [toastAction, setToastAction] = useState<(() => void) | undefined>(undefined);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Friends layer: movie_id → FriendAvatar[]
   const [friendMap, setFriendMap] = useState<Record<string, FriendAvatar[]>>({});
 
-  // ── Load pool ────────────────────────────────────────────────
+  // ── Session initialization — runs once on mount ───────────────────
+  const initSession = useCallback(async () => {
+    setLoading(true);
+    setHistory([]);
+
+    seenIds.current       = new Set();
+    watchedIds.current    = new Set();
+    watchLaterIds.current = new Set();
+    refillPage.current    = 2;
+    affinity.current      = {};
+    leftStreaks.current   = {};
+
+    // 1. Fetch watched history + watch later in parallel
+    const [watchedList, watchLaterList] = await Promise.all([
+      user
+        ? getWatchedMovies(user.user_id, 500).catch(() => [] as WatchedMovie[])
+        : Promise.resolve([] as WatchedMovie[]),
+      user
+        ? getWatchLater(user.user_id).catch(() => [] as string[])
+        : Promise.resolve([] as string[]),
+    ]);
+
+    // 2. Watched → seenIds (watch later stays out of seenIds so it can appear naturally)
+    for (const w of watchedList) {
+      watchedIds.current.add(w.movie_id);
+      seenIds.current.add(w.movie_id);
+    }
+    for (const id of watchLaterList) {
+      watchLaterIds.current.add(id);
+    }
+
+    // 3. Pick one random watch later movie as seed, fetch its recs
+    let seedRecs: Movie[] = [];
+    if (watchLaterList.length > 0) {
+      const seedId = watchLaterList[Math.floor(Math.random() * watchLaterList.length)];
+      seedRecs = await getMovieRecommendations(seedId).catch(() => []);
+    }
+
+    // 4. Backfill with trending
+    const trending = await getTrendingMovies('week').catch(() => [] as Movie[]);
+
+    // 5. Combine: recs first, then trending, filtered through seenIds
+    const addedThisSession = new Set<string>();
+    const combined: Movie[] = [];
+    const tryAdd = (m: Movie) => {
+      if (seenIds.current.has(m.id) || addedThisSession.has(m.id)) return;
+      addedThisSession.add(m.id);
+      combined.push(m);
+    };
+    for (const m of seedRecs)  tryAdd(m);
+    for (const m of trending)  tryAdd(m);
+
+    // Supplement with discover page 1 if the combined pool is thin
+    if (combined.length < 10) {
+      const extra = await discoverMovies({ min_rating: 5, sort_by: 'popularity', page: 1 })
+        .catch(() => [] as Movie[]);
+      for (const m of extra) tryAdd(m);
+    }
+
+    // 6. Mark all deck IDs seen so future refills don't repeat them
+    for (const m of combined) seenIds.current.add(m.id);
+
+    setDeck(rerankDeck(combined, affinity.current));
+    setIndex(0);
+    setLoading(false);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Mood-change deck reload (uses existing loadPool) ─────────────
   const loadDeck = useCallback(async (mood: typeof MOODS[0]) => {
     setLoading(true);
     setHistory([]);
+
+    // Keep watched filter; clear deck-seen state for the new mood
+    seenIds.current    = new Set(watchedIds.current);
+    refillPage.current = 2;
+
     const disliked = user ? getRoulettePrefs(user.user_id).disliked : [];
-    const movies = await loadPool(mood.genre, disliked);
-    setDeck(movies);
+    const movies   = await loadPool(mood.genre, disliked);
+    const fresh    = movies.filter(m => !seenIds.current.has(m.id));
+    for (const m of fresh) seenIds.current.add(m.id);
+
+    setDeck(fresh.length > 0 ? fresh : movies);
     setIndex(0);
     setLoading(false);
-  }, [user]);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => { loadDeck(activeMood); }, []);  // eslint-disable-line react-hooks/exhaustive-deps
+  // Mount: run session init
+  useEffect(() => { initSession(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Reset affinity on mood change and reload
+  // Track seen cards as they render (safety net for injected recs)
+  useEffect(() => {
+    const cur  = deck[index];
+    const next = deck[index + 1];
+    if (cur)  seenIds.current.add(cur.id);
+    if (next) seenIds.current.add(next.id);
+  }, [index, deck]);
+
+  // Mood change
   const handleMoodChange = (mood: typeof MOODS[0]) => {
     if (mood.label === activeMood.label) return;
-    affinity.current     = {};
-    leftStreaks.current  = {};
+    affinity.current    = {};
+    leftStreaks.current = {};
     setActiveMood(mood);
     loadDeck(mood);
   };
 
-  // ── Load friends' swipe history (using roulette history as proxy) ──
+  // ── Friends layer ─────────────────────────────────────────────────
   useEffect(() => {
     if (!user) return;
     getfriendsRouletteHistory(user.user_id, 5).then(friendsData => {
@@ -438,27 +544,31 @@ export function SpeedSwipeTab() {
     }).catch(() => {});
   }, [user?.user_id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-reload when running low (< 4 cards left)
+  // Auto-refill when ≤ 3 cards remain
   useEffect(() => {
-    if (!loading && deck.length > 0 && index >= deck.length - 4) {
-      loadPool(activeMood.genre, user ? getRoulettePrefs(user.user_id).disliked : [])
-        .then(more => {
-          const seenIds = new Set(deck.map(m => m.id));
-          const fresh   = more.filter(m => !seenIds.has(m.id));
-          if (fresh.length > 0) setDeck(prev => [...prev, ...fresh]);
-        })
-        .catch(() => {});
-    }
+    if (loading || deck.length === 0 || index < deck.length - 3) return;
+    const page = refillPage.current++;
+    discoverMovies({
+      genre_id:   activeMood.genre || undefined,
+      min_rating: 5,
+      sort_by:    'popularity',
+      page,
+    }).then(more => {
+      const fresh = more.filter(m => !seenIds.current.has(m.id));
+      if (fresh.length > 0) {
+        for (const m of fresh) seenIds.current.add(m.id);
+        setDeck(prev => [...prev, ...fresh]);
+      }
+    }).catch(() => {});
   }, [index, deck.length, loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Recommendation: update affinity + re-rank ────────────────
+  // ── Affinity engine ───────────────────────────────────────────────
   const applyAffinity = (movie: Movie, dir: 'left' | 'right') => {
     const delta = dir === 'right' ? 1 : -0.5;
     for (const g of movie.genres) {
       affinity.current[g] = (affinity.current[g] || 0) + delta;
       if (dir === 'left') {
         leftStreaks.current[g] = (leftStreaks.current[g] || 0) + 1;
-        // 3+ consecutive left swipes → heavy deprioritize
         if (leftStreaks.current[g] >= 3) affinity.current[g] -= 1;
       } else {
         leftStreaks.current[g] = 0;
@@ -470,33 +580,64 @@ export function SpeedSwipeTab() {
     setDeck(prev => {
       const done      = prev.slice(0, currentIndex + 1);
       const remaining = prev.slice(currentIndex + 1);
-      const reranked  = rerankDeck(remaining, affinity.current);
-      return [...done, ...reranked];
+      return [...done, ...rerankDeck(remaining, affinity.current)];
     });
   };
 
-  // ── Show toast ───────────────────────────────────────────────
-  const showToast = (msg: string) => {
+  // ── Toast ─────────────────────────────────────────────────────────
+  const showToast = (msg: string, action?: () => void) => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
     setToastMsg(msg);
+    setToastAction(action);
     setToastShow(true);
-    toastTimer.current = setTimeout(() => setToastShow(false), 2200);
+    toastTimer.current = setTimeout(() => setToastShow(false), action ? 4000 : 2200);
   };
 
-  // ── Swipe handlers ───────────────────────────────────────────
+  // ── Swipe handlers ────────────────────────────────────────────────
   const currentMovie = deck[index] ?? null;
 
-  const handleSwipeRight = async () => {
+  const handleSwipeRight = () => {
     if (!currentMovie) return;
-    applyAffinity(currentMovie, 'right');
-    if (user) {
-      await watchMovieLater(user.user_id, currentMovie.id).catch(() => {});
-      showToast(`Added "${currentMovie.title}" to Watch Later`);
-    }
-    setHistory(h => [...h, index]);
-    const nextIdx = index + 1;
-    rerank(nextIdx - 1);
+    const movie         = currentMovie;
+    const capturedIndex = index;
+    const nextIdx       = capturedIndex + 1;
+
+    applyAffinity(movie, 'right');
+    setHistory(h => [...h, capturedIndex]);
+    rerank(capturedIndex);
     setIndex(nextIdx);
+
+    // Duplicate state checks
+    if (watchedIds.current.has(movie.id)) {
+      showToast("You've seen this one!");
+    } else if (watchLaterIds.current.has(movie.id)) {
+      showToast(
+        "Already saved — want to watch it now?",
+        () => {
+          setModalMovieId(movie.id);
+          setModalMovieType('movie');
+          setToastShow(false);
+        },
+      );
+    } else {
+      if (user) {
+        watchMovieLater(user.user_id, movie.id).catch(() => {});
+        watchLaterIds.current.add(movie.id);
+      }
+      showToast(`Added "${movie.title}" to Watch Later`);
+    }
+
+    // Background: inject top unseen rec as the very next card
+    getMovieRecommendations(movie.id).then(recs => {
+      const fresh = recs.find(r => !seenIds.current.has(r.id));
+      if (!fresh) return;
+      seenIds.current.add(fresh.id);
+      setDeck(prev => [
+        ...prev.slice(0, nextIdx),
+        fresh,
+        ...prev.slice(nextIdx),
+      ]);
+    }).catch(() => {});
   };
 
   const handleSwipeLeft = () => {
@@ -518,12 +659,13 @@ export function SpeedSwipeTab() {
   const handleShuffle = () => {
     affinity.current    = {};
     leftStreaks.current = {};
-    loadDeck(activeMood);
+    setActiveMood(MOODS[0]);
+    initSession();
   };
 
   const isDone = !loading && index >= deck.length;
 
-  // ── Render ────────────────────────────────────────────────────
+  // ── Render ────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col" style={{ minHeight: 'calc(100vh - 60px)', background: '#0c0c0f' }}>
 
@@ -624,7 +766,7 @@ export function SpeedSwipeTab() {
             style={{ maxWidth: 380, height: 'min(580px, calc(100vh - 260px))' }}
           >
             {/* Render top 2 cards (next card peeks behind) */}
-            {[index + 1, index].map((cardIdx, stackPos) => {
+            {[index + 1, index].map((cardIdx) => {
               const movie = deck[cardIdx];
               if (!movie) return null;
               const stackIndex = index + 1 - cardIdx; // 0 = top, 1 = behind
@@ -648,7 +790,7 @@ export function SpeedSwipeTab() {
       </div>
 
       {/* Toast */}
-      <Toast message={toastMsg} visible={toastShow} />
+      <Toast message={toastMsg} visible={toastShow} onAction={toastAction} />
 
       {/* Modal */}
       {modalMovieId && (
