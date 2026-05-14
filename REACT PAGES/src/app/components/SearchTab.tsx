@@ -135,34 +135,9 @@ export function SearchTab() {
 
   return (
     <div className="space-y-6">
-      {/* Header + Media type toggle */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div className="text-2xl text-white" style={{ fontFamily: "SanFran, system-ui, sans-serif", fontWeight: 100 }}>
-          Search {mediaType === 'show' ? 'Shows' : 'Movies'}
-        </div>
-        <div
-          className="flex items-center p-1 rounded-full"
-          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
-        >
-          <button
-            onClick={() => setMediaType('movie')}
-            className="px-5 py-1 rounded-full text-sm font-semibold transition-all duration-200"
-            style={mediaType === 'movie'
-              ? { background: 'rgba(124,93,189,0.85)', color: '#fff' }
-              : { color: '#6b7280' }}
-          >
-            Movies
-          </button>
-          <button
-            onClick={() => setMediaType('show')}
-            className="px-5 py-1 rounded-full text-sm font-semibold transition-all duration-200"
-            style={mediaType === 'show'
-              ? { background: 'rgba(124,93,189,0.85)', color: '#fff' }
-              : { color: '#6b7280' }}
-          >
-            Shows
-          </button>
-        </div>
+      {/* Header */}
+      <div className="text-2xl text-white" style={{ fontFamily: "SanFran, system-ui, sans-serif", fontWeight: 100 }}>
+        Search {mediaType === 'show' ? 'Shows' : 'Movies'}
       </div>
 
       {/* Search Bar */}
@@ -175,6 +150,28 @@ export function SearchTab() {
           placeholder={`Search by title or keyword...`}
           className="w-full bg-[#1C1C1C] border-[#2A2A2A] text-white placeholder:text-gray-600 pl-12 h-14 rounded-xl focus:border-[#7C5DBD]"
         />
+      </div>
+
+      {/* Media type toggle — prominent row below search */}
+      <div className="flex gap-3">
+        <button
+          onClick={() => setMediaType('movie')}
+          className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all duration-200 border"
+          style={mediaType === 'movie'
+            ? { background: 'rgba(124,93,189,0.85)', color: '#fff', borderColor: 'rgba(124,93,189,0.85)' }
+            : { background: 'transparent', color: '#6b7280', borderColor: '#2A2A2A' }}
+        >
+          Movies
+        </button>
+        <button
+          onClick={() => setMediaType('show')}
+          className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all duration-200 border"
+          style={mediaType === 'show'
+            ? { background: 'rgba(124,93,189,0.85)', color: '#fff', borderColor: 'rgba(124,93,189,0.85)' }
+            : { background: 'transparent', color: '#6b7280', borderColor: '#2A2A2A' }}
+        >
+          Shows
+        </button>
       </div>
 
       {/* Filter Panel */}

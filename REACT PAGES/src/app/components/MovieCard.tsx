@@ -11,7 +11,7 @@ export function MovieCard({ movie, onClick }: MovieCardProps) {
   return (
     <div
       onClick={() => onClick?.(movie)}
-      className={`bg-[#1C1C1C] rounded-xl overflow-hidden border border-[#2A2A2A] hover:border-[#7C5DBD]/50 transition-all duration-300 hover:scale-105 group ${
+      className={`bg-[#1C1C1C] rounded-xl overflow-hidden border border-[#2A2A2A] hover:border-[#7C5DBD]/50 transition-all duration-300 group ${
         onClick ? 'cursor-pointer' : ''
       }`}
     >
@@ -21,7 +21,7 @@ export function MovieCard({ movie, onClick }: MovieCardProps) {
           <img
             src={movie.poster}
             alt={movie.title}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover object-top"
             loading="lazy"
             decoding="async"
           />

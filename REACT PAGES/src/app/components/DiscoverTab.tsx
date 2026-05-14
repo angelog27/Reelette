@@ -482,7 +482,7 @@ function PersonalizedHero({ slots, backdropOverrides = {}, onOpenModal, onToggle
           <div key={i} className="absolute inset-0 transition-opacity duration-1000 ease-in-out"
             style={{ opacity: i === current ? 1 : 0, zIndex: i === current ? 1 : 0 }}>
             {bg
-              ? <img src={bg} alt={s.movie.title} className="w-full h-full object-cover" loading={i === 0 ? 'eager' : 'lazy'} />
+              ? <img src={bg} alt={s.movie.title} className="w-full h-full object-cover" style={{ objectPosition: 'center 30%' }} loading={i === 0 ? 'eager' : 'lazy'} />
               : <div className="w-full h-full" style={{ background: 'linear-gradient(135deg, #160e30 0%, #0e0825 40%, #0a0a12 100%)' }} />
             }
           </div>
