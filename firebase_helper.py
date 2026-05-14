@@ -55,6 +55,7 @@ def create_user(email, password, username):
         user_ref = db.collection('users').document(user.uid)
         user_ref.set({
             'username': username,
+            'username_lower': username.lower(),
             'email': email,
             'displayName': username,
             'bio': '',
@@ -608,6 +609,8 @@ def update_user_profile(user_id, data):
         update_data = {k: v for k, v in data.items() if k in allowed}
         if not update_data:
             return {'success': False, 'message': 'No valid fields to update'}
+        if 'username' in update_data:
+            update_data['username_lower'] = update_data['username'].lower()
         db.collection('users').document(user_id).update(update_data)
         if 'displayName' in update_data:
             auth.update_user(user_id, display_name=update_data['displayName'])
@@ -617,26 +620,67 @@ def update_user_profile(user_id, data):
 
 
 def search_users(query, exclude_user_id=None, limit=10):
-    """Prefix search on username field — Firestore range query"""
+    """Case-insensitive prefix search on username.
+    Searches username_lower (new users) AND raw username with multiple case
+    variants to cover existing users without the normalized field.
+    """
     try:
-        query_lower = query.lower()
-        docs = (db.collection('users')
-                  .where('username', '>=', query_lower)
-                  .where('username', '<=', query_lower + '\uf8ff')
-                  .select(['username', 'displayName', 'avatarUrl'])
-                  .limit(limit)
-                  .stream())
+        seen_ids = set()
         users = []
-        for doc in docs:
-            if doc.id == exclude_user_id:
-                continue
-            d = doc.to_dict()
-            users.append({
-                'user_id': doc.id,
-                'username': d.get('username', ''),
-                'displayName': d.get('displayName', d.get('username', ''))
-            })
-        return users
+        sentinel = '\uf8ff'
+
+        def _collect(stream):
+            for doc in stream:
+                if doc.id == exclude_user_id or doc.id in seen_ids:
+                    continue
+                seen_ids.add(doc.id)
+                d = doc.to_dict()
+                users.append({
+                    'user_id': doc.id,
+                    'username': d.get('username', ''),
+                    'displayName': d.get('displayName', d.get('username', ''))
+                })
+
+        q_lower = query.strip().lower()
+        q_upper = query.strip().upper()
+        q_orig  = query.strip()
+
+        # Primary: username_lower covers new users regardless of registration casing
+        _collect(db.collection('users')
+                   .where('username_lower', '>=', q_lower)
+                   .where('username_lower', '<=', q_lower + sentinel)
+                   .select(['username', 'displayName', 'avatarUrl', 'username_lower'])
+                   .limit(limit)
+                   .stream())
+
+        # Fallback for existing users without username_lower: lowercase variant
+        if len(users) < limit:
+            _collect(db.collection('users')
+                       .where('username', '>=', q_lower)
+                       .where('username', '<=', q_lower + sentinel)
+                       .select(['username', 'displayName', 'avatarUrl'])
+                       .limit(limit)
+                       .stream())
+
+        # Uppercase variant — catches ALL-CAPS usernames like TJACK
+        if len(users) < limit and q_upper != q_lower:
+            _collect(db.collection('users')
+                       .where('username', '>=', q_upper)
+                       .where('username', '<=', q_upper + sentinel)
+                       .select(['username', 'displayName', 'avatarUrl'])
+                       .limit(limit)
+                       .stream())
+
+        # As-typed variant — catches mixed-case like TJack
+        if len(users) < limit and q_orig != q_lower and q_orig != q_upper:
+            _collect(db.collection('users')
+                       .where('username', '>=', q_orig)
+                       .where('username', '<=', q_orig + sentinel)
+                       .select(['username', 'displayName', 'avatarUrl'])
+                       .limit(limit)
+                       .stream())
+
+        return users[:limit]
     except Exception as e:
         print(f"Error searching users: {e}")
         return []

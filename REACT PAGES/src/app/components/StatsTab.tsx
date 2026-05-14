@@ -6,7 +6,7 @@ import { PROVIDER_LOGOS } from '../constants/providers';
 interface Props {
   movies: WatchedMovie[];
   recentSpins?: RouletteSpin[];
-  onMovieClick?: (movieId: string) => void;
+  onMovieClick?: (movieId: string, type: 'movie' | 'show') => void;
 }
 
 const ACCENT = '#f97316';
@@ -246,7 +246,7 @@ export function StatsTab({ movies, recentSpins = [], onMovieClick }: Props) {
           {top10.map((m, i) => (
             <button
               key={m.movie_id}
-              onClick={() => onMovieClick?.(m.movie_id)}
+              onClick={() => onMovieClick?.(m.movie_id, m.media_type === 'show' ? 'show' : 'movie')}
               className="shrink-0 w-48 text-left group focus:outline-none"
               disabled={!onMovieClick}
             >

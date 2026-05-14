@@ -6,8 +6,9 @@ import { MovieDetailModal } from './MovieDetailModal';
 import { PROVIDER_LOGOS } from '../constants/providers';
 import { StatsTab } from './StatsTab';
 
-type Tab      = 'watched' | 'watchlater' | 'stats';
-type SortMode = 'rating-desc' | 'rating-asc' | 'franchise' | 'year-desc' | 'year-asc' | 'az';
+type Tab         = 'watched' | 'watchlater' | 'stats';
+type SortMode    = 'rating-desc' | 'rating-asc' | 'franchise' | 'year-desc' | 'year-asc' | 'az';
+type MediaFilter = 'all' | 'movie' | 'show';
 
 interface WatchLaterMovie {
   movie_id: string;
@@ -71,9 +72,10 @@ export function MyStuffTab() {
   const [recentSpins, setRecentSpins]         = useState<RouletteSpin[]>([]);
   const [loading, setLoading]                 = useState(true);
   const [page, setPage]                       = useState(1);
-  const [selectedMovieId, setSelectedMovieId] = useState<string | null>(null);
+  const [selectedMovieId, setSelectedMovieId]   = useState<string | null>(null);
   const [selectedItemType, setSelectedItemType] = useState<'movie' | 'show'>('movie');
-  const [sortMode, setSortMode]               = useState<SortMode>('rating-desc');
+  const [mediaFilter, setMediaFilter]           = useState<MediaFilter>('all');
+  const [sortMode, setSortMode]                 = useState<SortMode>('rating-desc');
   const [sortOpen, setSortOpen]               = useState(false);
   const sortRef                               = useRef<HTMLDivElement>(null);
 
@@ -142,10 +144,14 @@ export function MyStuffTab() {
     if (tab === 'watchlater' && (sortMode === 'rating-desc' || sortMode === 'rating-asc')) {
       setSortMode('year-desc');
     }
+    if (tab !== 'watched') setMediaFilter('all');
     setActiveTab(tab);
   };
 
-  const sortedMovies     = sortWatched(movies, sortMode);
+  const filteredMovies   = movies.filter(m =>
+    mediaFilter === 'all' ? true : mediaFilter === 'show' ? m.media_type === 'show' : m.media_type !== 'show'
+  );
+  const sortedMovies     = sortWatched(filteredMovies, sortMode);
   const totalPages       = Math.max(1, Math.ceil(sortedMovies.length / PAGE_SIZE));
   const pagedMovies      = sortedMovies.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const sortedWatchLater = sortWatchLater(watchLater, sortMode);
@@ -235,6 +241,22 @@ export function MyStuffTab() {
           </button>
         </div>
 
+        {/* Media filter — only on Watched tab */}
+        {activeTab === 'watched' && (
+          <div className="flex gap-1 bg-[#111] border border-[#1e1e1e] rounded-full p-1 w-fit">
+            {(['all', 'movie', 'show'] as MediaFilter[]).map(f => (
+              <button
+                key={f}
+                onClick={() => { setMediaFilter(f); setPage(1); }}
+                className="px-3 py-1.5 rounded-full text-xs font-medium transition-colors"
+                style={mediaFilter === f ? { background: '#7C5DBD', color: '#fff' } : { color: '#9ca3af' }}
+              >
+                {f === 'all' ? 'All' : f === 'movie' ? 'Movies' : 'Shows'}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Sort button — hidden on Stats tab */}
         {activeTab !== 'stats' && (
           <div className="relative" ref={sortRef}>
@@ -279,7 +301,11 @@ export function MyStuffTab() {
         {loading ? (
           <div className="text-gray-500 text-center py-16">Loading…</div>
         ) : activeTab === 'stats' ? (
-          <StatsTab movies={movies} recentSpins={recentSpins} onMovieClick={setSelectedMovieId} />
+          <StatsTab
+            movies={movies}
+            recentSpins={recentSpins}
+            onMovieClick={(id, t) => { setSelectedMovieId(id); setSelectedItemType(t ?? 'movie'); }}
+          />
         ) : activeTab === 'watched' ? (
           sortedMovies.length === 0 ? (
             <div className="text-gray-500 text-center py-16">

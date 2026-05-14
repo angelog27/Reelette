@@ -79,7 +79,17 @@ export function MovieDetailModal({ movieId, type = 'movie', onClose, onWatchedCh
     setInWatchLater(false);
     setOverviewExpanded(false);
 
-    (type === 'show' ? getShowDetails(movieId) : getMovieDetails(movieId)).then((data) => {
+    const fetchMedia = type === 'show'
+      ? getShowDetails(movieId)
+      : getMovieDetails(movieId).then(async (d) => {
+          // Auto-detect: if TMDB movie endpoint returned show data (has name, no title)
+          if (!d || d.success === false || (!d.title && (d.name || d.first_air_date))) {
+            return getShowDetails(movieId);
+          }
+          return d;
+        });
+
+    fetchMedia.then((data) => {
       setMovie(data);
       setLoading(false);
     });
