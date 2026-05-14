@@ -77,7 +77,7 @@ export function HomePage() {
   const navigate = useNavigate();
 
   const tabs: TabLink[] = [
-    { id: 'roulette', label: 'Home',     path: '/home/roulette', icon: Home     },
+    { id: 'roulette', label: 'Home',     path: '/home/spin',     icon: Home     },
     { id: 'discover', label: 'Discover', path: '/home/discover', icon: Film     },
     { id: 'social',   label: 'Social',   path: '/home/social',   icon: Users    },
     { id: 'mystuff',  label: 'My Stuff', path: '/home/mystuff',  icon: Star     },

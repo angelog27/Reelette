@@ -9,6 +9,8 @@ import Landing from '../pages/Landing';
 // navigates to that tab for the first time, keeping the initial bundle small.
 const DiscoverTab          = lazy(() => import('./components/DiscoverTab').then(m => ({ default: m.DiscoverTab })));
 const RouletteTab          = lazy(() => import('./components/RouletteTab').then(m => ({ default: m.RouletteTab })));
+const SpinModePicker       = lazy(() => import('./components/SpinModePicker').then(m => ({ default: m.SpinModePicker })));
+const SpeedSwipeTab        = lazy(() => import('./components/SpeedSwipeTab').then(m => ({ default: m.SpeedSwipeTab })));
 const SocialTab            = lazy(() => import('./components/SocialTab').then(m => ({ default: m.SocialTab })));
 const ProfileandSettingsTab = lazy(() => import('./components/ProfileandSettingsTab').then(m => ({ default: m.ProfileandSettingsTab })));
 const MyStuffTab           = lazy(() => import('./components/MyStuffTab').then(m => ({ default: m.MyStuffTab })));
@@ -20,7 +22,7 @@ function hasSeenLanding() {
 
 function LandingGuard() {
   if (localStorage.getItem('user_id')) {
-    return <Navigate to="/home/roulette" replace />;
+    return <Navigate to="/home/spin" replace />;
   }
   if (hasSeenLanding()) {
     return <Navigate to="/login" replace />;
@@ -47,7 +49,15 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <Navigate to="/home/roulette" replace />,
+        element: <Navigate to="/home/spin" replace />,
+      },
+      {
+        path: 'spin',
+        Component: SpinModePicker,
+      },
+      {
+        path: 'speedswipe',
+        Component: SpeedSwipeTab,
       },
       {
         path: 'discover',
