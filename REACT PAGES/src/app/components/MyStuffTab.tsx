@@ -100,8 +100,20 @@ export function MyStuffTab() {
     Promise.all([
       getWatchedMovies(user.user_id, 500),
       getRouletteHistory(user.user_id, 20),
-    ]).then(([m, spins]) => {
-      setMovies(m);
+    ]).then(async ([m, spins]) => {
+      // For old entries missing media_type, detect by checking if the movie endpoint
+      // returns an error or a title mismatch (same logic as MovieDetailModal's knownTitle).
+      const resolved = await Promise.all(m.map(async (entry) => {
+        if (entry.media_type) return entry;
+        try {
+          const d = await getMovieDetails(entry.movie_id) as any;
+          const isError = !d || d.success === false || d.error || !d.title;
+          const titleMismatch = d?.title && d.title.toLowerCase() !== entry.title.toLowerCase();
+          if (isError || titleMismatch) return { ...entry, media_type: 'show' as const };
+        } catch {}
+        return { ...entry, media_type: 'movie' as const };
+      }));
+      setMovies(resolved);
       setRecentSpins(spins);
       setPage(1);
       setLoading(false);

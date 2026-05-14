@@ -412,7 +412,8 @@ def add_watched_movie(user_id, movie, user_rating, comment=''):
             'services': movie.get('services', []),
             'user_rating': user_rating,
             'comment': comment,
-            'watched_at': datetime.now()
+            'watched_at': datetime.now(),
+            'media_type': movie.get('media_type', 'movie'),
         }
         (db.collection('users').document(user_id)
            .collection('watched_movies').document(str(movie['movie_id']))
