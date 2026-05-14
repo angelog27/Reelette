@@ -556,12 +556,60 @@ def add_reply(post_id, user_id, username, message):
             'user_id': user_id,
             'username': username,
             'message': message,
-            'created_at': datetime.now()
+            'created_at': datetime.now(),
+            'likes': 0,
+            'liked_by': [],
+            'dislikes': 0,
+            'disliked_by': [],
         })
         post_ref.update({'reply_count': firestore.Increment(1)})
         return {'success': True, 'reply_id': reply_ref.id}
     except Exception as e:
         return {'success': False, 'message': str(e)}
+
+def toggle_reply_like(post_id, reply_id, user_id):
+    try:
+        ref = db.collection('posts').document(post_id).collection('replies').document(reply_id)
+        doc = ref.get()
+        if not doc.exists:
+            return {'success': False, 'message': 'Reply not found'}
+        data = doc.to_dict()
+        liked_by = data.get('liked_by', [])
+        disliked_by = data.get('disliked_by', [])
+        if user_id in liked_by:
+            ref.update({'liked_by': firestore.ArrayRemove([user_id]), 'likes': firestore.Increment(-1)})
+        else:
+            updates = {'liked_by': firestore.ArrayUnion([user_id]), 'likes': firestore.Increment(1)}
+            if user_id in disliked_by:
+                updates['disliked_by'] = firestore.ArrayRemove([user_id])
+                updates['dislikes'] = firestore.Increment(-1)
+            ref.update(updates)
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+
+def toggle_reply_dislike(post_id, reply_id, user_id):
+    try:
+        ref = db.collection('posts').document(post_id).collection('replies').document(reply_id)
+        doc = ref.get()
+        if not doc.exists:
+            return {'success': False, 'message': 'Reply not found'}
+        data = doc.to_dict()
+        liked_by = data.get('liked_by', [])
+        disliked_by = data.get('disliked_by', [])
+        if user_id in disliked_by:
+            ref.update({'disliked_by': firestore.ArrayRemove([user_id]), 'dislikes': firestore.Increment(-1)})
+        else:
+            updates = {'disliked_by': firestore.ArrayUnion([user_id]), 'dislikes': firestore.Increment(1)}
+            if user_id in liked_by:
+                updates['liked_by'] = firestore.ArrayRemove([user_id])
+                updates['likes'] = firestore.Increment(-1)
+            ref.update(updates)
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
 
 # fetches all replies for a given post, oldest first
 def get_replies(post_id):

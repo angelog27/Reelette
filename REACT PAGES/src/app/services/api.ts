@@ -674,6 +674,10 @@ export interface PostReply {
   avatarUrl?: string;
   message: string;
   created_at: string;
+  likes: number;
+  liked_by: string[];
+  dislikes: number;
+  disliked_by: string[];
 }
 
 export function getReplies(post_id: string): Promise<PostReply[]> {
@@ -690,6 +694,26 @@ export async function addReply(post_id: string, user_id: string, username: strin
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ user_id, username, message }),
+  });
+  return res.json();
+}
+
+export async function likeReply(post_id: string, reply_id: string, user_id: string) {
+  bustCache(`replies:${post_id}`);
+  const res = await fetch(`${BASE_URL}/feed/${post_id}/reply/${reply_id}/like`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_id }),
+  });
+  return res.json();
+}
+
+export async function dislikeReply(post_id: string, reply_id: string, user_id: string) {
+  bustCache(`replies:${post_id}`);
+  const res = await fetch(`${BASE_URL}/feed/${post_id}/reply/${reply_id}/dislike`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_id }),
   });
   return res.json();
 }

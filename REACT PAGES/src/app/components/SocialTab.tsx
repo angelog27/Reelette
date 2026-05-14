@@ -3,7 +3,7 @@ import {
   Heart, MessageCircle, Plus, Star, Trash2, Users, UserPlus, UserMinus,
   Search, Check, X, Film, Shuffle, Popcorn, Crown, LogOut,
   Tv, Wifi, WifiOff, Loader2, Clapperboard, Send, RefreshCw,
-  Clock, TrendingUp, ArrowLeft,
+  Clock, TrendingUp, ArrowLeft, ThumbsUp, ThumbsDown,
 } from 'lucide-react';
 import {
   getFeed, getFeedSince, bustFeedCache, createPost, likePost, deletePost, getUser, timeAgo,
@@ -13,7 +13,7 @@ import {
   addToGroupWatchlist, removeFromGroupWatchlist, deleteGroup,
   getGroupMemberProfiles, getGroupMemberServices,
   updateLastSeen, searchMovies, searchShows, discoverMovies, getMovieDetails,
-  getReplies, addReply,
+  getReplies, addReply, likeReply, dislikeReply,
   getGroupChat, sendGroupMessage,
   getTrendingMovies, getWatchedMovies,
   type FeedPost, type Friend, type FriendRequest, type MovieGroup,
@@ -715,6 +715,10 @@ function ActivityCard({ post, currentUserId, currentUsername, onLike, onDelete, 
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [openMovieId, setOpenMovieId] = useState<string | null>(null);
   const emojiRef = useRef<HTMLDivElement>(null);
+  const replyInputRef = useRef<HTMLInputElement>(null);
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionResults, setMentionResults] = useState<{ user_id: string; username: string }[]>([]);
+  const [replyReactions, setReplyReactions] = useState<Record<string, { likes: number; liked_by: string[]; dislikes: number; disliked_by: string[] }>>({});
 
   useEffect(() => {
     if (!post.movie_id) return;
@@ -769,6 +773,63 @@ function ActivityCard({ post, currentUserId, currentUsername, onLike, onDelete, 
     setLikeAnim(true);
     onLike(post.post_id);
     setTimeout(() => setLikeAnim(false), 320);
+  };
+
+  const handleReplyChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setReplyText(val);
+    const cursor = e.target.selectionStart ?? val.length;
+    const before = val.slice(0, cursor);
+    const match = before.match(/@(\w*)$/);
+    if (match) {
+      const q = match[1];
+      setMentionQuery(q);
+      if (q.length >= 1) {
+        searchUsers(q, currentUserId).then(results => setMentionResults(results.slice(0, 5))).catch(() => {});
+      } else {
+        setMentionResults([]);
+      }
+    } else {
+      setMentionQuery(null);
+      setMentionResults([]);
+    }
+  };
+
+  const selectMention = (username: string) => {
+    const cursor = replyInputRef.current?.selectionStart ?? replyText.length;
+    const before = replyText.slice(0, cursor);
+    const after = replyText.slice(cursor);
+    setReplyText(before.replace(/@\w*$/, `@${username} `) + after);
+    setMentionQuery(null);
+    setMentionResults([]);
+    setTimeout(() => replyInputRef.current?.focus(), 0);
+  };
+
+  const getReplyState = (r: PostReply) =>
+    replyReactions[r.reply_id] ?? { likes: r.likes ?? 0, liked_by: r.liked_by ?? [], dislikes: r.dislikes ?? 0, disliked_by: r.disliked_by ?? [] };
+
+  const handleReplyLike = async (r: PostReply) => {
+    const cur = getReplyState(r);
+    const isLiked = cur.liked_by.includes(currentUserId);
+    setReplyReactions(prev => ({ ...prev, [r.reply_id]: {
+      likes: isLiked ? cur.likes - 1 : cur.likes + 1,
+      liked_by: isLiked ? cur.liked_by.filter(id => id !== currentUserId) : [...cur.liked_by, currentUserId],
+      dislikes: !isLiked && cur.disliked_by.includes(currentUserId) ? cur.dislikes - 1 : cur.dislikes,
+      disliked_by: !isLiked ? cur.disliked_by.filter(id => id !== currentUserId) : cur.disliked_by,
+    }}));
+    await likeReply(post.post_id, r.reply_id, currentUserId);
+  };
+
+  const handleReplyDislike = async (r: PostReply) => {
+    const cur = getReplyState(r);
+    const isDisliked = cur.disliked_by.includes(currentUserId);
+    setReplyReactions(prev => ({ ...prev, [r.reply_id]: {
+      dislikes: isDisliked ? cur.dislikes - 1 : cur.dislikes + 1,
+      disliked_by: isDisliked ? cur.disliked_by.filter(id => id !== currentUserId) : [...cur.disliked_by, currentUserId],
+      likes: !isDisliked && cur.liked_by.includes(currentUserId) ? cur.likes - 1 : cur.likes,
+      liked_by: !isDisliked ? cur.liked_by.filter(id => id !== currentUserId) : cur.liked_by,
+    }}));
+    await dislikeReply(post.post_id, r.reply_id, currentUserId);
   };
 
   const handleSubmitReply = async () => {
@@ -923,24 +984,52 @@ function ActivityCard({ post, currentUserId, currentUsername, onLike, onDelete, 
               <p className="text-zinc-700 text-xs">No replies yet.</p>
             ) : (
               <div className="space-y-2.5">
-                {replies.map(r => (
-                  <div key={r.reply_id} className="flex items-start gap-2">
-                    <UserAvatar username={r.username} avatarUrl={r.avatarUrl} size={26} onClick={() => onOpenProfile(r.user_id)} />
-                    <div className="flex-1 bg-[#141416] rounded-2xl px-3 py-2">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <button onClick={() => onOpenProfile(r.user_id)} className="text-white text-xs font-semibold hover:text-[#9B7BD7] transition-colors">@{r.username}</button>
-                        <span className="text-zinc-700 text-xs">{timeAgo(r.created_at)}</span>
+                {replies.map(r => {
+                  const rxn = getReplyState(r);
+                  const isLiked = rxn.liked_by.includes(currentUserId);
+                  const isDisliked = rxn.disliked_by.includes(currentUserId);
+                  return (
+                    <div key={r.reply_id} className="flex items-start gap-2">
+                      <UserAvatar username={r.username} avatarUrl={r.avatarUrl} size={26} onClick={() => onOpenProfile(r.user_id)} />
+                      <div className="flex-1 bg-[#141416] rounded-2xl px-3 py-2">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <button onClick={() => onOpenProfile(r.user_id)} className="text-white text-xs font-semibold hover:text-[#9B7BD7] transition-colors">@{r.username}</button>
+                          <span className="text-zinc-700 text-xs">{timeAgo(r.created_at)}</span>
+                        </div>
+                        <p className="text-zinc-400 text-sm leading-snug">{renderMessage(r.message, onOpenProfile)}</p>
+                        <div className="flex items-center gap-1 mt-1.5 -ml-1">
+                          <button onClick={() => handleReplyLike(r)}
+                            className={`flex items-center gap-1 px-1.5 py-0.5 rounded-lg text-xs transition-colors ${isLiked ? 'text-[#7C5DBD]' : 'text-zinc-600 hover:text-zinc-300'}`}>
+                            <ThumbsUp className={`w-3 h-3 ${isLiked ? 'fill-[#7C5DBD]' : ''}`} />
+                            {rxn.likes > 0 && <span className="tabular-nums">{rxn.likes}</span>}
+                          </button>
+                          <button onClick={() => handleReplyDislike(r)}
+                            className={`flex items-center gap-1 px-1.5 py-0.5 rounded-lg text-xs transition-colors ${isDisliked ? 'text-red-400' : 'text-zinc-600 hover:text-zinc-300'}`}>
+                            <ThumbsDown className={`w-3 h-3 ${isDisliked ? 'fill-red-400' : ''}`} />
+                            {rxn.dislikes > 0 && <span className="tabular-nums">{rxn.dislikes}</span>}
+                          </button>
+                        </div>
                       </div>
-                      <p className="text-zinc-400 text-sm leading-snug">{r.message}</p>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
-            <div className="flex gap-2 mt-3">
-              <input type="text" placeholder="Reply…" value={replyText}
-                onChange={e => setReplyText(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSubmitReply()}
+            <div className="flex gap-2 mt-3 relative">
+              {mentionQuery !== null && mentionResults.length > 0 && (
+                <div className="absolute bottom-full left-0 right-10 mb-1 bg-[#1a1a1e] border border-[#2a2a2e] rounded-xl shadow-xl z-20 overflow-hidden">
+                  {mentionResults.map(u => (
+                    <button key={u.user_id} onMouseDown={e => { e.preventDefault(); selectMention(u.username); }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-white hover:bg-[#7C5DBD]/20 transition-colors text-left">
+                      <span className="text-[#9B7BD7] font-semibold">@{u.username}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <input ref={replyInputRef} type="text" placeholder="Reply… use @ to mention"
+                value={replyText}
+                onChange={handleReplyChange}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && mentionQuery === null) handleSubmitReply(); }}
                 className="flex-1 bg-[#141416] rounded-full px-4 py-1.5 text-white text-sm placeholder:text-zinc-700 focus:border-[#7C5DBD]/40 focus:outline-none" />
               <button onClick={handleSubmitReply} disabled={submittingReply || !replyText.trim()}
                 className="p-2 bg-[#7C5DBD] hover:bg-[#6B4DAD] disabled:opacity-40 text-white rounded-full transition-colors">

@@ -21,7 +21,7 @@ from firebase_helper import (
     update_streaming_services, get_user_streaming_services,
     add_to_watchlist, get_watchlist, remove_from_watchlist,
     add_watched_movie, get_watched_movies, get_watched_movie, update_watched_rating,
-    create_post, get_feed, like_post, add_reply, get_replies, delete_post, send_password_reset_email,
+    create_post, get_feed, like_post, add_reply, get_replies, delete_post, toggle_reply_like, toggle_reply_dislike, send_password_reset_email,
     update_user_profile, get_user_movie_preferences, update_movie_preferences, search_users,
     send_friend_request, get_friend_requests, accept_friend_request, reject_friend_request,
     remove_friend, get_friends,
@@ -847,6 +847,22 @@ def reply_to_post(post_id):
                 send_post_reply_email(post['user_id'], _uname, _pid, post.get('movie_title', ''), _msg)
         threading.Thread(target=_notify_poster, daemon=True).start()
     return jsonify(result)
+
+@app.route('/api/feed/<post_id>/reply/<reply_id>/like', methods=['POST'])
+def like_reply_route(post_id, reply_id):
+    data = request.get_json() or {}
+    user_id = data.get('user_id', '').strip()
+    if not user_id:
+        return jsonify({'success': False, 'message': 'user_id required'}), 400
+    return jsonify(toggle_reply_like(post_id, reply_id, user_id))
+
+@app.route('/api/feed/<post_id>/reply/<reply_id>/dislike', methods=['POST'])
+def dislike_reply_route(post_id, reply_id):
+    data = request.get_json() or {}
+    user_id = data.get('user_id', '').strip()
+    if not user_id:
+        return jsonify({'success': False, 'message': 'user_id required'}), 400
+    return jsonify(toggle_reply_dislike(post_id, reply_id, user_id))
 
 @app.route('/api/feed/<post_id>', methods=['DELETE'])
 def delete_feed_post(post_id):
