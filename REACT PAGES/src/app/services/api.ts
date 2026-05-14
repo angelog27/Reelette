@@ -1,36 +1,107 @@
 export const BASE_URL = (import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000') + '/api';
 
 
-// ── Simple in-memory TTL cache ───────────────────────────────────
-// Caches stable/global data (movie catalogs, movie details) to avoid
-// redundant network hits on every tab visit.
+// ── Two-tier cache: in-memory (fast) + localStorage (survives refresh) ───────
+//
+//  Tier 1 — _cache Map: cleared on page reload, deduplicates concurrent calls.
+//  Tier 2 — localStorage (rl_cache:* keys): survives reload, longer TTL.
+//  _inflight Map: prevents duplicate network requests for the same key.
 
-const _cache = new Map<string, { data: unknown; expires: number }>();
+const _cache    = new Map<string, { data: unknown; expires: number }>();
+const _inflight = new Map<string, Promise<unknown>>();
+const LS_PREFIX = 'rl_cache:';
 
+function lsRead<T>(key: string): T | null {
+  try {
+    const raw = localStorage.getItem(LS_PREFIX + key);
+    if (!raw) return null;
+    const { data, expires } = JSON.parse(raw) as { data: T; expires: number };
+    if (expires > Date.now()) return data;
+    localStorage.removeItem(LS_PREFIX + key);
+  } catch {}
+  return null;
+}
+
+function lsWrite<T>(key: string, data: T, ttlMs: number) {
+  try {
+    localStorage.setItem(LS_PREFIX + key, JSON.stringify({ data, expires: Date.now() + ttlMs }));
+  } catch {}
+}
+
+function lsDelete(key: string) {
+  try { localStorage.removeItem(LS_PREFIX + key); } catch {}
+}
+
+function lsDeletePrefix(prefix: string) {
+  try {
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(LS_PREFIX + prefix)) localStorage.removeItem(k);
+    }
+  } catch {}
+}
+
+/** Memory-only cache with inflight deduplication. */
 function fromCache<T>(key: string, ttlMs: number, fn: () => Promise<T>): Promise<T> {
   const hit = _cache.get(key);
   if (hit && hit.expires > Date.now()) return Promise.resolve(hit.data as T);
-  return fn().then((data) => {
-    _cache.set(key, { data, expires: Date.now() + ttlMs });
-    return data;
-  });
+  const inflight = _inflight.get(key);
+  if (inflight) return inflight as Promise<T>;
+  const promise = fn()
+    .then(data => { _cache.set(key, { data, expires: Date.now() + ttlMs }); _inflight.delete(key); return data; })
+    .catch(err  => { _inflight.delete(key); throw err; });
+  _inflight.set(key, promise);
+  return promise;
 }
 
-/** Manually bust a cache key (call after user mutations that affect cached data). */
+/**
+ * Two-tier cache: checks in-memory first, then localStorage, then network.
+ * @param memTtlMs  How long to keep in memory (fast path, clears on reload).
+ * @param lsTtlMs   How long to persist in localStorage (survives reload).
+ */
+function fromCachePersisted<T>(key: string, memTtlMs: number, lsTtlMs: number, fn: () => Promise<T>): Promise<T> {
+  const memHit = _cache.get(key);
+  if (memHit && memHit.expires > Date.now()) return Promise.resolve(memHit.data as T);
+  const inflight = _inflight.get(key);
+  if (inflight) return inflight as Promise<T>;
+  const lsHit = lsRead<T>(key);
+  if (lsHit !== null) {
+    _cache.set(key, { data: lsHit, expires: Date.now() + memTtlMs });
+    return Promise.resolve(lsHit);
+  }
+  const promise = fn()
+    .then(data => {
+      _cache.set(key, { data, expires: Date.now() + memTtlMs });
+      lsWrite(key, data, lsTtlMs);
+      _inflight.delete(key);
+      return data;
+    })
+    .catch(err => { _inflight.delete(key); throw err; });
+  _inflight.set(key, promise);
+  return promise;
+}
+
+/** Manually bust a cache key from both tiers. */
 export function bustCache(key: string) {
   _cache.delete(key);
+  lsDelete(key);
 }
 
-/** Bust all cache keys that start with the given prefix. */
+/** Bust all cache keys that start with the given prefix from both tiers. */
 export function bustCachePrefix(prefix: string) {
   for (const key of _cache.keys()) {
     if (key.startsWith(prefix)) _cache.delete(key);
   }
+  lsDeletePrefix(prefix);
 }
 
 const TTL = {
-  CATALOG: 5 * 60 * 1000,   // 5 min — popular / trending / top-rated
-  MOVIE:   10 * 60 * 1000,  // 10 min — individual movie details (TMDB data)
+  CATALOG:  10 * 60 * 1000,  // 10 min — popular / trending / top-rated
+  MOVIE:    30 * 60 * 1000,  // 30 min — TMDB detail data changes rarely
+  PROFILE:  15 * 60 * 1000,  // 15 min memory / 60 min ls — public profiles
+  FRIENDS:  10 * 60 * 1000,  // 10 min memory / 30 min ls — friend lists
+  WATCHED:   5 * 60 * 1000,  //  5 min memory / 30 min ls — watched lists
+  WATCHLIST: 10 * 60 * 1000, // 10 min memory / 30 min ls — watch later
 };
 
 
@@ -446,21 +517,19 @@ export interface WatchedMovie {
   user_rating: number;
   comment: string;
   watched_at: string;
+  media_type?: 'movie' | 'show';
 }
 
 
 export function getWatchedMovies(user_id: string, limit = 20, cursor?: string): Promise<WatchedMovie[]> {
   const params = new URLSearchParams({ limit: String(limit) });
   if (cursor) params.set('cursor', cursor);
-  return fromCache(
-    `watched_list:${user_id}:${limit}:${cursor ?? ''}`,
-    60 * 1000,
-    async () => {
-      const res = await fetch(`${BASE_URL}/watched/${user_id}?${params}`);
-      const data = await res.json();
-      return data.movies ?? [];
-    }
-  );
+  const key = `watched_list:${user_id}:${limit}:${cursor ?? ''}`;
+  return fromCachePersisted(key, TTL.WATCHED, 30 * 60 * 1000, async () => {
+    const res = await fetch(`${BASE_URL}/watched/${user_id}?${params}`);
+    const data = await res.json();
+    return data.movies ?? [];
+  });
 }
 
 
@@ -479,6 +548,7 @@ export async function addWatchedMovie(
     movie_id: string; title: string; year: number; rating: number;
     overview: string; poster: string; director: string;
     actors: string[]; genres: string[]; services: string[];
+    media_type?: 'movie' | 'show';
   },
   user_rating: number,
   comment: string
@@ -506,7 +576,7 @@ export async function updateWatchedMovie(user_id: string, movie_id: string, rati
 }
 
 export function getWatchLater(user_id: string): Promise<string[]> {
-  return fromCache(`watchlist:${user_id}`, 5 * 60 * 1000, async () => {
+  return fromCachePersisted(`watchlist:${user_id}`, TTL.WATCHLIST, 30 * 60 * 1000, async () => {
     const res = await fetch(`${BASE_URL}/watchlist/${user_id}`);
     const data = await res.json();
     return data.movies ?? [];
@@ -606,13 +676,16 @@ export interface PostReply {
   created_at: string;
 }
 
-export async function getReplies(post_id: string): Promise<PostReply[]> {
-  const res = await fetch(`${BASE_URL}/feed/${post_id}/replies`);
-  const data = await res.json();
-  return data.replies ?? [];
+export function getReplies(post_id: string): Promise<PostReply[]> {
+  return fromCache(`replies:${post_id}`, 2 * 60 * 1000, async () => {
+    const res = await fetch(`${BASE_URL}/feed/${post_id}/replies`);
+    const data = await res.json();
+    return data.replies ?? [];
+  });
 }
 
 export async function addReply(post_id: string, user_id: string, username: string, message: string) {
+  bustCache(`replies:${post_id}`);
   const res = await fetch(`${BASE_URL}/feed/${post_id}/reply`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -670,7 +743,7 @@ export interface UserPublicProfile {
 }
 
 export function getUserPublicProfile(user_id: string): Promise<UserPublicProfile | null> {
-  return fromCache(`profile:public:${user_id}`, 5 * 60 * 1000, async () => {
+  return fromCachePersisted(`profile:public:${user_id}`, TTL.PROFILE, 60 * 60 * 1000, async () => {
     const res = await fetch(`${BASE_URL}/user/${user_id}/public`);
     if (!res.ok) return null;
     return res.json();
@@ -724,12 +797,15 @@ export async function updateUserProfile(user_id: string, data: Partial<Pick<User
   return res.json();
 }
 
-export async function searchUsers(query: string, excludeUserId?: string): Promise<{ user_id: string; username: string; displayName: string }[]> {
-  const params = new URLSearchParams({ q: query });
-  if (excludeUserId) params.set('exclude', excludeUserId);
-  const res = await fetch(`${BASE_URL}/users/search?${params}`);
-  const data = await res.json();
-  return data.users ?? [];
+export function searchUsers(query: string, excludeUserId?: string): Promise<{ user_id: string; username: string; displayName: string }[]> {
+  const key = `user_search:${query.toLowerCase().trim()}:${excludeUserId ?? ''}`;
+  return fromCache(key, 5 * 60 * 1000, async () => {
+    const params = new URLSearchParams({ q: query });
+    if (excludeUserId) params.set('exclude', excludeUserId);
+    const res = await fetch(`${BASE_URL}/users/search?${params}`);
+    const data = await res.json();
+    return data.users ?? [];
+  });
 }
 
 // ── Friends ──────────────────────────────────────────────────────
@@ -750,7 +826,7 @@ export interface FriendRequest {
 }
 
 export function getFriends(user_id: string): Promise<Friend[]> {
-  return fromCache(`friends:${user_id}`, 3 * 60 * 1000, async () => {
+  return fromCachePersisted(`friends:${user_id}`, TTL.FRIENDS, 30 * 60 * 1000, async () => {
     const res = await fetch(`${BASE_URL}/friends/${user_id}`);
     const data = await res.json();
     return data.friends ?? [];
@@ -838,10 +914,12 @@ export async function createGroup(name: string, description: string, creator_id:
   return res.json();
 }
 
-export async function getGroup(group_id: string): Promise<MovieGroup | null> {
-  const res = await fetch(`${BASE_URL}/groups/${group_id}`);
-  if (!res.ok) return null;
-  return res.json();
+export function getGroup(group_id: string): Promise<MovieGroup | null> {
+  return fromCache(`group:${group_id}`, 2 * 60 * 1000, async () => {
+    const res = await fetch(`${BASE_URL}/groups/${group_id}`);
+    if (!res.ok) return null;
+    return res.json();
+  });
 }
 
 export function getUserGroups(user_id: string): Promise<MovieGroup[]> {
@@ -854,6 +932,7 @@ export function getUserGroups(user_id: string): Promise<MovieGroup[]> {
 
 export async function addGroupMember(group_id: string, user_id: string, username: string) {
   bustCache(`user_groups:${user_id}`);
+  bustCache(`group:${group_id}`);
   bustCache(`group:members:${group_id}`);
   bustCache(`group:services:${group_id}`);
   const res = await fetch(`${BASE_URL}/groups/${group_id}/members`, {
@@ -866,6 +945,7 @@ export async function addGroupMember(group_id: string, user_id: string, username
 
 export async function removeGroupMember(group_id: string, member_id: string) {
   bustCache(`user_groups:${member_id}`);
+  bustCache(`group:${group_id}`);
   bustCache(`group:members:${group_id}`);
   bustCache(`group:services:${group_id}`);
   const res = await fetch(`${BASE_URL}/groups/${group_id}/members/${member_id}`, {

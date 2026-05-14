@@ -1,7 +1,7 @@
 ﻿import { useState, useEffect } from 'react';
 import {
   X, Film, BookMarked, Users, UserPlus, UserMinus, Check,
-  Loader2, Calendar, Star, Maximize2, ChevronLeft,
+  Loader2, Calendar, Star, Maximize2, ChevronLeft, Trophy,
 } from 'lucide-react';
 import {
   getUser, getUserPublicProfile, getFriends, sendFriendRequest,
@@ -41,7 +41,7 @@ function MyStuffFullscreen({
   avatar: string;
   onClose: () => void;
 }) {
-  const [tab, setTab] = useState<'watched' | 'watchlater'>('watched');
+  const [tab, setTab] = useState<'watched' | 'top10' | 'watchlater'>('watched');
   const [watched, setWatched] = useState<WatchedMovie[]>([]);
   const [watchLater, setWatchLater] = useState<WatchLaterMovie[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,13 +49,13 @@ function MyStuffFullscreen({
   useEffect(() => {
     setLoading(true);
     Promise.all([
-      getWatchedMovies(profile.user_id),
+      getWatchedMovies(profile.user_id, 500),
       getWatchLater(profile.user_id).then(async (ids) => {
         const details = await Promise.all(
           ids.map((id) =>
             getMovieDetails(id).then((d) => ({
               movie_id: String(id),
-              title: d?.title ?? 'Unknown',
+              title: (d?.title ?? d?.name ?? 'Unknown') as string,
               year: d?.release_date ? String(d.release_date).slice(0, 4) : '',
               poster: d?.poster_path ? `https://image.tmdb.org/t/p/w500${d.poster_path}` : null,
             }))
@@ -70,43 +70,49 @@ function MyStuffFullscreen({
     });
   }, [profile.user_id]);
 
+  const top10 = [...watched]
+    .filter(m => (m.user_rating ?? 0) > 0)
+    .sort((a, b) => (b.user_rating ?? 0) - (a.user_rating ?? 0))
+    .slice(0, 10);
+
+  const tabs: { id: typeof tab; label: string; icon: React.ReactNode }[] = [
+    { id: 'watched',   label: 'Watched',    icon: <Star className="w-3.5 h-3.5" /> },
+    { id: 'top10',     label: 'Top 10',     icon: <Trophy className="w-3.5 h-3.5" /> },
+    { id: 'watchlater',label: 'Watch Later',icon: <BookMarked className="w-3.5 h-3.5" /> },
+  ];
+
   return (
     <div className="fixed inset-0 bg-black z-[300] flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="flex items-center gap-4 px-6 py-4 border-b border-[#2A2A2A] bg-[#0A0A0A] shrink-0">
+      <div className="flex items-center gap-4 px-6 py-4 border-b border-[#2A2A2A] bg-[#0A0A0A] shrink-0 flex-wrap">
         <button
           onClick={onClose}
-          className="w-9 h-9 rounded-full bg-[#1C1C1C] hover:bg-[#2A2A2A] border border-[#2A2A2A] flex items-center justify-center text-gray-400 hover:text-white transition-colors"
+          className="w-9 h-9 rounded-full bg-[#1C1C1C] hover:bg-[#2A2A2A] border border-[#2A2A2A] flex items-center justify-center text-gray-400 hover:text-white transition-colors shrink-0"
         >
           <ChevronLeft className="w-5 h-5" />
         </button>
         <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-[#2A2A2A] shrink-0">
           <img src={avatar} alt={profile.username} className="w-full h-full object-cover object-top" />
         </div>
-        <div>
-          <p className="text-white font-semibold leading-tight">{profile.displayName}</p>
+        <div className="flex-1 min-w-0">
+          <p className="text-white font-semibold leading-tight truncate">{profile.displayName}</p>
           <p className="text-gray-500 text-xs">@{profile.username} · MyStuff</p>
         </div>
         {/* Tabs */}
-        <div className="ml-auto flex gap-1 bg-[#141414] border border-[#2A2A2A] rounded-full p-1">
-          <button
-            onClick={() => setTab('watched')}
-            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              tab === 'watched' ? 'bg-[#7C5DBD] text-white' : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            <Star className="w-3.5 h-3.5" />
-            Watched
-          </button>
-          <button
-            onClick={() => setTab('watchlater')}
-            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              tab === 'watchlater' ? 'bg-[#7C5DBD] text-white' : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            <BookMarked className="w-3.5 h-3.5" />
-            Watch Later
-          </button>
+        <div className="flex gap-1 bg-[#141414] border border-[#2A2A2A] rounded-full p-1">
+          {tabs.map(t => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                tab === t.id
+                  ? t.id === 'top10' ? 'bg-amber-500 text-black' : 'bg-[#7C5DBD] text-white'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              {t.icon}{t.label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -116,6 +122,42 @@ function MyStuffFullscreen({
           <div className="flex items-center justify-center h-40 gap-2 text-gray-500">
             <Loader2 className="w-5 h-5 animate-spin" /> Loading…
           </div>
+        ) : tab === 'top10' ? (
+          top10.length === 0 ? (
+            <p className="text-gray-500 text-center py-16">No rated titles yet.</p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5 max-w-4xl">
+              {top10.map((m, i) => (
+                <div key={m.movie_id} className="relative rounded-xl overflow-hidden bg-[#1A1A1A] border border-[#2A2A2A]">
+                  {/* Rank badge */}
+                  <div
+                    className="absolute top-2 left-2 z-10 w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold text-black"
+                    style={{ backgroundColor: i === 0 ? '#f59e0b' : i === 1 ? '#9ca3af' : i === 2 ? '#b45309' : '#3f3f46' }}
+                  >
+                    <span style={{ color: i < 3 ? '#000' : '#fff' }}>{i + 1}</span>
+                  </div>
+                  {m.poster ? (
+                    <img src={m.poster} alt={m.title} className="w-full aspect-[2/3] object-cover" />
+                  ) : (
+                    <div className="w-full aspect-[2/3] bg-[#2A2A2A] flex items-center justify-center">
+                      <Film className="w-6 h-6 text-gray-600" />
+                    </div>
+                  )}
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent px-2 pt-4 pb-2">
+                    <div className="flex items-center gap-1">
+                      <Star className="w-3 h-3 fill-amber-400 text-amber-400 shrink-0" />
+                      <span className="text-white text-xs font-bold">{m.user_rating}</span>
+                      <span className="text-gray-400 text-[10px]">/10</span>
+                    </div>
+                  </div>
+                  <div className="p-2 pt-1">
+                    <p className="text-white text-xs font-medium line-clamp-1">{m.title}</p>
+                    <p className="text-gray-500 text-[10px]">{m.year}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
         ) : tab === 'watched' ? (
           watched.length === 0 ? (
             <p className="text-gray-500 text-center py-16">No watched movies yet.</p>
@@ -187,9 +229,10 @@ export function UserProfileModal({ userId, onClose }: Props) {
   const [myStuffOpen, setMyStuffOpen] = useState(false);
 
   // Preview watched movies for the "MyStuff" teaser strip
-  const [previewWatched, setPreviewWatched] = useState<WatchedMovie[]>([]);
+  const [previewWatched, setPreviewWatched]       = useState<WatchedMovie[]>([]);
+  const [allWatched, setAllWatched]               = useState<WatchedMovie[]>([]);
   const [previewWatchLater, setPreviewWatchLater] = useState<WatchLaterMovie[]>([]);
-  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewLoading, setPreviewLoading]       = useState(false);
 
   const isOwnProfile = userId === currentUid;
 
@@ -209,14 +252,14 @@ export function UserProfileModal({ userId, onClose }: Props) {
       if (prof?.showMyStuffPublicly) {
         setPreviewLoading(true);
         Promise.all([
-          getWatchedMovies(userId),
+          getWatchedMovies(userId, 500),   // fetch all so Top 10 is accurate
           getWatchLater(userId).then(async (ids) => {
             const slice = ids.slice(0, 6);
             const details = await Promise.all(
               slice.map((id) =>
                 getMovieDetails(id).then((d) => ({
                   movie_id: String(id),
-                  title: d?.title ?? 'Unknown',
+                  title: ((d?.title ?? d?.name ?? 'Unknown') as string),
                   year: d?.release_date ? String(d.release_date).slice(0, 4) : '',
                   poster: d?.poster_path
                     ? `https://image.tmdb.org/t/p/w500${d.poster_path}`
@@ -227,6 +270,7 @@ export function UserProfileModal({ userId, onClose }: Props) {
             return details;
           }),
         ]).then(([w, wl]) => {
+          setAllWatched(w);
           setPreviewWatched(w.slice(0, 6));
           setPreviewWatchLater(wl);
           setPreviewLoading(false);
@@ -392,7 +436,7 @@ export function UserProfileModal({ userId, onClose }: Props) {
 
                   {/* MyStuff section — always visible, gated by showMyStuffPublicly */}
                   <div className="mt-5 pt-4 border-t border-[#2A2A2A]">
-                    <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
                       <p className="text-white text-sm font-semibold">MyStuff</p>
                       {profile.showMyStuffPublicly && (
                         <button
@@ -400,7 +444,7 @@ export function UserProfileModal({ userId, onClose }: Props) {
                           className="flex items-center gap-1.5 text-xs text-[#7C5DBD] hover:text-[#9B7BD7] transition-colors"
                         >
                           <Maximize2 className="w-3.5 h-3.5" />
-                          View Fullscreen
+                          View All
                         </button>
                       )}
                     </div>
@@ -451,6 +495,48 @@ export function UserProfileModal({ userId, onClose }: Props) {
                           </div>
                         )}
 
+                        {/* Top 10 strip */}
+                        {allWatched.length > 0 && (() => {
+                          const top10Preview = [...allWatched]
+                            .filter(m => (m.user_rating ?? 0) > 0)
+                            .sort((a, b) => (b.user_rating ?? 0) - (a.user_rating ?? 0))
+                            .slice(0, 10);
+                          return top10Preview.length > 0 ? (
+                            <div className="mb-4">
+                              <p className="text-gray-500 text-xs mb-2 flex items-center gap-1">
+                                <Trophy className="w-3 h-3 text-amber-400" />
+                                Top 10
+                              </p>
+                              <div className="flex gap-2 overflow-x-auto pb-1">
+                                {top10Preview.map((m, i) => (
+                                  <div key={m.movie_id} className="relative shrink-0 w-16 rounded-lg overflow-hidden border border-[#2A2A2A]">
+                                    <div
+                                      className="absolute top-1 left-1 z-10 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold"
+                                      style={{
+                                        backgroundColor: i === 0 ? '#f59e0b' : i === 1 ? '#9ca3af' : i === 2 ? '#b45309' : '#3f3f46',
+                                        color: i < 3 ? '#000' : '#fff',
+                                      }}
+                                    >
+                                      {i + 1}
+                                    </div>
+                                    {m.poster ? (
+                                      <img src={m.poster} alt={m.title} className="w-full aspect-[2/3] object-cover" />
+                                    ) : (
+                                      <div className="w-full aspect-[2/3] bg-[#2A2A2A] flex items-center justify-center">
+                                        <Film className="w-4 h-4 text-gray-600" />
+                                      </div>
+                                    )}
+                                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent px-1 pb-1 pt-3 flex items-center gap-0.5">
+                                      <Star className="w-2 h-2 fill-amber-400 text-amber-400 shrink-0" />
+                                      <span className="text-white text-[9px] font-bold">{m.user_rating}</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ) : null;
+                        })()}
+
                         {/* Watch Later strip */}
                         {previewWatchLater.length > 0 && (
                           <div>
@@ -480,7 +566,7 @@ export function UserProfileModal({ userId, onClose }: Props) {
                           </div>
                         )}
 
-                        {previewWatched.length === 0 && previewWatchLater.length === 0 && (
+                        {previewWatched.length === 0 && previewWatchLater.length === 0 && allWatched.length === 0 && (
                           <p className="text-gray-600 text-xs py-2">Nothing saved yet.</p>
                         )}
                       </>

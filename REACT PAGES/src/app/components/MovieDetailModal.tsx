@@ -36,6 +36,8 @@ export function MovieDetailModal({ movieId, type = 'movie', onClose, onWatchedCh
   const [relatedMovieId,   setRelatedMovieId]   = useState<string | null>(null);
   const [relatedItemType,  setRelatedItemType]  = useState<'movie' | 'show'>('movie');
   const [friendReviews, setFriendReviews]         = useState<FriendReview[]>([]);
+  const [seasonRatings, setSeasonRatings]         = useState<Record<string, number>>({});
+  const [showSeasonRatings, setShowSeasonRatings] = useState(false);
 
   const user = getUser();
 
@@ -54,6 +56,20 @@ export function MovieDetailModal({ movieId, type = 'movie', onClose, onWatchedCh
       setFriendReviews(entries.filter(e => e !== null) as FriendReview[]);
     }).catch(() => {});
   }, [movieId]);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(`reelette_season_ratings_${movieId}`);
+      if (raw) setSeasonRatings(JSON.parse(raw));
+      else setSeasonRatings({});
+    } catch { setSeasonRatings({}); }
+  }, [movieId]);
+
+  function handleSeasonRating(season: number, rating: number) {
+    const updated = { ...seasonRatings, [season]: rating };
+    setSeasonRatings(updated);
+    try { localStorage.setItem(`reelette_season_ratings_${movieId}`, JSON.stringify(updated)); } catch {}
+  }
 
   useEffect(() => {
     setLoading(true);
@@ -135,6 +151,7 @@ export function MovieDetailModal({ movieId, type = 'movie', onClose, onWatchedCh
             };
             return ID_TO_NAME[p.provider_id] ?? p.provider_name;
           }),
+          media_type: isShowEntry ? 'show' : 'movie',
         },
         rating,
         commentInput
@@ -397,6 +414,22 @@ export function MovieDetailModal({ movieId, type = 'movie', onClose, onWatchedCh
             )}
           </div>
 
+          {/* Season ratings display (read mode) */}
+          {isShow && Object.keys(seasonRatings).length > 0 && !showWatchForm && (
+            <div className="mb-4">
+              <p className="text-gray-400 text-xs font-semibold uppercase tracking-widest mb-2">Your Season Ratings</p>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(seasonRatings).sort((a, b) => Number(a[0]) - Number(b[0])).map(([s, r]) => (
+                  <div key={s} className="flex items-center gap-1.5 bg-black/40 border border-white/10 rounded-full px-3 py-1">
+                    <span className="text-gray-400 text-xs">S{s}</span>
+                    <Star className="w-3 h-3 fill-[#7C5DBD] text-[#7C5DBD]" />
+                    <span className="text-white text-xs font-semibold">{r}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* ── Action buttons ──────────────────────────────────── */}
           {!showWatchForm ? (
             <div className="space-y-3">
@@ -504,7 +537,7 @@ export function MovieDetailModal({ movieId, type = 'movie', onClose, onWatchedCh
               </p>
               <div className="space-y-3">
                 <div>
-                  <label className="text-gray-400 text-xs uppercase tracking-widest block mb-1">Rating (0–10)</label>
+                  <label className="text-gray-400 text-xs uppercase tracking-widest block mb-1">Overall Rating (0–10)</label>
                   <input
                     type="number" min="0" max="10" step="0.5"
                     value={ratingInput}
@@ -523,6 +556,45 @@ export function MovieDetailModal({ movieId, type = 'movie', onClose, onWatchedCh
                     className="w-full bg-white/5 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#7C5DBD] resize-none placeholder-gray-600"
                   />
                 </div>
+
+                {/* Season ratings — only for shows */}
+                {isShow && (movie.number_of_seasons ?? 0) > 0 && (
+                  <div>
+                    <button
+                      onClick={() => setShowSeasonRatings(v => !v)}
+                      className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors"
+                    >
+                      <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showSeasonRatings ? 'rotate-180' : ''}`} />
+                      Rate individual seasons
+                    </button>
+                    {showSeasonRatings && (
+                      <div className="mt-2 space-y-2 max-h-48 overflow-y-auto pr-1">
+                        {Array.from({ length: movie.number_of_seasons as number }, (_, i) => i + 1).map(n => (
+                          <div key={n} className="flex items-center gap-3">
+                            <span className="text-gray-400 text-xs w-16 shrink-0">Season {n}</span>
+                            <input
+                              type="number" min="0" max="10" step="0.5"
+                              value={seasonRatings[n] ?? ''}
+                              onChange={e => {
+                                const v = parseFloat(e.target.value);
+                                if (!isNaN(v) && v >= 0 && v <= 10) handleSeasonRating(n, v);
+                                else if (e.target.value === '') {
+                                  const updated = { ...seasonRatings };
+                                  delete updated[n];
+                                  setSeasonRatings(updated);
+                                  try { localStorage.setItem(`reelette_season_ratings_${movieId}`, JSON.stringify(updated)); } catch {}
+                                }
+                              }}
+                              placeholder="—"
+                              className="flex-1 bg-white/5 border border-white/15 rounded-lg px-2 py-1.5 text-white text-sm focus:outline-none focus:border-[#7C5DBD] placeholder-gray-600"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="flex gap-2 pt-1">
                   <button
                     onClick={handleSaveWatch}

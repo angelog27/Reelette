@@ -96,30 +96,38 @@ function PersonCard({ name, count, photo, rank }: { name: string; count: number;
   );
 }
 
+type MediaFilter = 'all' | 'movie' | 'show';
+
 export function StatsTab({ movies, recentSpins = [], onMovieClick }: Props) {
   const [photoMap, setPhotoMap] = useState<Record<string, string | null>>({});
+  const [mediaFilter, setMediaFilter] = useState<MediaFilter>('all');
+  const [top10Filter, setTop10Filter] = useState<MediaFilter>('all');
+
+  const moviesOnly = movies.filter(m => m.media_type !== 'show');
+  const showsOnly  = movies.filter(m => m.media_type === 'show');
+  const filtered   = mediaFilter === 'movie' ? moviesOnly : mediaFilter === 'show' ? showsOnly : movies;
 
   // ── Derived stats ───────────────────────────────────────────────
-  const top10 = [...movies]
+  const top10Source = top10Filter === 'movie' ? moviesOnly : top10Filter === 'show' ? showsOnly : movies;
+  const top10 = [...top10Source]
     .sort((a, b) => b.user_rating - a.user_rating || b.tmdb_rating - a.tmdb_rating)
     .slice(0, 10);
 
   const actorCounts: Record<string, number> = {};
-  movies.forEach((m) => (m.actors ?? []).forEach((a) => { if (a) actorCounts[a] = (actorCounts[a] || 0) + 1; }));
+  filtered.forEach((m) => (m.actors ?? []).forEach((a) => { if (a) actorCounts[a] = (actorCounts[a] || 0) + 1; }));
   const topActors = Object.entries(actorCounts).sort((a, b) => b[1] - a[1]).slice(0, 4);
-  
 
   const directorCounts: Record<string, number> = {};
-  movies.forEach((m) => { if (m.director) directorCounts[m.director] = (directorCounts[m.director] || 0) + 1; });
+  filtered.forEach((m) => { if (m.director) directorCounts[m.director] = (directorCounts[m.director] || 0) + 1; });
   const topDirectors = Object.entries(directorCounts).sort((a, b) => b[1] - a[1]).slice(0, 4);
 
   const genreCounts: Record<string, number> = {};
-  movies.forEach((m) => (m.genres ?? []).forEach((g) => { if (g) genreCounts[g] = (genreCounts[g] || 0) + 1; }));
+  filtered.forEach((m) => (m.genres ?? []).forEach((g) => { if (g) genreCounts[g] = (genreCounts[g] || 0) + 1; }));
   const topGenres = Object.entries(genreCounts).sort((a, b) => b[1] - a[1]);
   const maxGenreCount = topGenres[0]?.[1] ?? 1;
 
   const decadeCounts: Record<string, number> = {};
-  movies.forEach((m) => {
+  filtered.forEach((m) => {
     if (!m.year) return;
     const decade = `${Math.floor(Number(m.year) / 10) * 10}s`;
     decadeCounts[decade] = (decadeCounts[decade] || 0) + 1;
@@ -128,13 +136,15 @@ export function StatsTab({ movies, recentSpins = [], onMovieClick }: Props) {
   const maxDecade = Math.max(...decades.map((d) => d[1]), 1);
 
   const platformCounts: Record<string, number> = {};
-  movies.forEach((m) => (m.services ?? []).forEach((s) => { if (s) platformCounts[s] = (platformCounts[s] || 0) + 1; }));
+  filtered.forEach((m) => (m.services ?? []).forEach((s) => { if (s) platformCounts[s] = (platformCounts[s] || 0) + 1; }));
   const topPlatforms = Object.entries(platformCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
   const maxPlatform = topPlatforms[0]?.[1] ?? 1;
 
-  const avgRating = (movies.reduce((s, m) => s + (m.user_rating ?? 0), 0) / movies.length).toFixed(1);
+  const avgRating = filtered.length > 0
+    ? (filtered.reduce((s, m) => s + (m.user_rating ?? 0), 0) / filtered.length).toFixed(1)
+    : '—';
   const topGenreName = topGenres[0]?.[0] ?? '—';
-  const tags = deriveTags(topGenres, movies.length);
+  const tags = deriveTags(topGenres, filtered.length);
 
   const watchedIds = new Set(movies.map((m) => m.movie_id));
   const spinWatchPct = recentSpins.length > 0
@@ -143,7 +153,7 @@ export function StatsTab({ movies, recentSpins = [], onMovieClick }: Props) {
 
   // ── Fetch actor/director profile photos ─────────────────────────
   useEffect(() => {
-    if (movies.length === 0) return;
+    if (filtered.length === 0) return;
     const actorNames = Object.entries(actorCounts).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([n]) => n);
     const directorNames = Object.entries(directorCounts).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([n]) => n);
     const unique = [...new Set([...actorNames, ...directorNames])];
@@ -151,7 +161,7 @@ export function StatsTab({ movies, recentSpins = [], onMovieClick }: Props) {
       unique.map(async (name) => [name, await getPersonPhoto(name)] as [string, string | null])
     ).then((results) => setPhotoMap(Object.fromEntries(results)));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [movies]);
+  }, [filtered]);
 
   if (movies.length === 0) {
     return <div className="text-gray-500 text-center py-16">Watch some movies to see your stats!</div>;
@@ -160,13 +170,27 @@ export function StatsTab({ movies, recentSpins = [], onMovieClick }: Props) {
   return (
     <div className="space-y-5 pb-8">
 
+      {/* ── Media type filter toggle ────────────────────────────── */}
+      <div className="flex gap-1 bg-[#111] border border-[#1e1e1e] rounded-full p-1 w-fit">
+        {(['all', 'movie', 'show'] as MediaFilter[]).map(f => (
+          <button
+            key={f}
+            onClick={() => setMediaFilter(f)}
+            className="px-4 py-1.5 rounded-full text-sm font-medium transition-colors"
+            style={mediaFilter === f ? { background: '#f97316', color: '#fff' } : { color: '#9ca3af' }}
+          >
+            {f === 'all' ? 'All' : f === 'movie' ? 'Movies' : 'Shows'}
+          </button>
+        ))}
+      </div>
+
       {/* ── Summary cards ──────────────────────────────────────── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: 'Movies Watched', value: String(movies.length) },
+          { label: mediaFilter === 'show' ? 'Shows Watched' : mediaFilter === 'movie' ? 'Movies Watched' : 'Total Watched', value: String(filtered.length) },
           { label: 'Avg Your Rating', value: avgRating, accent: true },
           { label: 'Top Genre', value: topGenreName },
-          { label: 'Unique Directors', value: String(Object.keys(directorCounts).length) },
+          { label: mediaFilter === 'show' ? 'Unique Creators' : 'Unique Directors', value: String(Object.keys(directorCounts).length) },
         ].map((stat) => (
           <div key={stat.label} className="rounded-xl p-4 border border-[#1f1f1f]" style={{ backgroundColor: '#111' }}>
             <p className="text-gray-500 text-xs mb-1">{stat.label}</p>
@@ -203,7 +227,21 @@ export function StatsTab({ movies, recentSpins = [], onMovieClick }: Props) {
 
       {/* ── Top 10 — horizontal poster scroll ──────────────────── */}
       <div className="rounded-xl p-5 border border-[#1f1f1f]" style={{ backgroundColor: '#111' }}>
-        <p className="text-gray-400 text-xs font-semibold uppercase tracking-widest mb-4">Top 10 Highest Rated</p>
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <p className="text-gray-400 text-xs font-semibold uppercase tracking-widest">Top 10 Highest Rated</p>
+          <div className="flex gap-1 bg-[#1a1a1a] border border-[#2a2a2a] rounded-full p-0.5">
+            {(['all', 'movie', 'show'] as MediaFilter[]).map(f => (
+              <button
+                key={f}
+                onClick={() => setTop10Filter(f)}
+                className="px-3 py-1 rounded-full text-xs font-semibold transition-colors"
+                style={top10Filter === f ? { background: ACCENT, color: '#000' } : { color: '#6b7280' }}
+              >
+                {f === 'all' ? 'All' : f === 'movie' ? 'Movies' : 'Shows'}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="flex gap-4 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
           {top10.map((m, i) => (
             <button

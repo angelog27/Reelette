@@ -72,6 +72,7 @@ export function MyStuffTab() {
   const [loading, setLoading]                 = useState(true);
   const [page, setPage]                       = useState(1);
   const [selectedMovieId, setSelectedMovieId] = useState<string | null>(null);
+  const [selectedItemType, setSelectedItemType] = useState<'movie' | 'show'>('movie');
   const [sortMode, setSortMode]               = useState<SortMode>('rating-desc');
   const [sortOpen, setSortOpen]               = useState(false);
   const sortRef                               = useRef<HTMLDivElement>(null);
@@ -290,7 +291,7 @@ export function MyStuffTab() {
               {pagedMovies.map(m => (
                 <button
                   key={m.movie_id}
-                  onClick={() => setSelectedMovieId(m.movie_id)}
+                  onClick={() => { setSelectedMovieId(m.movie_id); setSelectedItemType(m.media_type === 'show' ? 'show' : 'movie'); }}
                   className="text-left group focus:outline-none"
                 >
                   <div className="relative rounded-xl overflow-hidden bg-[#111] border border-[#1e1e1e] group-hover:border-[#7C5DBD]/50 transition-colors">
@@ -407,6 +408,7 @@ export function MyStuffTab() {
       {selectedMovieId && (
         <MovieDetailModal
           movieId={selectedMovieId}
+          type={selectedItemType}
           onClose={() => {
             setSelectedMovieId(null);
             if (activeTab === 'watched') loadWatched();

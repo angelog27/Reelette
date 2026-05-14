@@ -5,6 +5,7 @@ import {
   watchMovieLater, removeFromWatchLater, getUser, getServices,
   getFeed, getFriends, getMovieDetails, getShowDetails, getWatchedMovies, getUserPublicProfile,
   getTrendingShows, getPopularShows, getTopRatedShows, discoverShows,
+  searchMovies, discoverMovies,
 } from '../services/api';
 import { getServiceCategoryMovies } from '../services/discoveryService';
 import type { Movie, WatchedMovie } from '../services/api';
@@ -135,6 +136,34 @@ const SERVICE_CATALOG: Record<string, ServiceCatalogEntry> = {
       { firestoreId: 'action',  title: 'Action' },
       { firestoreId: 'drama',   title: 'Drama' },
     ],
+  },
+};
+
+// ── Provider category TMDB fallbacks (used when Firestore is empty) ─
+const PROVIDER_CATEGORY_FALLBACKS: Partial<Record<string, Record<string, () => Promise<Movie[]>>>> = {
+  'Disney+': {
+    'marvel':    () => searchMovies('Marvel Avengers').then(r => r.slice(0, ROW_LIMIT)),
+    'star_wars': () => searchMovies('Star Wars').then(r => r.slice(0, ROW_LIMIT)),
+    'pixar':     () => discoverMovies({ genre_id: '16', min_rating: 6, sort_by: 'vote_average.desc' }).then(r => r.slice(0, ROW_LIMIT)),
+    'classics':  () => discoverMovies({ genre_id: '16', year_to: '2000', min_rating: 6 }).then(r => r.slice(0, ROW_LIMIT)),
+  },
+  'Netflix': {
+    'originals': () => searchMovies('Netflix Original').then(r => r.slice(0, ROW_LIMIT)),
+    'action':    () => discoverMovies({ genre_id: '28', sort_by: 'popularity.desc', services_filter: { netflix: true } }).then(r => r.slice(0, ROW_LIMIT)),
+    'comedy':    () => discoverMovies({ genre_id: '35', sort_by: 'popularity.desc', services_filter: { netflix: true } }).then(r => r.slice(0, ROW_LIMIT)),
+    'thriller':  () => discoverMovies({ genre_id: '53', sort_by: 'popularity.desc', services_filter: { netflix: true } }).then(r => r.slice(0, ROW_LIMIT)),
+  },
+  'Hulu': {
+    'horror':   () => discoverMovies({ genre_id: '27', sort_by: 'popularity.desc', services_filter: { hulu: true } }).then(r => r.slice(0, ROW_LIMIT)),
+    'comedy':   () => discoverMovies({ genre_id: '35', sort_by: 'popularity.desc', services_filter: { hulu: true } }).then(r => r.slice(0, ROW_LIMIT)),
+    'scifi':    () => discoverMovies({ genre_id: '878', sort_by: 'popularity.desc', services_filter: { hulu: true } }).then(r => r.slice(0, ROW_LIMIT)),
+    'thriller': () => discoverMovies({ genre_id: '53', sort_by: 'popularity.desc', services_filter: { hulu: true } }).then(r => r.slice(0, ROW_LIMIT)),
+  },
+  'Max': {
+    'dc':        () => searchMovies('DC Comics').then(r => r.slice(0, ROW_LIMIT)),
+    'drama':     () => discoverMovies({ genre_id: '18', sort_by: 'popularity.desc', services_filter: { hboMax: true } }).then(r => r.slice(0, ROW_LIMIT)),
+    'action':    () => discoverMovies({ genre_id: '28', sort_by: 'popularity.desc', services_filter: { hboMax: true } }).then(r => r.slice(0, ROW_LIMIT)),
+    'top_rated': () => discoverMovies({ min_rating: 8, sort_by: 'vote_average.desc', services_filter: { hboMax: true } }).then(r => r.slice(0, ROW_LIMIT)),
   },
 };
 
@@ -735,7 +764,7 @@ export function DiscoverTab() {
           if (!cancelled) {
             setFriendWatchSlot({
               kind: 'friendWatch',
-              movie: { id: w.movie_id, title: w.title, year: w.year ?? 0, genres: w.genres ?? [], rating: w.tmdb_rating ?? 0, poster: w.poster ?? '', backdrop, streamingService: w.services?.[0] ?? '' },
+              movie: { id: w.movie_id, title: w.title, year: w.year ?? 0, genres: w.genres ?? [], rating: w.tmdb_rating ?? 0, poster: w.poster ?? '', backdrop, streamingService: w.services?.[0] ?? '', type: w.media_type === 'show' ? 'show' : 'movie' },
               friendName: friendProfile?.username ?? friend.friend_id,
               friendAvatar: friendProfile?.avatarUrl,
             });
@@ -803,11 +832,17 @@ export function DiscoverTab() {
         setProviderShowsPopular(shows.slice(0, ROW_LIMIT));
 
         const specificResults = await Promise.all(
-          catalog.specificCategories.map(cat =>
-            getServiceCategoryMovies(catalog.firestoreServiceId, cat.firestoreId)
-              .then(movies => movies.slice(0, ROW_LIMIT))
-              .catch(() => [] as Movie[])
-          )
+          catalog.specificCategories.map(async cat => {
+            const movies = await getServiceCategoryMovies(catalog.firestoreServiceId, cat.firestoreId)
+              .catch(() => [] as Movie[]);
+            if (movies.length > 0) return movies.slice(0, ROW_LIMIT);
+            // Firestore empty — try TMDB fallback
+            const fallbackFn = PROVIDER_CATEGORY_FALLBACKS[activeProvider]?.[cat.firestoreId];
+            if (fallbackFn) {
+              return fallbackFn().catch(() => [] as Movie[]);
+            }
+            return [] as Movie[];
+          })
         );
         if (cancelled) return;
         const specificData = specificResults;
@@ -857,11 +892,26 @@ export function DiscoverTab() {
       const id = slot.movie.id;
       if (slot.movie.backdrop || !id || fetchedBackdropsRef.current.has(id)) return;
       fetchedBackdropsRef.current.add(id);
-      getMovieDetails(id).then(d => {
-        const bd = (d.backdrop as string) ||
-          (d.backdrop_path ? `https://image.tmdb.org/t/p/w1280${d.backdrop_path}` : '');
+
+      const extractBackdrop = (d: Record<string, unknown>) =>
+        (d.backdrop as string) || (d.backdrop_path ? `https://image.tmdb.org/t/p/w1280${d.backdrop_path}` : '');
+
+      const applyIfFound = (bd: string) => {
         if (bd) setBackdropOverrides(prev => ({ ...prev, [id]: bd }));
-      }).catch(() => {});
+      };
+
+      if (slot.movie.type === 'show') {
+        getShowDetails(id).then(d => applyIfFound(extractBackdrop(d))).catch(() => {});
+      } else {
+        getMovieDetails(id).then(d => {
+          const bd = extractBackdrop(d);
+          if (bd) { applyIfFound(bd); return; }
+          // No backdrop from movie API — try show API as fallback
+          getShowDetails(id).then(d2 => applyIfFound(extractBackdrop(d2))).catch(() => {});
+        }).catch(() => {
+          getShowDetails(id).then(d => applyIfFound(extractBackdrop(d))).catch(() => {});
+        });
+      }
     });
   }, [heroSlots]); // eslint-disable-line react-hooks/exhaustive-deps
 

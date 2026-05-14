@@ -12,7 +12,7 @@ import {
   getUserGroups, createGroup, getGroup, addGroupMember, removeGroupMember,
   addToGroupWatchlist, removeFromGroupWatchlist, deleteGroup,
   getGroupMemberProfiles, getGroupMemberServices,
-  updateLastSeen, searchMovies, discoverMovies, getMovieDetails,
+  updateLastSeen, searchMovies, searchShows, discoverMovies, getMovieDetails,
   getReplies, addReply,
   getGroupChat, sendGroupMessage,
   getTrendingMovies, getWatchedMovies,
@@ -344,7 +344,7 @@ function ActivitySkeleton() {
 }
 
 // ── Post Movie Search ──────────────────────────────────────────
-type MovieOption = { id: string; title: string; year: number; poster: string };
+type MovieOption = { id: string; title: string; year: number; poster: string; media_type?: 'movie' | 'show' };
 
 function PostMovieSearch({ onSelect, selected }: { onSelect: (m: MovieOption | null) => void; selected: MovieOption | null }) {
   const [query, setQuery] = useState('');
@@ -357,8 +357,15 @@ function PostMovieSearch({ onSelect, selected }: { onSelect: (m: MovieOption | n
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
       setSearching(true);
-      const movies = await searchMovies(query.trim());
-      setResults(movies.slice(0, 6).map(m => ({ id: m.id, title: m.title, year: m.year, poster: m.poster })));
+      const [movies, shows] = await Promise.all([
+        searchMovies(query.trim()).catch(() => []),
+        searchShows(query.trim()).catch(() => []),
+      ]);
+      const combined = [
+        ...movies.slice(0, 4).map(m => ({ id: m.id, title: m.title, year: m.year, poster: m.poster, media_type: 'movie' as const })),
+        ...shows.slice(0, 4).map(m => ({ id: m.id, title: m.title, year: m.year, poster: m.poster, media_type: 'show' as const })),
+      ].slice(0, 8);
+      setResults(combined);
       setSearching(false);
     }, 400);
   }, [query]);
@@ -384,14 +391,14 @@ function PostMovieSearch({ onSelect, selected }: { onSelect: (m: MovieOption | n
     <div className="relative">
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 pointer-events-none" />
-        <input type="text" placeholder="Search for a movie…" value={query} onChange={e => setQuery(e.target.value)}
+        <input type="text" placeholder="Search movies & shows…" value={query} onChange={e => setQuery(e.target.value)}
           className="w-full bg-[#141416] border border-[#2a2a2e] rounded-xl pl-10 pr-10 py-2.5 text-white text-sm placeholder:text-zinc-600 focus:border-[#7C5DBD]/50 focus:outline-none transition-colors" />
         {searching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 animate-spin" />}
       </div>
       {results.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-[#141416] border border-[#2a2a2e] rounded-xl shadow-2xl z-20 overflow-hidden max-h-60 overflow-y-auto no-scrollbar">
+        <div className="absolute top-full left-0 right-0 mt-1 bg-[#141416] border border-[#2a2a2e] rounded-xl shadow-2xl z-20 overflow-hidden max-h-64 overflow-y-auto no-scrollbar">
           {results.map(m => (
-            <button key={m.id} onClick={() => { onSelect(m); setQuery(''); setResults([]); }}
+            <button key={`${m.media_type}-${m.id}`} onClick={() => { onSelect(m); setQuery(''); setResults([]); }}
               className="w-full flex items-center gap-3 p-3 hover:bg-[#1a1a1e] transition-colors text-left border-b border-[#2a2a2e] last:border-0">
               {m.poster
                 ? <img src={m.poster} alt={m.title} className="w-8 h-12 object-cover rounded-lg shrink-0" />
@@ -400,6 +407,10 @@ function PostMovieSearch({ onSelect, selected }: { onSelect: (m: MovieOption | n
                 <p className="text-white text-sm font-medium truncate">{m.title}</p>
                 <p className="text-zinc-500 text-xs">{m.year}</p>
               </div>
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0"
+                style={{ background: m.media_type === 'show' ? 'rgba(124,93,189,0.25)' : 'rgba(255,255,255,0.07)', color: m.media_type === 'show' ? '#9B7BD7' : '#6b7280' }}>
+                {m.media_type === 'show' ? 'TV' : 'FILM'}
+              </span>
             </button>
           ))}
         </div>
@@ -484,7 +495,7 @@ function ComposeBox({ currentUser, onPostCreated }: {
 
   const handleSubmit = async () => {
     if (!currentUser) return;
-    if (!selectedMovie) { setPostError('Tag a movie first.'); return; }
+    if (!selectedMovie) { setPostError('Tag a movie or show first.'); return; }
     setPosting(true);
     setPostError('');
     const result = await createPost({
@@ -538,7 +549,7 @@ function ComposeBox({ currentUser, onPostCreated }: {
           username={currentUser.username} 
           avatarUrl={currentUser.avatarUrl}
           size={38} />
-          <span className="flex-1 text-zinc-600 text-[15px]">What movie did you watch?</span>
+          <span className="flex-1 text-zinc-600 text-[15px]">What did you watch?</span>
           <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-[#7C5DBD]/20 text-[#9B7BD7] border border-[#7C5DBD]/30">
             Post
           </span>
@@ -555,7 +566,7 @@ function ComposeBox({ currentUser, onPostCreated }: {
               <textarea
                 ref={textareaRef}
                 autoFocus
-                placeholder="What movie did you watch?"
+                placeholder="What did you watch?"
                 rows={3}
                 value={message}
                 onChange={handleMessageChange}
@@ -645,7 +656,7 @@ function ComposeBox({ currentUser, onPostCreated }: {
                 }`}
               >
                 <Film className="w-3.5 h-3.5" />
-                {selectedMovie ? selectedMovie.title.length > 14 ? selectedMovie.title.slice(0, 13) + '…' : selectedMovie.title : 'Tag a Movie'}
+                {selectedMovie ? selectedMovie.title.length > 14 ? selectedMovie.title.slice(0, 13) + '…' : selectedMovie.title : 'Tag Media'}
               </button>
               <button
                 onClick={() => { setRatingOpen(v => !v); setMovieSearchOpen(false); }}
