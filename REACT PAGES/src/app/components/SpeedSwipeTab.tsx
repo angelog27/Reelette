@@ -123,21 +123,33 @@ function SwipeCard({ movie, stackIndex, friendAvatars, onSwipeLeft, onSwipeRight
   const [dragX, setDragX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [exitDir, setExitDir] = useState<'left' | 'right' | null>(null);
-  const cardRef = useRef<HTMLDivElement>(null);
-  const startX  = useRef(0);
-  const active  = stackIndex === 0;
+  const cardRef     = useRef<HTMLDivElement>(null);
+  const startX      = useRef(0);
+  const exitFired   = useRef(false);  // one-shot guard — prevents double-trigger from any source
+  const exitTimer   = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const active      = stackIndex === 0;
 
   const accent = getAccent(movie.genres);
 
-  // Reset when card becomes top
+  // Reset all local state when a new card becomes active
   useEffect(() => {
     setDragX(0);
     setExitDir(null);
+    exitFired.current = false;
+    if (exitTimer.current) { clearTimeout(exitTimer.current); exitTimer.current = null; }
   }, [movie.id]);
 
+  // Clean up any pending exit timer on unmount
+  useEffect(() => {
+    return () => { if (exitTimer.current) clearTimeout(exitTimer.current); };
+  }, []);
+
   const triggerExit = useCallback((dir: 'left' | 'right') => {
+    if (exitFired.current) return;  // already exiting — ignore duplicate calls
+    exitFired.current = true;
     setExitDir(dir);
-    setTimeout(() => {
+    exitTimer.current = setTimeout(() => {
+      exitTimer.current = null;
       if (dir === 'right') onSwipeRight(movie);
       else onSwipeLeft(movie);
     }, 280);
@@ -195,6 +207,7 @@ function SwipeCard({ movie, stackIndex, friendAvatars, onSwipeLeft, onSwipeRight
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerLeave={onPointerUp}
+      onPointerCancel={() => { setIsDragging(false); setDragX(0); }}
     >
       {/* Poster */}
       {movie.poster && (

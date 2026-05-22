@@ -1032,6 +1032,15 @@ export function DiscoverTab() {
       <div>
         {isProviderView ? (() => {
           const catalog = SERVICE_CATALOG[activeProvider];
+          if (mediaType === 'show') {
+            return (
+              <MovieRow
+                title={`Popular Shows on ${activeProvider}`}
+                movies={providerShowsPopular}
+                onMovieClick={(id, _t, title) => openModal(id, 'show', title)}
+              />
+            );
+          }
           return (
             <>
               <MovieRow title={`Popular on ${activeProvider}`} movies={providerPopular} onMovieClick={openModal} />
@@ -1045,7 +1054,6 @@ export function DiscoverTab() {
                   ? <SkeletonRow key={cat.firestoreId} title={cat.title} />
                   : <MovieRow key={cat.firestoreId} title={cat.title} movies={rowMovies} onMovieClick={openModal} />;
               })}
-              <MovieRow title={`Popular Shows on ${activeProvider}`} movies={providerShowsPopular} onMovieClick={openModal} />
             </>
           );
         })() : mediaType === 'show' ? (
