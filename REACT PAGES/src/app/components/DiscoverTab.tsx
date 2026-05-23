@@ -440,6 +440,200 @@ function MovieRow({ title, movies, onMovieClick }: {
   );
 }
 
+// ── Landscape card ───────────────────────────────────────────────
+
+const LAND_W = 420;
+const LAND_H = 236; // 16:9
+
+function SkeletonLandscapeRow({ title }: { title: string }) {
+  return (
+    <div className="mb-10">
+      <h2 className="text-[15px] font-bold mb-3" style={{ color: '#e8e8e8', letterSpacing: '-0.01em' }}>{title}</h2>
+      <div className="flex gap-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="flex-shrink-0 animate-pulse rounded-xl bg-[#1e1e1e]"
+            style={{ width: LAND_W, height: LAND_H }} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function LandscapeCard({ movie, onClick }: { movie: Movie; onClick: () => void }) {
+  const [backdrop, setBackdrop] = useState<string | null>(movie.backdrop ?? null);
+  const [trailerKey, setTrailerKey] = useState<string | null | undefined>(undefined);
+  const [timerDone, setTimerDone] = useState(false);
+  const [showTrailer, setShowTrailer] = useState(false);
+  const [barKey, setBarKey] = useState(0);
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const detailsFetchedRef = useRef(false);
+
+  const handleMouseEnter = () => {
+    setTimerDone(false);
+    setShowTrailer(false);
+    setBarKey((k: number) => k + 1);
+    hoverTimerRef.current = setTimeout(() => setTimerDone(true), 5000);
+
+    if (!detailsFetchedRef.current) {
+      detailsFetchedRef.current = true;
+      const fetchFn = movie.type === 'show' ? getShowDetails : getMovieDetails;
+      fetchFn(movie.id).then((d) => {
+        const bd = (d.backdrop as string) ||
+          (d.backdrop_path ? `https://image.tmdb.org/t/p/w1280${d.backdrop_path as string}` : null);
+        if (bd) setBackdrop(bd);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const videos: Array<{ site: string; type: string; key: string }> = (d.videos as any)?.results ?? [];
+        const t = videos.find(v => v.site === 'YouTube' && v.type === 'Trailer')
+          ?? videos.find(v => v.site === 'YouTube' && v.type === 'Teaser')
+          ?? videos.find(v => v.site === 'YouTube');
+        setTrailerKey(t?.key ?? null);
+      }).catch(() => setTrailerKey(null));
+    }
+  };
+
+  const handleMouseLeave = () => {
+    setTimerDone(false);
+    setShowTrailer(false);
+    setBarKey(0);
+    if (hoverTimerRef.current) { clearTimeout(hoverTimerRef.current); hoverTimerRef.current = null; }
+  };
+
+  useEffect(() => {
+    if (timerDone && trailerKey !== undefined && trailerKey !== null) setShowTrailer(true);
+  }, [timerDone, trailerKey]);
+
+  useEffect(() => () => { if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current); }, []);
+
+  const imgSrc = backdrop || movie.poster || '';
+
+  return (
+    <div
+      className="flex-shrink-0 relative rounded-xl overflow-hidden cursor-pointer"
+      style={{ width: LAND_W, height: LAND_H }}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      onClick={!showTrailer ? onClick : undefined}
+    >
+      <img
+        src={imgSrc}
+        alt={movie.title}
+        style={{
+          position: 'absolute', inset: 0, width: '100%', height: '100%',
+          objectFit: 'cover', objectPosition: backdrop ? 'center' : 'center top',
+          opacity: showTrailer ? 0 : 1,
+          transition: 'opacity 0.5s ease',
+        }}
+        loading="lazy"
+        decoding="async"
+      />
+
+      {showTrailer && trailerKey && (
+        <iframe
+          src={`https://www.youtube.com/embed/${trailerKey}?autoplay=1&mute=0&rel=0&modestbranding=1`}
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
+          allow="autoplay; encrypted-media"
+          allowFullScreen
+          title={`${movie.title} trailer`}
+        />
+      )}
+
+      {!showTrailer && (
+        <>
+          <div style={{
+            position: 'absolute', inset: 0, pointerEvents: 'none',
+            background: 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.35) 35%, transparent 65%)',
+          }} />
+          <div style={{ position: 'absolute', bottom: 14, left: 14, right: 14, pointerEvents: 'none' }}>
+            <p className="line-clamp-2" style={{
+              color: '#fff', fontWeight: 700, fontSize: 15, lineHeight: 1.3, margin: '0 0 5px',
+            }}>
+              {movie.title}
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              {movie.year > 0 && <span style={{ color: '#9ca3af', fontSize: 12 }}>{movie.year}</span>}
+              {movie.rating > 0 && (
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#facc15', fontSize: 12, fontWeight: 600 }}>
+                  <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                  {movie.rating.toFixed(1)}
+                </span>
+              )}
+              {movie.streamingService && PROVIDER_LOGOS[movie.streamingService] && (
+                <img src={PROVIDER_LOGOS[movie.streamingService]} alt={movie.streamingService}
+                  style={{ width: 20, height: 20, borderRadius: 4, objectFit: 'cover' }} />
+              )}
+            </div>
+          </div>
+        </>
+      )}
+
+      {barKey > 0 && !showTrailer && (
+        <div style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0, height: 3,
+          background: 'rgba(255,255,255,0.15)', pointerEvents: 'none',
+        }}>
+          <div
+            key={barKey}
+            style={{
+              height: '100%', background: '#9B7BD7',
+              transformOrigin: 'left',
+              animation: 'landscape-progress 5s linear forwards',
+            }}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LandscapeRow({ title, movies, onMovieClick }: {
+  title: string;
+  movies: Movie[] | null;
+  onMovieClick: (id: string, type?: 'movie' | 'show', title?: string) => void;
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  if (movies === null) return <SkeletonLandscapeRow title={title} />;
+  if (!movies.length) return null;
+
+  const scroll = (dir: 'left' | 'right') =>
+    scrollRef.current?.scrollBy({ left: dir === 'left' ? -(LAND_W * 2) : LAND_W * 2, behavior: 'smooth' });
+
+  return (
+    <div className="mb-10">
+      <h2 className="text-[15px] font-bold mb-3" style={{ color: '#e8e8e8', letterSpacing: '-0.01em' }}>{title}</h2>
+      <div className="relative group">
+        <button
+          onClick={() => scroll('left')}
+          className="absolute left-0 top-0 bottom-0 z-10 w-12 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 rounded-l-xl"
+          style={{ background: 'linear-gradient(to right, rgba(0,0,0,0.8), transparent)' }}
+        >
+          <ChevronLeft className="w-6 h-6 text-white" />
+        </button>
+        <div
+          ref={scrollRef}
+          className="hide-scrollbar flex gap-3 overflow-x-auto"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
+          onWheel={(e) => { if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) window.scrollBy(0, e.deltaY); }}
+        >
+          {movies.map(movie => (
+            <LandscapeCard
+              key={movie.id}
+              movie={movie}
+              onClick={() => onMovieClick(movie.id, movie.type ?? 'movie', movie.title)}
+            />
+          ))}
+        </div>
+        <button
+          onClick={() => scroll('right')}
+          className="absolute right-0 top-0 bottom-0 z-10 w-12 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 rounded-r-xl"
+          style={{ background: 'linear-gradient(to left, rgba(0,0,0,0.8), transparent)' }}
+        >
+          <ChevronRight className="w-6 h-6 text-white" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── Personalized Hero ─────────────────────────────────────────────
 
 type PersonalizedSlot =
@@ -816,6 +1010,23 @@ export function DiscoverTab() {
       p.id === 'all' || (PROVIDER_KEY[p.id] && userServices[PROVIDER_KEY[p.id]])
   );
 
+  // ── Based on Your Providers landscape row ──────────────────────
+  const [providerBasedMovies, setProviderBasedMovies] = useState<Movie[] | null>(null);
+  const servicesKey = useMemo(
+    () => Object.entries(userServices).filter(([, v]) => v).map(([k]) => k).sort().join(','),
+    [userServices],
+  );
+  useEffect(() => {
+    const activeFilter: Record<string, boolean> = Object.fromEntries(Object.entries(userServices).filter(([, v]) => v)) as Record<string, boolean>;
+    if (!Object.keys(activeFilter).length) { setProviderBasedMovies([]); return; }
+    setProviderBasedMovies(null);
+    let cancelled = false;
+    discoverMovies({ services_filter: activeFilter, sort_by: 'popularity.desc', min_rating: 6 })
+      .then(movies => { if (!cancelled) setProviderBasedMovies(movies.slice(0, ROW_LIMIT)); })
+      .catch(() => { if (!cancelled) setProviderBasedMovies([]); });
+    return () => { cancelled = true; };
+  }, [servicesKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Provider rows ──────────────────────────────────────────────
   const [providerPopular,      setProviderPopular]      = useState<Movie[] | null>(null);
   const [providerNew,          setProviderNew]          = useState<Movie[] | null>(null);
@@ -1110,11 +1321,14 @@ export function DiscoverTab() {
             {user && top10.length > 0 && (
               <MovieRow title="Your Top 10"           movies={top10}          onMovieClick={openModal} />
             )}
+            {user && (
+              <LandscapeRow title="Recommended for You" movies={recommended} onMovieClick={openModal} />
+            )}
             {user && recentSpins !== null && recentSpins.length > 0 && (
               <MovieRow title="Your Recent Spins"     movies={recentSpins}    onMovieClick={openModal} />
             )}
             {user && (
-              <MovieRow title="Recommended Watches"   movies={recommended}    onMovieClick={openModal} />
+              <LandscapeRow title="Based on Your Providers" movies={providerBasedMovies} onMovieClick={openModal} />
             )}
             <MovieRow title="Trending Now"            movies={trendingMovies} onMovieClick={openModal} />
             <MovieRow title="New Releases"            movies={newReleases}    onMovieClick={openModal} />

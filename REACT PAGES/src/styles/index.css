@@ -55,6 +55,11 @@ body {
   display: none;
 }
 
+@keyframes landscape-progress {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
 .film-grain::after {
   content: "";
   position: absolute;
