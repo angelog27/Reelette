@@ -195,44 +195,8 @@ export function MyStuffTab() {
   return (
     <div className="-mx-6 -mt-8">
 
-      {/* ── Subtle cinema header ── */}
-      <div className="full-bleed relative overflow-hidden" style={{ marginBottom: 0 }}>
-        {/* Film strip — top only (subtle: just one strip) */}
-
-        {/* Subtle glow from nav — softer than Roulette/Social */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ background: 'radial-gradient(ellipse 55% 70% at 50% 0%, rgba(124,93,189,0.14) 0%, transparent 70%)' }}
-        />
-
-        {/* Faint side curtains */}
-        <div className="absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-black/50 to-transparent pointer-events-none" />
-        <div className="absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-black/50 to-transparent pointer-events-none" />
-
-        {/* Content */}
-        <div className="relative z-10 flex flex-col items-center justify-center text-center px-6" style={{ paddingTop: 42, paddingBottom: 32 }}>
-          {/* Badge */}
-          <div className="flex items-center gap-2 mb-3"></div>
-
-          <h1
-            style={{
-              fontFamily: "SanFran, system-ui, sans-serif",
-              fontWeight: 100,
-              fontSize: 'clamp(1.6rem, 3vw, 2.4rem)',
-              color: '#fff',
-              lineHeight: 1.15,
-            }}
-          >
-            My Stuff
-          </h1>
-
-          <div className="flex items-center gap-3 mt-3">
-          </div>
-        </div>
-      </div>
-
       {/* ── Controls row: tabs + sort ── */}
-      <div className="px-6 pt-6 pb-4 flex items-center justify-between gap-4 flex-wrap">
+      <div className="px-6 pt-6 pb-4 flex items-center gap-4 flex-wrap">
 
         {/* Tab pills */}
         <div className="flex gap-1 bg-[#111] border border-[#1e1e1e] rounded-full p-1 w-fit">
@@ -279,9 +243,9 @@ export function MyStuffTab() {
           </div>
         )}
 
-        {/* Sort button — hidden on Stats tab */}
+        {/* Sort button — hidden on Stats tab, pushed to the far right */}
         {activeTab !== 'stats' && (
-          <div className="relative" ref={sortRef}>
+          <div className="relative ml-auto" ref={sortRef}>
             <button
               onClick={() => setSortOpen(v => !v)}
               className="flex items-center gap-2 text-sm border rounded-full px-3.5 py-2 transition-colors bg-[#111] border-[#1e1e1e] text-gray-400 hover:text-white hover:border-[#333]"
@@ -451,7 +415,8 @@ export function MyStuffTab() {
             </div>
           )
         )}
-      </div>
+      </div>pip install -r requirements.txt
+
 
       {selectedMovieId && (
         <MovieDetailModal

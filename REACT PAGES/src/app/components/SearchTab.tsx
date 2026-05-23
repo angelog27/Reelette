@@ -54,12 +54,12 @@ export function SearchTab() {
   const setFiltersExpanded = (v: boolean) => { _store.filtersExpanded = v; _setFiltersExpanded(v); };
   const setMovies          = (m: Movie[]) => { _store.movies = m;          _setMovies(m); };
 
-  // Pre-fill from navbar search (?q=...)
+  // Pre-fill from navbar search (?q=...) — re-runs whenever the URL query changes
   useEffect(() => {
     const q = searchParams.get('q');
     if (q && q !== searchQuery) setSearchQuery(q);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [searchParams]);
 
   // Clear results + genre filter when switching media type
   const prevMediaType = useRef(mediaType);

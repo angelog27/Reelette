@@ -853,8 +853,19 @@ export function DiscoverTab() {
             : Promise.resolve([] as Movie[]),
         ]);
         if (cancelled) return;
-        setProviderPopular(pop.slice(0, ROW_LIMIT));
-        setProviderNew(newM.slice(0, ROW_LIMIT));
+
+        // Firestore empty → fall back to TMDB discover filtered by provider
+        const popularFinal = pop.length > 0 || !providerKey
+          ? pop
+          : await discoverMovies({ services_filter: { [providerKey]: true }, sort_by: 'popularity.desc' }).catch(() => [] as Movie[]);
+
+        const newFinal = newM.length > 0 || !providerKey
+          ? newM
+          : await discoverMovies({ services_filter: { [providerKey]: true }, sort_by: 'vote_average.desc', min_rating: 6 }).catch(() => [] as Movie[]);
+
+        if (cancelled) return;
+        setProviderPopular(popularFinal.slice(0, ROW_LIMIT));
+        setProviderNew(newFinal.slice(0, ROW_LIMIT));
         setProviderShowsPopular(shows.slice(0, ROW_LIMIT));
 
         const specificResults = await Promise.all(
@@ -875,8 +886,8 @@ export function DiscoverTab() {
         setProviderSpecific(specificData);
 
         cacheProvider(activeProvider, {
-          popular:      pop.slice(0, ROW_LIMIT),
-          newMovies:    newM.slice(0, ROW_LIMIT),
+          popular:      popularFinal.slice(0, ROW_LIMIT),
+          newMovies:    newFinal.slice(0, ROW_LIMIT),
           specificRows: specificData,
           showsPopular: shows.slice(0, ROW_LIMIT),
         });
