@@ -252,8 +252,11 @@ export async function forgotPassword(email: string) {
 
 
 export async function getUserStreaming(user_id: string): Promise<Record<string, boolean>> {
-  const res = await fetch(`${BASE_URL}/user/${user_id}/streaming`);
-  return res.json();
+  try {
+    const res = await fetch(`${BASE_URL}/user/${user_id}/streaming`);
+    if (!res.ok) return {};
+    return res.json();
+  } catch { return {}; }
 }
 
 
@@ -272,27 +275,36 @@ export async function updateUserStreaming(user_id: string, services: Record<stri
 
 export function getPopularMovies(page = 1): Promise<Movie[]> {
   return fromCache(`popular:${page}`, TTL.CATALOG, async () => {
-    const res = await fetch(`${BASE_URL}/movies/popular?page=${page}`);
-    const data = await res.json();
-    return data.movies ?? [];
+    try {
+      const res = await fetch(`${BASE_URL}/movies/popular?page=${page}`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.movies ?? [];
+    } catch { return []; }
   });
 }
 
 
 export function getTrendingMovies(window = 'week'): Promise<Movie[]> {
   return fromCache(`trending:${window}`, TTL.CATALOG, async () => {
-    const res = await fetch(`${BASE_URL}/movies/trending?window=${window}`);
-    const data = await res.json();
-    return data.movies ?? [];
+    try {
+      const res = await fetch(`${BASE_URL}/movies/trending?window=${window}`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.movies ?? [];
+    } catch { return []; }
   });
 }
 
 
 export function getTopRatedMovies(page = 1): Promise<Movie[]> {
   return fromCache(`toprated:${page}`, TTL.CATALOG, async () => {
-    const res = await fetch(`${BASE_URL}/movies/top_rated?page=${page}`);
-    const data = await res.json();
-    return data.movies ?? [];
+    try {
+      const res = await fetch(`${BASE_URL}/movies/top_rated?page=${page}`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.movies ?? [];
+    } catch { return []; }
   });
 }
 
@@ -335,9 +347,12 @@ export function getMovieRecommendations(movie_id: string): Promise<Movie[]> {
 
 export function searchMovies(query: string, page = 1): Promise<Movie[]> {
   return fromCache(`search:${query.toLowerCase().trim()}:${page}`, TTL.CATALOG, async () => {
-    const res = await fetch(`${BASE_URL}/movies/search?q=${encodeURIComponent(query)}&page=${page}`);
-    const data = await res.json();
-    return data.movies ?? [];
+    try {
+      const res = await fetch(`${BASE_URL}/movies/search?q=${encodeURIComponent(query)}&page=${page}`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.movies ?? [];
+    } catch { return []; }
   });
 }
 
@@ -359,16 +374,18 @@ export function discoverMovies(filters: {
   watch_region?: string;
   vote_count_gte?: number;
 }): Promise<Movie[]> {
-  // Stable cache key regardless of property insertion order
   const key = `discover:${JSON.stringify(Object.fromEntries(Object.entries(filters).sort()))}`;
   return fromCache(key, TTL.CATALOG, async () => {
-    const res = await fetch(`${BASE_URL}/movies/discover`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(filters),
-    });
-    const data = await res.json();
-    return data.movies ?? [];
+    try {
+      const res = await fetch(`${BASE_URL}/movies/discover`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(filters),
+      });
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.movies ?? [];
+    } catch { return []; }
   });
 }
 
@@ -390,7 +407,7 @@ export async function fetchProviderCategory(
   try {
     localStorage.setItem(storageKey, JSON.stringify({
       data: movies,
-      expires: Date.now() + 14 * 24 * 60 * 60 * 1000,
+      expires: Date.now() + 2 * 60 * 60 * 1000,  // 2 hours — was 14 days
     }));
   } catch {}
   return movies;
@@ -399,47 +416,65 @@ export async function fetchProviderCategory(
 
 export function getMovieDetails(movie_id: string): Promise<Record<string, unknown>> {
   return fromCache(`movie:${movie_id}`, TTL.MOVIE, async () => {
-    const res = await fetch(`${BASE_URL}/movies/${movie_id}`);
-    return res.json();
+    try {
+      const res = await fetch(`${BASE_URL}/movies/${movie_id}`);
+      if (!res.ok) return {};
+      return res.json();
+    } catch { return {}; }
   });
 }
 
 export function getShowDetails(show_id: string): Promise<Record<string, unknown>> {
   return fromCache(`show:${show_id}`, TTL.MOVIE, async () => {
-    const res = await fetch(`${BASE_URL}/shows/${show_id}`);
-    return res.json();
+    try {
+      const res = await fetch(`${BASE_URL}/shows/${show_id}`);
+      if (!res.ok) return {};
+      return res.json();
+    } catch { return {}; }
   });
 }
 
 export function getTrendingShows(): Promise<Movie[]> {
   return fromCache('tv_trending:week', TTL.CATALOG, async () => {
-    const res = await fetch(`${BASE_URL}/shows/trending`);
-    const data = await res.json();
-    return data.movies ?? [];
+    try {
+      const res = await fetch(`${BASE_URL}/shows/trending`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.movies ?? [];
+    } catch { return []; }
   });
 }
 
 export function getPopularShows(): Promise<Movie[]> {
   return fromCache('tv_popular:1', TTL.CATALOG, async () => {
-    const res = await fetch(`${BASE_URL}/shows/popular`);
-    const data = await res.json();
-    return data.movies ?? [];
+    try {
+      const res = await fetch(`${BASE_URL}/shows/popular`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.movies ?? [];
+    } catch { return []; }
   });
 }
 
 export function getTopRatedShows(): Promise<Movie[]> {
   return fromCache('tv_top_rated:1', TTL.CATALOG, async () => {
-    const res = await fetch(`${BASE_URL}/shows/top_rated`);
-    const data = await res.json();
-    return data.movies ?? [];
+    try {
+      const res = await fetch(`${BASE_URL}/shows/top_rated`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.movies ?? [];
+    } catch { return []; }
   });
 }
 
 export function searchShows(query: string, page = 1): Promise<Movie[]> {
   return fromCache(`tv_search:${query.toLowerCase().trim()}:${page}`, TTL.CATALOG, async () => {
-    const res = await fetch(`${BASE_URL}/shows/search?q=${encodeURIComponent(query)}&page=${page}`);
-    const data = await res.json();
-    return data.movies ?? [];
+    try {
+      const res = await fetch(`${BASE_URL}/shows/search?q=${encodeURIComponent(query)}&page=${page}`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.movies ?? [];
+    } catch { return []; }
   });
 }
 
@@ -454,13 +489,16 @@ export function discoverShows(filters: {
 }): Promise<Movie[]> {
   const key = `tv_discover:${JSON.stringify(Object.fromEntries(Object.entries(filters).sort()))}`;
   return fromCache(key, TTL.CATALOG, async () => {
-    const res = await fetch(`${BASE_URL}/shows/discover`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(filters),
-    });
-    const data = await res.json();
-    return data.movies ?? [];
+    try {
+      const res = await fetch(`${BASE_URL}/shows/discover`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(filters),
+      });
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.movies ?? [];
+    } catch { return []; }
   });
 }
 
@@ -526,18 +564,24 @@ export function getWatchedMovies(user_id: string, limit = 20, cursor?: string): 
   if (cursor) params.set('cursor', cursor);
   const key = `watched_list:${user_id}:${limit}:${cursor ?? ''}`;
   return fromCachePersisted(key, TTL.WATCHED, 30 * 60 * 1000, async () => {
-    const res = await fetch(`${BASE_URL}/watched/${user_id}?${params}`);
-    const data = await res.json();
-    return data.movies ?? [];
+    try {
+      const res = await fetch(`${BASE_URL}/watched/${user_id}?${params}`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.movies ?? [];
+    } catch { return []; }
   });
 }
 
 
 export function getWatchedMovie(user_id: string, movie_id: string): Promise<(WatchedMovie & { watched: boolean }) | null> {
   return fromCache(`watched_check:${user_id}:${movie_id}`, 5 * 60 * 1000, async () => {
-    const res = await fetch(`${BASE_URL}/watched/${user_id}/${movie_id}`);
-    const data = await res.json();
-    return data.watched ? data : null;
+    try {
+      const res = await fetch(`${BASE_URL}/watched/${user_id}/${movie_id}`);
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data.watched ? data : null;
+    } catch { return null; }
   });
 }
 
@@ -577,9 +621,12 @@ export async function updateWatchedMovie(user_id: string, movie_id: string, rati
 
 export function getWatchLater(user_id: string): Promise<string[]> {
   return fromCachePersisted(`watchlist:${user_id}`, TTL.WATCHLIST, 30 * 60 * 1000, async () => {
-    const res = await fetch(`${BASE_URL}/watchlist/${user_id}`);
-    const data = await res.json();
-    return data.movies ?? [];
+    try {
+      const res = await fetch(`${BASE_URL}/watchlist/${user_id}`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.movies ?? [];
+    } catch { return []; }
   });
 }
 
@@ -607,17 +654,23 @@ export async function removeFromWatchLater(user_id: string, movie_id: string) {
 
 export function getFeed(limit = 20): Promise<FeedPost[]> {
   return fromCache(`feed:${limit}`, 2 * 60 * 1000, async () => {
-    const res = await fetch(`${BASE_URL}/feed?limit=${limit}`);
-    const data = await res.json();
-    return data.posts ?? [];
+    try {
+      const res = await fetch(`${BASE_URL}/feed?limit=${limit}`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.posts ?? [];
+    } catch { return []; }
   });
 }
 
 /** Fetch only posts newer than `since` (ISO timestamp). Bypasses and does not populate the cache. */
 export async function getFeedSince(since: string): Promise<FeedPost[]> {
-  const res = await fetch(`${BASE_URL}/feed?since=${encodeURIComponent(since)}`);
-  const data = await res.json();
-  return data.posts ?? [];
+  try {
+    const res = await fetch(`${BASE_URL}/feed?since=${encodeURIComponent(since)}`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.posts ?? [];
+  } catch { return []; }
 }
 
 /** Bust all client-side feed cache entries so the next getFeed() call hits the network. */
@@ -682,9 +735,12 @@ export interface PostReply {
 
 export function getReplies(post_id: string): Promise<PostReply[]> {
   return fromCache(`replies:${post_id}`, 2 * 60 * 1000, async () => {
-    const res = await fetch(`${BASE_URL}/feed/${post_id}/replies`);
-    const data = await res.json();
-    return data.replies ?? [];
+    try {
+      const res = await fetch(`${BASE_URL}/feed/${post_id}/replies`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.replies ?? [];
+    } catch { return []; }
   });
 }
 
@@ -851,17 +907,23 @@ export interface FriendRequest {
 
 export function getFriends(user_id: string): Promise<Friend[]> {
   return fromCachePersisted(`friends:${user_id}`, TTL.FRIENDS, 30 * 60 * 1000, async () => {
-    const res = await fetch(`${BASE_URL}/friends/${user_id}`);
-    const data = await res.json();
-    return data.friends ?? [];
+    try {
+      const res = await fetch(`${BASE_URL}/friends/${user_id}`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.friends ?? [];
+    } catch { return []; }
   });
 }
 
 export function getFriendRequests(user_id: string): Promise<FriendRequest[]> {
   return fromCache(`friend_requests:${user_id}`, 60 * 1000, async () => {
-    const res = await fetch(`${BASE_URL}/friends/${user_id}/requests`);
-    const data = await res.json();
-    return data.requests ?? [];
+    try {
+      const res = await fetch(`${BASE_URL}/friends/${user_id}/requests`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.requests ?? [];
+    } catch { return []; }
   });
 }
 
@@ -1113,10 +1175,15 @@ export interface AppNotification {
   created_at: string;
 }
 
-export async function getNotifications(user_id: string): Promise<AppNotification[]> {
-  const res = await fetch(`${BASE_URL}/user/${user_id}/notifications`);
-  const data = await res.json();
-  return data.notifications ?? [];
+export function getNotifications(user_id: string): Promise<AppNotification[]> {
+  return fromCache(`notifications:${user_id}`, 30 * 1000, async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/user/${user_id}/notifications`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.notifications ?? [];
+    } catch { return []; }
+  });
 }
 
 export async function markNotificationRead(user_id: string, notification_id: string) {
@@ -1177,11 +1244,14 @@ export interface GroupMessage {
 }
 
 export function getGroupChat(group_id: string): Promise<GroupMessage[]> {
-  return fromCache(`group_chat:${group_id}`, 2 * 60 * 1000, () =>
-    fetch(`${BASE_URL}/groups/${group_id}/chat`)
-      .then(r => r.json())
-      .then(d => d.messages ?? [])
-  );
+  return fromCache(`group_chat:${group_id}`, 2 * 60 * 1000, async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/groups/${group_id}/chat`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.messages ?? [];
+    } catch { return []; }
+  });
 }
 
 export async function sendGroupMessage(
@@ -1217,9 +1287,14 @@ export interface DirectMessage {
 }
 
 export function getConversations(user_id: string): Promise<Conversation[]> {
-  return fetch(`${BASE_URL}/conversations/${user_id}`)
-    .then(r => r.json())
-    .then(d => d.conversations ?? []);
+  return fromCache(`conversations:${user_id}`, 30 * 1000, async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/conversations/${user_id}`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.conversations ?? [];
+    } catch { return []; }
+  });
 }
 
 export function openConversation(
@@ -1233,14 +1308,21 @@ export function openConversation(
 }
 
 export function getDirectMessages(conversation_id: string): Promise<DirectMessage[]> {
-  return fetch(`${BASE_URL}/conversations/${conversation_id}/messages`)
-    .then(r => r.json())
-    .then(d => d.messages ?? []);
+  return fromCache(`dm:${conversation_id}`, 15 * 1000, async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/conversations/${conversation_id}/messages`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.messages ?? [];
+    } catch { return []; }
+  });
 }
 
 export function sendDirectMessage(
   conversation_id: string, sender_id: string, text: string,
 ): Promise<{ success: boolean }> {
+  bustCache(`dm:${conversation_id}`);
+  bustCache(`conversations:${sender_id}`);
   return fetch(`${BASE_URL}/conversations/${conversation_id}/messages`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

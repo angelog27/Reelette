@@ -165,6 +165,30 @@ const PROVIDER_CATEGORY_FALLBACKS: Partial<Record<string, Record<string, () => P
     'action':    () => discoverMovies({ genre_id: '28', sort_by: 'popularity.desc', services_filter: { hboMax: true } }).then(r => r.slice(0, ROW_LIMIT)),
     'top_rated': () => discoverMovies({ min_rating: 8, sort_by: 'vote_average.desc', services_filter: { hboMax: true } }).then(r => r.slice(0, ROW_LIMIT)),
   },
+  'Prime Video': {
+    'action':        () => discoverMovies({ genre_id: '28', sort_by: 'popularity.desc', services_filter: { amazonPrime: true } }).then(r => r.slice(0, ROW_LIMIT)),
+    'comedy':        () => discoverMovies({ genre_id: '35', sort_by: 'popularity.desc', services_filter: { amazonPrime: true } }).then(r => r.slice(0, ROW_LIMIT)),
+    'drama':         () => discoverMovies({ genre_id: '18', sort_by: 'popularity.desc', services_filter: { amazonPrime: true } }).then(r => r.slice(0, ROW_LIMIT)),
+    'international': () => discoverMovies({ sort_by: 'popularity.desc', services_filter: { amazonPrime: true } }).then(r => r.slice(0, ROW_LIMIT)),
+  },
+  'Paramount+': {
+    'mission_impossible': () => searchMovies('Mission Impossible').then(r => r.slice(0, ROW_LIMIT)),
+    'action':             () => discoverMovies({ genre_id: '28', sort_by: 'popularity.desc', services_filter: { paramount: true } }).then(r => r.slice(0, ROW_LIMIT)),
+    'drama':              () => discoverMovies({ genre_id: '18', sort_by: 'popularity.desc', services_filter: { paramount: true } }).then(r => r.slice(0, ROW_LIMIT)),
+    'comedy':             () => discoverMovies({ genre_id: '35', sort_by: 'popularity.desc', services_filter: { paramount: true } }).then(r => r.slice(0, ROW_LIMIT)),
+  },
+  'Apple TV+': {
+    'originals': () => searchMovies('Apple TV Original').then(r => r.slice(0, ROW_LIMIT)),
+    'drama':     () => discoverMovies({ genre_id: '18', sort_by: 'popularity.desc', services_filter: { appleTV: true } }).then(r => r.slice(0, ROW_LIMIT)),
+    'scifi':     () => discoverMovies({ genre_id: '878', sort_by: 'popularity.desc', services_filter: { appleTV: true } }).then(r => r.slice(0, ROW_LIMIT)),
+    'thriller':  () => discoverMovies({ genre_id: '53', sort_by: 'popularity.desc', services_filter: { appleTV: true } }).then(r => r.slice(0, ROW_LIMIT)),
+  },
+  'Peacock': {
+    'comedy': () => discoverMovies({ genre_id: '35', sort_by: 'popularity.desc', services_filter: { peacock: true } }).then(r => r.slice(0, ROW_LIMIT)),
+    'horror': () => searchMovies('Conjuring Universe').then(r => r.slice(0, ROW_LIMIT)),
+    'action': () => discoverMovies({ genre_id: '28', sort_by: 'popularity.desc', services_filter: { peacock: true } }).then(r => r.slice(0, ROW_LIMIT)),
+    'drama':  () => discoverMovies({ genre_id: '18', sort_by: 'popularity.desc', services_filter: { peacock: true } }).then(r => r.slice(0, ROW_LIMIT)),
+  },
 };
 
 // ── Helpers ───────────────────────────────────────────────────────
