@@ -39,6 +39,7 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
   const [friendReviews, setFriendReviews]         = useState<FriendReview[]>([]);
   const [seasonRatings, setSeasonRatings]         = useState<Record<string, number>>({});
   const [showSeasonRatings, setShowSeasonRatings] = useState(false);
+  const [trailerOpen, setTrailerOpen]             = useState(false);
 
   const user = getUser();
 
@@ -79,6 +80,7 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
     setSaveSuccess(false);
     setInWatchLater(false);
     setOverviewExpanded(false);
+    setTrailerOpen(false);
 
     const fetchMedia = type === 'show'
       ? getShowDetails(movieId)
@@ -465,17 +467,16 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
                   Play Now
                 </a>
 
-                {/* Watch Trailer — opens YouTube */}
-                {trailerUrl && (
-                  <a
-                    href={trailerUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                {/* Watch Trailer — opens inline mini-player */}
+                {trailer && (
+                  <button
+                    onClick={() => setTrailerOpen(v => !v)}
                     className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-white/30 bg-white/5 hover:bg-white/15 text-white text-sm font-medium transition-colors"
+                    style={trailerOpen ? { borderColor: 'rgba(124,93,189,0.6)', background: 'rgba(124,93,189,0.15)' } : {}}
                   >
                     <Play className="w-4 h-4" />
-                    Watch Trailer
-                  </a>
+                    {trailerOpen ? 'Hide Trailer' : 'Watch Trailer'}
+                  </button>
                 )}
 
                 {/* Watch Later */}
@@ -660,6 +661,40 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
           </div>
         )}
       </div>
+
+      {/* ── Trailer mini-player ─────────────────────────────────── */}
+      {trailerOpen && trailer && (
+        <div
+          className="absolute z-30"
+          style={{
+            bottom: '6.5rem',
+            right: '1rem',
+            width: 'min(380px, calc(100vw - 2rem))',
+            borderRadius: 12,
+            overflow: 'hidden',
+            boxShadow: '0 12px 48px rgba(0,0,0,0.85)',
+            border: '1px solid rgba(255,255,255,0.14)',
+          }}
+        >
+          <button
+            onClick={() => setTrailerOpen(false)}
+            className="absolute top-2 right-2 z-10 p-1 rounded-full transition-colors"
+            style={{ background: 'rgba(0,0,0,0.7)' }}
+            aria-label="Close trailer"
+          >
+            <X className="w-4 h-4 text-white" />
+          </button>
+          <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
+            <iframe
+              src={`https://www.youtube.com/embed/${trailer.key}?autoplay=1&rel=0&modestbranding=1`}
+              allow="autoplay; encrypted-media; picture-in-picture"
+              allowFullScreen
+              title={`${displayTitle} Trailer`}
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
