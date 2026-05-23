@@ -196,7 +196,7 @@ export function MyStuffTab() {
     <div className="-mx-6 -mt-8">
 
       {/* ── Controls row: tabs + sort ── */}
-      <div className="px-6 pt-6 pb-4 flex items-center gap-4 flex-wrap">
+      <div className="px-6 pt-10 pb-4 flex items-center gap-4 flex-wrap">
 
         {/* Tab pills */}
         <div className="flex gap-1 bg-[#111] border border-[#1e1e1e] rounded-full p-1 w-fit">

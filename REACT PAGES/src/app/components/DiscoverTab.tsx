@@ -749,7 +749,8 @@ export function DiscoverTab() {
       .then(async ([posts, friends]) => {
         if (cancelled) return;
         const friendIds = new Set(friends.map((f: { friend_id: string }) => f.friend_id));
-        const post = posts.find(p => friendIds.has(p.user_id) && !!p.movie_id && p.message.trim().length > 10);
+        const friendPosts = posts.filter(p => friendIds.has(p.user_id) && !!p.movie_id && p.message.trim().length > 10);
+        const post = friendPosts[Math.floor(Math.random() * Math.min(friendPosts.length, 5))];
         if (!post) return;
         let backdrop = '';
         try {
@@ -775,7 +776,8 @@ export function DiscoverTab() {
     let cancelled = false;
     getFriends(user.user_id).then(async (friends: { friend_id: string }[]) => {
       if (cancelled || !friends.length) return;
-      for (const friend of friends.slice(0, 6)) {
+      const shuffled = [...friends].sort(() => Math.random() - 0.5);
+      for (const friend of shuffled.slice(0, 6)) {
         try {
           const watched = await getWatchedMovies(friend.friend_id, 1);
           if (cancelled) return;
@@ -915,8 +917,9 @@ export function DiscoverTab() {
     if (recommended?.length) slots.push({ kind: 'recommended', movie: recommended[0] });
     if (heroMovies?.length)  slots.push({ kind: 'tonight',     movie: heroMovies[0] });
     if (top10.length) {
-      const watched = userWatched.find(w => w.movie_id === top10[0].id);
-      if (watched?.user_rating) slots.push({ kind: 'topPick', movie: top10[0], yourRating: watched.user_rating });
+      const randomPick = top10[Math.floor(Math.random() * top10.length)];
+      const watched = userWatched.find(w => w.movie_id === randomPick.id);
+      if (watched?.user_rating) slots.push({ kind: 'topPick', movie: randomPick, yourRating: watched.user_rating });
     }
     return slots;
   }, [friendSlot, friendWatchSlot, recommended, heroMovies, top10, userWatched]);

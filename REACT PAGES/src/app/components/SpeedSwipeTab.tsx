@@ -65,7 +65,6 @@ function rerankDeck(movies: Movie[], affinity: Record<string, number>): Movie[] 
     const score = (m: Movie) =>
       m.genres.reduce((s, g) => s + (affinity[g] || 0), 0) * 0.6
       + (m.rating / 10) * 0.3
-      + ((m.year - 1970) / 55) * 0.1
       + (Math.random() - 0.5) * 0.25; // weighted shuffle — not fully deterministic
     return score(b) - score(a);
   });
@@ -80,26 +79,40 @@ async function loadPool(genreId: string, dislikedIds: string[]): Promise<Movie[]
   pages.add(1);
   while (pages.size < 3) pages.add(Math.floor(Math.random() * 8) + 1);
 
-  const results = await Promise.all(
-    [...pages].map(p =>
-      discoverMovies({
-        genre_id:    genreId || undefined,
-        min_rating:  5,
-        sort_by:     'popularity.desc',
-        page:        p,
-      }).catch(() => [] as Movie[])
-    )
-  );
+  const [modernResults, classics] = await Promise.all([
+    Promise.all(
+      [...pages].map(p =>
+        discoverMovies({
+          genre_id:   genreId || undefined,
+          min_rating: 5,
+          sort_by:    'popularity.desc',
+          page:       p,
+        }).catch(() => [] as Movie[])
+      )
+    ),
+    discoverMovies({
+      genre_id:   genreId || undefined,
+      year_to:    '2005',
+      min_rating: 7,
+      sort_by:    'vote_count.desc',
+      page:       Math.floor(Math.random() * 3) + 1,
+    }).catch(() => [] as Movie[]),
+  ]);
 
   const seen = new Set<string>();
   const dislikedSet = new Set(dislikedIds);
   const pool: Movie[] = [];
-  for (const page of results)
+  for (const page of modernResults)
     for (const m of page)
       if (!seen.has(m.id) && !dislikedSet.has(m.id)) {
         seen.add(m.id);
         pool.push(m);
       }
+  for (const m of classics)
+    if (!seen.has(m.id) && !dislikedSet.has(m.id)) {
+      seen.add(m.id);
+      pool.push(m);
+    }
 
   return pool.sort(() => Math.random() - 0.5);
 }
@@ -474,10 +487,14 @@ export function SpeedSwipeTab() {
       seedRecs = await getMovieRecommendations(seedId).catch(() => []);
     }
 
-    // 4. Backfill with trending
-    const trending = await getTrendingMovies('week').catch(() => [] as Movie[]);
+    // 4. Fetch trending + classics in parallel
+    const [trending, classics] = await Promise.all([
+      getTrendingMovies('week').catch(() => [] as Movie[]),
+      discoverMovies({ year_to: '2005', min_rating: 7.5, sort_by: 'vote_count.desc', page: 1 })
+        .catch(() => [] as Movie[]),
+    ]);
 
-    // 5. Combine: recs first, then trending, filtered through seenIds
+    // 5. Combine: seed recs first, then interleave trending + classics (~1 classic per 3 modern)
     const addedThisSession = new Set<string>();
     const combined: Movie[] = [];
     const tryAdd = (m: Movie) => {
@@ -485,14 +502,24 @@ export function SpeedSwipeTab() {
       addedThisSession.add(m.id);
       combined.push(m);
     };
-    for (const m of seedRecs)  tryAdd(m);
-    for (const m of trending)  tryAdd(m);
+    for (const m of seedRecs) tryAdd(m);
 
-    // Supplement with discover page 1 if the combined pool is thin
+    const classicQueue = classics.filter(m => !seenIds.current.has(m.id) && !addedThisSession.has(m.id));
+    let ci = 0;
+    for (let mi = 0; mi < trending.length; mi++) {
+      tryAdd(trending[mi]);
+      if ((mi + 1) % 3 === 0 && ci < classicQueue.length) tryAdd(classicQueue[ci++]);
+    }
+    while (ci < classicQueue.length) tryAdd(classicQueue[ci++]);
+
+    // Supplement with popular + more classics if the combined pool is thin
     if (combined.length < 10) {
-      const extra = await discoverMovies({ min_rating: 5, sort_by: 'popularity', page: 1 })
-        .catch(() => [] as Movie[]);
+      const [extra, moreClassics] = await Promise.all([
+        discoverMovies({ min_rating: 5, sort_by: 'popularity', page: 1 }).catch(() => [] as Movie[]),
+        discoverMovies({ year_to: '2005', min_rating: 7, sort_by: 'vote_count.desc', page: 2 }).catch(() => [] as Movie[]),
+      ]);
       for (const m of extra) tryAdd(m);
+      for (const m of moreClassics) tryAdd(m);
     }
 
     // 6. Mark all deck IDs seen so future refills don't repeat them
@@ -663,6 +690,7 @@ export function SpeedSwipeTab() {
   const handleSwipeLeft = (movie: Movie) => {
     if (!movie) return;
     const capturedIndex = indexRef.current;
+    seenIds.current.add(movie.id);
     applyAffinity(movie, 'left');
     setHistory(h => [...h, capturedIndex]);
     rerank(capturedIndex);
