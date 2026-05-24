@@ -24,7 +24,11 @@ except ImportError:
 try:
     from config import CORS_ORIGINS
 except ImportError:
-    CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000").split(",")
+    CORS_ORIGINS = os.environ.get(
+        "CORS_ORIGINS",
+        "http://localhost:5173,http://localhost:3000,"
+        "https://reelette-movie.com,https://www.reelette-movie.com",
+    ).split(",")
 from firebase_helper import (
     create_user, verify_user, get_user_data,
     update_streaming_services, get_user_streaming_services,

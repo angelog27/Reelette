@@ -178,6 +178,7 @@ export function RouletteTab() {
   const [smartResult,           setSmartResult]           = useState<{ movie: Movie; reason: string } | null>(null);
   const [smartError,            setSmartError]            = useState("");
   const [smartSpinResting,      setSmartSpinResting]      = useState(false);
+  const smartResultRef = useRef<HTMLDivElement>(null);
 
   const [error, setError]                      = useState("");
   const [activeMood, setActiveMood]            = useState("");
@@ -214,6 +215,7 @@ export function RouletteTab() {
       setSmartResult({ movie: res.movie, reason: res.reason });
       setSmartSpinAvailable(false);
       setHoursUntilReset(24);
+      setTimeout(() => smartResultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
     } catch (err: unknown) {
       const e = err as { status?: number; data?: { hoursUntilReset?: number } };
       if (e.status === 429) {
@@ -628,6 +630,7 @@ export function RouletteTab() {
               {/* Smart Spin result card */}
               {smartResult && (
                 <div
+                  ref={smartResultRef}
                   className="mt-4 w-full bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl overflow-hidden shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-400 cursor-pointer"
                   onClick={() => setSelectedMovieId(smartResult.movie.id)}
                 >
