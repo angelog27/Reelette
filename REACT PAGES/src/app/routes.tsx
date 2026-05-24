@@ -1,9 +1,10 @@
-import { lazy, Suspense } from 'react';
+import React, { lazy, Suspense } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { HomePage } from './components/HomePage';
 import { LoginPage } from './components/LoginPage';
 import QuizGate from './components/QuizGate';
 import Landing from '../pages/Landing';
+import { getUser } from './services/api';
 
 // Tab components are code-split: their JS is only downloaded when the user
 // navigates to that tab for the first time, keeping the initial bundle small.
@@ -15,6 +16,11 @@ const SocialTab            = lazy(() => import('./components/SocialTab').then(m 
 const ProfileandSettingsTab = lazy(() => import('./components/ProfileandSettingsTab').then(m => ({ default: m.ProfileandSettingsTab })));
 const MyStuffTab           = lazy(() => import('./components/MyStuffTab').then(m => ({ default: m.MyStuffTab })));
 const SearchTab            = lazy(() => import('./components/SearchTab').then(m => ({ default: m.SearchTab })));
+
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  if (!getUser()) return <Navigate to="/login" replace />;
+  return <>{children}</>;
+}
 
 function hasSeenLanding() {
   return document.cookie.split(';').some(c => c.trim().startsWith('reelette_visited='));
@@ -45,7 +51,7 @@ export const router = createBrowserRouter([
   },
   {
     path: '/home',
-    Component: HomePage,
+    element: <ProtectedRoute><HomePage /></ProtectedRoute>,
     children: [
       {
         index: true,

@@ -24,12 +24,26 @@ export const scheduledSeed = onSchedule(
   },
 );
 
-// HTTP trigger — call manually to seed on demand
-// Usage: firebase functions:shell → seedNow({})
-// Or:    curl -X POST https://<region>-reelette-project.cloudfunctions.net/seedNow
+// HTTP trigger — call manually to seed on demand (requires Firebase ID token from a project admin)
+// Usage: curl -X POST -H "Authorization: Bearer <id_token>" \
+//          https://<region>-reelette-project.cloudfunctions.net/seedNow
 export const seedNow = onRequest(
   { timeoutSeconds: 540, memory: '512MiB' },
-  async (_req, res) => {
+  async (req, res) => {
+    // Verify that the caller is an authenticated Firebase user
+    const authHeader = req.headers.authorization ?? '';
+    const idToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+    if (!idToken) {
+      res.status(401).json({ success: false, error: 'Authentication required' });
+      return;
+    }
+    try {
+      await admin.auth().verifyIdToken(idToken);
+    } catch {
+      res.status(401).json({ success: false, error: 'Invalid or expired token' });
+      return;
+    }
+
     logger.info('Manual seed trigger received');
     try {
       await runSeed(tmdbApiKey.value());

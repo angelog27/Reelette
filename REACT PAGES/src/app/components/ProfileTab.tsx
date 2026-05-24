@@ -879,6 +879,7 @@ export function ProfileTab() {
       setIsEditingProfile(false);
     } catch (error) {
       console.error('Failed to save profile:', error);
+      alert('Failed to save profile. Please try again.');
     }
   }
 

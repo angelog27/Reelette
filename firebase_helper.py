@@ -1,10 +1,11 @@
 # firebase_helper.py
 import firebase_admin
+import html as _html
 import requests
 import os
 import tempfile
 import json
-import resend 
+import resend
 from firebase_admin import credentials, firestore, auth
 from datetime import datetime
 
@@ -146,32 +147,16 @@ def verify_user(email, password):
         }
 
 def send_password_reset_email(email):
+    # Always return a generic response to avoid leaking whether an email is registered.
     try:
         url = f"https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key={FIREBASE_WEB_API_KEY}"
-
-        response = requests.post(url, json={
-            "requestType": "PASSWORD_RESET",
-            "email": email
-        })
-
-        data = response.json()
-
-        if response.status_code != 200 or "error" in data:
-            return {
-                "success": False,
-                "message": data.get("error", {}).get("message", "Failed to send reset email")
-            }
-
-        return {
-            "success": True,
-            "message": "Password reset email sent"
-        }
-
-    except Exception as e:
-        return {
-            "success": False,
-            "message": str(e)
-        }
+        requests.post(url, json={"requestType": "PASSWORD_RESET", "email": email})
+    except Exception:
+        pass
+    return {
+        "success": True,
+        "message": "If that email is registered, a reset link has been sent."
+    }
 
 def update_streaming_services(user_id, services):
     #updating our users streaming service prefrences in firestore.
@@ -1358,7 +1343,7 @@ def send_welcome_email(user_id):
             "to": email,
             "subject": "Welcome to Reelette!🎬",
             "html": f"""
-                <h1>Welcome to Reelette, {email.split('@')[0]}! 🎉</h1>
+                <h1>Welcome to Reelette, {_html.escape(email.split('@')[0])}! 🎉</h1>
                 <p>Thanks for signing up. We're excited to have you join our movie loving community!</p>
                 <p>Here are some tips to get started:</p>
                 <ul>
@@ -1377,7 +1362,7 @@ def send_welcome_email(user_id):
 def get_user_id_by_username(username: str):
     try:
         docs = (db.collection('users')
-                  .where('username', '==', username.lower())
+                  .where('username_lower', '==', username.lower())
                   .limit(1)
                   .stream())
         for doc in docs:
@@ -1396,6 +1381,8 @@ def send_tagged_in_post_email(to_user_id: str, tagger_username: str,
         if not email:
             return {'success': False, 'message': 'User email not found'}
 
+        safe_tagger = _html.escape(tagger_username)
+        safe_title  = _html.escape(movie_title)
         resend.Emails.send({
             "from": FROM_EMAIL,
             "to": email,
@@ -1403,8 +1390,8 @@ def send_tagged_in_post_email(to_user_id: str, tagger_username: str,
             "html": f"""
                 <div style="font-family:sans-serif;max-width:480px;margin:auto;">
                     <h2>You were mentioned in a post!</h2>
-                    <p><strong>{tagger_username}</strong> tagged you in a post about
-                        <strong>{movie_title}</strong> on Reelette.</p>
+                    <p><strong>{safe_tagger}</strong> tagged you in a post about
+                        <strong>{safe_title}</strong> on Reelette.</p>
                     <a href="{BASE_URL}/feed?post={post_id}" style="display:inline-block;
                         padding:10px 20px;background:#e50914;color:#fff;border-radius:6px;text-decoration:none;">
                         View Post
@@ -1426,6 +1413,9 @@ def send_post_reply_email(to_user_id: str, replier_username: str, post_id: str,
         if not email:
             return {'success': False, 'message': 'User email not found'}
 
+        safe_replier  = _html.escape(replier_username)
+        safe_title    = _html.escape(movie_title)
+        safe_preview  = _html.escape(reply_preview[:120]) + ('...' if len(reply_preview) > 120 else '')
         resend.Emails.send({
             "from": FROM_EMAIL,
             "to": email,
@@ -1433,10 +1423,10 @@ def send_post_reply_email(to_user_id: str, replier_username: str, post_id: str,
             "html": f"""
                 <div style="font-family:sans-serif;max-width:480px;margin:auto;">
                     <h2>New Reply on Your Post</h2>
-                    <p><strong>{replier_username}</strong> replied to your post about
-                        <strong>{movie_title}</strong>:</p>
+                    <p><strong>{safe_replier}</strong> replied to your post about
+                        <strong>{safe_title}</strong>:</p>
                     <blockquote style="border-left:3px solid #e50914;padding-left:12px;color:#555;margin:16px 0;">
-                        {reply_preview[:120]}{'...' if len(reply_preview) > 120 else ''}
+                        {safe_preview}
                     </blockquote>
                     <a href="{BASE_URL}/feed?post={post_id}" style="display:inline-block;
                         padding:10px 20px;background:#e50914;color:#fff;border-radius:6px;text-decoration:none;">
@@ -1462,6 +1452,7 @@ def send_like_milestone_email(to_user_id: str, like_count: int, post_id: str,
         if not email:
             return {'success': False, 'message': 'User email not found'}
 
+        safe_title = _html.escape(movie_title)
         resend.Emails.send({
             "from": FROM_EMAIL,
             "to": email,
@@ -1469,7 +1460,7 @@ def send_like_milestone_email(to_user_id: str, like_count: int, post_id: str,
             "html": f"""
                 <div style="font-family:sans-serif;max-width:480px;margin:auto;">
                     <h2>People are loving your post!</h2>
-                    <p>Your post about <strong>{movie_title}</strong> has reached
+                    <p>Your post about <strong>{safe_title}</strong> has reached
                         <strong>{like_count} likes</strong> on Reelette.</p>
                     <a href="{BASE_URL}/feed?post={post_id}" style="display:inline-block;
                         padding:10px 20px;background:#e50914;color:#fff;border-radius:6px;text-decoration:none;">
@@ -1491,6 +1482,7 @@ def send_friend_request_email(to_user_id: str, from_username: str) -> dict:
         if not email:
             return {'success': False, 'message': 'User email not found'}
 
+        safe_from = _html.escape(from_username)
         resend.Emails.send({
             "from": FROM_EMAIL,
             "to": email,
@@ -1498,7 +1490,7 @@ def send_friend_request_email(to_user_id: str, from_username: str) -> dict:
             "html": f"""
                 <div style="font-family:sans-serif;max-width:480px;margin:auto;">
                     <h2>New Friend Request</h2>
-                    <p><strong>{from_username}</strong> wants to connect with you on Reelette.</p>
+                    <p><strong>{safe_from}</strong> wants to connect with you on Reelette.</p>
                     <a href="{BASE_URL}/friends" style="display:inline-block;
                         padding:10px 20px;background:#e50914;color:#fff;border-radius:6px;text-decoration:none;">
                         View Request
@@ -1520,6 +1512,8 @@ def send_group_added_email(to_user_id: str, added_by_username: str, group_name: 
         if not email:
             return {'success': False, 'message': 'User email not found'}
 
+        safe_adder = _html.escape(added_by_username)
+        safe_group = _html.escape(group_name)
         resend.Emails.send({
             "from": FROM_EMAIL,
             "to": email,
@@ -1527,8 +1521,8 @@ def send_group_added_email(to_user_id: str, added_by_username: str, group_name: 
             "html": f"""
                 <div style="font-family:sans-serif;max-width:480px;margin:auto;">
                     <h2>You're in a new group!</h2>
-                    <p><strong>{added_by_username}</strong> added you to
-                        <strong>{group_name}</strong> on Reelette.</p>
+                    <p><strong>{safe_adder}</strong> added you to
+                        <strong>{safe_group}</strong> on Reelette.</p>
                     <p style="color:#555;">Check out the group's watchlist and spin the roulette
                         together.</p>
                     <a href="{BASE_URL}/groups/{group_id}" style="display:inline-block;

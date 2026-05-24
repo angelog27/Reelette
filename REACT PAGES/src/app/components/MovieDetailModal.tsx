@@ -45,6 +45,7 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
 
   useEffect(() => {
     if (!user) return;
+    let cancelled = false;
     getFriends(user.user_id).then(async friends => {
       const entries = await Promise.all(
         friends.map(f =>
@@ -55,8 +56,9 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
           ).catch(() => null)
         )
       );
-      setFriendReviews(entries.filter(e => e !== null) as FriendReview[]);
+      if (!cancelled) setFriendReviews(entries.filter(e => e !== null) as FriendReview[]);
     }).catch(() => {});
+    return () => { cancelled = true; };
   }, [movieId]);
 
   useEffect(() => {

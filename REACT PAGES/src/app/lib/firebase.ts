@@ -39,6 +39,8 @@ export async function signInFirebase(): Promise<boolean> {
   if (!token) return false;
   try {
     await signInWithCustomToken(auth, token);
+    // Token is one-time-use; clear it immediately — SDK manages the session via refresh tokens
+    localStorage.removeItem(CUSTOM_TOKEN_KEY);
     return true;
   } catch {
     localStorage.removeItem(CUSTOM_TOKEN_KEY);

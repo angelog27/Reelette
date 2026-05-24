@@ -415,7 +415,7 @@ export function MyStuffTab() {
             </div>
           )
         )}
-      </div>pip install -r requirements.txt
+      </div>
 
 
       {selectedMovieId && (

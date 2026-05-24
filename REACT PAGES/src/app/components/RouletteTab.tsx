@@ -18,9 +18,28 @@ import {
   getRoulettePrefs,
   setRoulettePref,
   timeAgo,
+  getSmartSpinStatus,
+  doSmartSpin,
   type Movie,
   type RouletteSpin,
 } from "../services/api";
+
+// ── Gemini icon (inline SVG, no npm package needed) ──────────────
+const GeminiIcon = ({ size = 16 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+    <path
+      d="M8 0C8 4.418 4.418 8 0 8C4.418 8 8 11.582 8 16C8 11.582 11.582 8 16 8C11.582 8 8 4.418 8 0Z"
+      fill="url(#gg)"
+    />
+    <defs>
+      <linearGradient id="gg" x1="0" y1="0" x2="16" y2="16" gradientUnits="userSpaceOnUse">
+        <stop offset="0%"   stopColor="#4285F4" />
+        <stop offset="50%"  stopColor="#9B72CB" />
+        <stop offset="100%" stopColor="#F29900" />
+      </linearGradient>
+    </defs>
+  </svg>
+);
 
 const GENRES = [
   { label: "Action",          value: "28"    },
@@ -155,6 +174,14 @@ export function RouletteTab() {
   const [awaitingVote, setAwaitingVote]        = useState(false);
   const [userVote, setUserVote]                = useState<"like" | "dislike" | null>(null);
 
+  // Smart Spin state
+  const [smartSpinAvailable,    setSmartSpinAvailable]    = useState(true);
+  const [hoursUntilReset,       setHoursUntilReset]       = useState(0);
+  const [smartSpinLoading,      setSmartSpinLoading]      = useState(false);
+  const [smartPreferences,      setSmartPreferences]      = useState("");
+  const [smartResult,           setSmartResult]           = useState<{ movie: Movie; reason: string } | null>(null);
+  const [smartError,            setSmartError]            = useState("");
+
   const [error, setError]                      = useState("");
   const [activeMood, setActiveMood]            = useState("");
   const [friendSpins, setFriendSpins]          = useState<
@@ -172,6 +199,37 @@ export function RouletteTab() {
     if (!user) return;
     getfriendsRouletteHistory(user.user_id, 1).then(setFriendSpins).catch(() => {});
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!user) return;
+    getSmartSpinStatus()
+      .then(s => { setSmartSpinAvailable(s.available); setHoursUntilReset(s.hoursUntilReset); })
+      .catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleSmartSpin = async () => {
+    if (!user || smartSpinLoading) return;
+    setSmartSpinLoading(true);
+    setSmartError("");
+    setSmartResult(null);
+    try {
+      const res = await doSmartSpin(smartPreferences, activeMood, genre);
+      setSmartResult({ movie: res.movie, reason: res.reason });
+      setSmartSpinAvailable(false);
+      setHoursUntilReset(24);
+    } catch (err: unknown) {
+      const e = err as { status?: number; data?: { hoursUntilReset?: number } };
+      if (e.status === 429) {
+        setSmartSpinAvailable(false);
+        setHoursUntilReset(e.data?.hoursUntilReset ?? 24);
+        setSmartError("Smart Spin resets tomorrow!");
+      } else {
+        setSmartError("Something went wrong. Please try again.");
+      }
+    } finally {
+      setSmartSpinLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!user) { setSpinsLoaded(true); return; }
@@ -506,6 +564,107 @@ export function RouletteTab() {
               )}
             </div>
           </div>
+
+          {/* ── Smart Spin divider ── */}
+          {user && (
+            <div className="w-full max-w-[400px]">
+              {/* Divider */}
+              <div className="flex items-center gap-3 my-1">
+                <div className="flex-1 h-px bg-[#1e1e1e]" />
+                <span className="text-[11px] text-gray-600 font-medium whitespace-nowrap">or let AI decide</span>
+                <div className="flex-1 h-px bg-[#1e1e1e]" />
+              </div>
+
+              {/* Textarea */}
+              <div className="mt-3 space-y-1">
+                <label className="text-[11px] text-gray-500 font-medium">
+                  Tell the AI what you're in the mood for (optional)
+                </label>
+                <textarea
+                  value={smartPreferences}
+                  onChange={e => setSmartPreferences(e.target.value)}
+                  maxLength={300}
+                  disabled={!smartSpinAvailable || smartSpinLoading}
+                  placeholder="e.g. I want a romantic 7/10 movie from the 90s, nothing too sad..."
+                  rows={2}
+                  className="w-full bg-[#0a0a0a] border border-[#252525] text-white text-xs rounded-xl px-3 py-2.5 resize-none focus:outline-none focus:border-[#3d3566] placeholder-gray-700 transition-colors disabled:opacity-50"
+                  style={{ fontFamily: "SanFran, system-ui, sans-serif" }}
+                />
+                <p className="text-[10px] text-gray-700 text-right">{smartPreferences.length}/300</p>
+              </div>
+
+              {/* Smart Spin button */}
+              <div className="mt-2">
+                <button
+                  onClick={handleSmartSpin}
+                  disabled={!smartSpinAvailable || smartSpinLoading}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-full border text-sm font-semibold transition-all active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50"
+                  style={
+                    smartSpinAvailable && !smartSpinLoading
+                      ? { borderColor: '#7C5DBD', color: '#c4b5fd', background: 'rgba(124,93,189,0.08)' }
+                      : { borderColor: '#2a2a2a', color: '#4b5563', background: 'transparent' }
+                  }
+                >
+                  <GeminiIcon size={14} />
+                  {smartSpinLoading
+                    ? "Finding your perfect movie…"
+                    : !smartSpinAvailable
+                    ? `Next Smart Spin in ${hoursUntilReset}h`
+                    : "Smart Spin"}
+                </button>
+                <p className="text-[10px] text-gray-700 text-center mt-1.5">
+                  {smartSpinAvailable ? "1 of 1 smart spin remaining today" : "0 of 1 smart spins remaining today"}
+                </p>
+              </div>
+
+              {/* Smart Spin error */}
+              {smartError && (
+                <p className="text-yellow-500 text-xs text-center mt-2">{smartError}</p>
+              )}
+
+              {/* Smart Spin result card */}
+              {smartResult && (
+                <div
+                  className="mt-4 w-full bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl overflow-hidden shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-400 cursor-pointer"
+                  onClick={() => setSelectedMovieId(smartResult.movie.id)}
+                >
+                  <div className="flex gap-4 p-4">
+                    {smartResult.movie.poster ? (
+                      <img
+                        src={smartResult.movie.poster}
+                        alt={smartResult.movie.title}
+                        className="w-20 h-[120px] rounded-xl object-cover shadow-lg ring-1 ring-white/10 shrink-0"
+                      />
+                    ) : (
+                      <div className="w-20 h-[120px] rounded-xl bg-[#1a1a1a] flex items-center justify-center shrink-0">
+                        <Film className="w-5 h-5 text-gray-600" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
+                      <p className="text-white font-bold text-sm leading-snug line-clamp-2">
+                        {smartResult.movie.title}
+                      </p>
+                      <div className="flex items-center gap-2 text-xs">
+                        {smartResult.movie.year > 0 && <span className="text-gray-500">{smartResult.movie.year}</span>}
+                        {smartResult.movie.rating > 0 && (
+                          <span className="text-yellow-400 font-semibold">★ {smartResult.movie.rating.toFixed(1)}</span>
+                        )}
+                      </div>
+                      {/* Reason */}
+                      <p className="text-gray-400 text-[11px] italic leading-relaxed line-clamp-3 mt-0.5">
+                        {smartResult.reason}
+                      </p>
+                    </div>
+                  </div>
+                  {/* Gemini badge */}
+                  <div className="flex items-center justify-end gap-1 px-4 pb-3">
+                    <GeminiIcon size={11} />
+                    <span className="text-[10px] text-gray-600">Powered by Gemini</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Spin button — above the wheel */}
           {!awaitingVote && (

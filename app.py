@@ -1,16 +1,25 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, g
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from functools import wraps
 import os
 import time
 import json
 import threading
-from datetime import datetime, timezone
+import html as _html
+from datetime import datetime, timezone, timedelta
+from firebase_admin import auth as fb_auth
 
 try:
     from config import SECRET_KEY
 except ImportError:
-    SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret")
+    SECRET_KEY = os.environ.get("SECRET_KEY", "")
+    if not SECRET_KEY:
+        import secrets as _secrets
+        SECRET_KEY = _secrets.token_hex(32)
+        print("WARNING: SECRET_KEY not set — using a random key (sessions won't persist across restarts)")
 
 try:
     from config import CORS_ORIGINS
@@ -59,8 +68,40 @@ _cors_origins = [
 ]
 CORS(app, origins=_cors_origins)
 
-
 app.secret_key = SECRET_KEY
+
+# ── Rate limiting ────────────────────────────────────────────────
+# Uses in-memory storage (single-process). If you scale to multiple
+# workers, point RATELIMIT_STORAGE_URI at a Redis instance instead.
+limiter = Limiter(
+    key_func=get_remote_address,
+    app=app,
+    default_limits=["300 per minute"],   # global safety net per IP
+    storage_uri="memory://",
+)
+
+# ── Auth middleware ───────────────────────────────────────────────
+
+def require_auth(f):
+    """Verify Firebase ID token from Authorization header. Stores uid in g.verified_uid."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = request.headers.get('Authorization', '').removeprefix('Bearer ').strip()
+        if not token:
+            return jsonify({'error': 'Authentication required'}), 401
+        try:
+            decoded = fb_auth.verify_id_token(token)
+            g.verified_uid = decoded['uid']
+        except Exception:
+            return jsonify({'error': 'Invalid or expired token'}), 401
+        return f(*args, **kwargs)
+    return decorated
+
+def _own_account(user_id: str):
+    """Return a 403 response if g.verified_uid doesn't match user_id, else None."""
+    if g.verified_uid != user_id:
+        return jsonify({'error': 'Forbidden'}), 403
+    return None
 
 # ── Genre caches ─────────────────────────────────────────────────
 _genre_cache = {}
@@ -164,6 +205,8 @@ _executor = ThreadPoolExecutor(max_workers=20)
 # Stores any key → (value, expiry_timestamp)
 _cache: dict = {}
 
+_MAX_CACHE_ENTRIES = 2000
+
 def _cache_get(key):
     entry = _cache.get(key)
     if entry and time.time() < entry[1]:
@@ -171,6 +214,16 @@ def _cache_get(key):
     return None
 
 def _cache_set(key, value, ttl):
+    if len(_cache) >= _MAX_CACHE_ENTRIES:
+        now = time.time()
+        expired_keys = [k for k, (_, exp) in _cache.items() if exp < now]
+        for k in expired_keys:
+            del _cache[k]
+        # If still full after removing expired, evict the oldest quarter
+        if len(_cache) >= _MAX_CACHE_ENTRIES:
+            oldest = sorted(_cache.items(), key=lambda x: x[1][1])[:_MAX_CACHE_ENTRIES // 4]
+            for k, _ in oldest:
+                del _cache[k]
     _cache[key] = (value, time.time() + ttl)
 
 # TTLs
@@ -272,6 +325,7 @@ def serialize_timestamps(obj):
 # ── Auth Routes ──────────────────────────────────────────────────
 
 @app.route('/api/auth/login', methods=['POST'])
+@limiter.limit("20 per minute; 100 per hour")
 def login():
     data = request.get_json() or {}
     email = data.get('email', '').strip()
@@ -282,6 +336,7 @@ def login():
     return jsonify(result)
 
 @app.route('/api/auth/register', methods=['POST'])
+@limiter.limit("5 per hour")
 def register():
     data = request.get_json() or {}
     email = data.get('email', '').strip()
@@ -295,6 +350,7 @@ def register():
     return jsonify(result)
 
 @app.route('/api/auth/forgot-password', methods=['POST'])
+@limiter.limit("5 per hour")
 def forgot_password():
     data = request.get_json() or {}
     email = data.get('email', '').strip()
@@ -306,8 +362,7 @@ def forgot_password():
         }), 400
 
     result = send_password_reset_email(email)
-    status_code = 200 if result.get('success') else 400
-    return jsonify(result), status_code
+    return jsonify(result), 200
 
 # ── Movie Routes ─────────────────────────────────────────────────
 
@@ -328,6 +383,8 @@ def popular_movies():
 @app.route('/api/movies/trending', methods=['GET'])
 def trending_movies():
     time_window = request.args.get('window', 'week')
+    if time_window not in ('day', 'week'):
+        time_window = 'week'
     cache_key = f'trending:{time_window}'
     cached = _cache_get(cache_key)
     if cached:
@@ -395,6 +452,7 @@ def movie_recommendations(movie_id):
     return jsonify({'movies': movies})
 
 @app.route('/api/movies/search', methods=['GET'])
+@limiter.limit("60 per minute")
 def search():
     query = request.args.get('q', '').strip()
     page = request.args.get('page', 1, type=int)
@@ -419,6 +477,7 @@ SORT_MAP = {
 }
 
 @app.route('/api/movies/discover', methods=['POST'])
+@limiter.limit("30 per minute")
 def discover():
     data = request.get_json() or {}
 
@@ -535,6 +594,8 @@ def popular_shows():
 @app.route('/api/shows/trending', methods=['GET'])
 def trending_shows():
     time_window = request.args.get('window', 'week')
+    if time_window not in ('day', 'week'):
+        time_window = 'week'
     cache_key = f'tv_trending:{time_window}'
     cached = _cache_get(cache_key)
     if cached:
@@ -561,6 +622,7 @@ def top_rated_shows():
     return jsonify({'movies': shows})
 
 @app.route('/api/shows/search', methods=['GET'])
+@limiter.limit("60 per minute")
 def search_shows():
     query = request.args.get('q', '').strip()
     page = request.args.get('page', 1, type=int)
@@ -578,6 +640,7 @@ def search_shows():
     return jsonify({'movies': shows})
 
 @app.route('/api/shows/discover', methods=['POST'])
+@limiter.limit("30 per minute")
 def discover_shows():
     data = request.get_json() or {}
     cache_key = f'tv_discover:{json.dumps(data, sort_keys=True, default=str)}'
@@ -665,7 +728,10 @@ def user_data(user_id):
     return jsonify(result)
 
 @app.route('/api/user/<user_id>', methods=['PUT'])
+@require_auth
 def update_user(user_id):
+    err = _own_account(user_id)
+    if err: return err
     data = request.get_json() or {}
     result = update_user_profile(user_id, data)
     if result.get('success'):
@@ -680,7 +746,10 @@ def get_streaming(user_id):
     return jsonify(services)
 
 @app.route('/api/user/<user_id>/streaming', methods=['PUT'])
+@require_auth
 def update_streaming(user_id):
+    err = _own_account(user_id)
+    if err: return err
     services = request.get_json() or {}
     result = update_streaming_services(user_id, services)
     if result.get('success'):
@@ -697,7 +766,10 @@ def get_movie_preferences(user_id):
     return jsonify(preferences)
 
 @app.route('/api/user/<user_id>/movie-preferences', methods=['PUT'])
+@require_auth
 def update_movie_preferences_route(user_id):
+    err = _own_account(user_id)
+    if err: return err
     preferences = request.get_json() or {}
     result = update_movie_preferences(user_id, preferences)
     status_code = 200 if result.get('success') else 400
@@ -710,7 +782,10 @@ def get_user_watchlist(user_id):
     return jsonify({'movies': get_watchlist(user_id)})
 
 @app.route('/api/watchlist/<user_id>', methods=['POST'])
+@require_auth
 def add_to_user_watchlist(user_id):
+    err = _own_account(user_id)
+    if err: return err
     data = request.get_json() or {}
     movie_id = data.get('movie_id')
     if not movie_id:
@@ -718,7 +793,10 @@ def add_to_user_watchlist(user_id):
     return jsonify(add_to_watchlist(user_id, movie_id))
 
 @app.route('/api/watchlist/<user_id>/<movie_id>', methods=['DELETE'])
+@require_auth
 def remove_from_user_watchlist(user_id, movie_id):
+    err = _own_account(user_id)
+    if err: return err
     return jsonify(remove_from_watchlist(user_id, movie_id))
 
 # ── Watched Movies Routes ────────────────────────────────────────
@@ -744,25 +822,39 @@ def get_user_watched_movie(user_id, movie_id):
 
 # This endpoint is used both for initially marking a movie as watched and for adding a user rating + comment. If the movie is already marked as watched, it will update the existing entry with the new rating/comment.
 @app.route('/api/watched/<user_id>', methods=['POST'])
+@require_auth
 def add_user_watched(user_id):
+    err = _own_account(user_id)
+    if err: return err
     data = request.get_json() or {}
     movie = data.get('movie')
     user_rating = data.get('user_rating')
     comment = data.get('comment', '')
     if not movie or user_rating is None:
         return jsonify({'success': False, 'message': 'movie and user_rating required'}), 400
+    if not isinstance(user_rating, (int, float)) or not (0 <= user_rating <= 10):
+        return jsonify({'success': False, 'message': 'user_rating must be a number between 0 and 10'}), 400
+    if len(str(comment)) > 2000:
+        return jsonify({'success': False, 'message': 'comment must be 2000 characters or fewer'}), 400
     result = add_watched_movie(user_id, movie, user_rating, comment)
     if result.get('success'):
         _cache.pop(f'watched:{user_id}', None)
     return jsonify(result)
 
 @app.route('/api/watched/<user_id>/<movie_id>', methods=['PUT'])
+@require_auth
 def update_user_watched_rating(user_id, movie_id):
+    err = _own_account(user_id)
+    if err: return err
     data = request.get_json() or {}
     new_rating = data.get('rating')
     comment = data.get('comment')
     if new_rating is None:
         return jsonify({'success': False, 'message': 'rating required'}), 400
+    if not isinstance(new_rating, (int, float)) or not (0 <= new_rating <= 10):
+        return jsonify({'success': False, 'message': 'rating must be a number between 0 and 10'}), 400
+    if comment is not None and len(str(comment)) > 2000:
+        return jsonify({'success': False, 'message': 'comment must be 2000 characters or fewer'}), 400
     result = update_watched_rating(user_id, movie_id, new_rating, comment)
     if result.get('success'):
         _cache.pop(f'watched:{user_id}', None)
@@ -788,17 +880,21 @@ def social_feed():
     return jsonify({'posts': serialized})
 
 @app.route('/api/feed', methods=['POST'])
+@require_auth
+@limiter.limit("10 per minute; 50 per hour")
 def create_feed_post():
     data = request.get_json() or {}
-    user_id    = data.get('user_id', '').strip()
+    user_id    = g.verified_uid
     username   = data.get('username', '').strip()
     message    = data.get('message', '').strip()
     movie_title = data.get('movie_title', '').strip()
     movie_id     = data.get('movie_id', '')
     movie_poster = data.get('movie_poster', '')
     rating       = data.get('rating', 0)
-    if not all([user_id, username, message, movie_title]):
-        return jsonify({'success': False, 'message': 'user_id, username, message, and movie_title are required'}), 400
+    if not all([username, message, movie_title]):
+        return jsonify({'success': False, 'message': 'username, message, and movie_title are required'}), 400
+    if len(message) > 2000:
+        return jsonify({'success': False, 'message': 'message must be 2000 characters or fewer'}), 400
     result = create_post(user_id, username, message, movie_title, movie_id, movie_poster, rating)
     if result.get('success'):
         for key in [k for k in _cache if k.startswith('feed:')]:
@@ -813,11 +909,9 @@ def create_feed_post():
     return jsonify(result)
 
 @app.route('/api/feed/<post_id>/like', methods=['POST'])
+@require_auth
 def like_feed_post(post_id):
-    data = request.get_json() or {}
-    user_id = data.get('user_id', '').strip()
-    if not user_id:
-        return jsonify({'success': False, 'message': 'user_id required'}), 400
+    user_id = g.verified_uid
     result = like_post(post_id, user_id)
     if result.get('action') == 'liked':
         def _check_milestone(_pid=post_id):
@@ -832,13 +926,17 @@ def get_post_replies(post_id):
     return jsonify({'replies': serialize_timestamps(get_replies(post_id))})
 
 @app.route('/api/feed/<post_id>/reply', methods=['POST'])
+@require_auth
+@limiter.limit("20 per minute; 100 per hour")
 def reply_to_post(post_id):
     data = request.get_json() or {}
-    user_id  = data.get('user_id', '').strip()
+    user_id  = g.verified_uid
     username = data.get('username', '').strip()
     message  = data.get('message', '').strip()
-    if not all([user_id, username, message]):
-        return jsonify({'success': False, 'message': 'user_id, username, and message are required'}), 400
+    if not all([username, message]):
+        return jsonify({'success': False, 'message': 'username and message are required'}), 400
+    if len(message) > 2000:
+        return jsonify({'success': False, 'message': 'message must be 2000 characters or fewer'}), 400
     result = add_reply(post_id, user_id, username, message)
     if result.get('success'):
         def _notify_poster(_pid=post_id, _uname=username, _msg=message, _sender=user_id):
@@ -849,34 +947,35 @@ def reply_to_post(post_id):
     return jsonify(result)
 
 @app.route('/api/feed/<post_id>/reply/<reply_id>/like', methods=['POST'])
+@require_auth
 def like_reply_route(post_id, reply_id):
-    data = request.get_json() or {}
-    user_id = data.get('user_id', '').strip()
-    if not user_id:
-        return jsonify({'success': False, 'message': 'user_id required'}), 400
-    return jsonify(toggle_reply_like(post_id, reply_id, user_id))
+    return jsonify(toggle_reply_like(post_id, reply_id, g.verified_uid))
 
 @app.route('/api/feed/<post_id>/reply/<reply_id>/dislike', methods=['POST'])
+@require_auth
 def dislike_reply_route(post_id, reply_id):
-    data = request.get_json() or {}
-    user_id = data.get('user_id', '').strip()
-    if not user_id:
-        return jsonify({'success': False, 'message': 'user_id required'}), 400
-    return jsonify(toggle_reply_dislike(post_id, reply_id, user_id))
+    return jsonify(toggle_reply_dislike(post_id, reply_id, g.verified_uid))
 
 @app.route('/api/feed/<post_id>', methods=['DELETE'])
+@require_auth
 def delete_feed_post(post_id):
-    data = request.get_json() or {}
-    user_id = data.get('user_id', '').strip()
-    if not user_id:
-        return jsonify({'success': False, 'message': 'user_id required'}), 400
-    return jsonify(delete_post(post_id, user_id))
+    return jsonify(delete_post(post_id, g.verified_uid))
 
 # ── User Profile Update / Avatar / Presence ──────────────────────
 
 @app.route('/api/user/<user_id>/profile', methods=['PUT'])
+@require_auth
 def update_profile(user_id):
+    err = _own_account(user_id)
+    if err: return err
     data = request.get_json() or {}
+    # Enforce length limits on user-supplied text fields
+    if len(data.get('username', '') or '') > 30:
+        return jsonify({'success': False, 'message': 'username must be 30 characters or fewer'}), 400
+    if len(data.get('displayName', '') or '') > 60:
+        return jsonify({'success': False, 'message': 'displayName must be 60 characters or fewer'}), 400
+    if len(data.get('bio', '') or '') > 300:
+        return jsonify({'success': False, 'message': 'bio must be 300 characters or fewer'}), 400
     result = update_user_profile(user_id, data)
     return jsonify(result)
 
@@ -899,27 +998,41 @@ def get_user_profile(uid):
     return jsonify({'quizCompleted': result.get('quizCompleted', True)})
 
 @app.route('/api/quiz/complete', methods=['POST'])
+@require_auth
 def complete_quiz():
     data = request.get_json() or {}
-    uid = data.get('uid', '').strip()
+    uid = g.verified_uid
     top_genre = data.get('topGenre')
     answers = data.get('answers', {})
-    if not uid:
-        return jsonify({'success': False, 'message': 'uid required'}), 400
     from firebase_helper import save_quiz_result
     save_quiz_result(uid, top_genre, answers)
     return jsonify({'success': True})
 
+_MAX_AVATAR_BYTES = 512 * 1024  # 512 KB
+
 @app.route('/api/user/<user_id>/avatar', methods=['PUT'])
+@require_auth
 def update_avatar_route(user_id):
+    err = _own_account(user_id)
+    if err: return err
     data = request.get_json() or {}
     avatar_url = data.get('avatar_url', '').strip()
     if not avatar_url:
         return jsonify({'success': False, 'message': 'avatar_url required'}), 400
+    # Must be an https:// URL or a data:image/ URI within size limit
+    is_data_uri = avatar_url.startswith('data:image/')
+    is_https    = avatar_url.startswith('https://')
+    if not is_data_uri and not is_https:
+        return jsonify({'success': False, 'message': 'avatar_url must be an https URL or a data:image/ URI'}), 400
+    if is_data_uri and len(avatar_url.encode('utf-8')) > _MAX_AVATAR_BYTES:
+        return jsonify({'success': False, 'message': 'Avatar image must be 512 KB or smaller'}), 400
     return jsonify(update_user_avatar(user_id, avatar_url))
 
 @app.route('/api/user/<user_id>/lastseen', methods=['PUT'])
+@require_auth
 def update_lastseen_route(user_id):
+    err = _own_account(user_id)
+    if err: return err
     return jsonify(update_user_last_seen(user_id))
 
 @app.route('/api/user/<user_id>/public', methods=['GET'])
@@ -965,19 +1078,24 @@ def get_user_friend_requests(user_id):
     return jsonify({'requests': serialize_timestamps(reqs)})
 
 @app.route('/api/friends/<user_id>/request', methods=['POST'])
+@require_auth
+@limiter.limit("20 per hour")
 def send_request(user_id):
     data = request.get_json() or {}
-    from_user_id = data.get('from_user_id', '').strip()
+    from_user_id = g.verified_uid
     from_username = data.get('from_username', '').strip()
-    if not from_user_id or not from_username:
-        return jsonify({'success': False, 'message': 'from_user_id and from_username required'}), 400
+    if not from_username:
+        return jsonify({'success': False, 'message': 'from_username required'}), 400
     result = send_friend_request(from_user_id, from_username, user_id)
     if result.get('success'):
         threading.Thread(target=send_friend_request_email, args=(user_id, from_username), daemon=True).start()
     return jsonify(result)
 
 @app.route('/api/friends/<user_id>/request/<from_id>/accept', methods=['POST'])
+@require_auth
 def accept_request(user_id, from_id):
+    err = _own_account(user_id)
+    if err: return err
     data = request.get_json() or {}
     user_username = data.get('user_username', '').strip()
     from_username = data.get('from_username', '').strip()
@@ -988,11 +1106,17 @@ def accept_request(user_id, from_id):
     return jsonify(result)
 
 @app.route('/api/friends/<user_id>/request/<from_id>/reject', methods=['POST'])
+@require_auth
 def reject_request(user_id, from_id):
+    err = _own_account(user_id)
+    if err: return err
     return jsonify(reject_friend_request(user_id, from_id))
 
 @app.route('/api/friends/<user_id>/<friend_id>', methods=['DELETE'])
+@require_auth
 def delete_friend(user_id, friend_id):
+    err = _own_account(user_id)
+    if err: return err
     result = remove_friend(user_id, friend_id)
     if result.get('success'):
         _cache.pop(f'friends:{user_id}', None)
@@ -1017,7 +1141,10 @@ def get_notif_prefs(user_id):
     return jsonify(get_notification_prefs(user_id))
 
 @app.route('/api/user/<user_id>/notification-prefs', methods=['PUT'])
+@require_auth
 def set_notif_prefs(user_id):
+    err = _own_account(user_id)
+    if err: return err
     prefs = request.get_json() or {}
     result = set_notification_prefs(user_id, prefs)
     if result.get('success'):
@@ -1025,24 +1152,31 @@ def set_notif_prefs(user_id):
     return jsonify(result)
 
 @app.route('/api/user/<user_id>/notifications/read-all', methods=['PUT'])
+@require_auth
 def read_all_notifications(user_id):
+    err = _own_account(user_id)
+    if err: return err
     return jsonify(mark_all_notifications_read(user_id))
 
 @app.route('/api/user/<user_id>/notifications/<notification_id>/read', methods=['PUT'])
+@require_auth
 def read_one_notification(user_id, notification_id):
+    err = _own_account(user_id)
+    if err: return err
     return jsonify(mark_notification_read(user_id, notification_id))
 
 # ── Groups ───────────────────────────────────────────────────────
 
 @app.route('/api/groups', methods=['POST'])
+@require_auth
 def create_new_group():
     data = request.get_json() or {}
     name = data.get('name', '').strip()
     description = data.get('description', '').strip()
-    creator_id = data.get('creator_id', '').strip()
+    creator_id = g.verified_uid
     creator_username = data.get('creator_username', '').strip()
-    if not all([name, creator_id, creator_username]):
-        return jsonify({'success': False, 'message': 'name, creator_id, and creator_username are required'}), 400
+    if not all([name, creator_username]):
+        return jsonify({'success': False, 'message': 'name and creator_username are required'}), 400
     result = create_group(name, description, creator_id, creator_username)
     if result.get('success'):
         _cache.pop(f'groups:{creator_id}', None)
@@ -1056,11 +1190,9 @@ def get_group_route(group_id):
     return jsonify(serialize_timestamps(group))
 
 @app.route('/api/groups/<group_id>', methods=['DELETE'])
+@require_auth
 def delete_group_route(group_id):
-    data = request.get_json() or {}
-    user_id = data.get('user_id', '').strip()
-    if not user_id:
-        return jsonify({'success': False, 'message': 'user_id required'}), 400
+    user_id = g.verified_uid
     return jsonify(delete_group(group_id, user_id))
 
 @app.route('/api/user/<user_id>/groups', methods=['GET'])
@@ -1075,6 +1207,7 @@ def get_user_groups_route(user_id):
     return jsonify({'groups': result})
 
 @app.route('/api/groups/<group_id>/members', methods=['POST'])
+@require_auth
 def add_member(group_id):
     data = request.get_json() or {}
     new_member_id = data.get('user_id', '').strip()
@@ -1096,6 +1229,7 @@ def add_member(group_id):
     return jsonify(result)
 
 @app.route('/api/groups/<group_id>/members/<member_id>', methods=['DELETE'])
+@require_auth
 def remove_member(group_id, member_id):
     result = remove_group_member(group_id, member_id)
     if result.get('success'):
@@ -1105,22 +1239,25 @@ def remove_member(group_id, member_id):
     return jsonify(result)
 
 @app.route('/api/groups/<group_id>/watchlist', methods=['POST'])
+@require_auth
 def add_to_group_watchlist_route(group_id):
     data = request.get_json() or {}
     movie_id = str(data.get('movie_id', '')).strip()
     movie_poster = data.get('movie_poster')
     movie_title = data.get('movie_title', '').strip()
-    user_id = data.get('user_id', '').strip()
+    user_id = g.verified_uid
     username = data.get('username', '').strip()
-    if not all([movie_id, movie_title, user_id, username]):
-        return jsonify({'success': False, 'message': 'movie_id, movie_title, user_id, and username are required'}), 400
+    if not all([movie_id, movie_title, username]):
+        return jsonify({'success': False, 'message': 'movie_id, movie_title, and username are required'}), 400
     return jsonify(add_to_group_watchlist(group_id, movie_id, movie_title, movie_poster, user_id, username))
 
 @app.route('/api/groups/<group_id>/watchlist/<movie_id>', methods=['DELETE'])
+@require_auth
 def remove_from_group_watchlist_route(group_id, movie_id):
     return jsonify(remove_from_group_watchlist(group_id, movie_id))
 
 @app.route('/api/groups/<group_id>/spin', methods=['POST'])
+@require_auth
 def spin_reelette(group_id):
     return jsonify(spin_group_reelette(group_id))
 
@@ -1149,7 +1286,10 @@ def group_member_services(group_id):
 # ── Roulette Spin History ────────────────────────────────────────
 
 @app.route('/api/roulette/<user_id>/spin', methods=['POST'])
+@require_auth
 def roulette_spin_route(user_id):
+    err = _own_account(user_id)
+    if err: return err
     data = request.get_json() or {}
     movie_id = str(data.get('movie_id', '')).strip()
     movie_title = data.get('movie_title', '').strip()
@@ -1174,6 +1314,309 @@ def roulette_history_route(user_id):
     _cache_set(cache_key, serialized, 30)  # 30 s — busted on new spin
     return jsonify({'spins': serialized})
 
+# ── Smart Spin (Gemini-powered roulette) ─────────────────────────
+
+@app.route('/api/roulette/smart-spin/status', methods=['GET'])
+@require_auth
+@limiter.limit("30 per minute; 100 per hour")
+def smart_spin_status():
+    from firebase_admin import firestore as _fs
+    uid = g.verified_uid
+    db  = _fs.client()
+
+    user_doc  = db.collection('users').document(uid).get()
+    user_data = user_doc.to_dict() if user_doc.exists else {}
+    last_used = (user_data.get('smartSpin') or {}).get('lastUsed')
+
+    now_utc   = datetime.now(timezone.utc)
+    today_utc = now_utc.date()
+
+    if last_used:
+        last_used_date = last_used.date() if hasattr(last_used, 'date') else today_utc
+        if last_used_date == today_utc:
+            next_midnight = (datetime(today_utc.year, today_utc.month, today_utc.day,
+                                      tzinfo=timezone.utc) + timedelta(days=1))
+            hours_until = max(0, int((next_midnight - now_utc).total_seconds() / 3600))
+            return jsonify({'available': False, 'hoursUntilReset': hours_until})
+
+    return jsonify({'available': True, 'hoursUntilReset': 0})
+
+
+@app.route('/api/roulette/smart-spin', methods=['POST'])
+@require_auth
+@limiter.limit("5 per hour")
+def smart_spin():
+    from firebase_admin import firestore as _fs
+    from gemini_helper import get_user_taste_profile, gemini, parse_gemini_json
+    uid = g.verified_uid
+    db  = _fs.client()
+
+    if not gemini:
+        return jsonify({'error': 'AI service not configured'}), 503
+
+    # 1. Daily limit check
+    user_doc  = db.collection('users').document(uid).get()
+    user_data = user_doc.to_dict() if user_doc.exists else {}
+    last_used = (user_data.get('smartSpin') or {}).get('lastUsed')
+
+    now_utc   = datetime.now(timezone.utc)
+    today_utc = now_utc.date()
+
+    if last_used:
+        last_used_date = last_used.date() if hasattr(last_used, 'date') else today_utc
+        if last_used_date == today_utc:
+            next_midnight = (datetime(today_utc.year, today_utc.month, today_utc.day,
+                                      tzinfo=timezone.utc) + timedelta(days=1))
+            hours_until = max(0, int((next_midnight - now_utc).total_seconds() / 3600))
+            return jsonify({'error': 'limit_reached', 'hoursUntilReset': hours_until}), 429
+
+    # 2. Taste profile
+    profile = get_user_taste_profile(uid)
+
+    # 3. Request body
+    body        = request.get_json() or {}
+    preferences = _html.escape(str(body.get('preferences') or '')[:300])
+    mood        = str(body.get('mood')  or '')[:100]
+    genre       = str(body.get('genre') or '')[:50]
+
+    watched_ids   = (profile or {}).get('all_watched_tmdb_ids', [])
+    recently_ids  = (profile or {}).get('recently_watched_tmdb_ids', [])
+
+    if profile:
+        profile_block = (
+            f"USER TASTE PROFILE:\n"
+            f"- Top genres: {profile['top_genres']}\n"
+            f"- Favorite directors: {profile['top_directors']}\n"
+            f"- Favorite actors: {profile['top_actors']}\n"
+            f"- Preferred decades: {profile['decade_breakdown']}\n"
+            f"- Rating style: {profile['rating_style']}\n"
+            f"- Personal favorites: {profile['top_rated_movies']}\n"
+            f"- Recently watched (avoid these): {recently_ids}\n"
+            f"- Streaming services: {profile['streaming_services']}"
+        )
+    else:
+        profile_block = "USER TASTE PROFILE: No watch history available yet."
+
+    # 4. Gemini prompt
+    prompt = f"""You are a world-class movie recommendation engine.
+
+{profile_block}
+
+CURRENT REQUEST:
+- Mood: "{mood}"
+- Genre: "{genre}"
+- User's own words: "{preferences}"
+
+Rules:
+- If user typed a preference, prioritize it above everything else
+- If no preference, recommend based purely on their taste profile
+- Never recommend anything in their watched list: {watched_ids[:100]}
+- Prefer movies likely on their streaming services
+
+Return ONLY valid JSON, no markdown, no explanation:
+{{
+  "title": "string",
+  "year": number,
+  "tmdb_id": number,
+  "reason": "1-2 sentences using SPECIFIC stats, e.g. 'You give Denis Villeneuve a 9.4 average and haven't seen this one' or 'Your top decade is the 90s and you love psychological thrillers'"
+}}"""
+
+    # 5. Call Gemini + validate TMDB
+    try:
+        response = gemini.generate_content(prompt)
+        result   = parse_gemini_json(response.text)
+    except Exception as e:
+        return jsonify({'error': f'AI generation failed: {str(e)}'}), 500
+
+    tmdb_id   = result.get('tmdb_id')
+    tmdb_data = None
+    if tmdb_id:
+        try:
+            tmdb_data = get_movie_details(int(tmdb_id))
+            if tmdb_data and tmdb_data.get('error'):
+                tmdb_data = None
+        except Exception:
+            tmdb_data = None
+
+    # 6. Retry once if invalid
+    if not tmdb_data:
+        try:
+            retry_prompt = prompt + f"\n\nNote: tmdb_id {tmdb_id} was invalid. Suggest a different movie."
+            response2    = gemini.generate_content(retry_prompt)
+            result       = parse_gemini_json(response2.text)
+            tmdb_id      = result.get('tmdb_id')
+            if tmdb_id:
+                tmdb_data = get_movie_details(int(tmdb_id))
+                if tmdb_data and tmdb_data.get('error'):
+                    tmdb_data = None
+        except Exception:
+            tmdb_data = None
+
+    if not tmdb_data:
+        return jsonify({'error': 'Could not validate movie recommendation'}), 500
+
+    # 7. Update lastUsed
+    db.collection('users').document(uid).update({'smartSpin': {'lastUsed': now_utc}})
+
+    movie = format_movie(tmdb_data)
+    return jsonify({'movie': movie, 'reason': result.get('reason', ''), 'geminiPowered': True})
+
+
+# ── AI Discover Recommendations ───────────────────────────────────
+
+def _get_watch_count(uid):
+    from firebase_admin import firestore as _fs
+    db = _fs.client()
+    try:
+        agg = (db.collection('users').document(uid)
+                 .collection('watched_movies').count().get())
+        return agg[0][0].value
+    except Exception:
+        docs = list(db.collection('users').document(uid)
+                      .collection('watched_movies').stream())
+        return len(docs)
+
+
+def _generate_ai_recs(uid, current_watch_count):
+    """Calls Gemini, validates TMDBs, stores + returns formatted rows."""
+    from firebase_admin import firestore as _fs
+    from gemini_helper import get_user_taste_profile, gemini, parse_gemini_json
+
+    if not gemini:
+        return None
+
+    db      = _fs.client()
+    profile = get_user_taste_profile(uid)
+    if not profile:
+        return None
+
+    prompt = f"""You are a personalized movie recommendation engine.
+
+USER PROFILE:
+- Top genres: {profile['top_genres']}
+- Favorite directors: {profile['top_directors']}
+- Favorite actors: {profile['top_actors']}
+- Preferred decades: {profile['decade_breakdown']}
+- Rating style: {profile['rating_style']}
+- Personal favorites: {profile['top_rated_movies']}
+- Streaming services: {profile['streaming_services']}
+- Already watched (exclude all of these): {profile['all_watched_tmdb_ids'][:200]}
+
+Generate 20 movies this user has NOT watched that they will love.
+Organize into exactly 4 rows of 5 movies each.
+Row labels must be personal and specific, not generic. Examples:
+- "Because you love Christopher Nolan"
+- "Your kind of 90s psychological thriller"
+- "Critically loved dramas you haven't seen"
+- "Hidden gems your taste profile predicts you'd rate 9+"
+
+Return ONLY valid JSON, no markdown:
+{{
+  "rows": [
+    {{
+      "label": "string",
+      "movies": [
+        {{ "tmdb_id": number, "title": "string", "year": number }}
+      ]
+    }}
+  ]
+}}"""
+
+    try:
+        response = gemini.generate_content(prompt)
+        data     = parse_gemini_json(response.text)
+    except Exception as e:
+        print(f"AI recs Gemini error for {uid}: {e}")
+        return None
+
+    # Validate TMDBs and format movies
+    rows_out = []
+    for row in data.get('rows', []):
+        label        = row.get('label', '')
+        movies_in    = row.get('movies', [])
+        movies_valid = []
+        for m in movies_in:
+            tmdb_id = m.get('tmdb_id')
+            if not tmdb_id:
+                continue
+            try:
+                details = get_movie_details(int(tmdb_id))
+                if not details or details.get('status_code') == 34 or details.get('error'):
+                    continue
+                movies_valid.append(format_movie(details))
+            except Exception:
+                continue
+        if movies_valid:
+            rows_out.append({'label': label, 'movies': movies_valid})
+
+    if not rows_out:
+        return None
+
+    # Store validated result in Firestore
+    now_utc = datetime.now(timezone.utc)
+    try:
+        db.collection('users').document(uid).update({
+            'aiRecommendations': {
+                'rows':                   rows_out,
+                'generatedAt':            now_utc,
+                'watchCountAtGeneration': current_watch_count,
+            }
+        })
+    except Exception as e:
+        print(f"AI recs Firestore write error for {uid}: {e}")
+
+    return rows_out
+
+
+@app.route('/api/discover/ai-recommendations', methods=['GET'])
+@require_auth
+@limiter.limit("10 per minute; 30 per hour")
+def ai_recommendations():
+    from firebase_admin import firestore as _fs
+    uid = g.verified_uid
+    db  = _fs.client()
+
+    # Read cached data from user doc
+    user_doc  = db.collection('users').document(uid).get()
+    user_data = user_doc.to_dict() if user_doc.exists else {}
+    cache     = user_data.get('aiRecommendations') or {}
+
+    generated_at      = cache.get('generatedAt')
+    watch_count_at_gen = cache.get('watchCountAtGeneration', 0)
+    cached_rows       = cache.get('rows', [])
+
+    current_watch_count = _get_watch_count(uid)
+
+    # Determine freshness
+    cache_fresh = False
+    if generated_at and cached_rows:
+        now_utc = datetime.now(timezone.utc)
+        try:
+            gen_dt   = generated_at.replace(tzinfo=timezone.utc) if generated_at.tzinfo is None else generated_at
+            age_days = (now_utc - gen_dt).days
+            new_watches = current_watch_count - watch_count_at_gen
+            cache_fresh = age_days < 5 and new_watches < 10
+        except Exception:
+            cache_fresh = False
+
+    if cache_fresh:
+        return jsonify({'rows': cached_rows})
+
+    if cached_rows:
+        # Return stale immediately; refresh in background
+        def regen():
+            try:
+                _generate_ai_recs(uid, current_watch_count)
+            except Exception as e:
+                print(f"Background AI recs regen error: {e}")
+        threading.Thread(target=regen, daemon=True).start()
+        return jsonify({'rows': cached_rows})
+
+    # No cache at all — generate synchronously
+    rows = _generate_ai_recs(uid, current_watch_count)
+    return jsonify({'rows': rows or []})
+
+
 @app.route('/api/roulette/<user_id>/friends-history', methods=['GET'])
 def friends_roulette_history_route(user_id):
     limit = request.args.get('limit', 1, type=int)
@@ -1194,13 +1637,16 @@ def get_chat(group_id):
     return jsonify({'messages': get_group_chat(group_id)})
 
 @app.route('/api/groups/<group_id>/chat', methods=['POST'])
+@require_auth
 def post_chat(group_id):
-    data = request.get_json()
+    data = request.get_json() or {}
     text = (data.get('text') or '').strip()
     if not text:
         return jsonify({'success': False, 'message': 'Empty message'}), 400
+    if len(text) > 2000:
+        return jsonify({'success': False, 'message': 'message must be 2000 characters or fewer'}), 400
     return jsonify(send_group_message(
-        group_id, data.get('sender_id'), data.get('sender_username', ''), text,
+        group_id, g.verified_uid, data.get('sender_username', ''), text,
     ))
 
 
@@ -1211,8 +1657,9 @@ def get_user_conversations(user_id):
     return jsonify({'conversations': get_conversations(user_id)})
 
 @app.route('/api/conversations/open', methods=['POST'])
+@require_auth
 def open_conversation():
-    data = request.get_json()
+    data = request.get_json() or {}
     result = get_or_create_conversation(
         data.get('uid1'), data.get('uid2'),
         data.get('username1', ''), data.get('username2', ''),
@@ -1224,23 +1671,29 @@ def get_conversation_messages(conversation_id):
     return jsonify({'messages': get_messages(conversation_id)})
 
 @app.route('/api/conversations/<conversation_id>/messages', methods=['POST'])
+@require_auth
 def post_message(conversation_id):
-    data = request.get_json()
+    data = request.get_json() or {}
     text = (data.get('text') or '').strip()
     if not text:
         return jsonify({'success': False, 'message': 'Empty message'}), 400
-    return jsonify(send_message(conversation_id, data.get('sender_id'), text))
+    if len(text) > 2000:
+        return jsonify({'success': False, 'message': 'message must be 2000 characters or fewer'}), 400
+    return jsonify(send_message(conversation_id, g.verified_uid, text))
 
 @app.route('/api/conversations/<conversation_id>/read', methods=['PUT'])
+@require_auth
 def read_conversation(conversation_id):
-    data = request.get_json()
-    return jsonify(mark_conversation_read(conversation_id, data.get('user_id')))
+    return jsonify(mark_conversation_read(conversation_id, g.verified_uid))
 
 
 # ── Account management ───────────────────────────────────────────
 
 @app.route('/api/user/<user_id>/email', methods=['PUT'])
+@require_auth
 def change_email(user_id):
+    err = _own_account(user_id)
+    if err: return err
     data = request.get_json() or {}
     new_email = (data.get('email') or '').strip()
     if not new_email:
@@ -1248,7 +1701,10 @@ def change_email(user_id):
     return jsonify(update_user_email(user_id, new_email))
 
 @app.route('/api/user/<user_id>/account', methods=['DELETE'])
+@require_auth
 def delete_account(user_id):
+    err = _own_account(user_id)
+    if err: return err
     return jsonify(delete_user_account(user_id))
 
 
@@ -1256,8 +1712,16 @@ def delete_account(user_id):
 # No auth, no DB, no TMDB — used by UptimeRobot to keep the server warm.
 
 @app.route('/api/health', methods=['GET'])
+@limiter.exempt
 def health():
     return jsonify({'status': 'ok', 'timestamp': datetime.now(timezone.utc).isoformat()}), 200
+
+
+# ── Rate limit error handler ──────────────────────────────────────
+
+@app.errorhandler(429)
+def ratelimit_handler(e):
+    return jsonify({'error': 'Too many requests. Please slow down.', 'retry_after': str(e.description)}), 429
 
 
 if __name__ == '__main__':

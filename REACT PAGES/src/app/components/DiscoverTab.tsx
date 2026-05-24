@@ -6,7 +6,26 @@ import {
   getFeed, getFriends, getMovieDetails, getShowDetails, getWatchedMovies, getUserPublicProfile,
   getTrendingShows, getPopularShows, getTopRatedShows, discoverShows,
   searchMovies, discoverMovies,
+  getAIRecommendations,
+  type AIRecommendationRow,
 } from '../services/api';
+
+// ── Gemini icon (shared inline SVG — unique gradient id per usage) ─
+const GeminiIcon = ({ size = 16 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+    <path
+      d="M8 0C8 4.418 4.418 8 0 8C4.418 8 8 11.582 8 16C8 11.582 11.582 8 16 8C11.582 8 8 4.418 8 0Z"
+      fill="url(#gg-disc)"
+    />
+    <defs>
+      <linearGradient id="gg-disc" x1="0" y1="0" x2="16" y2="16" gradientUnits="userSpaceOnUse">
+        <stop offset="0%"   stopColor="#4285F4" />
+        <stop offset="50%"  stopColor="#9B72CB" />
+        <stop offset="100%" stopColor="#F29900" />
+      </linearGradient>
+    </defs>
+  </svg>
+);
 import { getServiceCategoryMovies } from '../services/discoveryService';
 import type { Movie, WatchedMovie } from '../services/api';
 import { PROVIDER_LOGOS } from '../constants/providers';
@@ -904,6 +923,14 @@ export function DiscoverTab() {
   const [hoveredProvider,  setHoveredProvider]  = useState<string | null>(null);
   const [mediaType,        setMediaType]        = useState<'movie' | 'show'>('movie');
 
+  // AI recommendation rows (null = loading, [] = no data)
+  const [aiRows, setAiRows] = useState<AIRecommendationRow[] | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    getAIRecommendations().then(rows => setAiRows(rows)).catch(() => setAiRows([]));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Shows rows (loaded lazily on first switch to Shows mode) ───
   const showsLoadedRef = useRef(false);
   const [showsTrending,  setShowsTrending]  = useState<Movie[] | null>(null);
@@ -1340,6 +1367,41 @@ export function DiscoverTab() {
             <MovieRow title="Sci-Fi"                  movies={scifiMovies}    onMovieClick={openModal} />
             <MovieRow title="Critically Acclaimed"    movies={acclaimed}      onMovieClick={openModal} />
             <MovieRow title="Coming Soon"             movies={comingSoon}     onMovieClick={openModal} />
+
+            {/* ── AI Picks for You ── */}
+            {user && (aiRows === null || aiRows.length > 0) && (
+              <div className="mt-4">
+                {/* Section header */}
+                <div className="flex items-center gap-2 mb-6">
+                  <div className="h-px flex-1 bg-[#1e1e1e]" />
+                  <div className="flex items-center gap-1.5">
+                    <GeminiIcon size={13} />
+                    <span className="text-[11px] font-bold tracking-[0.18em] uppercase text-gray-500">
+                      Picked for you
+                    </span>
+                  </div>
+                  <div className="h-px flex-1 bg-[#1e1e1e]" />
+                </div>
+
+                {aiRows === null ? (
+                  /* Skeleton while loading */
+                  <>
+                    <SkeletonRow title="Personalizing your picks…" />
+                    <SkeletonRow title="Finding hidden gems…" />
+                  </>
+                ) : (
+                  /* Render each AI row — label acts as the row header */
+                  (aiRows as AIRecommendationRow[]).map((row, i) => (
+                    <MovieRow
+                      key={i}
+                      title={row.label}
+                      movies={row.movies}
+                      onMovieClick={openModal}
+                    />
+                  ))
+                )}
+              </div>
+            )}
           </>
         )}
       </div>
