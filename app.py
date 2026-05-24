@@ -1370,17 +1370,21 @@ def smart_spin():
             hours_until = max(0, int((next_midnight - now_utc).total_seconds() / 3600))
             return jsonify({'error': 'limit_reached', 'hoursUntilReset': hours_until}), 429
 
-    # 2. Taste profile
+    # 2. Consume the daily spin BEFORE calling Gemini so failed attempts still count.
+    #    This prevents users from retrying indefinitely and burning API quota.
+    db.collection('users').document(uid).update({'smartSpin': {'lastUsed': now_utc}})
+
+    # 3. Taste profile
     profile = get_user_taste_profile(uid)
 
-    # 3. Request body
+    # 4. Request body
     body        = request.get_json() or {}
     preferences = _html.escape(str(body.get('preferences') or '')[:300])
     mood        = str(body.get('mood')  or '')[:100]
     genre       = str(body.get('genre') or '')[:50]
 
-    watched_ids   = (profile or {}).get('all_watched_tmdb_ids', [])
-    recently_ids  = (profile or {}).get('recently_watched_tmdb_ids', [])
+    watched_ids  = (profile or {}).get('all_watched_tmdb_ids', [])
+    recently_ids = (profile or {}).get('recently_watched_tmdb_ids', [])
 
     if profile:
         profile_block = (
@@ -1397,7 +1401,7 @@ def smart_spin():
     else:
         profile_block = "USER TASTE PROFILE: No watch history available yet."
 
-    # 4. Gemini prompt
+    # 5. Gemini prompt — one call only, no retry
     prompt = f"""You are a world-class movie recommendation engine.
 
 {profile_block}
@@ -1412,6 +1416,7 @@ Rules:
 - If no preference, recommend based purely on their taste profile
 - Never recommend anything in their watched list: {watched_ids[:100]}
 - Prefer movies likely on their streaming services
+- IMPORTANT: Only use real, verified TMDB movie IDs. When in doubt, use a very well-known film.
 
 Return ONLY valid JSON, no markdown, no explanation:
 {{
@@ -1421,45 +1426,54 @@ Return ONLY valid JSON, no markdown, no explanation:
   "reason": "1-2 sentences using SPECIFIC stats, e.g. 'You give Denis Villeneuve a 9.4 average and haven't seen this one' or 'Your top decade is the 90s and you love psychological thrillers'"
 }}"""
 
-    # 5. Call Gemini + validate TMDB
     try:
         response = gemini.generate_content(prompt)
         result   = parse_gemini_json(response.text)
     except Exception as e:
-        return jsonify({'error': f'AI generation failed: {str(e)}'}), 500
+        err_str = str(e)
+        # Gemini quota/rate-limit surfaces as ResourceExhausted or 429 in the message
+        if '429' in err_str or 'quota' in err_str.lower() or 'exhausted' in err_str.lower():
+            return jsonify({'error': 'AI service is busy — please try again in a few minutes'}), 503
+        return jsonify({'error': 'AI generation failed'}), 500
 
+    # 6. Validate TMDB ID. If invalid, fall back to searching by title — no second Gemini call.
     tmdb_id   = result.get('tmdb_id')
-    tmdb_data = None
+    title_hint = result.get('title', '')
+    year_hint  = result.get('year')
+    reason     = result.get('reason', '')
+    tmdb_data  = None
+
     if tmdb_id:
         try:
             tmdb_data = get_movie_details(int(tmdb_id))
-            if tmdb_data and tmdb_data.get('error'):
+            # TMDB returns a dict with 'success': False for invalid IDs
+            if tmdb_data and not tmdb_data.get('title'):
                 tmdb_data = None
         except Exception:
             tmdb_data = None
 
-    # 6. Retry once if invalid
-    if not tmdb_data:
+    # Fallback: search TMDB by title (zero extra Gemini calls)
+    if not tmdb_data and title_hint:
         try:
-            retry_prompt = prompt + f"\n\nNote: tmdb_id {tmdb_id} was invalid. Suggest a different movie."
-            response2    = gemini.generate_content(retry_prompt)
-            result       = parse_gemini_json(response2.text)
-            tmdb_id      = result.get('tmdb_id')
-            if tmdb_id:
-                tmdb_data = get_movie_details(int(tmdb_id))
-                if tmdb_data and tmdb_data.get('error'):
+            search_results = search_movies(title_hint)
+            if search_results:
+                # Prefer exact year match, otherwise take first result
+                match = next(
+                    (m for m in search_results
+                     if year_hint and str(m.get('release_date', ''))[:4] == str(year_hint)),
+                    search_results[0],
+                )
+                tmdb_data = get_movie_details(match['id'])
+                if tmdb_data and not tmdb_data.get('title'):
                     tmdb_data = None
         except Exception:
             tmdb_data = None
 
     if not tmdb_data:
-        return jsonify({'error': 'Could not validate movie recommendation'}), 500
-
-    # 7. Update lastUsed
-    db.collection('users').document(uid).update({'smartSpin': {'lastUsed': now_utc}})
+        return jsonify({'error': 'Could not find that movie in our database. Your spin has been used for today.'}), 500
 
     movie = format_movie(tmdb_data)
-    return jsonify({'movie': movie, 'reason': result.get('reason', ''), 'geminiPowered': True})
+    return jsonify({'movie': movie, 'reason': reason, 'geminiPowered': True})
 
 
 # ── AI Discover Recommendations ───────────────────────────────────
