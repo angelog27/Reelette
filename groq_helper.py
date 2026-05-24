@@ -1,21 +1,7 @@
-import os
 import json
 from collections import defaultdict
 from firebase_admin import firestore
 from datetime import datetime, timezone
-
-try:
-    from config import GEMINI_API_KEY
-except ImportError:
-    GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-
-import google.generativeai as genai
-
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
-    gemini = genai.GenerativeModel("gemini-2.0-flash")
-else:
-    gemini = None
 
 _SERVICE_NAMES = {
     'netflix':     'Netflix',
@@ -42,7 +28,6 @@ def get_user_taste_profile(uid):
     if not movies:
         return None
 
-    # Streaming services from user document
     user_doc = db.collection('users').document(uid).get()
     streaming_raw = {}
     if user_doc.exists:
@@ -52,7 +37,6 @@ def get_user_taste_profile(uid):
         if v and k in _SERVICE_NAMES
     ]
 
-    # Genre stats
     genre_counts  = defaultdict(int)
     genre_ratings = defaultdict(list)
     for m in movies:
@@ -72,7 +56,6 @@ def get_user_taste_profile(uid):
         for g, c in sorted(genre_counts.items(), key=lambda x: x[1], reverse=True)[:5]
     ]
 
-    # Director stats
     director_counts  = defaultdict(int)
     director_ratings = defaultdict(list)
     for m in movies:
@@ -92,7 +75,6 @@ def get_user_taste_profile(uid):
         for d, c in sorted(director_counts.items(), key=lambda x: x[1], reverse=True)[:5]
     ]
 
-    # Actor stats
     actor_counts  = defaultdict(int)
     actor_ratings = defaultdict(list)
     for m in movies:
@@ -112,7 +94,6 @@ def get_user_taste_profile(uid):
         for a, c in sorted(actor_counts.items(), key=lambda x: x[1], reverse=True)[:5]
     ]
 
-    # Decade breakdown
     decade_counts = defaultdict(int)
     for m in movies:
         year = m.get('year')
@@ -123,7 +104,6 @@ def get_user_taste_profile(uid):
         for d, c in sorted(decade_counts.items())
     ]
 
-    # Average rating + style label
     ratings = [m['user_rating'] for m in movies if m.get('user_rating')]
     avg_rating = round(sum(ratings) / len(ratings), 1) if ratings else 0.0
     if avg_rating >= 8:
@@ -133,7 +113,6 @@ def get_user_taste_profile(uid):
     else:
         rating_style = f"critical rater (avg {avg_rating})"
 
-    # Top 10 by personal rating
     top_rated = sorted(
         [m for m in movies if m.get('user_rating') and m.get('title')],
         key=lambda x: x['user_rating'],
@@ -144,7 +123,6 @@ def get_user_taste_profile(uid):
         for m in top_rated
     ]
 
-    # Watched IDs (int)
     def _to_int(val):
         try:
             return int(val)
@@ -169,12 +147,11 @@ def get_user_taste_profile(uid):
     }
 
 
-def parse_gemini_json(text):
-    """Strip markdown fences from Gemini output and parse JSON."""
+def parse_llm_json(text):
+    """Strip markdown fences from LLM output and parse JSON."""
     text = text.strip()
     if text.startswith('```'):
         lines = text.split('\n')
-        # Drop first line (```json or ```) and last line if it's just ```
         start = 1
         end   = len(lines) - 1 if lines[-1].strip() == '```' else len(lines)
         text  = '\n'.join(lines[start:end])

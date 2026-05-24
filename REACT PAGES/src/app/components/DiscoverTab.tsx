@@ -4,24 +4,18 @@ import { MovieDetailModal } from './MovieDetailModal';
 import {
   watchMovieLater, removeFromWatchLater, getUser, getServices,
   getFeed, getFriends, getMovieDetails, getShowDetails, getWatchedMovies, getUserPublicProfile,
-  getTrendingShows, getPopularShows, getTopRatedShows, discoverShows,
-  searchMovies, discoverMovies,
-  getAIRecommendations,
+  searchMovies, discoverMovies, discoverShows,
   type AIRecommendationRow,
 } from '../services/api';
 
-// ── Gemini icon (shared inline SVG — unique gradient id per usage) ─
-const GeminiIcon = ({ size = 16 }: { size?: number }) => (
+// ── Groq icon (inline SVG — lightning bolt, orange/red gradient) ──
+const GroqIcon = ({ size = 16 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
-    <path
-      d="M8 0C8 4.418 4.418 8 0 8C4.418 8 8 11.582 8 16C8 11.582 11.582 8 16 8C11.582 8 8 4.418 8 0Z"
-      fill="url(#gg-disc)"
-    />
+    <path d="M9.5 1L3 9h5l-1.5 6L14 7H9L9.5 1Z" fill="url(#groq-g-d)" />
     <defs>
-      <linearGradient id="gg-disc" x1="0" y1="0" x2="16" y2="16" gradientUnits="userSpaceOnUse">
-        <stop offset="0%"   stopColor="#4285F4" />
-        <stop offset="50%"  stopColor="#9B72CB" />
-        <stop offset="100%" stopColor="#F29900" />
+      <linearGradient id="groq-g-d" x1="0" y1="0" x2="16" y2="16" gradientUnits="userSpaceOnUse">
+        <stop offset="0%"   stopColor="#FF6B35" />
+        <stop offset="100%" stopColor="#E63946" />
       </linearGradient>
     </defs>
   </svg>
@@ -914,6 +908,9 @@ export function DiscoverTab() {
     recommended, userWatched, recentSpins,
     watchlistIds, setWatchlistIds,
     providerCache, cacheProvider,
+    showsTrending, showsPopular, showsTopRated, showsDrama, showsComedy,
+    showsCrime, showsScifi, showsAnimation, triggerShowsFetch,
+    aiRows,
   } = useDiscover();
 
   const [selectedMovieId,  setSelectedMovieId]  = useState<string | null>(null);
@@ -923,37 +920,10 @@ export function DiscoverTab() {
   const [hoveredProvider,  setHoveredProvider]  = useState<string | null>(null);
   const [mediaType,        setMediaType]        = useState<'movie' | 'show'>('movie');
 
-  // AI recommendation rows (null = loading, [] = no data)
-  const [aiRows, setAiRows] = useState<AIRecommendationRow[] | null>(null);
-
+  // ── Shows rows — loaded lazily via context on first switch to Shows mode ─
   useEffect(() => {
-    if (!user) return;
-    getAIRecommendations().then(rows => setAiRows(rows)).catch(() => setAiRows([]));
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── Shows rows (loaded lazily on first switch to Shows mode) ───
-  const showsLoadedRef = useRef(false);
-  const [showsTrending,  setShowsTrending]  = useState<Movie[] | null>(null);
-  const [showsPopular,   setShowsPopular]   = useState<Movie[] | null>(null);
-  const [showsTopRated,  setShowsTopRated]  = useState<Movie[] | null>(null);
-  const [showsDrama,     setShowsDrama]     = useState<Movie[] | null>(null);
-  const [showsComedy,    setShowsComedy]    = useState<Movie[] | null>(null);
-  const [showsCrime,     setShowsCrime]     = useState<Movie[] | null>(null);
-  const [showsScifi,     setShowsScifi]     = useState<Movie[] | null>(null);
-  const [showsAnimation, setShowsAnimation] = useState<Movie[] | null>(null);
-
-  useEffect(() => {
-    if (mediaType !== 'show' || showsLoadedRef.current) return;
-    showsLoadedRef.current = true;
-    getTrendingShows().then(setShowsTrending).catch(() => setShowsTrending([]));
-    getPopularShows().then(setShowsPopular).catch(() => setShowsPopular([]));
-    getTopRatedShows().then(setShowsTopRated).catch(() => setShowsTopRated([]));
-    discoverShows({ genre_id: '18' }).then(setShowsDrama).catch(() => setShowsDrama([]));
-    discoverShows({ genre_id: '35' }).then(setShowsComedy).catch(() => setShowsComedy([]));
-    discoverShows({ genre_id: '80' }).then(setShowsCrime).catch(() => setShowsCrime([]));
-    discoverShows({ genre_id: '10765' }).then(setShowsScifi).catch(() => setShowsScifi([]));
-    discoverShows({ genre_id: '16' }).then(setShowsAnimation).catch(() => setShowsAnimation([]));
-  }, [mediaType]);
+    if (mediaType === 'show') triggerShowsFetch();
+  }, [mediaType, triggerShowsFetch]);
 
   const openModal = (id: string, type: 'movie' | 'show' = 'movie', title?: string) => {
     setSelectedMovieId(id);
@@ -1375,9 +1345,9 @@ export function DiscoverTab() {
                 <div className="flex items-center gap-2 mb-6">
                   <div className="h-px flex-1 bg-[#1e1e1e]" />
                   <div className="flex items-center gap-1.5">
-                    <GeminiIcon size={13} />
+                    <GroqIcon size={13} />
                     <span className="text-[11px] font-bold tracking-[0.18em] uppercase text-gray-500">
-                      Picked for you
+                      Picked for you  ⚡ Groq AI
                     </span>
                   </div>
                   <div className="h-px flex-1 bg-[#1e1e1e]" />

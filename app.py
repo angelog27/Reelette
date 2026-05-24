@@ -80,6 +80,62 @@ limiter = Limiter(
     storage_uri="memory://",
 )
 
+# ── Groq AI client ───────────────────────────────────────────────
+import random as _random
+from groq import Groq as _Groq
+from groq_helper import get_user_taste_profile, parse_llm_json
+
+_GROQ_API_KEY   = os.environ.get("GROQ_API_KEY", "")
+_groq_client    = _Groq(api_key=_GROQ_API_KEY) if _GROQ_API_KEY else None
+_GROQ_MODEL     = "llama-3.3-70b-versatile"
+_GROQ_DAY_LIMIT = 10000
+
+
+def call_groq(prompt: str, max_tokens: int = 500) -> str:
+    """Call Groq chat completions. Retries once after 10 s on rate-limit."""
+    if not _groq_client:
+        raise RuntimeError("Groq not configured")
+    for attempt in range(2):
+        try:
+            resp = _groq_client.chat.completions.create(
+                model=_GROQ_MODEL,
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=max_tokens,
+                temperature=0.7,
+            )
+            return resp.choices[0].message.content
+        except Exception as e:
+            err = str(e)
+            if attempt == 0 and ('429' in err or 'rate' in err.lower()):
+                time.sleep(10)
+                continue
+            raise
+
+
+def check_and_increment_groq_budget() -> bool:
+    """Returns True if under the daily call limit, False if exceeded. Fails open on error."""
+    try:
+        from firebase_admin import firestore as _fs
+        db   = _fs.client()
+        ref  = db.collection('system').document('groqBudget')
+        doc  = ref.get()
+        today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+        if doc.exists:
+            data = doc.to_dict()
+            if data.get('date') == today and data.get('calls', 0) >= _GROQ_DAY_LIMIT:
+                return False
+            if data.get('date') != today:
+                ref.set({'date': today, 'calls': 1})
+            else:
+                from firebase_admin.firestore import SERVER_TIMESTAMP
+                ref.update({'calls': _fs.Increment(1)})
+        else:
+            ref.set({'date': today, 'calls': 1})
+    except Exception as e:
+        print(f"groqBudget Firestore error (failing open): {e}")
+    return True
+
+
 # ── Auth middleware ───────────────────────────────────────────────
 
 def require_auth(f):
@@ -1314,7 +1370,7 @@ def roulette_history_route(user_id):
     _cache_set(cache_key, serialized, 30)  # 30 s — busted on new spin
     return jsonify({'spins': serialized})
 
-# ── Smart Spin (Gemini-powered roulette) ─────────────────────────
+# ── Smart Spin (Groq-powered roulette) ───────────────────────────
 
 @app.route('/api/roulette/smart-spin/status', methods=['GET'])
 @require_auth
@@ -1347,11 +1403,10 @@ def smart_spin_status():
 @limiter.limit("5 per hour")
 def smart_spin():
     from firebase_admin import firestore as _fs
-    from gemini_helper import get_user_taste_profile, gemini, parse_gemini_json
     uid = g.verified_uid
     db  = _fs.client()
 
-    if not gemini:
+    if not _groq_client:
         return jsonify({'error': 'AI service not configured'}), 503
 
     # 1. Daily limit check
@@ -1370,14 +1425,18 @@ def smart_spin():
             hours_until = max(0, int((next_midnight - now_utc).total_seconds() / 3600))
             return jsonify({'error': 'limit_reached', 'hoursUntilReset': hours_until}), 429
 
-    # 2. Consume the daily spin BEFORE calling Gemini so failed attempts still count.
+    # 2. Global daily budget check
+    if not check_and_increment_groq_budget():
+        return jsonify({'error': 'AI service is at capacity for today — please try again tomorrow'}), 503
+
+    # 3. Consume the daily spin BEFORE calling Groq so failed attempts still count.
     #    This prevents users from retrying indefinitely and burning API quota.
     db.collection('users').document(uid).update({'smartSpin': {'lastUsed': now_utc}})
 
-    # 3. Taste profile
+    # 4. Taste profile
     profile = get_user_taste_profile(uid)
 
-    # 4. Request body
+    # 5. Request body
     body        = request.get_json() or {}
     preferences = _html.escape(str(body.get('preferences') or '')[:300])
     mood        = str(body.get('mood')  or '')[:100]
@@ -1401,7 +1460,7 @@ def smart_spin():
     else:
         profile_block = "USER TASTE PROFILE: No watch history available yet."
 
-    # 5. Gemini prompt — one call only, no retry
+    # 6. Groq prompt — one call only, TMDB fallback on bad ID
     prompt = f"""You are a world-class movie recommendation engine.
 
 {profile_block}
@@ -1427,16 +1486,15 @@ Return ONLY valid JSON, no markdown, no explanation:
 }}"""
 
     try:
-        response = gemini.generate_content(prompt)
-        result   = parse_gemini_json(response.text)
+        text   = call_groq(prompt, max_tokens=500)
+        result = parse_llm_json(text)
     except Exception as e:
         err_str = str(e)
-        # Gemini quota/rate-limit surfaces as ResourceExhausted or 429 in the message
-        if '429' in err_str or 'quota' in err_str.lower() or 'exhausted' in err_str.lower():
+        if '429' in err_str or 'rate' in err_str.lower() or 'quota' in err_str.lower():
             return jsonify({'error': 'AI service is busy — please try again in a few minutes'}), 503
         return jsonify({'error': 'AI generation failed'}), 500
 
-    # 6. Validate TMDB ID. If invalid, fall back to searching by title — no second Gemini call.
+    # 7. Validate TMDB ID. If invalid, fall back to searching by title — no second Groq call.
     tmdb_id   = result.get('tmdb_id')
     title_hint = result.get('title', '')
     year_hint  = result.get('year')
@@ -1452,7 +1510,7 @@ Return ONLY valid JSON, no markdown, no explanation:
         except Exception:
             tmdb_data = None
 
-    # Fallback: search TMDB by title (zero extra Gemini calls)
+    # Fallback: search TMDB by title (zero extra Groq calls)
     if not tmdb_data and title_hint:
         try:
             search_results = search_movies(title_hint)
@@ -1473,7 +1531,7 @@ Return ONLY valid JSON, no markdown, no explanation:
         return jsonify({'error': 'Could not find that movie in our database. Your spin has been used for today.'}), 500
 
     movie = format_movie(tmdb_data)
-    return jsonify({'movie': movie, 'reason': reason, 'geminiPowered': True})
+    return jsonify({'movie': movie, 'reason': reason, 'groqPowered': True})
 
 
 # ── AI Discover Recommendations ───────────────────────────────────
@@ -1492,11 +1550,13 @@ def _get_watch_count(uid):
 
 
 def _generate_ai_recs(uid, current_watch_count):
-    """Calls Gemini, validates TMDBs, stores + returns formatted rows."""
+    """Calls Groq, validates TMDBs, stores + returns formatted rows."""
     from firebase_admin import firestore as _fs
-    from gemini_helper import get_user_taste_profile, gemini, parse_gemini_json
 
-    if not gemini:
+    if not _groq_client:
+        return None
+
+    if not check_and_increment_groq_budget():
         return None
 
     db      = _fs.client()
@@ -1537,10 +1597,10 @@ Return ONLY valid JSON, no markdown:
 }}"""
 
     try:
-        response = gemini.generate_content(prompt)
-        data     = parse_gemini_json(response.text)
+        text = call_groq(prompt, max_tokens=1500)
+        data = parse_llm_json(text)
     except Exception as e:
-        print(f"AI recs Gemini error for {uid}: {e}")
+        print(f"AI recs Groq error for {uid}: {e}")
         return None
 
     # Validate TMDBs and format movies
@@ -1566,14 +1626,18 @@ Return ONLY valid JSON, no markdown:
     if not rows_out:
         return None
 
-    # Store validated result in Firestore
-    now_utc = datetime.now(timezone.utc)
+    # Store validated result in Firestore with randomized TTL (5–9 days)
+    now_utc   = datetime.now(timezone.utc)
+    ttl_days  = _random.randint(5, 9)
+    expires_at = now_utc + timedelta(days=ttl_days)
     try:
         db.collection('users').document(uid).update({
             'aiRecommendations': {
                 'rows':                   rows_out,
                 'generatedAt':            now_utc,
+                'expiresAt':              expires_at,
                 'watchCountAtGeneration': current_watch_count,
+                'locked':                 False,
             }
         })
     except Exception as e:
@@ -1602,14 +1666,23 @@ def ai_recommendations():
     current_watch_count = _get_watch_count(uid)
 
     # Determine freshness
+    locked      = cache.get('locked', False)
+    expires_at  = cache.get('expiresAt')
     cache_fresh = False
-    if generated_at and cached_rows:
+    if cached_rows:
         now_utc = datetime.now(timezone.utc)
         try:
-            gen_dt   = generated_at.replace(tzinfo=timezone.utc) if generated_at.tzinfo is None else generated_at
-            age_days = (now_utc - gen_dt).days
-            new_watches = current_watch_count - watch_count_at_gen
-            cache_fresh = age_days < 5 and new_watches < 10
+            if locked:
+                cache_fresh = True
+            elif expires_at:
+                exp_dt      = expires_at.replace(tzinfo=timezone.utc) if expires_at.tzinfo is None else expires_at
+                new_watches = current_watch_count - watch_count_at_gen
+                cache_fresh = now_utc < exp_dt and new_watches < 10
+            elif generated_at:
+                gen_dt      = generated_at.replace(tzinfo=timezone.utc) if generated_at.tzinfo is None else generated_at
+                age_days    = (now_utc - gen_dt).days
+                new_watches = current_watch_count - watch_count_at_gen
+                cache_fresh = age_days < 7 and new_watches < 10
         except Exception:
             cache_fresh = False
 

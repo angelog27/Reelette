@@ -3,8 +3,10 @@ import {
   getTrendingMovies, getTopRatedMovies, getNowPlayingMovies, getUpcomingMovies,
   discoverMovies, getMovieRecommendations, getWatchedMovies, getRouletteHistory,
   getWatchLater, getUser,
+  getTrendingShows, getPopularShows, getTopRatedShows, discoverShows,
+  getAIRecommendations,
 } from '../services/api';
-import type { Movie, WatchedMovie, RouletteSpin } from '../services/api';
+import type { Movie, WatchedMovie, RouletteSpin, AIRecommendationRow } from '../services/api';
 
 const ROW_LIMIT = 14;
 // Cache the most-recently-watched movie ID so recommendations can be kicked off
@@ -48,6 +50,18 @@ interface DiscoverContextValue {
   // Provider rows — keyed by provider id (e.g. 'Netflix'), persists across tab switches
   providerCache:    Record<string, ProviderRows>;
   cacheProvider:    (id: string, rows: ProviderRows) => void;
+  // Shows rows — null = not yet loaded, loaded lazily on first switch to Shows mode
+  showsTrending:    Movie[] | null;
+  showsPopular:     Movie[] | null;
+  showsTopRated:    Movie[] | null;
+  showsDrama:       Movie[] | null;
+  showsComedy:      Movie[] | null;
+  showsCrime:       Movie[] | null;
+  showsScifi:       Movie[] | null;
+  showsAnimation:   Movie[] | null;
+  triggerShowsFetch: () => void;
+  // AI recommendation rows — null = loading, [] = no data or logged out
+  aiRows: AIRecommendationRow[] | null;
 }
 
 const DiscoverCtx = createContext<DiscoverContextValue | null>(null);
@@ -79,6 +93,37 @@ export function DiscoverProvider({ children }: { children: React.ReactNode }) {
   const cacheProvider = useCallback((id: string, rows: ProviderRows) => {
     setProviderCache(prev => ({ ...prev, [id]: rows }));
   }, []);
+
+  // Shows rows — fetched once on first request, persisted in-memory for the session
+  const [showsTrending,  setShowsTrending]  = useState<Movie[] | null>(null);
+  const [showsPopular,   setShowsPopular]   = useState<Movie[] | null>(null);
+  const [showsTopRated,  setShowsTopRated]  = useState<Movie[] | null>(null);
+  const [showsDrama,     setShowsDrama]     = useState<Movie[] | null>(null);
+  const [showsComedy,    setShowsComedy]    = useState<Movie[] | null>(null);
+  const [showsCrime,     setShowsCrime]     = useState<Movie[] | null>(null);
+  const [showsScifi,     setShowsScifi]     = useState<Movie[] | null>(null);
+  const [showsAnimation, setShowsAnimation] = useState<Movie[] | null>(null);
+  const showsFetchedRef  = useRef(false);
+
+  const triggerShowsFetch = useCallback(() => {
+    if (showsFetchedRef.current) return;
+    showsFetchedRef.current = true;
+    getTrendingShows().then(setShowsTrending).catch(() => setShowsTrending([]));
+    getPopularShows().then(setShowsPopular).catch(() => setShowsPopular([]));
+    getTopRatedShows().then(setShowsTopRated).catch(() => setShowsTopRated([]));
+    discoverShows({ genre_id: '18' }).then(setShowsDrama).catch(() => setShowsDrama([]));
+    discoverShows({ genre_id: '35' }).then(setShowsComedy).catch(() => setShowsComedy([]));
+    discoverShows({ genre_id: '80' }).then(setShowsCrime).catch(() => setShowsCrime([]));
+    discoverShows({ genre_id: '10765' }).then(setShowsScifi).catch(() => setShowsScifi([]));
+    discoverShows({ genre_id: '16' }).then(setShowsAnimation).catch(() => setShowsAnimation([]));
+  }, []);
+
+  // AI recommendation rows
+  const [aiRows, setAiRows] = useState<AIRecommendationRow[] | null>(null);
+  useEffect(() => {
+    if (!user) { setAiRows([]); return; }
+    getAIRecommendations().then(rows => setAiRows(rows)).catch(() => setAiRows([]));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Guard: only fetch once per provider lifetime, even in React 18 StrictMode double-invoke
   const fetchedRef = useRef(false);
@@ -178,6 +223,9 @@ export function DiscoverProvider({ children }: { children: React.ReactNode }) {
       actionMovies, comedyMovies, horrorMovies, scifiMovies, acclaimed, comingSoon,
       recommended, userWatched, recentSpins, watchlistIds, setWatchlistIds,
       providerCache, cacheProvider,
+      showsTrending, showsPopular, showsTopRated, showsDrama, showsComedy,
+      showsCrime, showsScifi, showsAnimation, triggerShowsFetch,
+      aiRows,
     }}>
       {children}
     </DiscoverCtx.Provider>

@@ -310,7 +310,7 @@ export function getPopularMovies(page = 1): Promise<Movie[]> {
 
 
 export function getTrendingMovies(window = 'week'): Promise<Movie[]> {
-  return fromCache(`trending:${window}`, TTL.CATALOG, async () => {
+  return fromCachePersisted(`trending:${window}`, TTL.CATALOG, 2 * 60 * 60 * 1000, async () => {
     try {
       const res = await fetch(`${BASE_URL}/movies/trending?window=${window}`);
       if (!res.ok) return [];
@@ -322,7 +322,7 @@ export function getTrendingMovies(window = 'week'): Promise<Movie[]> {
 
 
 export function getTopRatedMovies(page = 1): Promise<Movie[]> {
-  return fromCache(`toprated:${page}`, TTL.CATALOG, async () => {
+  return fromCachePersisted(`toprated:${page}`, TTL.CATALOG, 2 * 60 * 60 * 1000, async () => {
     try {
       const res = await fetch(`${BASE_URL}/movies/top_rated?page=${page}`);
       if (!res.ok) return [];
@@ -334,7 +334,7 @@ export function getTopRatedMovies(page = 1): Promise<Movie[]> {
 
 
 export function getUpcomingMovies(page = 1): Promise<Movie[]> {
-  return fromCache(`upcoming:${page}`, TTL.CATALOG, async () => {
+  return fromCachePersisted(`upcoming:${page}`, TTL.CATALOG, 2 * 60 * 60 * 1000, async () => {
     try {
       const res = await fetch(`${BASE_URL}/movies/upcoming?page=${page}`);
       if (!res.ok) return [];
@@ -346,7 +346,7 @@ export function getUpcomingMovies(page = 1): Promise<Movie[]> {
 
 
 export function getNowPlayingMovies(page = 1): Promise<Movie[]> {
-  return fromCache(`nowplaying:${page}`, TTL.CATALOG, async () => {
+  return fromCachePersisted(`nowplaying:${page}`, TTL.CATALOG, 2 * 60 * 60 * 1000, async () => {
     try {
       const res = await fetch(`${BASE_URL}/movies/now_playing?page=${page}`);
       if (!res.ok) return [];
@@ -399,7 +399,7 @@ export function discoverMovies(filters: {
   vote_count_gte?: number;
 }): Promise<Movie[]> {
   const key = `discover:${JSON.stringify(Object.fromEntries(Object.entries(filters).sort()))}`;
-  return fromCache(key, TTL.CATALOG, async () => {
+  return fromCachePersisted(key, TTL.CATALOG, 2 * 60 * 60 * 1000, async () => {
     try {
       const res = await fetch(`${BASE_URL}/movies/discover`, {
         method: 'POST',
@@ -459,7 +459,7 @@ export function getShowDetails(show_id: string): Promise<Record<string, unknown>
 }
 
 export function getTrendingShows(): Promise<Movie[]> {
-  return fromCache('tv_trending:week', TTL.CATALOG, async () => {
+  return fromCachePersisted('tv_trending:week', TTL.CATALOG, 2 * 60 * 60 * 1000, async () => {
     try {
       const res = await fetch(`${BASE_URL}/shows/trending`);
       if (!res.ok) return [];
@@ -470,7 +470,7 @@ export function getTrendingShows(): Promise<Movie[]> {
 }
 
 export function getPopularShows(): Promise<Movie[]> {
-  return fromCache('tv_popular:1', TTL.CATALOG, async () => {
+  return fromCachePersisted('tv_popular:1', TTL.CATALOG, 2 * 60 * 60 * 1000, async () => {
     try {
       const res = await fetch(`${BASE_URL}/shows/popular`);
       if (!res.ok) return [];
@@ -481,7 +481,7 @@ export function getPopularShows(): Promise<Movie[]> {
 }
 
 export function getTopRatedShows(): Promise<Movie[]> {
-  return fromCache('tv_top_rated:1', TTL.CATALOG, async () => {
+  return fromCachePersisted('tv_top_rated:1', TTL.CATALOG, 2 * 60 * 60 * 1000, async () => {
     try {
       const res = await fetch(`${BASE_URL}/shows/top_rated`);
       if (!res.ok) return [];
@@ -512,7 +512,7 @@ export function discoverShows(filters: {
   page?: number;
 }): Promise<Movie[]> {
   const key = `tv_discover:${JSON.stringify(Object.fromEntries(Object.entries(filters).sort()))}`;
-  return fromCache(key, TTL.CATALOG, async () => {
+  return fromCachePersisted(key, TTL.CATALOG, 2 * 60 * 60 * 1000, async () => {
     try {
       const res = await fetch(`${BASE_URL}/shows/discover`, {
         method: 'POST',
@@ -1400,7 +1400,7 @@ export async function doSmartSpin(
   preferences: string,
   mood: string,
   genre: string,
-): Promise<{ movie: Movie; reason: string; geminiPowered: boolean }> {
+): Promise<{ movie: Movie; reason: string; groqPowered: boolean }> {
   const token = await getIdToken();
   if (!token) throw new Error('Not authenticated');
   const res = await fetch(`${BASE_URL}/roulette/smart-spin`, {
@@ -1425,7 +1425,8 @@ export interface AIRecommendationRow {
 }
 
 export async function getAIRecommendations(): Promise<AIRecommendationRow[]> {
-  try {
+  const uid = getUser()?.user_id ?? 'anon';
+  return fromCachePersisted(`ai_recs:${uid}`, 10 * 60 * 1000, 30 * 60 * 1000, async () => {
     const token = await getIdToken();
     if (!token) return [];
     const res = await fetch(`${BASE_URL}/discover/ai-recommendations`, {
@@ -1434,9 +1435,7 @@ export async function getAIRecommendations(): Promise<AIRecommendationRow[]> {
     if (!res.ok) return [];
     const data = await res.json();
     return data.rows ?? [];
-  } catch {
-    return [];
-  }
+  });
 }
 
 

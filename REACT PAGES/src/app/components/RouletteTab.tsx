@@ -24,18 +24,14 @@ import {
   type RouletteSpin,
 } from "../services/api";
 
-// ── Gemini icon (inline SVG, no npm package needed) ──────────────
-const GeminiIcon = ({ size = 16 }: { size?: number }) => (
+// ── Groq icon (inline SVG — lightning bolt, orange/red gradient) ──
+const GroqIcon = ({ size = 16 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
-    <path
-      d="M8 0C8 4.418 4.418 8 0 8C4.418 8 8 11.582 8 16C8 11.582 11.582 8 16 8C11.582 8 8 4.418 8 0Z"
-      fill="url(#gg)"
-    />
+    <path d="M9.5 1L3 9h5l-1.5 6L14 7H9L9.5 1Z" fill="url(#groq-g)" />
     <defs>
-      <linearGradient id="gg" x1="0" y1="0" x2="16" y2="16" gradientUnits="userSpaceOnUse">
-        <stop offset="0%"   stopColor="#4285F4" />
-        <stop offset="50%"  stopColor="#9B72CB" />
-        <stop offset="100%" stopColor="#F29900" />
+      <linearGradient id="groq-g" x1="0" y1="0" x2="16" y2="16" gradientUnits="userSpaceOnUse">
+        <stop offset="0%"   stopColor="#FF6B35" />
+        <stop offset="100%" stopColor="#E63946" />
       </linearGradient>
     </defs>
   </svg>
@@ -181,6 +177,7 @@ export function RouletteTab() {
   const [smartPreferences,      setSmartPreferences]      = useState("");
   const [smartResult,           setSmartResult]           = useState<{ movie: Movie; reason: string } | null>(null);
   const [smartError,            setSmartError]            = useState("");
+  const [smartSpinResting,      setSmartSpinResting]      = useState(false);
 
   const [error, setError]                      = useState("");
   const [activeMood, setActiveMood]            = useState("");
@@ -223,6 +220,10 @@ export function RouletteTab() {
         setSmartSpinAvailable(false);
         setHoursUntilReset(e.data?.hoursUntilReset ?? 24);
         setSmartError("Smart Spin resets tomorrow!");
+      } else if (e.status === 503) {
+        setSmartError("Smart Spin is resting — try again soon.");
+        setSmartSpinResting(true);
+        setTimeout(() => { setSmartSpinResting(false); setSmartError(""); }, 60000);
       } else {
         setSmartError("Something went wrong. Please try again.");
       }
@@ -597,17 +598,19 @@ export function RouletteTab() {
               <div className="mt-2">
                 <button
                   onClick={handleSmartSpin}
-                  disabled={!smartSpinAvailable || smartSpinLoading}
+                  disabled={!smartSpinAvailable || smartSpinLoading || smartSpinResting}
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-full border text-sm font-semibold transition-all active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50"
                   style={
-                    smartSpinAvailable && !smartSpinLoading
+                    smartSpinAvailable && !smartSpinLoading && !smartSpinResting
                       ? { borderColor: '#7C5DBD', color: '#c4b5fd', background: 'rgba(124,93,189,0.08)' }
                       : { borderColor: '#2a2a2a', color: '#4b5563', background: 'transparent' }
                   }
                 >
-                  <GeminiIcon size={14} />
+                  <GroqIcon size={14} />
                   {smartSpinLoading
                     ? "Finding your perfect movie…"
+                    : smartSpinResting
+                    ? "Smart Spin is resting…"
                     : !smartSpinAvailable
                     ? `Next Smart Spin in ${hoursUntilReset}h`
                     : "Smart Spin"}
@@ -656,10 +659,10 @@ export function RouletteTab() {
                       </p>
                     </div>
                   </div>
-                  {/* Gemini badge */}
+                  {/* Groq badge */}
                   <div className="flex items-center justify-end gap-1 px-4 pb-3">
-                    <GeminiIcon size={11} />
-                    <span className="text-[10px] text-gray-600">Powered by Gemini</span>
+                    <GroqIcon size={11} />
+                    <span className="text-[10px] text-gray-600">⚡ Powered by Groq</span>
                   </div>
                 </div>
               )}
