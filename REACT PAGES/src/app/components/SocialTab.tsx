@@ -859,132 +859,66 @@ function ActivityCard({ post, currentUserId, currentUsername, isAdmin, onLike, o
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <article className="rounded-2xl bg-white/[0.03] border border-white/[0.06] shadow-lg shadow-black/40 overflow-hidden">
-      <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,58%)_minmax(0,42%)]">
+    <article className="rounded-2xl bg-white/[0.035] border border-white/[0.06] p-4 shadow-lg shadow-black/30">
+      <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,60%)_minmax(300px,40%)] gap-5 items-start">
 
-        {/* ── LEFT: Post content ─────────────────────────────── */}
-        <div className="flex flex-col p-5 gap-3">
-
-          {/* Header: avatar + user info + delete */}
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <UserAvatar username={post.username} avatarUrl={post.avatarUrl} size={30} onClick={() => onOpenProfile(post.user_id)} />
-              <div className="flex flex-col leading-none gap-0.5 min-w-0">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <button onClick={() => onOpenProfile(post.user_id)}
-                    className="text-white text-sm font-semibold hover:text-[#9B7BD7] transition-colors leading-none shrink-0">
-                    {(post as { displayName?: string }).displayName || post.username}
-                  </button>
-                  {post.user_id === ADMIN_UID && <AdminBadge />}
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-zinc-600 text-[11px]">@{post.username}</span>
-                  <span className="text-zinc-700 text-[11px]">· {timeAgo(post.created_at)}</span>
-                </div>
-              </div>
+        {/* ── LEFT: Review block ──────────────────────────────── */}
+        {post.movie_title ? (
+          <div className="flex gap-4 items-start">
+            {/* Poster */}
+            <div className="shrink-0 cursor-pointer" onClick={() => setOpenMovieId(post.movie_id)}>
+              {post.movie_poster
+                ? <img src={post.movie_poster} alt={post.movie_title}
+                    className="w-[160px] h-[240px] object-cover rounded-xl shadow-2xl ring-1 ring-white/[0.07] hover:opacity-90 transition-opacity" />
+                : <div className="w-[160px] h-[240px] bg-white/[0.04] rounded-xl flex items-center justify-center">
+                    <Film className="w-8 h-8 text-zinc-700" />
+                  </div>
+              }
             </div>
-            {(post.user_id === currentUserId || isAdmin) && (
-              <button onClick={() => onDelete(post.post_id)}
-                className="shrink-0 text-zinc-700 hover:text-red-500 transition-colors p-1"
-                title={isAdmin && post.user_id !== currentUserId ? 'Delete (admin)' : 'Delete'}>
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
 
-          {/* Movie card: poster left, review right */}
-          {post.movie_title ? (
-            <div className="flex gap-4 items-start">
-              {/* Poster — clickable to movie modal */}
-              <div className="shrink-0 cursor-pointer" onClick={() => setOpenMovieId(post.movie_id)}>
-                {post.movie_poster
-                  ? <img src={post.movie_poster} alt={post.movie_title}
-                      className="w-[150px] h-[225px] object-cover rounded-xl shadow-2xl ring-1 ring-white/[0.07] hover:opacity-90 transition-opacity" />
-                  : <div className="w-[150px] h-[225px] bg-white/[0.04] rounded-xl flex items-center justify-center">
-                      <Film className="w-8 h-8 text-zinc-700" />
+            {/* Right of poster: tightly packed top-to-bottom */}
+            <div className="flex-1 min-w-0 flex flex-col gap-2.5">
+
+              {/* 1. User avatar + name + time + delete */}
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <UserAvatar username={post.username} avatarUrl={post.avatarUrl} size={26} onClick={() => onOpenProfile(post.user_id)} />
+                  <div className="flex flex-col gap-0.5 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <button onClick={() => onOpenProfile(post.user_id)}
+                        className="text-white text-sm font-semibold hover:text-[#9B7BD7] transition-colors leading-none">
+                        {(post as { displayName?: string }).displayName || post.username}
+                      </button>
+                      {post.user_id === ADMIN_UID && <AdminBadge />}
                     </div>
-                }
+                    <span className="text-zinc-600 text-[11px]">@{post.username} · {timeAgo(post.created_at)}</span>
+                  </div>
+                </div>
+                {(post.user_id === currentUserId || isAdmin) && (
+                  <button onClick={() => onDelete(post.post_id)}
+                    className="shrink-0 text-zinc-700 hover:text-red-500 transition-colors p-1"
+                    title={isAdmin && post.user_id !== currentUserId ? 'Delete (admin)' : 'Delete'}>
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
 
-              {/* Right: title → review (dominant) → rating → actions */}
-              <div className="flex-1 min-w-0 flex flex-col gap-2 pt-0.5 h-[225px]">
-                {/* Movie title — clickable */}
+              {/* 2. Movie title + year · runtime */}
+              <div>
                 <button onClick={() => setOpenMovieId(post.movie_id)}
-                  className="text-left text-zinc-400 text-xs font-semibold hover:text-[#9B7BD7] transition-colors line-clamp-1 shrink-0">
+                  className="text-left text-white text-[15px] font-bold leading-snug hover:text-[#9B7BD7] transition-colors line-clamp-2 w-full">
                   {post.movie_title}
                 </button>
-
-                {/* Review text — main content */}
-                {post.message && (
-                  <p className="text-zinc-100 text-sm leading-relaxed flex-1 overflow-hidden" style={{ display: '-webkit-box', WebkitLineClamp: 7, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                    {renderMessage(post.message, onOpenProfile)}
+                {(movieMeta?.year || (movieMeta?.runtime ?? 0) > 0) && (
+                  <p className="text-zinc-500 text-xs mt-0.5">
+                    {movieMeta?.year}{(movieMeta?.runtime ?? 0) > 0 ? ` · ${movieMeta!.runtime}m` : ''}
                   </p>
                 )}
-
-                {/* Spacer when no message */}
-                {!post.message && <div className="flex-1" />}
-
-                {/* User's rating */}
-                {post.rating > 0 && (
-                  <div className="shrink-0 flex items-center gap-2">
-                    <div className="flex items-center gap-0.5">
-                      {[...Array(5)].map((_, i) => {
-                        const filled = (post.rating / 2) >= (i + 1);
-                        const half   = !filled && (post.rating / 2) > i;
-                        return <Star key={i} className={`w-3 h-3 ${filled || half ? 'fill-yellow-400 text-yellow-400' : 'text-zinc-800'}`} />;
-                      })}
-                    </div>
-                    <span className="text-zinc-500 text-[11px]">
-                      <span className="text-zinc-400 font-medium">{post.username}</span>'s rating:
-                      <span className="text-yellow-400 font-bold tabular-nums ml-1">{post.rating}/10</span>
-                    </span>
-                  </div>
-                )}
-
-                {/* Action row */}
-                <div className="shrink-0 flex items-center gap-0.5 -ml-1.5">
-                  <button onClick={handleLikeClick}
-                    style={{ transition: 'transform 0.25s cubic-bezier(0.34,1.56,0.64,1)', transform: likeAnim ? 'scale(1.4)' : 'scale(1)' }}
-                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-[#7C5DBD]/[0.08] hover:text-[#9B7BD7] ${isLiked ? 'text-[#7C5DBD]' : 'text-zinc-600'}`}>
-                    <Heart className={`w-[13px] h-[13px] ${isLiked ? 'fill-[#7C5DBD]' : ''}`} />
-                    {post.likes > 0 && <span className="tabular-nums">{post.likes}</span>}
-                  </button>
-                  <div className="relative" ref={emojiRef}>
-                    <button onClick={() => setShowEmojiPicker(s => !s)}
-                      className="flex items-center px-2 py-1.5 rounded-lg text-xs text-zinc-600 hover:text-zinc-300 hover:bg-white/[0.04] transition-colors">
-                      <span className="text-sm leading-none">😊</span>
-                    </button>
-                    {showEmojiPicker && (
-                      <div className="absolute bottom-full left-0 mb-1 flex items-center gap-1 bg-[#1a1a1e] border border-white/[0.08] rounded-xl px-2 py-1.5 shadow-xl z-20">
-                        {REACTION_EMOJIS.map(e => (
-                          <button key={e} onClick={() => handleReact(e)}
-                            className={`text-base hover:scale-125 transition-transform px-0.5 rounded ${reactions[e]?.includes(currentUserId) ? 'opacity-100' : 'opacity-70 hover:opacity-100'}`}>
-                            {e}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  {Object.entries(reactions).filter(([, users]) => users.length > 0).map(([emoji, users]) => (
-                    <button key={emoji} onClick={() => handleReact(emoji)}
-                      className={`flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs transition-all ${users.includes(currentUserId) ? 'bg-[#7C5DBD]/15 text-[#9B7BD7]' : 'bg-white/[0.04] text-zinc-400 hover:bg-white/[0.07]'}`}>
-                      <span className="text-sm leading-none">{emoji}</span>
-                      <span className="tabular-nums">{users.length}</span>
-                    </button>
-                  ))}
-                </div>
               </div>
-            </div>
-          ) : (
-            /* Text-only post (no movie) */
-            <>
-              {post.message && (
-                <p className="text-zinc-100 text-sm leading-relaxed flex-1">
-                  {renderMessage(post.message, onOpenProfile)}
-                </p>
-              )}
+
+              {/* 3. User's star rating */}
               {post.rating > 0 && (
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2">
                   <div className="flex items-center gap-0.5">
                     {[...Array(5)].map((_, i) => {
                       const filled = (post.rating / 2) >= (i + 1);
@@ -992,13 +926,38 @@ function ActivityCard({ post, currentUserId, currentUsername, isAdmin, onLike, o
                       return <Star key={i} className={`w-3 h-3 ${filled || half ? 'fill-yellow-400 text-yellow-400' : 'text-zinc-800'}`} />;
                     })}
                   </div>
-                  <span className="text-zinc-500 text-[11px]">
-                    <span className="text-zinc-400 font-medium">{post.username}</span>'s rating:
+                  <span className="text-[11px] text-zinc-500">
+                    <span className="text-zinc-300 font-medium">{post.username}</span>'s rating:
                     <span className="text-yellow-400 font-bold tabular-nums ml-1">{post.rating}/10</span>
                   </span>
                 </div>
               )}
-              <div className="flex items-center gap-0.5 -ml-1.5 mt-auto pt-1">
+
+              {/* 4. Review text — dominant */}
+              {post.message && (
+                <p className="text-zinc-200 text-sm leading-relaxed line-clamp-5">
+                  {renderMessage(post.message, onOpenProfile)}
+                </p>
+              )}
+
+              {/* 5. Genres + TMDB fan rating */}
+              {((movieMeta?.genres && movieMeta.genres.length > 0) || (movieMeta?.voteAverage ?? 0) > 0) && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  {movieMeta?.genres?.map(g => (
+                    <span key={g} className="text-[10px] px-2 py-0.5 rounded-full bg-[#7C5DBD]/10 text-[#9B7BD7]">{g}</span>
+                  ))}
+                  {(movieMeta?.voteAverage ?? 0) > 0 && (
+                    <span className="flex items-center gap-1 text-[10px] text-zinc-500">
+                      <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
+                      <span className="text-amber-400 font-semibold">{movieMeta!.voteAverage.toFixed(1)}</span>
+                      <span>TMDB</span>
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* 6. Like + emoji reactions */}
+              <div className="flex items-center gap-0.5 -ml-1.5">
                 <button onClick={handleLikeClick}
                   style={{ transition: 'transform 0.25s cubic-bezier(0.34,1.56,0.64,1)', transform: likeAnim ? 'scale(1.4)' : 'scale(1)' }}
                   className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-[#7C5DBD]/[0.08] hover:text-[#9B7BD7] ${isLiked ? 'text-[#7C5DBD]' : 'text-zinc-600'}`}>
@@ -1029,12 +988,89 @@ function ActivityCard({ post, currentUserId, currentUsername, isAdmin, onLike, o
                   </button>
                 ))}
               </div>
-            </>
-          )}
-        </div>
+            </div>
+          </div>
+        ) : (
+          /* Text-only post (no movie) */
+          <div className="flex flex-col gap-3">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <UserAvatar username={post.username} avatarUrl={post.avatarUrl} size={28} onClick={() => onOpenProfile(post.user_id)} />
+                <div className="flex flex-col gap-0.5 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <button onClick={() => onOpenProfile(post.user_id)}
+                      className="text-white text-sm font-semibold hover:text-[#9B7BD7] transition-colors leading-none">
+                      {(post as { displayName?: string }).displayName || post.username}
+                    </button>
+                    {post.user_id === ADMIN_UID && <AdminBadge />}
+                  </div>
+                  <span className="text-zinc-600 text-[11px]">@{post.username} · {timeAgo(post.created_at)}</span>
+                </div>
+              </div>
+              {(post.user_id === currentUserId || isAdmin) && (
+                <button onClick={() => onDelete(post.post_id)}
+                  className="shrink-0 text-zinc-700 hover:text-red-500 transition-colors p-1"
+                  title={isAdmin && post.user_id !== currentUserId ? 'Delete (admin)' : 'Delete'}>
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+            {post.rating > 0 && (
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-0.5">
+                  {[...Array(5)].map((_, i) => {
+                    const filled = (post.rating / 2) >= (i + 1);
+                    const half   = !filled && (post.rating / 2) > i;
+                    return <Star key={i} className={`w-3 h-3 ${filled || half ? 'fill-yellow-400 text-yellow-400' : 'text-zinc-800'}`} />;
+                  })}
+                </div>
+                <span className="text-[11px] text-zinc-500">
+                  <span className="text-zinc-300 font-medium">{post.username}</span>'s rating:
+                  <span className="text-yellow-400 font-bold tabular-nums ml-1">{post.rating}/10</span>
+                </span>
+              </div>
+            )}
+            {post.message && (
+              <p className="text-zinc-200 text-sm leading-relaxed">
+                {renderMessage(post.message, onOpenProfile)}
+              </p>
+            )}
+            <div className="flex items-center gap-0.5 -ml-1.5">
+              <button onClick={handleLikeClick}
+                style={{ transition: 'transform 0.25s cubic-bezier(0.34,1.56,0.64,1)', transform: likeAnim ? 'scale(1.4)' : 'scale(1)' }}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-[#7C5DBD]/[0.08] hover:text-[#9B7BD7] ${isLiked ? 'text-[#7C5DBD]' : 'text-zinc-600'}`}>
+                <Heart className={`w-[13px] h-[13px] ${isLiked ? 'fill-[#7C5DBD]' : ''}`} />
+                {post.likes > 0 && <span className="tabular-nums">{post.likes}</span>}
+              </button>
+              <div className="relative" ref={emojiRef}>
+                <button onClick={() => setShowEmojiPicker(s => !s)}
+                  className="flex items-center px-2 py-1.5 rounded-lg text-xs text-zinc-600 hover:text-zinc-300 hover:bg-white/[0.04] transition-colors">
+                  <span className="text-sm leading-none">😊</span>
+                </button>
+                {showEmojiPicker && (
+                  <div className="absolute bottom-full left-0 mb-1 flex items-center gap-1 bg-[#1a1a1e] border border-white/[0.08] rounded-xl px-2 py-1.5 shadow-xl z-20">
+                    {REACTION_EMOJIS.map(e => (
+                      <button key={e} onClick={() => handleReact(e)}
+                        className={`text-base hover:scale-125 transition-transform px-0.5 rounded ${reactions[e]?.includes(currentUserId) ? 'opacity-100' : 'opacity-70 hover:opacity-100'}`}>
+                        {e}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {Object.entries(reactions).filter(([, users]) => users.length > 0).map(([emoji, users]) => (
+                <button key={emoji} onClick={() => handleReact(emoji)}
+                  className={`flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs transition-all ${users.includes(currentUserId) ? 'bg-[#7C5DBD]/15 text-[#9B7BD7]' : 'bg-white/[0.04] text-zinc-400 hover:bg-white/[0.07]'}`}>
+                  <span className="text-sm leading-none">{emoji}</span>
+                  <span className="tabular-nums">{users.length}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* ── RIGHT: Comments panel ───────────────────────────── */}
-        <div className="flex flex-col m-3 ml-0 rounded-xl bg-black/20 overflow-hidden">
+        <div className="flex flex-col rounded-xl bg-black/20 overflow-hidden min-h-[180px]">
 
           {/* Comments list — scrollable only when needed */}
           <div className="overflow-y-auto px-3 pt-3 pb-2 space-y-3 max-h-[260px]">
