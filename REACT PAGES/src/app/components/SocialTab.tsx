@@ -859,68 +859,66 @@ function ActivityCard({ post, currentUserId, currentUsername, isAdmin, onLike, o
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <article className="rounded-2xl border border-white/[0.06] bg-[#0d0d10] overflow-hidden">
-      {/* Two-column card: post content left, comments right */}
+    <article className="rounded-2xl bg-white/[0.03] border border-white/[0.06] shadow-lg shadow-black/30 overflow-hidden">
       <div className="grid grid-cols-1 sm:grid-cols-[55%_45%] items-stretch">
 
         {/* ── LEFT: Post content ─────────────────────────────── */}
-        <div className="flex flex-col gap-3 p-4">
+        <div className="flex flex-col p-5 gap-4">
 
-          {/* Header: stars + user info + delete */}
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex flex-col gap-1.5 min-w-0">
-              {post.rating > 0 && (
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-0.5">
-                    {[...Array(5)].map((_, i) => {
-                      const filled = (post.rating / 2) >= (i + 1);
-                      const half   = !filled && (post.rating / 2) > i;
-                      return <Star key={i} className={`w-3.5 h-3.5 ${filled || half ? 'fill-yellow-400 text-yellow-400' : 'text-zinc-700'}`} />;
-                    })}
-                  </div>
-                  <span className="text-yellow-400 font-bold text-sm tabular-nums">{post.rating}/10</span>
+          {/* Header: user info + delete */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5 flex-wrap min-w-0">
+              <UserAvatar username={post.username} avatarUrl={post.avatarUrl} size={30} onClick={() => onOpenProfile(post.user_id)} />
+              <div className="flex flex-col leading-none gap-0.5 min-w-0">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <button onClick={() => onOpenProfile(post.user_id)}
+                    className="text-white text-sm font-semibold hover:text-[#9B7BD7] transition-colors leading-none shrink-0">
+                    {(post as { displayName?: string }).displayName || post.username}
+                  </button>
+                  {post.user_id === ADMIN_UID && <AdminBadge />}
                 </div>
-              )}
-              <div className="flex items-center gap-2 flex-wrap">
-                <UserAvatar username={post.username} avatarUrl={post.avatarUrl} size={28} onClick={() => onOpenProfile(post.user_id)} />
-                <button onClick={() => onOpenProfile(post.user_id)}
-                  className="text-white text-sm font-semibold hover:text-[#9B7BD7] transition-colors leading-none shrink-0">
-                  {(post as { displayName?: string }).displayName || post.username}
-                </button>
-                {post.user_id === ADMIN_UID && <AdminBadge />}
-                <span className="text-zinc-600 text-xs shrink-0">@{post.username}</span>
-                <span className="text-zinc-700 text-xs shrink-0">· {timeAgo(post.created_at)}</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-zinc-600 text-[11px]">@{post.username}</span>
+                  <span className="text-zinc-700 text-[11px]">· {timeAgo(post.created_at)}</span>
+                </div>
               </div>
             </div>
             {(post.user_id === currentUserId || isAdmin) && (
               <button onClick={() => onDelete(post.post_id)}
-                className="shrink-0 text-zinc-700 hover:text-red-500 transition-colors p-0.5 mt-0.5"
+                className="shrink-0 text-zinc-700 hover:text-red-500 transition-colors p-1"
                 title={isAdmin && post.user_id !== currentUserId ? 'Delete (admin)' : 'Delete'}>
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
 
-          {/* Review text */}
-          {post.message && (
-            <p className="text-zinc-300 text-sm leading-relaxed">
-              {renderMessage(post.message, onOpenProfile)}
-            </p>
+          {/* Star rating */}
+          {post.rating > 0 && (
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-0.5">
+                {[...Array(5)].map((_, i) => {
+                  const filled = (post.rating / 2) >= (i + 1);
+                  const half   = !filled && (post.rating / 2) > i;
+                  return <Star key={i} className={`w-3.5 h-3.5 ${filled || half ? 'fill-yellow-400 text-yellow-400' : 'text-zinc-800'}`} />;
+                })}
+              </div>
+              <span className="text-yellow-400 font-bold text-sm tabular-nums">{post.rating}/10</span>
+            </div>
           )}
 
-          {/* Movie block: poster + metadata */}
+          {/* Movie block: full-height poster left, metadata right */}
           {post.movie_title && (
-            <div className="flex gap-3">
-              <div className="shrink-0 cursor-pointer" onClick={() => setOpenMovieId(post.movie_id)}>
+            <div className="flex gap-3 flex-1">
+              <div className="shrink-0 cursor-pointer self-stretch" onClick={() => setOpenMovieId(post.movie_id)}>
                 {post.movie_poster
                   ? <img src={post.movie_poster} alt={post.movie_title}
-                      className="w-[88px] h-[132px] object-cover rounded-xl shadow-lg ring-1 ring-white/[0.07] hover:opacity-90 transition-opacity" />
-                  : <div className="w-[88px] h-[132px] bg-[#1a1a1e] rounded-xl flex items-center justify-center">
-                      <Film className="w-6 h-6 text-zinc-600" />
+                      className="w-[100px] h-full min-h-[150px] object-cover rounded-xl shadow-xl ring-1 ring-white/[0.06] hover:opacity-90 transition-opacity" />
+                  : <div className="w-[100px] min-h-[150px] bg-white/[0.04] rounded-xl flex items-center justify-center">
+                      <Film className="w-7 h-7 text-zinc-700" />
                     </div>
                 }
               </div>
-              <div className="flex-1 min-w-0 flex flex-col gap-1.5 pt-0.5">
+              <div className="flex-1 min-w-0 flex flex-col gap-2 py-0.5">
                 <p className="text-white text-sm font-bold leading-snug line-clamp-2">{post.movie_title}</p>
                 <div className="flex items-center gap-2 text-xs flex-wrap">
                   {movieMeta?.year && <span className="text-zinc-500">{movieMeta.year}</span>}
@@ -930,25 +928,34 @@ function ActivityCard({ post, currentUserId, currentUsername, isAdmin, onLike, o
                   <div className="flex items-center gap-1">
                     <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
                     <span className="text-amber-400 text-xs font-semibold">{movieMeta.voteAverage.toFixed(1)}</span>
-                    <span className="text-zinc-600 text-[11px]">Fan Rating</span>
+                    <span className="text-zinc-600 text-[11px]">TMDB</span>
                   </div>
                 )}
                 {movieMeta?.genres && movieMeta.genres.length > 0 && (
                   <div className="flex gap-1 flex-wrap">
                     {movieMeta.genres.map(g => (
-                      <span key={g} className="text-[10px] px-2 py-0.5 rounded-full bg-[#7C5DBD]/10 text-[#9B7BD7] border border-[#7C5DBD]/20">{g}</span>
+                      <span key={g} className="text-[10px] px-2 py-0.5 rounded-full bg-[#7C5DBD]/10 text-[#9B7BD7]">{g}</span>
                     ))}
                   </div>
                 )}
-                {movieMeta?.overview && (
-                  <p className="text-zinc-500 text-[11px] leading-relaxed line-clamp-3">{movieMeta.overview}</p>
+                {post.message && (
+                  <p className="text-zinc-400 text-xs leading-relaxed line-clamp-4 mt-0.5">
+                    {renderMessage(post.message, onOpenProfile)}
+                  </p>
                 )}
               </div>
             </div>
           )}
 
-          {/* Action row: like + emoji reactions — pushed to bottom */}
-          <div className="flex items-center gap-0.5 -ml-1.5 mt-auto pt-1">
+          {/* Review text (only shown when no movie attached) */}
+          {!post.movie_title && post.message && (
+            <p className="text-zinc-300 text-sm leading-relaxed">
+              {renderMessage(post.message, onOpenProfile)}
+            </p>
+          )}
+
+          {/* Action row: like + emoji reactions */}
+          <div className="flex items-center gap-0.5 -ml-1.5 mt-auto">
             <button onClick={handleLikeClick}
               style={{ transition: 'transform 0.25s cubic-bezier(0.34,1.56,0.64,1)', transform: likeAnim ? 'scale(1.4)' : 'scale(1)' }}
               className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-[#7C5DBD]/[0.08] hover:text-[#9B7BD7] ${isLiked ? 'text-[#7C5DBD]' : 'text-zinc-600'}`}>
@@ -961,7 +968,7 @@ function ActivityCard({ post, currentUserId, currentUsername, isAdmin, onLike, o
                 <span className="text-sm leading-none">😊</span>
               </button>
               {showEmojiPicker && (
-                <div className="absolute bottom-full left-0 mb-1 flex items-center gap-1 bg-[#1a1a1e] border border-[#2a2a2e] rounded-xl px-2 py-1.5 shadow-xl z-20">
+                <div className="absolute bottom-full left-0 mb-1 flex items-center gap-1 bg-[#1a1a1e] border border-white/[0.08] rounded-xl px-2 py-1.5 shadow-xl z-20">
                   {REACTION_EMOJIS.map(e => (
                     <button key={e} onClick={() => handleReact(e)}
                       className={`text-base hover:scale-125 transition-transform px-0.5 rounded ${reactions[e]?.includes(currentUserId) ? 'opacity-100' : 'opacity-70 hover:opacity-100'}`}>
@@ -973,7 +980,7 @@ function ActivityCard({ post, currentUserId, currentUsername, isAdmin, onLike, o
             </div>
             {Object.entries(reactions).filter(([, users]) => users.length > 0).map(([emoji, users]) => (
               <button key={emoji} onClick={() => handleReact(emoji)}
-                className={`flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs border transition-all ${users.includes(currentUserId) ? 'bg-[#7C5DBD]/15 border-[#7C5DBD]/30 text-[#9B7BD7]' : 'bg-white/[0.03] border-white/[0.07] text-zinc-400 hover:border-white/20'}`}>
+                className={`flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs transition-all ${users.includes(currentUserId) ? 'bg-[#7C5DBD]/15 text-[#9B7BD7]' : 'bg-white/[0.04] text-zinc-400 hover:bg-white/[0.07]'}`}>
                 <span className="text-sm leading-none">{emoji}</span>
                 <span className="tabular-nums">{users.length}</span>
               </button>
@@ -982,10 +989,10 @@ function ActivityCard({ post, currentUserId, currentUsername, isAdmin, onLike, o
         </div>
 
         {/* ── RIGHT: Comments panel ───────────────────────────── */}
-        <div className="flex flex-col border-t sm:border-t-0 sm:border-l border-white/[0.05] bg-[#080809]">
+        <div className="flex flex-col m-3 ml-0 rounded-xl bg-black/20 overflow-hidden">
 
           {/* Scrollable comments list */}
-          <div className="flex-1 overflow-y-auto px-3 pt-3 pb-2 space-y-3 max-h-[320px] min-h-[100px]">
+          <div className="flex-1 overflow-y-auto px-3 pt-3 pb-2 space-y-3 max-h-[300px] min-h-[80px]">
             {loadingReplies ? (
               <div className="flex items-center gap-2 text-zinc-600 text-xs pt-1">
                 <Loader2 className="w-3 h-3 animate-spin" /> Loading…
@@ -994,12 +1001,12 @@ function ActivityCard({ post, currentUserId, currentUsername, isAdmin, onLike, o
               <p className="text-zinc-700 text-xs pt-1">No comments yet. Be the first!</p>
             ) : (
               replies.slice(0, 8).map(r => {
-                const rxn        = getReplyState(r);
-                const isLikedR   = rxn.liked_by.includes(currentUserId);
+                const rxn         = getReplyState(r);
+                const isLikedR    = rxn.liked_by.includes(currentUserId);
                 const isDislikedR = rxn.disliked_by.includes(currentUserId);
                 return (
                   <div key={r.reply_id} className="flex items-start gap-2">
-                    <UserAvatar username={r.username} avatarUrl={r.avatarUrl} size={24} onClick={() => onOpenProfile(r.user_id)} />
+                    <UserAvatar username={r.username} avatarUrl={r.avatarUrl} size={22} onClick={() => onOpenProfile(r.user_id)} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <button onClick={() => onOpenProfile(r.user_id)}
@@ -1043,11 +1050,11 @@ function ActivityCard({ post, currentUserId, currentUsername, isAdmin, onLike, o
             )}
           </div>
 
-          {/* Reply input — pinned to bottom of right column */}
-          <div className="px-3 py-2.5 border-t border-white/[0.05]">
+          {/* Reply input — floats inside the comments panel */}
+          <div className="px-3 pb-3 pt-2">
             <div className="relative flex gap-2">
               {mentionQuery !== null && mentionResults.length > 0 && (
-                <div className="absolute bottom-full left-0 right-10 mb-1 bg-[#1a1a1e] border border-[#2a2a2e] rounded-xl shadow-xl z-20 overflow-hidden">
+                <div className="absolute bottom-full left-0 right-10 mb-1 bg-[#1a1a1e] border border-white/[0.08] rounded-xl shadow-xl z-20 overflow-hidden">
                   {mentionResults.map(u => (
                     <button key={u.user_id} onMouseDown={e => { e.preventDefault(); selectMention(u.username); }}
                       className="w-full flex items-center gap-2 px-3 py-2 text-sm text-white hover:bg-[#7C5DBD]/20 transition-colors text-left">
@@ -1056,11 +1063,11 @@ function ActivityCard({ post, currentUserId, currentUsername, isAdmin, onLike, o
                   ))}
                 </div>
               )}
-              <input ref={replyInputRef} type="text" placeholder="Add a comment… use @ to mention"
+              <input ref={replyInputRef} type="text" placeholder="Add a comment…"
                 value={replyText}
                 onChange={handleReplyChange}
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && mentionQuery === null) handleSubmitReply(); }}
-                className="flex-1 bg-[#141416] border border-white/[0.06] rounded-full px-3.5 py-1.5 text-white text-xs placeholder:text-zinc-600 focus:outline-none focus:border-[#7C5DBD]/40 transition-colors" />
+                className="flex-1 bg-white/[0.05] rounded-full px-3.5 py-1.5 text-white text-xs placeholder:text-zinc-600 focus:outline-none focus:bg-white/[0.08] transition-colors" />
               <button onClick={handleSubmitReply} disabled={submittingReply || !replyText.trim()}
                 className="p-1.5 bg-[#7C5DBD] hover:bg-[#6B4DAD] disabled:opacity-40 text-white rounded-full transition-colors shrink-0">
                 {submittingReply ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
