@@ -626,6 +626,32 @@ def delete_post(post_id, user_id):
         return {'success': False, 'message': str(e)}
 
 
+def admin_delete_post(post_id):
+    """Delete any post regardless of owner. Called only by the admin endpoint."""
+    try:
+        ref = db.collection('posts').document(post_id)
+        if not ref.get().exists:
+            return {'success': False, 'message': 'Post not found'}
+        ref.delete()
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+
+def admin_delete_reply(post_id, reply_id):
+    """Delete any reply regardless of owner. Called only by the admin endpoint."""
+    try:
+        post_ref  = db.collection('posts').document(post_id)
+        reply_ref = post_ref.collection('replies').document(reply_id)
+        if not reply_ref.get().exists:
+            return {'success': False, 'message': 'Reply not found'}
+        reply_ref.delete()
+        post_ref.update({'reply_count': firestore.Increment(-1)})
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+
 def get_post(post_id):
     try:
         doc = db.collection('posts').document(post_id).get()

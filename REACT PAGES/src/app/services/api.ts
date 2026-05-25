@@ -104,6 +104,30 @@ const TTL = {
   WATCHLIST: 10 * 60 * 1000, // 10 min memory / 30 min ls — watch later
 };
 
+// ── Admin ─────────────────────────────────────────────────────────
+// Used for badge display only — every actual action is re-verified server-side.
+export const ADMIN_UID = 'DErwtoDpkRS8ZoudSIX5awlDMqo1';
+
+export async function adminDeletePost(post_id: string): Promise<{ success: boolean }> {
+  const token = await getIdToken();
+  if (!token) return { success: false };
+  const res = await fetch(`${BASE_URL}/admin/posts/${post_id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.ok ? res.json() : { success: false };
+}
+
+export async function adminDeleteReply(post_id: string, reply_id: string): Promise<{ success: boolean }> {
+  const token = await getIdToken();
+  if (!token) return { success: false };
+  const res = await fetch(`${BASE_URL}/admin/posts/${post_id}/replies/${reply_id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.ok ? res.json() : { success: false };
+}
+
 
 // ── Auth helpers ─────────────────────────────────────────────────
 

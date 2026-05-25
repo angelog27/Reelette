@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import {
   getFeed, getFeedSince, bustFeedCache, createPost, likePost, deletePost, getUser, timeAgo,
+  ADMIN_UID, adminDeletePost, adminDeleteReply,
   getFriends, getFriendRequests, sendFriendRequest, acceptFriendRequest,
   rejectFriendRequest, searchUsers,
   getUserGroups, createGroup, getGroup, addGroupMember, removeGroupMember,
@@ -66,6 +67,14 @@ function OnlineDot({ online }: { online: boolean }) {
       className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-[#0A0A0A] ${online ? 'bg-emerald-500' : 'bg-zinc-700'}`}
       title={online ? 'Online' : 'Offline'}
     />
+  );
+}
+
+function AdminBadge() {
+  return (
+    <span title="Site Admin" className="inline-flex items-center ml-0.5">
+      <Crown className="w-3 h-3 text-amber-400 fill-amber-400" />
+    </span>
   );
 }
 
@@ -696,8 +705,8 @@ function saveReactions(postId: string, data: Record<string, string[]>) {
 }
 
 // ── Activity Card ─────────────────────────────────────────────
-function ActivityCard({ post, currentUserId, currentUsername, onLike, onDelete, onOpenProfile }: {
-  post: FeedPost; currentUserId: string; currentUsername: string;
+function ActivityCard({ post, currentUserId, currentUsername, isAdmin, onLike, onDelete, onOpenProfile }: {
+  post: FeedPost; currentUserId: string; currentUsername: string; isAdmin: boolean;
   onLike: (id: string) => void;
   onDelete: (id: string) => void;
   onOpenProfile: (userId: string) => void;
@@ -844,67 +853,78 @@ function ActivityCard({ post, currentUserId, currentUsername, onLike, onDelete, 
     setSubmittingReply(false);
   };
 
+  // Auto-load replies so the right panel is always populated
+  useEffect(() => {
+    loadReplies();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
-    <article className="mb-0 transition-colors duration-150 hover:bg-[#0f0f11]">
-      {/* Rating strip */}
-      {post.rating > 0 && (
-        <div className="px-4 pt-3 pb-0 flex items-center gap-2">
-          <div className="flex items-center gap-1">
-            {[...Array(5)].map((_, i) => {
-              const filled = (post.rating / 2) >= (i + 1);
-              const half = !filled && (post.rating / 2) > i;
-              return (
-                <Star key={i} className={`w-3 h-3 ${filled || half ? 'fill-yellow-400 text-yellow-400' : 'text-zinc-700'}`} />
-              );
-            })}
-          </div>
-          <span className="text-yellow-400 font-bold text-xs tabular-nums">{post.rating}/10</span>
-        </div>
-      )}
+    <article className="rounded-2xl border border-white/[0.06] bg-[#0d0d10] overflow-hidden">
+      {/* Two-column card: post content left, comments right */}
+      <div className="grid grid-cols-1 sm:grid-cols-[55%_45%] items-stretch">
 
-      <div className="px-4 pt-3 pb-2 flex gap-3">
-        {/* Avatar */}
-        <UserAvatar username={post.username} avatarUrl={post.avatarUrl} size={38} onClick={() => onOpenProfile(post.user_id)} />
+        {/* ── LEFT: Post content ─────────────────────────────── */}
+        <div className="flex flex-col gap-3 p-4">
 
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2 mb-1">
-            <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
-              <button onClick={() => onOpenProfile(post.user_id)}
-                className="text-white text-sm font-semibold hover:text-[#9B7BD7] transition-colors leading-none shrink-0">
-                {(post as { displayName?: string }).displayName || post.username}
-              </button>
-              <span className="text-zinc-600 text-xs shrink-0">@{post.username}</span>
-              <span className="text-zinc-700 text-xs shrink-0">· {timeAgo(post.created_at)}</span>
+          {/* Header: stars + user info + delete */}
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex flex-col gap-1.5 min-w-0">
+              {post.rating > 0 && (
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-0.5">
+                    {[...Array(5)].map((_, i) => {
+                      const filled = (post.rating / 2) >= (i + 1);
+                      const half   = !filled && (post.rating / 2) > i;
+                      return <Star key={i} className={`w-3.5 h-3.5 ${filled || half ? 'fill-yellow-400 text-yellow-400' : 'text-zinc-700'}`} />;
+                    })}
+                  </div>
+                  <span className="text-yellow-400 font-bold text-sm tabular-nums">{post.rating}/10</span>
+                </div>
+              )}
+              <div className="flex items-center gap-2 flex-wrap">
+                <UserAvatar username={post.username} avatarUrl={post.avatarUrl} size={28} onClick={() => onOpenProfile(post.user_id)} />
+                <button onClick={() => onOpenProfile(post.user_id)}
+                  className="text-white text-sm font-semibold hover:text-[#9B7BD7] transition-colors leading-none shrink-0">
+                  {(post as { displayName?: string }).displayName || post.username}
+                </button>
+                {post.user_id === ADMIN_UID && <AdminBadge />}
+                <span className="text-zinc-600 text-xs shrink-0">@{post.username}</span>
+                <span className="text-zinc-700 text-xs shrink-0">· {timeAgo(post.created_at)}</span>
+              </div>
             </div>
-            {post.user_id === currentUserId && (
-              <button onClick={() => onDelete(post.post_id)} className="shrink-0 text-zinc-700 hover:text-red-500 transition-colors p-0.5">
+            {(post.user_id === currentUserId || isAdmin) && (
+              <button onClick={() => onDelete(post.post_id)}
+                className="shrink-0 text-zinc-700 hover:text-red-500 transition-colors p-0.5 mt-0.5"
+                title={isAdmin && post.user_id !== currentUserId ? 'Delete (admin)' : 'Delete'}>
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
 
+          {/* Review text */}
           {post.message && (
-            <p className="text-zinc-300 text-[14px] leading-relaxed mb-2">
+            <p className="text-zinc-300 text-sm leading-relaxed">
               {renderMessage(post.message, onOpenProfile)}
             </p>
           )}
 
-          {/* Movie card */}
+          {/* Movie block: poster + metadata */}
           {post.movie_title && (
-            <div className="flex gap-3 mb-3">
-              {post.movie_poster
-                ? <img src={post.movie_poster} alt={post.movie_title}
-                    className="w-[76px] h-[114px] object-cover rounded-xl shrink-0 cursor-pointer hover:opacity-90 transition-opacity"
-                    onClick={() => setOpenMovieId(post.movie_id)} />
-                : <div className="w-[76px] h-[114px] bg-[#1a1a1e] rounded-xl shrink-0 flex items-center justify-center cursor-pointer" onClick={() => setOpenMovieId(post.movie_id)}>
-                    <Film className="w-6 h-6 text-zinc-600" />
-                  </div>}
-              <div className="flex-1 min-w-0 flex flex-col justify-start gap-1.5 pt-0.5">
-                <p className="text-white text-sm font-medium leading-snug line-clamp-2">{post.movie_title}</p>
+            <div className="flex gap-3">
+              <div className="shrink-0 cursor-pointer" onClick={() => setOpenMovieId(post.movie_id)}>
+                {post.movie_poster
+                  ? <img src={post.movie_poster} alt={post.movie_title}
+                      className="w-[88px] h-[132px] object-cover rounded-xl shadow-lg ring-1 ring-white/[0.07] hover:opacity-90 transition-opacity" />
+                  : <div className="w-[88px] h-[132px] bg-[#1a1a1e] rounded-xl flex items-center justify-center">
+                      <Film className="w-6 h-6 text-zinc-600" />
+                    </div>
+                }
+              </div>
+              <div className="flex-1 min-w-0 flex flex-col gap-1.5 pt-0.5">
+                <p className="text-white text-sm font-bold leading-snug line-clamp-2">{post.movie_title}</p>
                 <div className="flex items-center gap-2 text-xs flex-wrap">
                   {movieMeta?.year && <span className="text-zinc-500">{movieMeta.year}</span>}
-                  {movieMeta?.runtime > 0 && <span className="text-zinc-600">{movieMeta.runtime}m</span>}
+                  {movieMeta?.runtime > 0 && <span className="text-zinc-600">· {movieMeta.runtime}m</span>}
                 </div>
                 {movieMeta && movieMeta.voteAverage > 0 && (
                   <div className="flex items-center gap-1">
@@ -926,25 +946,15 @@ function ActivityCard({ post, currentUserId, currentUsername, onLike, onDelete, 
               </div>
             </div>
           )}
-          {openMovieId && <MovieDetailModal movieId={openMovieId} onClose={() => setOpenMovieId(null)} />}
 
-          {/* Action row */}
-          <div className="flex items-center gap-0.5 -ml-2 flex-wrap">
-            <button onClick={toggleReplies}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-blue-500/[0.08] hover:text-blue-400 ${showReplies ? 'text-blue-400' : 'text-zinc-600'}`}>
-              <MessageCircle className="w-[14px] h-[14px]" />
-              {(showReplies ? replies.length : localReplyCount) > 0 && (
-                <span className="tabular-nums">{showReplies ? replies.length : localReplyCount}</span>
-              )}
-            </button>
+          {/* Action row: like + emoji reactions — pushed to bottom */}
+          <div className="flex items-center gap-0.5 -ml-1.5 mt-auto pt-1">
             <button onClick={handleLikeClick}
               style={{ transition: 'transform 0.25s cubic-bezier(0.34,1.56,0.64,1)', transform: likeAnim ? 'scale(1.4)' : 'scale(1)' }}
               className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-[#7C5DBD]/[0.08] hover:text-[#9B7BD7] ${isLiked ? 'text-[#7C5DBD]' : 'text-zinc-600'}`}>
               <Heart className={`w-[14px] h-[14px] ${isLiked ? 'fill-[#7C5DBD]' : ''}`} />
               {post.likes > 0 && <span className="tabular-nums">{post.likes}</span>}
             </button>
-
-            {/* Emoji reaction trigger */}
             <div className="relative" ref={emojiRef}>
               <button onClick={() => setShowEmojiPicker(s => !s)}
                 className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-zinc-600 hover:text-zinc-300 hover:bg-white/[0.04] transition-colors">
@@ -961,8 +971,6 @@ function ActivityCard({ post, currentUserId, currentUsername, onLike, onDelete, 
                 </div>
               )}
             </div>
-
-            {/* Reaction pills */}
             {Object.entries(reactions).filter(([, users]) => users.length > 0).map(([emoji, users]) => (
               <button key={emoji} onClick={() => handleReact(emoji)}
                 className={`flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs border transition-all ${users.includes(currentUserId) ? 'bg-[#7C5DBD]/15 border-[#7C5DBD]/30 text-[#9B7BD7]' : 'bg-white/[0.03] border-white/[0.07] text-zinc-400 hover:border-white/20'}`}>
@@ -972,50 +980,72 @@ function ActivityCard({ post, currentUserId, currentUsername, onLike, onDelete, 
             ))}
           </div>
         </div>
-      </div>
 
-      {/* Replies */}
-      {showReplies && (
-        <div className="px-4 pb-3 pl-[62px] space-y-3 ">
-          <div className="pt-3">
+        {/* ── RIGHT: Comments panel ───────────────────────────── */}
+        <div className="flex flex-col border-t sm:border-t-0 sm:border-l border-white/[0.05] bg-[#080809]">
+
+          {/* Scrollable comments list */}
+          <div className="flex-1 overflow-y-auto px-3 pt-3 pb-2 space-y-3 max-h-[320px] min-h-[100px]">
             {loadingReplies ? (
-              <div className="flex items-center gap-2 text-zinc-600 text-xs"><Loader2 className="w-3 h-3 animate-spin" /> Loading…</div>
+              <div className="flex items-center gap-2 text-zinc-600 text-xs pt-1">
+                <Loader2 className="w-3 h-3 animate-spin" /> Loading…
+              </div>
             ) : replies.length === 0 ? (
-              <p className="text-zinc-700 text-xs">No replies yet.</p>
+              <p className="text-zinc-700 text-xs pt-1">No comments yet. Be the first!</p>
             ) : (
-              <div className="space-y-2.5">
-                {replies.map(r => {
-                  const rxn = getReplyState(r);
-                  const isLiked = rxn.liked_by.includes(currentUserId);
-                  const isDisliked = rxn.disliked_by.includes(currentUserId);
-                  return (
-                    <div key={r.reply_id} className="flex items-start gap-2">
-                      <UserAvatar username={r.username} avatarUrl={r.avatarUrl} size={26} onClick={() => onOpenProfile(r.user_id)} />
-                      <div className="flex-1 bg-[#141416] rounded-2xl px-3 py-2">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <button onClick={() => onOpenProfile(r.user_id)} className="text-white text-xs font-semibold hover:text-[#9B7BD7] transition-colors">@{r.username}</button>
-                          <span className="text-zinc-700 text-xs">{timeAgo(r.created_at)}</span>
-                        </div>
-                        <p className="text-zinc-400 text-sm leading-snug">{renderMessage(r.message, onOpenProfile)}</p>
-                        <div className="flex items-center gap-1 mt-1.5 -ml-1">
-                          <button onClick={() => handleReplyLike(r)}
-                            className={`flex items-center gap-1 px-1.5 py-0.5 rounded-lg text-xs transition-colors ${isLiked ? 'text-[#7C5DBD]' : 'text-zinc-600 hover:text-zinc-300'}`}>
-                            <ThumbsUp className={`w-3 h-3 ${isLiked ? 'fill-[#7C5DBD]' : ''}`} />
-                            {rxn.likes > 0 && <span className="tabular-nums">{rxn.likes}</span>}
+              replies.slice(0, 8).map(r => {
+                const rxn        = getReplyState(r);
+                const isLikedR   = rxn.liked_by.includes(currentUserId);
+                const isDislikedR = rxn.disliked_by.includes(currentUserId);
+                return (
+                  <div key={r.reply_id} className="flex items-start gap-2">
+                    <UserAvatar username={r.username} avatarUrl={r.avatarUrl} size={24} onClick={() => onOpenProfile(r.user_id)} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <button onClick={() => onOpenProfile(r.user_id)}
+                          className="text-white text-xs font-semibold hover:text-[#9B7BD7] transition-colors leading-none">
+                          @{r.username}
+                        </button>
+                        {r.user_id === ADMIN_UID && <AdminBadge />}
+                        <span className="text-zinc-700 text-[10px]">{timeAgo(r.created_at)}</span>
+                        {isAdmin && (
+                          <button
+                            onClick={async () => {
+                              const ok = await adminDeleteReply(post.post_id, r.reply_id);
+                              if (ok.success) setReplies(prev => prev.filter(x => x.reply_id !== r.reply_id));
+                            }}
+                            className="ml-auto text-zinc-700 hover:text-red-500 transition-colors"
+                            title="Delete reply (admin)">
+                            <Trash2 className="w-2.5 h-2.5" />
                           </button>
-                          <button onClick={() => handleReplyDislike(r)}
-                            className={`flex items-center gap-1 px-1.5 py-0.5 rounded-lg text-xs transition-colors ${isDisliked ? 'text-red-400' : 'text-zinc-600 hover:text-zinc-300'}`}>
-                            <ThumbsDown className={`w-3 h-3 ${isDisliked ? 'fill-red-400' : ''}`} />
-                            {rxn.dislikes > 0 && <span className="tabular-nums">{rxn.dislikes}</span>}
-                          </button>
-                        </div>
+                        )}
+                      </div>
+                      <p className="text-zinc-400 text-xs leading-snug mt-0.5">{renderMessage(r.message, onOpenProfile)}</p>
+                      <div className="flex items-center gap-0.5 mt-1 -ml-1">
+                        <button onClick={() => handleReplyLike(r)}
+                          className={`flex items-center gap-1 px-1.5 py-0.5 rounded-lg text-[10px] transition-colors ${isLikedR ? 'text-[#7C5DBD]' : 'text-zinc-600 hover:text-zinc-300'}`}>
+                          <ThumbsUp className={`w-2.5 h-2.5 ${isLikedR ? 'fill-[#7C5DBD]' : ''}`} />
+                          {rxn.likes > 0 && <span className="tabular-nums">{rxn.likes}</span>}
+                        </button>
+                        <button onClick={() => handleReplyDislike(r)}
+                          className={`flex items-center gap-1 px-1.5 py-0.5 rounded-lg text-[10px] transition-colors ${isDislikedR ? 'text-red-400' : 'text-zinc-600 hover:text-zinc-300'}`}>
+                          <ThumbsDown className={`w-2.5 h-2.5 ${isDislikedR ? 'fill-red-400' : ''}`} />
+                          {rxn.dislikes > 0 && <span className="tabular-nums">{rxn.dislikes}</span>}
+                        </button>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
+                  </div>
+                );
+              })
             )}
-            <div className="flex gap-2 mt-3 relative">
+            {replies.length > 8 && (
+              <p className="text-zinc-700 text-[10px] text-center pb-1">+{replies.length - 8} more</p>
+            )}
+          </div>
+
+          {/* Reply input — pinned to bottom of right column */}
+          <div className="px-3 py-2.5 border-t border-white/[0.05]">
+            <div className="relative flex gap-2">
               {mentionQuery !== null && mentionResults.length > 0 && (
                 <div className="absolute bottom-full left-0 right-10 mb-1 bg-[#1a1a1e] border border-[#2a2a2e] rounded-xl shadow-xl z-20 overflow-hidden">
                   {mentionResults.map(u => (
@@ -1026,19 +1056,21 @@ function ActivityCard({ post, currentUserId, currentUsername, onLike, onDelete, 
                   ))}
                 </div>
               )}
-              <input ref={replyInputRef} type="text" placeholder="Reply… use @ to mention"
+              <input ref={replyInputRef} type="text" placeholder="Add a comment… use @ to mention"
                 value={replyText}
                 onChange={handleReplyChange}
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && mentionQuery === null) handleSubmitReply(); }}
-                className="flex-1 bg-[#141416] rounded-full px-4 py-1.5 text-white text-sm placeholder:text-zinc-700 focus:border-[#7C5DBD]/40 focus:outline-none" />
+                className="flex-1 bg-[#141416] border border-white/[0.06] rounded-full px-3.5 py-1.5 text-white text-xs placeholder:text-zinc-600 focus:outline-none focus:border-[#7C5DBD]/40 transition-colors" />
               <button onClick={handleSubmitReply} disabled={submittingReply || !replyText.trim()}
-                className="p-2 bg-[#7C5DBD] hover:bg-[#6B4DAD] disabled:opacity-40 text-white rounded-full transition-colors">
-                {submittingReply ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                className="p-1.5 bg-[#7C5DBD] hover:bg-[#6B4DAD] disabled:opacity-40 text-white rounded-full transition-colors shrink-0">
+                {submittingReply ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
               </button>
             </div>
           </div>
         </div>
-      )}
+      </div>
+
+      {openMovieId && <MovieDetailModal movieId={openMovieId} onClose={() => setOpenMovieId(null)} />}
     </article>
   );
 }
@@ -1957,9 +1989,15 @@ export function SocialTab() {
     }
   };
 
+  const isAdmin = currentUserId === ADMIN_UID;
+
   const handleDelete = async (post_id: string) => {
     if (!currentUserId) return;
-    const result = await deletePost(post_id, currentUserId);
+    const targetPost = posts.find((p: FeedPost) => p.post_id === post_id);
+    const isOwnPost  = targetPost?.user_id === currentUserId;
+    const result = isAdmin && !isOwnPost
+      ? await adminDeletePost(post_id)
+      : await deletePost(post_id, currentUserId);
     if (result.success) {
       _feedCache.delete(post_id);
       setPosts(prev => prev.filter(p => p.post_id !== post_id));
@@ -2100,7 +2138,7 @@ export function SocialTab() {
                         animationDelay: `${Math.min(idx * 40, 250)}ms`,
                       }}>
                       <ActivityCard post={post} currentUserId={currentUserId}
-                        currentUsername={currentUsername}
+                        currentUsername={currentUsername} isAdmin={isAdmin}
                         onLike={handleLike} onDelete={handleDelete}
                         onOpenProfile={setProfileUserId} />
                     </div>

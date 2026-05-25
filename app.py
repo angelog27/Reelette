@@ -157,6 +157,21 @@ def require_auth(f):
         return f(*args, **kwargs)
     return decorated
 
+# ── Admin ────────────────────────────────────────────────────────
+# The admin UID is the only source of truth for elevated privileges.
+# It is verified server-side on every request via a fresh Firebase token —
+# the frontend badge is cosmetic only and cannot grant any access.
+ADMIN_UID = "DErwtoDpkRS8ZoudSIX5awlDMqo1"
+
+def require_admin(f):
+    """Must follow @require_auth. Rejects with 403 if the caller is not the admin."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if g.verified_uid != ADMIN_UID:
+            return jsonify({'error': 'Forbidden'}), 403
+        return f(*args, **kwargs)
+    return decorated
+
 def _own_account(user_id: str):
     """Return a 403 response if g.verified_uid doesn't match user_id, else None."""
     if g.verified_uid != user_id:
@@ -1020,6 +1035,25 @@ def dislike_reply_route(post_id, reply_id):
 @require_auth
 def delete_feed_post(post_id):
     return jsonify(delete_post(post_id, g.verified_uid))
+
+
+@app.route('/api/admin/posts/<post_id>', methods=['DELETE'])
+@require_auth
+@require_admin
+@limiter.limit("60 per minute")
+def admin_delete_post(post_id):
+    from firebase_helper import admin_delete_post as _admin_del_post
+    return jsonify(_admin_del_post(post_id))
+
+
+@app.route('/api/admin/posts/<post_id>/replies/<reply_id>', methods=['DELETE'])
+@require_auth
+@require_admin
+@limiter.limit("60 per minute")
+def admin_delete_reply(post_id, reply_id):
+    from firebase_helper import admin_delete_reply as _admin_del_reply
+    return jsonify(_admin_del_reply(post_id, reply_id))
+
 
 # ── User Profile Update / Avatar / Presence ──────────────────────
 
