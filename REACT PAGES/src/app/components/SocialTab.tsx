@@ -892,10 +892,10 @@ function ActivityCard({ post, currentUserId, currentUsername, isAdmin, onLike, o
             )}
           </div>
 
-          {/* Movie card: large poster left, all metadata + review right */}
+          {/* Movie card: poster left, review right */}
           {post.movie_title ? (
             <div className="flex gap-4 items-start">
-              {/* Poster */}
+              {/* Poster — clickable to movie modal */}
               <div className="shrink-0 cursor-pointer" onClick={() => setOpenMovieId(post.movie_id)}>
                 {post.movie_poster
                   ? <img src={post.movie_poster} alt={post.movie_title}
@@ -906,30 +906,27 @@ function ActivityCard({ post, currentUserId, currentUsername, isAdmin, onLike, o
                 }
               </div>
 
-              {/* Metadata + review text */}
-              <div className="flex-1 min-w-0 flex flex-col gap-2 pt-0.5">
-                <p className="text-white font-bold leading-snug line-clamp-2" style={{ fontSize: '0.9rem' }}>{post.movie_title}</p>
+              {/* Right: title → review (dominant) → rating → actions */}
+              <div className="flex-1 min-w-0 flex flex-col gap-2 pt-0.5 h-[225px]">
+                {/* Movie title — clickable */}
+                <button onClick={() => setOpenMovieId(post.movie_id)}
+                  className="text-left text-zinc-400 text-xs font-semibold hover:text-[#9B7BD7] transition-colors line-clamp-1 shrink-0">
+                  {post.movie_title}
+                </button>
 
-                {/* Year · runtime */}
-                {(movieMeta?.year || (movieMeta?.runtime ?? 0) > 0) && (
-                  <div className="flex items-center gap-1.5 text-xs text-zinc-500">
-                    {movieMeta?.year && <span>{movieMeta.year}</span>}
-                    {(movieMeta?.runtime ?? 0) > 0 && <><span className="text-zinc-700">·</span><span>{movieMeta!.runtime}m</span></>}
-                  </div>
+                {/* Review text — main content */}
+                {post.message && (
+                  <p className="text-zinc-100 text-sm leading-relaxed flex-1 overflow-hidden" style={{ display: '-webkit-box', WebkitLineClamp: 7, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                    {renderMessage(post.message, onOpenProfile)}
+                  </p>
                 )}
 
-                {/* TMDB rating */}
-                {movieMeta && movieMeta.voteAverage > 0 && (
-                  <div className="flex items-center gap-1">
-                    <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                    <span className="text-amber-400 text-xs font-semibold">{movieMeta.voteAverage.toFixed(1)}</span>
-                    <span className="text-zinc-600 text-[10px]">TMDB</span>
-                  </div>
-                )}
+                {/* Spacer when no message */}
+                {!post.message && <div className="flex-1" />}
 
-                {/* Star rating */}
+                {/* User's rating */}
                 {post.rating > 0 && (
-                  <div className="flex items-center gap-1.5">
+                  <div className="shrink-0 flex items-center gap-2">
                     <div className="flex items-center gap-0.5">
                       {[...Array(5)].map((_, i) => {
                         const filled = (post.rating / 2) >= (i + 1);
@@ -937,28 +934,15 @@ function ActivityCard({ post, currentUserId, currentUsername, isAdmin, onLike, o
                         return <Star key={i} className={`w-3 h-3 ${filled || half ? 'fill-yellow-400 text-yellow-400' : 'text-zinc-800'}`} />;
                       })}
                     </div>
-                    <span className="text-yellow-400 font-bold text-xs tabular-nums">{post.rating}/10</span>
+                    <span className="text-zinc-500 text-[11px]">
+                      <span className="text-zinc-400 font-medium">{post.username}</span>'s rating:
+                      <span className="text-yellow-400 font-bold tabular-nums ml-1">{post.rating}/10</span>
+                    </span>
                   </div>
-                )}
-
-                {/* Genre tags */}
-                {movieMeta?.genres && movieMeta.genres.length > 0 && (
-                  <div className="flex gap-1 flex-wrap">
-                    {movieMeta.genres.map(g => (
-                      <span key={g} className="text-[10px] px-2 py-0.5 rounded-full bg-[#7C5DBD]/10 text-[#9B7BD7]">{g}</span>
-                    ))}
-                  </div>
-                )}
-
-                {/* Review text */}
-                {post.message && (
-                  <p className="text-zinc-400 text-xs leading-relaxed line-clamp-5 mt-0.5">
-                    {renderMessage(post.message, onOpenProfile)}
-                  </p>
                 )}
 
                 {/* Action row */}
-                <div className="flex items-center gap-0.5 -ml-1.5 mt-auto pt-1">
+                <div className="shrink-0 flex items-center gap-0.5 -ml-1.5">
                   <button onClick={handleLikeClick}
                     style={{ transition: 'transform 0.25s cubic-bezier(0.34,1.56,0.64,1)', transform: likeAnim ? 'scale(1.4)' : 'scale(1)' }}
                     className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-[#7C5DBD]/[0.08] hover:text-[#9B7BD7] ${isLiked ? 'text-[#7C5DBD]' : 'text-zinc-600'}`}>
@@ -994,22 +978,25 @@ function ActivityCard({ post, currentUserId, currentUsername, isAdmin, onLike, o
           ) : (
             /* Text-only post (no movie) */
             <>
+              {post.message && (
+                <p className="text-zinc-100 text-sm leading-relaxed flex-1">
+                  {renderMessage(post.message, onOpenProfile)}
+                </p>
+              )}
               {post.rating > 0 && (
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-2 shrink-0">
                   <div className="flex items-center gap-0.5">
                     {[...Array(5)].map((_, i) => {
                       const filled = (post.rating / 2) >= (i + 1);
                       const half   = !filled && (post.rating / 2) > i;
-                      return <Star key={i} className={`w-3.5 h-3.5 ${filled || half ? 'fill-yellow-400 text-yellow-400' : 'text-zinc-800'}`} />;
+                      return <Star key={i} className={`w-3 h-3 ${filled || half ? 'fill-yellow-400 text-yellow-400' : 'text-zinc-800'}`} />;
                     })}
                   </div>
-                  <span className="text-yellow-400 font-bold text-sm tabular-nums">{post.rating}/10</span>
+                  <span className="text-zinc-500 text-[11px]">
+                    <span className="text-zinc-400 font-medium">{post.username}</span>'s rating:
+                    <span className="text-yellow-400 font-bold tabular-nums ml-1">{post.rating}/10</span>
+                  </span>
                 </div>
-              )}
-              {post.message && (
-                <p className="text-zinc-300 text-sm leading-relaxed">
-                  {renderMessage(post.message, onOpenProfile)}
-                </p>
               )}
               <div className="flex items-center gap-0.5 -ml-1.5 mt-auto pt-1">
                 <button onClick={handleLikeClick}
