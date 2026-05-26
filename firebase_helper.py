@@ -1785,3 +1785,121 @@ def delete_user_account(user_id):
         return {'success': True}
     except Exception as e:
         return {'success': False, 'message': str(e)}
+
+
+# ── Rankings ──────────────────────────────────────────────────────
+
+def create_ranking(user_id, username, title, description, movies, is_public=True):
+    """Create a new ranking. movies is an ordered list of {movie_id, movie_title, movie_poster}."""
+    try:
+        ref = db.collection('users').document(user_id).collection('rankings').document()
+        now = datetime.utcnow()
+        ranked = [
+            {
+                'movie_id':    m.get('movie_id', ''),
+                'movie_title': m.get('movie_title', ''),
+                'movie_poster': m.get('movie_poster', ''),
+                'rank': i + 1,
+            }
+            for i, m in enumerate(movies)
+        ]
+        doc = {
+            'ranking_id':  ref.id,
+            'user_id':     user_id,
+            'username':    username,
+            'title':       title[:120],
+            'description': description[:500] if description else '',
+            'movies':      ranked,
+            'is_public':   is_public,
+            'created_at':  now,
+            'updated_at':  now,
+        }
+        ref.set(doc)
+        return {'success': True, 'ranking_id': ref.id}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+
+def get_user_rankings(user_id):
+    """Return all rankings for a user, newest first."""
+    try:
+        docs = (
+            db.collection('users').document(user_id).collection('rankings')
+            .order_by('updated_at', direction=firestore.Query.DESCENDING)
+            .stream()
+        )
+        return [d.to_dict() for d in docs]
+    except Exception as e:
+        print(f'get_user_rankings error: {e}')
+        return []
+
+
+def get_ranking(ranking_id, user_id):
+    """Fetch a single ranking by ID from the owning user's subcollection."""
+    try:
+        doc = db.collection('users').document(user_id).collection('rankings').document(ranking_id).get()
+        return doc.to_dict() if doc.exists else None
+    except Exception as e:
+        print(f'get_ranking error: {e}')
+        return None
+
+
+def update_ranking(ranking_id, user_id, title, description, movies, is_public=True):
+    """Replace an existing ranking's title / movies / visibility."""
+    try:
+        ref = db.collection('users').document(user_id).collection('rankings').document(ranking_id)
+        if not ref.get().exists:
+            return {'success': False, 'message': 'Ranking not found'}
+        ranked = [
+            {
+                'movie_id':    m.get('movie_id', ''),
+                'movie_title': m.get('movie_title', ''),
+                'movie_poster': m.get('movie_poster', ''),
+                'rank': i + 1,
+            }
+            for i, m in enumerate(movies)
+        ]
+        ref.update({
+            'title':       title[:120],
+            'description': description[:500] if description else '',
+            'movies':      ranked,
+            'is_public':   is_public,
+            'updated_at':  datetime.utcnow(),
+        })
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+
+def delete_ranking(ranking_id, user_id):
+    """Delete a ranking owned by user_id."""
+    try:
+        ref = db.collection('users').document(user_id).collection('rankings').document(ranking_id)
+        if not ref.get().exists:
+            return {'success': False, 'message': 'Ranking not found'}
+        ref.delete()
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+
+def get_friends_rankings(user_id, limit_per_friend=3):
+    """Return recent public rankings from all friends, newest first overall."""
+    try:
+        friend_docs = db.collection('users').document(user_id).collection('friends').stream()
+        friend_ids = [d.to_dict().get('friend_id') for d in friend_docs if d.to_dict().get('friend_id')]
+        all_rankings = []
+        for fid in friend_ids:
+            docs = (
+                db.collection('users').document(fid).collection('rankings')
+                .where('is_public', '==', True)
+                .order_by('updated_at', direction=firestore.Query.DESCENDING)
+                .limit(limit_per_friend)
+                .stream()
+            )
+            all_rankings.extend([d.to_dict() for d in docs])
+        all_rankings.sort(key=lambda r: r.get('updated_at', datetime.min), reverse=True)
+        return all_rankings[:30]
+    except Exception as e:
+        print(f'get_friends_rankings error: {e}')
+        return []

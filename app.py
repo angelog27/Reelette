@@ -49,6 +49,7 @@ from firebase_helper import (
     get_group_chat, send_group_message,
     update_user_email, delete_user_account,
     get_post, get_user_id_by_username,
+    create_ranking, get_user_rankings, get_ranking, update_ranking, delete_ranking, get_friends_rankings,
     send_welcome_email, send_tagged_in_post_email,
     send_post_reply_email, send_like_milestone_email,
     send_friend_request_email, send_group_added_email,
@@ -146,6 +147,8 @@ def require_auth(f):
     """Verify Firebase ID token from Authorization header. Stores uid in g.verified_uid."""
     @wraps(f)
     def decorated(*args, **kwargs):
+        if request.method == 'OPTIONS':
+            return '', 200
         token = request.headers.get('Authorization', '').removeprefix('Bearer ').strip()
         if not token:
             return jsonify({'error': 'Authentication required'}), 401
@@ -161,7 +164,7 @@ def require_auth(f):
 # The admin UID is the only source of truth for elevated privileges.
 # It is verified server-side on every request via a fresh Firebase token —
 # the frontend badge is cosmetic only and cannot grant any access.
-ADMIN_UID = "DErwtoDpkRS8ZoudSIX5awlDMqo1"
+ADMIN_UID = "iiBMPhonpAR4RWTGCwlykGiDIH63"
 
 def require_admin(f):
     """Must follow @require_auth. Rejects with 403 if the caller is not the admin."""
@@ -1831,6 +1834,83 @@ def delete_account(user_id):
     err = _own_account(user_id)
     if err: return err
     return jsonify(delete_user_account(user_id))
+
+
+# ── Rankings ─────────────────────────────────────────────────────
+
+_RANKINGS_TTL = 5 * 60  # 5 min server-side cache
+
+@app.route('/api/users/<user_id>/rankings', methods=['GET'])
+def get_rankings_for_user(user_id):
+    cache_key = f'rankings:{user_id}'
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return jsonify({'rankings': cached})
+    rankings = serialize_timestamps(get_user_rankings(user_id))
+    _cache_set(cache_key, rankings, _RANKINGS_TTL)
+    return jsonify({'rankings': rankings})
+
+
+@app.route('/api/rankings', methods=['POST'])
+@require_auth
+def create_ranking_route():
+    data = request.get_json() or {}
+    user_id     = g.verified_uid
+    username    = (data.get('username') or '').strip()
+    title       = (data.get('title') or '').strip()
+    description = (data.get('description') or '').strip()
+    movies      = data.get('movies') or []
+    is_public   = bool(data.get('is_public', True))
+    if not title:
+        return jsonify({'success': False, 'message': 'title is required'}), 400
+    if len(movies) < 2:
+        return jsonify({'success': False, 'message': 'A ranking needs at least 2 movies'}), 400
+    if len(movies) > 50:
+        return jsonify({'success': False, 'message': 'Maximum 50 movies per ranking'}), 400
+    result = create_ranking(user_id, username, title, description, movies, is_public)
+    if result.get('success'):
+        _cache.pop(f'rankings:{user_id}', None)
+    return jsonify(result)
+
+
+@app.route('/api/rankings/<ranking_id>', methods=['PUT'])
+@require_auth
+def update_ranking_route(ranking_id):
+    data        = request.get_json() or {}
+    user_id     = g.verified_uid
+    title       = (data.get('title') or '').strip()
+    description = (data.get('description') or '').strip()
+    movies      = data.get('movies') or []
+    is_public   = bool(data.get('is_public', True))
+    if not title:
+        return jsonify({'success': False, 'message': 'title is required'}), 400
+    if len(movies) < 2:
+        return jsonify({'success': False, 'message': 'A ranking needs at least 2 movies'}), 400
+    result = update_ranking(ranking_id, user_id, title, description, movies, is_public)
+    if result.get('success'):
+        _cache.pop(f'rankings:{user_id}', None)
+    return jsonify(result)
+
+
+@app.route('/api/rankings/<ranking_id>', methods=['DELETE'])
+@require_auth
+def delete_ranking_route(ranking_id):
+    user_id = g.verified_uid
+    result  = delete_ranking(ranking_id, user_id)
+    if result.get('success'):
+        _cache.pop(f'rankings:{user_id}', None)
+    return jsonify(result)
+
+
+@app.route('/api/friends/<user_id>/rankings', methods=['GET'])
+def get_friend_rankings_route(user_id):
+    cache_key = f'friend_rankings:{user_id}'
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return jsonify({'rankings': cached})
+    rankings = serialize_timestamps(get_friends_rankings(user_id))
+    _cache_set(cache_key, rankings, _RANKINGS_TTL)
+    return jsonify({'rankings': rankings})
 
 
 # ── Health check ─────────────────────────────────────────────────
