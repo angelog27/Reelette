@@ -26,6 +26,7 @@ import { db, signInFirebase } from '../lib/firebase';
 import { collection, query as fbQuery, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { UserProfileModal } from './UserProfileModal';
 import { MovieDetailModal } from './MovieDetailModal';
+import { FriendRankingsPanel } from './RankingsView';
 
 // ── Module-level feed cache — survives tab navigation ──────────
 const _feedCache = new Map<string, FeedPost>();
@@ -1946,6 +1947,16 @@ function RightSidebar({ currentUserId, currentUsername, onOpenProfile }: {
             ))}
           </div>
         )}
+      </section>
+
+      <div className="mx-4 border-t border-[#1a1a1e]" />
+
+      {/* Friend Rankings */}
+      <section className="px-4 pt-4 pb-4">
+        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600 mb-3 flex items-center gap-1.5">
+          <span>🏆</span> Friend Rankings
+        </p>
+        <FriendRankingsPanel userId={currentUserId} />
       </section>
 
       <div className="mx-4 border-t border-[#1a1a1e]" />

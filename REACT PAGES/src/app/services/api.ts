@@ -1463,3 +1463,110 @@ export async function getAIRecommendations(): Promise<AIRecommendationRow[]> {
 }
 
 
+
+
+// ── Rankings ──────────────────────────────────────────────────────
+
+export interface RankingMovie {
+  movie_id: string;
+  movie_title: string;
+  movie_poster: string;
+  rank: number;
+}
+
+export interface MovieRanking {
+  ranking_id: string;
+  user_id: string;
+  username: string;
+  title: string;
+  description: string;
+  movies: RankingMovie[];
+  is_public: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+const RANKINGS_MEM_TTL  = 5  * 60 * 1000;
+const RANKINGS_LS_TTL   = 15 * 60 * 1000;
+
+export function getUserRankings(user_id: string): Promise<MovieRanking[]> {
+  return fromCachePersisted(`rankings:${user_id}`, RANKINGS_MEM_TTL, RANKINGS_LS_TTL, async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/users/${user_id}/rankings`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.rankings ?? [];
+    } catch { return []; }
+  });
+}
+
+export async function createRanking(payload: {
+  username: string;
+  title: string;
+  description?: string;
+  movies: { movie_id: string; movie_title: string; movie_poster: string }[];
+  is_public?: boolean;
+}): Promise<{ success: boolean; ranking_id?: string; message?: string }> {
+  const token = await getIdToken();
+  if (!token) return { success: false, message: 'Not logged in' };
+  try {
+    const res = await fetch(`${BASE_URL}/rankings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (data.success) {
+      bustCachePrefix(`rankings:${getUser()?.user_id}`);
+    }
+    return data;
+  } catch { return { success: false, message: 'Network error' }; }
+}
+
+export async function updateRanking(
+  ranking_id: string,
+  payload: {
+    title: string;
+    description?: string;
+    movies: { movie_id: string; movie_title: string; movie_poster: string }[];
+    is_public?: boolean;
+  }
+): Promise<{ success: boolean; message?: string }> {
+  const token = await getIdToken();
+  if (!token) return { success: false, message: 'Not logged in' };
+  try {
+    const res = await fetch(`${BASE_URL}/rankings/${ranking_id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (data.success) bustCachePrefix(`rankings:${getUser()?.user_id}`);
+    return data;
+  } catch { return { success: false, message: 'Network error' }; }
+}
+
+export async function deleteRanking(ranking_id: string): Promise<{ success: boolean; message?: string }> {
+  const token = await getIdToken();
+  if (!token) return { success: false, message: 'Not logged in' };
+  try {
+    const res = await fetch(`${BASE_URL}/rankings/${ranking_id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    if (data.success) bustCachePrefix(`rankings:${getUser()?.user_id}`);
+    return data;
+  } catch { return { success: false, message: 'Network error' }; }
+}
+
+export function getFriendsRankings(user_id: string): Promise<MovieRanking[]> {
+  return fromCachePersisted(`friend_rankings:${user_id}`, 3 * 60 * 1000, 10 * 60 * 1000, async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/friends/${user_id}/rankings`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.rankings ?? [];
+    } catch { return []; }
+  });
+}

@@ -1,12 +1,13 @@
 ﻿import { useState, useEffect, useRef } from 'react';
-import { Star, Bookmark, BarChart2, ArrowUpDown, Check } from 'lucide-react';
+import { Star, Bookmark, BarChart2, ArrowUpDown, Check, Trophy } from 'lucide-react';
 import { getWatchedMovies, getWatchLater, getMovieDetails, getShowDetails, getMovieProvider, getUser, getRouletteHistory } from '../services/api';
 import type { WatchedMovie, RouletteSpin } from '../services/api';
 import { MovieDetailModal } from './MovieDetailModal';
 import { PROVIDER_LOGOS } from '../constants/providers';
 import { StatsTab } from './StatsTab';
+import { RankingsView } from './RankingsView';
 
-type Tab         = 'watched' | 'watchlater' | 'stats';
+type Tab         = 'watched' | 'watchlater' | 'stats' | 'rankings';
 type SortMode    = 'rating-desc' | 'rating-asc' | 'franchise' | 'year-desc' | 'year-asc' | 'az';
 type MediaFilter = 'all' | 'movie' | 'show';
 
@@ -225,6 +226,15 @@ export function MyStuffTab() {
           >
             <BarChart2 className="w-3.5 h-3.5" /> Stats
           </button>
+          <button
+            onClick={() => handleTabChange('rankings')}
+            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              activeTab === 'rankings' ? 'text-white' : 'text-gray-400 hover:text-white'
+            }`}
+            style={activeTab === 'rankings' ? { background: 'var(--reel-accent-hex)' } : {}}
+          >
+            <Trophy className="w-3.5 h-3.5" /> Rankings
+          </button>
         </div>
 
         {/* Media filter — only on Watched tab */}
@@ -243,8 +253,8 @@ export function MyStuffTab() {
           </div>
         )}
 
-        {/* Sort button — hidden on Stats tab, pushed to the far right */}
-        {activeTab !== 'stats' && (
+        {/* Sort button — hidden on Stats and Rankings tabs, pushed to the far right */}
+        {activeTab !== 'stats' && activeTab !== 'rankings' && (
           <div className="relative ml-auto" ref={sortRef}>
             <button
               onClick={() => setSortOpen(v => !v)}
@@ -284,7 +294,9 @@ export function MyStuffTab() {
 
       {/* ── Content ── */}
       <div className="px-3 sm:px-6 pb-12">
-        {loading ? (
+        {activeTab === 'rankings' ? (
+          <RankingsView userId={user.user_id} />
+        ) : loading ? (
           <div className="text-gray-500 text-center py-16">Loading…</div>
         ) : activeTab === 'stats' ? (
           <StatsTab
