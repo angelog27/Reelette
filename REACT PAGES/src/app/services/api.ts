@@ -405,7 +405,7 @@ export function searchMovies(query: string, page = 1): Promise<Movie[]> {
 }
 
 export function getMovieBackdrops(movieId: string, type: 'movie' | 'show' = 'movie'): Promise<string[]> {
-  return fromCache(`backdrops:${movieId}:${type}`, TTL.CATALOG, async () => {
+  return fromCache(`backdrops_v3:${movieId}:${type}`, TTL.CATALOG, async () => {
     try {
       const res = await fetch(`${BASE_URL}/movies/${movieId}/backdrops?type=${type}`);
       if (!res.ok) return [];
@@ -880,6 +880,7 @@ export interface UserPublicProfile {
   showMyStuffPublicly: boolean;
   showOnlineStatus: boolean;
   profileBannerUrl?: string | null;
+  themeId?: string;
 }
 
 export function getUserPublicProfile(user_id: string): Promise<UserPublicProfile | null> {
@@ -928,13 +929,17 @@ export async function saveSocialSettings(user_id: string, settings: { showOnline
   return res.json();
 }
 
-export async function updateUserProfile(user_id: string, data: Partial<Pick<UserProfile, 'displayName' | 'bio' | 'username'>>) {
+export async function updateUserProfile(user_id: string, data: Partial<Pick<UserProfile, 'displayName' | 'bio' | 'username'> & { themeId: string }>) {
   const res = await authedFetch(`${BASE_URL}/user/${user_id}/profile`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
   return res.json();
+}
+
+export function bustPublicProfileCache(user_id: string) {
+  bustCachePrefix(`profile:public:${user_id}`);
 }
 
 export async function updateProfileBanner(user_id: string, bannerUrl: string | null) {

@@ -16,7 +16,7 @@ import {
   getNotifPrefs, saveNotifPrefs,
   updateUserAvatar, updateUserEmail, deleteUserAccount,
   updateUserStreaming, updateProfileBanner, searchMovies, getMovieBackdrops,
-  updateUserProfile,
+  updateUserProfile, bustPublicProfileCache,
   type AppNotification, type Friend, type NotifPrefs, type Movie,
 } from '../services/api';
 
@@ -1049,7 +1049,11 @@ export function ProfileandSettingsTab() {
                   return (
                     <button
                       key={t.id}
-                      onClick={() => setThemeId(t.id)}
+                      onClick={() => {
+                        setThemeId(t.id);
+                        bustPublicProfileCache(userId);
+                        updateUserProfile(userId, { themeId: t.id });
+                      }}
                       className={`relative rounded-2xl overflow-hidden text-left transition-all duration-200 focus:outline-none ${
                         active ? 'ring-2 scale-[1.02]' : 'ring-1 ring-white/[0.08] hover:ring-white/20 hover:scale-[1.01]'
                       }`}

@@ -9,6 +9,7 @@ import {
   getMovieDetails,
   type UserPublicProfile, type WatchedMovie,
 } from '../services/api';
+import { THEMES } from './ThemeContext';
 
 interface Props {
   userId: string;
@@ -300,6 +301,7 @@ export function UserProfileModal({ userId, onClose }: Props) {
 
   const avatar = profile?.avatarUrl || dicebear(profile?.username ?? userId);
   const online = profile?.showOnlineStatus ? isOnline(profile.lastSeen) : false;
+  const ownerTheme = THEMES.find(t => t.id === (profile?.themeId ?? 'default')) ?? THEMES[0];
 
   const statBlocks = profile
     ? [
@@ -327,20 +329,30 @@ export function UserProfileModal({ userId, onClose }: Props) {
       >
         <div className="bg-[#1C1C1C] border border-[#2A2A2A] rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh]">
 
-          {/* Header banner */}
-          <div className="h-28 relative rounded-t-2xl shrink-0 overflow-hidden bg-gradient-to-br from-zinc-900 via-zinc-950 to-black">
-            {profile?.profileBannerUrl ? (
-              <>
-                <img
-                  src={profile.profileBannerUrl}
-                  alt="Profile banner"
-                  className="absolute inset-0 w-full h-full object-cover"
+          {/* Header banner — overflow visible so the avatar can bleed below */}
+          <div className="h-28 relative rounded-t-2xl shrink-0 bg-gradient-to-br from-zinc-900 via-zinc-950 to-black">
+            {/* image + overlays are clipped inside their own container */}
+            <div className="absolute inset-0 rounded-t-2xl overflow-hidden">
+              {profile?.profileBannerUrl ? (
+                <>
+                  <img
+                    src={profile.profileBannerUrl}
+                    alt="Profile banner"
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                </>
+              ) : ownerTheme ? (
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    background: `linear-gradient(135deg, ${ownerTheme.accent}22 0%, ${ownerTheme.accent}08 50%, transparent 100%)`,
+                  }}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-              </>
-            ) : (
-              <div className="absolute inset-0 bg-gradient-to-r from-red-950/30 to-transparent" />
-            )}
+              ) : (
+                <div className="absolute inset-0 bg-gradient-to-r from-red-950/30 to-transparent" />
+              )}
+            </div>
             <button
               onClick={onClose}
               className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/50 hover:bg-black/80 flex items-center justify-center text-gray-400 hover:text-white transition-colors z-10"
