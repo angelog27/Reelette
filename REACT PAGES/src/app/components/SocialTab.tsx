@@ -1570,7 +1570,7 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
 }
 
 // ── Left Sidebar ───────────────────────────────────────────────
-type SidebarView = 'feed' | 'recent';
+type SidebarView = 'feed' | 'recent' | 'groups' | 'friends';
 
 function LeftSidebar({ view, onViewChange, groups, groupsLoading, activeGroupId, onGroupSelect, onCreateGroup, currentUserId }: {
   view: SidebarView;
@@ -1607,7 +1607,7 @@ function LeftSidebar({ view, onViewChange, groups, groupsLoading, activeGroupId,
   ];
 
   return (
-    <aside className="w-[220px] shrink-0 flex flex-col overflow-y-auto overflow-x-hidden no-scrollbar">
+    <aside className="hidden md:flex w-[220px] shrink-0 flex-col overflow-y-auto overflow-x-hidden no-scrollbar">
       {/* Nav section */}
       <div className="px-3 pt-5 pb-3">
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600 px-2 mb-2">Navigation</p>
@@ -1860,13 +1860,13 @@ function RightSidebar({ currentUserId, currentUsername, onOpenProfile }: {
   };
 
   if (loading) return (
-    <aside className="w-[270px] shrink-0 overflow-y-auto px-4 py-5 space-y-4 no-scrollbar">
+    <aside className="hidden lg:flex w-[270px] shrink-0 flex-col overflow-y-auto px-4 py-5 space-y-4 no-scrollbar">
       {[...Array(3)].map((_, i) => <div key={i} className="h-20 bg-[#141416] rounded-xl animate-pulse" />)}
     </aside>
   );
 
   return (
-    <aside className="w-[270px] shrink-0 overflow-y-auto no-scrollbar">
+    <aside className="hidden lg:flex w-[270px] shrink-0 flex-col overflow-y-auto no-scrollbar">
 
       {/* Friend Requests */}
       {requests.length > 0 && (
@@ -1989,9 +1989,196 @@ function RightSidebar({ currentUserId, currentUsername, onOpenProfile }: {
   );
 }
 
+// ── Mobile Groups Panel ────────────────────────────────────────
+function MobileGroupsPanel({ groups, groupsLoading, onGroupSelect, onCreateGroup, currentUserId }: {
+  groups: MovieGroup[]; groupsLoading: boolean;
+  onGroupSelect: (g: MovieGroup) => void; onCreateGroup: () => void; currentUserId: string;
+}) {
+  const [showCreate, setShowCreate] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [creating, setCreating] = useState(false);
+  const currentUser = getUser();
+
+  const handleCreate = async () => {
+    if (!newName.trim() || !currentUser) return;
+    setCreating(true);
+    const r = await createGroup(newName.trim(), '', currentUser.user_id, currentUser.username);
+    if (r.success) { setNewName(''); setShowCreate(false); onCreateGroup(); }
+    setCreating(false);
+  };
+
+  return (
+    <div className="px-4 py-4">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-white font-semibold text-[15px] flex items-center gap-2">
+          <Users className="w-4 h-4 text-zinc-500" /> Groups
+        </h2>
+        <button onClick={() => setShowCreate(s => !s)}
+          className="text-xs text-[#9B7BD7] hover:text-[#7C5DBD] transition-colors flex items-center gap-1">
+          <Plus className="w-3.5 h-3.5" /> New Group
+        </button>
+      </div>
+      {showCreate && (
+        <div className="mb-4 p-3 bg-white/[0.03] rounded-xl space-y-2">
+          <input value={newName} onChange={e => setNewName(e.target.value)}
+            placeholder="Group name…"
+            className="w-full bg-[#141416] border border-white/[0.08] rounded-lg px-3 py-2 text-white text-sm placeholder:text-zinc-600 focus:outline-none focus:border-[#7C5DBD]/40" />
+          <button onClick={handleCreate} disabled={creating || !newName.trim()}
+            className="w-full py-2 bg-[#7C5DBD] hover:bg-[#6B4DAD] disabled:opacity-40 text-white text-sm font-semibold rounded-lg transition-colors">
+            {creating ? 'Creating…' : 'Create'}
+          </button>
+        </div>
+      )}
+      {groupsLoading ? (
+        <div className="space-y-2">{[...Array(3)].map((_, i) => <div key={i} className="h-14 bg-[#141416] rounded-xl animate-pulse" />)}</div>
+      ) : groups.length === 0 ? (
+        <p className="text-zinc-600 text-sm text-center py-12">No groups yet.</p>
+      ) : (
+        <div className="space-y-2">
+          {groups.map(g => (
+            <button key={g.group_id} onClick={() => onGroupSelect(g)}
+              className="w-full flex items-center gap-3 p-3 bg-white/[0.03] rounded-xl hover:bg-white/[0.06] transition-colors text-left">
+              <div className="w-10 h-10 rounded-xl bg-[#7C5DBD]/15 flex items-center justify-center shrink-0">
+                <Users className="w-5 h-5 text-[#9B7BD7]" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-white text-sm font-semibold truncate">{g.name}</p>
+                <p className="text-zinc-500 text-xs">{g.members?.length ?? 0} members</p>
+              </div>
+              <ArrowLeft className="w-4 h-4 text-zinc-600 rotate-180 shrink-0" />
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Mobile Friends Panel ───────────────────────────────────────
+function MobileFriendsPanel({ currentUserId, currentUsername, onOpenProfile }: {
+  currentUserId: string; currentUsername: string; onOpenProfile: (uid: string) => void;
+}) {
+  const [friends, setFriends] = useState<Friend[]>([]);
+  const [requests, setRequests] = useState<FriendRequest[]>([]);
+  const [suggested, setSuggested] = useState<{ user_id: string; username: string; displayName: string; avatarUrl?: string }[]>([]);
+  const [avatars, setAvatars] = useState<Record<string, string>>({});
+  const [sentTo, setSentTo] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    if (!currentUserId) return;
+    const [f, r] = await Promise.all([getFriends(currentUserId), getFriendRequests(currentUserId)]);
+    const ids = [...new Set([...f.map(x => x.friend_id), ...r.map(x => x.from_user_id)])];
+    const profiles = await Promise.all(ids.map(id => getUserPublicProfile(id)));
+    const av: Record<string, string> = {};
+    ids.forEach((id, i) => { const url = profiles[i]?.avatarUrl; if (url) av[id] = url; });
+    setFriends(f); setRequests(r); setAvatars(av);
+    try {
+      const letters = 'abcdefghijklmnopqrstuvwxyz';
+      const seed = letters[Math.floor(Math.random() * letters.length)];
+      const users = await searchUsers(seed, currentUserId);
+      const friendSet = new Set(f.map(fr => fr.friend_id));
+      const filtered = users.filter(u => !friendSet.has(u.user_id)).slice(0, 4);
+      const sp = await Promise.all(filtered.map(u => getUserPublicProfile(u.user_id)));
+      setSuggested(filtered.map((u, i) => ({ ...u, avatarUrl: sp[i]?.avatarUrl })));
+    } catch { /* non-critical */ }
+    setLoading(false);
+  }, [currentUserId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleAccept = async (req: FriendRequest) => {
+    await acceptFriendRequest(currentUserId, currentUsername, req.from_user_id, req.from_username);
+    load();
+  };
+  const handleReject = async (req: FriendRequest) => {
+    await rejectFriendRequest(currentUserId, req.from_user_id, req.from_username);
+    load();
+  };
+  const handleFollow = async (userId: string) => {
+    await sendFriendRequest(userId, currentUserId, currentUsername);
+    setSentTo(prev => new Set(prev).add(userId));
+    setSuggested(prev => prev.filter(u => u.user_id !== userId));
+  };
+
+  if (loading) return (
+    <div className="px-4 py-4 space-y-3">
+      {[...Array(4)].map((_, i) => <div key={i} className="h-14 bg-[#141416] rounded-xl animate-pulse" />)}
+    </div>
+  );
+
+  return (
+    <div className="px-4 py-4 space-y-6">
+      {requests.length > 0 && (
+        <section>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600 mb-3 flex items-center gap-2">
+            Requests <span className="bg-[#7C5DBD] text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">{requests.length}</span>
+          </p>
+          <div className="space-y-2.5">
+            {requests.map(req => (
+              <div key={req.from_user_id} className="flex items-center gap-2.5 p-2.5 bg-white/[0.03] rounded-xl">
+                <UserAvatar username={req.from_username} avatarUrl={avatars[req.from_user_id]} size={34} onClick={() => onOpenProfile(req.from_user_id)} />
+                <div className="flex-1 min-w-0">
+                  <button onClick={() => onOpenProfile(req.from_user_id)} className="text-white text-xs font-semibold hover:text-[#9B7BD7] transition-colors truncate block">@{req.from_username}</button>
+                </div>
+                <div className="flex gap-1 shrink-0">
+                  <button onClick={() => handleAccept(req)} className="p-1.5 bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 rounded-lg">
+                    <Check className="w-3.5 h-3.5" />
+                  </button>
+                  <button onClick={() => handleReject(req)} className="p-1.5 bg-red-500/10 border border-red-500/20 text-red-500 rounded-lg">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+      <section>
+        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600 mb-3">Friends · {friends.length}</p>
+        {friends.length === 0 ? (
+          <p className="text-zinc-600 text-sm text-center py-6">No friends yet.</p>
+        ) : (
+          <div className="space-y-2.5">
+            {friends.map(f => (
+              <div key={f.friend_id} className="flex items-center gap-2.5 p-2.5 bg-white/[0.03] rounded-xl">
+                <UserAvatar username={f.friend_username} avatarUrl={avatars[f.friend_id]} size={36} onClick={() => onOpenProfile(f.friend_id)} />
+                <div className="flex-1 min-w-0">
+                  <button onClick={() => onOpenProfile(f.friend_id)} className="text-white text-sm font-semibold hover:text-[#9B7BD7] transition-colors truncate block leading-none">@{f.friend_username}</button>
+                  <span className="text-zinc-600 text-xs">Friends since {new Date(f.since).toLocaleDateString()}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+      {suggested.length > 0 && (
+        <section>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600 mb-3">Suggested</p>
+          <div className="space-y-2.5">
+            {suggested.map(u => (
+              <div key={u.user_id} className="flex items-center gap-2.5 p-2.5 bg-white/[0.03] rounded-xl">
+                <UserAvatar username={u.username} avatarUrl={u.avatarUrl} size={34} onClick={() => onOpenProfile(u.user_id)} />
+                <div className="flex-1 min-w-0">
+                  <button onClick={() => onOpenProfile(u.user_id)} className="text-white text-xs font-semibold hover:text-[#9B7BD7] transition-colors truncate block">{u.displayName || u.username}</button>
+                  <span className="text-zinc-500 text-[11px]">@{u.username}</span>
+                </div>
+                <button onClick={() => handleFollow(u.user_id)} disabled={sentTo.has(u.user_id)}
+                  className="shrink-0 px-2.5 py-1 text-[11px] font-semibold rounded-full bg-[#7C5DBD]/15 text-[#9B7BD7] hover:bg-[#7C5DBD]/25 disabled:opacity-40 transition-colors">
+                  {sentTo.has(u.user_id) ? 'Sent' : 'Follow'}
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
+
 // ── Main SocialTab ─────────────────────────────────────────────
 export function SocialTab() {
-  const [sidebarView, setSidebarView] = useState<SidebarView>('feed');
+  const [sidebarView, setSidebarView] = useState<'feed' | 'recent' | 'groups' | 'friends'>('feed');
   const [feedMode, setFeedMode] = useState<'all' | 'friends'>('all');
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -2128,6 +2315,13 @@ export function SocialTab() {
     loadGroups();
   };
 
+  const mobileNavItems: { id: SidebarView; label: string; icon: React.ReactNode }[] = [
+    { id: 'feed', label: 'Feed', icon: <MessageCircle className="w-5 h-5" /> },
+    { id: 'recent', label: 'Recent', icon: <Clock className="w-5 h-5" /> },
+    { id: 'groups', label: 'Groups', icon: <Users className="w-5 h-5" /> },
+    { id: 'friends', label: 'Friends', icon: <UserPlus className="w-5 h-5" /> },
+  ];
+
   return (
     <div
       className="text-white -mx-6 -mt-8 pt-6 flex overflow-hidden"
@@ -2142,7 +2336,7 @@ export function SocialTab() {
 
       {profileUserId && <UserProfileModal userId={profileUserId} onClose={() => setProfileUserId(null)} />}
 
-      {/* Left Sidebar */}
+      {/* Left Sidebar — desktop only */}
       <LeftSidebar
         view={sidebarView}
         onViewChange={(v) => { setSidebarView(v); setActiveGroup(null); }}
@@ -2155,7 +2349,7 @@ export function SocialTab() {
       />
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto  no-scrollbar min-w-0">
+      <main className="flex-1 overflow-y-auto no-scrollbar min-w-0 pb-16 md:pb-0">
         {activeGroup ? (
           <GroupDetail
             group={activeGroup}
@@ -2166,6 +2360,22 @@ export function SocialTab() {
               const updated = await getGroup(activeGroup.group_id);
               if (updated) setActiveGroup(updated);
             }}
+          />
+        ) : sidebarView === 'groups' ? (
+          /* Mobile-only groups panel */
+          <MobileGroupsPanel
+            groups={groups}
+            groupsLoading={groupsLoading}
+            onGroupSelect={handleGroupSelect}
+            onCreateGroup={loadGroups}
+            currentUserId={currentUserId}
+          />
+        ) : sidebarView === 'friends' ? (
+          /* Mobile-only friends panel */
+          <MobileFriendsPanel
+            currentUserId={currentUserId}
+            currentUsername={currentUsername}
+            onOpenProfile={setProfileUserId}
           />
         ) : sidebarView === 'recent' ? (
           <>
@@ -2202,12 +2412,12 @@ export function SocialTab() {
             </div>
 
             {/* Compose */}
-            <div className="px-8">
+            <div className="px-3 sm:px-6 md:px-8">
               <ComposeBox currentUser={currentUser ? { ...currentUser, avatarUrl: currentUserAvatarUrl } : null} onPostCreated={handlePostCreated} />
             </div>
 
             {/* Posts */}
-            <div className="px-8">
+            <div className="px-3 sm:px-6 md:px-8">
               {loading
                 ? Array.from({ length: 5 }).map((_, i) => <ActivitySkeleton key={i} />)
                 : displayedPosts.length === 0
@@ -2237,12 +2447,30 @@ export function SocialTab() {
         )}
       </main>
 
-      {/* Right Sidebar */}
+      {/* Right Sidebar — desktop only */}
       <RightSidebar
         currentUserId={currentUserId}
         currentUsername={currentUsername}
         onOpenProfile={setProfileUserId}
       />
+
+      {/* Mobile bottom tab bar */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0A0A0A]/95 backdrop-blur-md border-t border-white/[0.06] flex items-stretch">
+        {mobileNavItems.map(item => (
+          <button
+            key={item.id}
+            onClick={() => { setSidebarView(item.id); setActiveGroup(null); }}
+            className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 transition-colors ${
+              sidebarView === item.id && !activeGroup
+                ? 'text-[#9B7BD7]'
+                : 'text-zinc-600 hover:text-zinc-400'
+            }`}
+          >
+            {item.icon}
+            <span className="text-[10px] font-medium">{item.label}</span>
+          </button>
+        ))}
+      </nav>
     </div>
   );
 }
