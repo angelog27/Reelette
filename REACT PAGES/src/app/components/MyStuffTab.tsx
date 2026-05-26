@@ -193,10 +193,10 @@ export function MyStuffTab() {
   }
 
   return (
-    <div className="-mx-6 -mt-8">
+    <div className="-mx-3 sm:-mx-6 -mt-8">
 
       {/* ── Controls row: tabs + sort ── */}
-      <div className="px-6 pt-10 pb-4 flex items-center gap-4 flex-wrap">
+      <div className="px-3 sm:px-6 pt-10 pb-4 flex items-center gap-4 flex-wrap">
 
         {/* Tab pills */}
         <div className="flex gap-1 bg-[#111] border border-[#1e1e1e] rounded-full p-1 w-fit">
@@ -283,7 +283,7 @@ export function MyStuffTab() {
       </div>
 
       {/* ── Content ── */}
-      <div className="px-6 pb-12">
+      <div className="px-3 sm:px-6 pb-12">
         {loading ? (
           <div className="text-gray-500 text-center py-16">Loading…</div>
         ) : activeTab === 'stats' ? (
@@ -299,7 +299,7 @@ export function MyStuffTab() {
             </div>
           ) : (
             <>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-6">
               {pagedMovies.map(m => (
                 <button
                   key={m.movie_id}
@@ -377,7 +377,7 @@ export function MyStuffTab() {
               No movies saved yet. Hit the bookmark icon on any movie to save it!
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-6">
               {sortedWatchLater.map(m => (
                 <button
                   key={m.movie_id}

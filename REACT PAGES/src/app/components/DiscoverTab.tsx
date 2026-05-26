@@ -666,8 +666,8 @@ const SLOT_META: Record<PersonalizedSlot['kind'], { label: string; color: string
 
 function PersonalizedHeroSkeleton() {
   return (
-    <div className="full-bleed relative animate-pulse bg-[#141414]" style={{ height: 520, marginTop: -32 }}>
-      <div className="absolute left-10 md:left-16 bottom-14 flex flex-col gap-3">
+    <div className="full-bleed relative animate-pulse bg-[#141414]" style={{ height: 'clamp(300px, 80vw, 520px)', marginTop: -32 }}>
+      <div className="absolute left-5 sm:left-10 md:left-16 bottom-8 sm:bottom-14 flex flex-col gap-3">
         <div className="h-3 w-40 rounded bg-[#222]" />
         <div className="h-14 w-80 rounded bg-[#222]" />
         <div className="h-4 w-40 rounded bg-[#222]" />
@@ -705,7 +705,7 @@ function PersonalizedHero({ slots, backdropOverrides = {}, onOpenModal, onToggle
   const isInWatchlist = watchlistIds.includes(slot.movie.id);
 
   return (
-    <div className="full-bleed relative overflow-hidden group/hero" style={{ height: 520, marginTop: -32 }}>
+    <div className="full-bleed relative overflow-hidden group/hero" style={{ height: 'clamp(300px, 80vw, 520px)', marginTop: -32 }}>
       {/* Backdrop layers */}
       {slots.map((s, i) => {
         const bg = backdropOverrides[s.movie.id] || s.movie.backdrop || '';
@@ -726,10 +726,10 @@ function PersonalizedHero({ slots, backdropOverrides = {}, onOpenModal, onToggle
       <div className="absolute inset-0" style={{ zIndex: 2, background: 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, transparent 18%)' }} />
 
       {/* Content row */}
-      <div className="absolute inset-x-0 bottom-0 flex items-end justify-between px-10 md:px-16 pb-12 gap-10" style={{ zIndex: 3 }}>
+      <div className="absolute inset-x-0 bottom-0 flex items-end justify-between px-5 sm:px-10 md:px-16 pb-6 sm:pb-12 gap-10" style={{ zIndex: 3 }}>
 
         {/* ── Left: movie info ── */}
-        <div className="flex flex-col min-w-0 max-w-[520px]">
+        <div className="flex flex-col min-w-0 max-w-[90vw] sm:max-w-[520px]">
           {/* Slot label */}
           <div className="flex items-center gap-2.5 mb-3">
             <div className="h-px w-8 rounded-full" style={{ background: color }} />
@@ -1235,7 +1235,7 @@ export function DiscoverTab() {
           {mediaType === 'show' ? 'Browse Shows' : 'Your Providers'}
         </p>
         <div
-          className="hide-scrollbar flex gap-3 justify-evenly"
+          className="hide-scrollbar flex gap-4 sm:gap-3 overflow-x-auto sm:justify-evenly px-2"
           style={{ scrollbarWidth: 'none' } as React.CSSProperties}
         >
           {visibleProviderTabs.map(p => {
@@ -1258,11 +1258,12 @@ export function DiscoverTab() {
                 }}
               >
                 {logo ? (
-                  <img src={logo} alt={p.label} className="rounded-xl object-cover"
-                    style={{ width: 108, height: 108, boxShadow: lit ? `0 0 20px ${color}99` : 'none', transition: 'box-shadow 0.25s' }}
+                  <img src={logo} alt={p.label}
+                    className="rounded-xl object-cover w-16 h-16 sm:w-[108px] sm:h-[108px]"
+                    style={{ boxShadow: lit ? `0 0 20px ${color}99` : 'none', transition: 'box-shadow 0.25s' }}
                   />
                 ) : (
-                  <Layers style={{ width: 68, height: 68, color: lit ? color : '#6b7280' }} />
+                  <Layers className="w-12 h-12 sm:w-[68px] sm:h-[68px]" style={{ color: lit ? color : '#6b7280' }} />
                 )}
                 <span className="text-[11px] font-semibold tracking-wide" style={{ color: lit ? '#fff' : '#9ca3af' }}>
                   {p.label}

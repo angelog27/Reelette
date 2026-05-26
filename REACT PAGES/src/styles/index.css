@@ -35,10 +35,16 @@ body {
   padding-top: env(safe-area-inset-top, 0px);
 }
 
-/* Breaks out of the px-6 content padding only — does not bleed into the sidebar */
+/* Breaks out of the content padding — responsive for mobile (px-3) vs desktop (px-6) */
 .full-bleed {
-  width: calc(100% + 3rem);
-  margin-left: -1.5rem;
+  width: calc(100% + 1.5rem);
+  margin-left: -0.75rem;
+}
+@media (min-width: 768px) {
+  .full-bleed {
+    width: calc(100% + 3rem);
+    margin-left: -1.5rem;
+  }
 }
 
 /* Hide scrollbar for horizontal movie rows */

@@ -283,7 +283,7 @@ export function SearchTab() {
         ) : displayedMovies.length === 0 ? (
           <div className="text-gray-500 text-center py-16">Enter a search term or apply filters to find {label.toLowerCase()}s.</div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-6">
             {displayedMovies.map((movie) => (
               <MovieCard key={movie.id} movie={movie} onClick={(m) => setSelectedMovieId(m.id)} />
             ))}

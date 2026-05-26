@@ -105,7 +105,7 @@ function timeAgoShort(iso: string): string {
 
 function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`bg-[#111111] border border-[#222222] rounded-2xl p-6 ${className}`}>
+    <div className={`bg-[#111111] border border-[#222222] rounded-2xl p-4 sm:p-6 ${className}`}>
       {children}
     </div>
   );
@@ -461,11 +461,11 @@ export function ProfileandSettingsTab() {
   const bannerGradient = getBannerGradient(editing ? draft.bannerBg : profile.bannerBg);
   const unreadCount = notifs.filter(n => !n.read).length;
 
-  const TABS: { id: Tab; label: string; badge?: number }[] = [
-    { id: 'profile',       label: 'Profile' },
-    { id: 'streaming',     label: 'Streaming' },
-    { id: 'notifications', label: 'Notifications', badge: unreadCount },
-    { id: 'security',      label: 'Security' },
+  const TABS: { id: Tab; label: string; short: string; badge?: number }[] = [
+    { id: 'profile',       label: 'Profile',       short: 'Profile' },
+    { id: 'streaming',     label: 'Streaming',     short: 'Streaming' },
+    { id: 'notifications', label: 'Notifications', short: 'Notifs', badge: unreadCount },
+    { id: 'security',      label: 'Security',      short: 'Security' },
   ];
 
   return (
@@ -504,7 +504,7 @@ export function ProfileandSettingsTab() {
           </div>
 
           {/* Avatar + name row */}
-          <div className="px-6 pb-5 bg-[#090909]">
+          <div className="px-3 sm:px-6 pb-5 bg-[#090909]">
             <div className="flex items-end justify-between" style={{ marginTop: -44 }}>
               {/* Avatar */}
               <div className="relative group z-10">
@@ -578,13 +578,14 @@ export function ProfileandSettingsTab() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`relative flex-1 flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150
+              className={`relative flex-1 flex items-center justify-center gap-1.5 px-1 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-150
                 ${activeTab === tab.id
                   ? 'bg-[#1e1e1e] text-white shadow-sm'
                   : 'text-zinc-500 hover:text-zinc-300'
                 }`}
             >
-              {tab.label}
+              <span className="sm:hidden">{tab.short}</span>
+              <span className="hidden sm:inline">{tab.label}</span>
               {(tab.badge ?? 0) > 0 && (
                 <span
                   className="w-4 h-4 flex items-center justify-center rounded-full text-[9px] font-bold text-white"
@@ -705,7 +706,7 @@ export function ProfileandSettingsTab() {
             <p className="text-zinc-500 text-sm mb-6">
               Select the services you subscribe to. Your Discover page will filter content to these providers.
             </p>
-            <div className="grid grid-cols-4 gap-5">
+            <div className="grid grid-cols-4 gap-2 sm:gap-5">
               {SERVICES.map(svc => {
                 const active  = !!services[svc.key];
                 const logoKey = KEY_TO_DISPLAY[svc.key];
