@@ -40,7 +40,7 @@ const PROVIDER_TABS = [
 ];
 
 const PROVIDER_COLOR: Record<string, string> = {
-  'all':          '#7C5DBD',
+  'all':          'var(--reel-accent-hex)',
   'Netflix':      '#E50914',
   'Disney+':      '#1A4DB5',
   'Hulu':         '#1CE783',
@@ -587,7 +587,7 @@ function LandscapeCard({ movie, onClick }: { movie: Movie; onClick: () => void }
           <div
             key={barKey}
             style={{
-              height: '100%', background: '#9B7BD7',
+              height: '100%', background: 'var(--reel-accent-hex)',
               transformOrigin: 'left',
               animation: 'landscape-progress 5s linear forwards',
             }}
@@ -657,9 +657,9 @@ type PersonalizedSlot =
   | { kind: 'topPick';     movie: Movie; yourRating: number };
 
 const SLOT_META: Record<PersonalizedSlot['kind'], { label: string; color: string }> = {
-  friend:      { label: 'Recently Posted About',     color: '#9B7BD7' },
+  friend:      { label: 'Recently Posted About',     color: 'var(--reel-accent-hex)' },
   friendWatch: { label: 'Your Friends Are Watching', color: '#7EC8C8' },
-  recommended: { label: 'Recommended for You',       color: '#9B7BD7' },
+  recommended: { label: 'Recommended for You',       color: 'var(--reel-accent-hex)' },
   tonight:     { label: "Tonight's Pick",             color: 'rgba(255,255,255,0.75)' },
   topPick:     { label: 'Your Top Pick',              color: '#fbbf24' },
 };
@@ -741,7 +741,7 @@ function PersonalizedHero({ slots, backdropOverrides = {}, onOpenModal, onToggle
             <div className="flex flex-wrap gap-2 mb-3">
               {slot.movie.genres.slice(0, 3).map(g => (
                 <span key={g} className="text-xs px-2.5 py-0.5 rounded-sm font-medium"
-                  style={{ background: 'rgba(124,93,189,0.55)', color: '#fff' }}>{g}</span>
+                  style={{ background: 'color-mix(in srgb, var(--reel-accent-hex) 55%, transparent)', color: '#fff' }}>{g}</span>
               ))}
             </div>
           )}
@@ -777,7 +777,7 @@ function PersonalizedHero({ slots, backdropOverrides = {}, onOpenModal, onToggle
             {hasUser && (
               <button onClick={() => onToggleWatchlist(slot.movie)}
                 className="flex items-center gap-2 px-5 py-2.5 font-semibold rounded-lg text-sm transition-colors duration-150"
-                style={isInWatchlist ? { background: '#7C5DBD', color: '#fff' } : { background: 'rgba(109,109,110,0.7)', color: '#fff' }}>
+                style={isInWatchlist ? { background: 'var(--reel-accent-hex)', color: '#fff' } : { background: 'rgba(109,109,110,0.7)', color: '#fff' }}>
                 {isInWatchlist ? <><BookmarkCheck className="w-4 h-4" /> In Watchlist</> : <><Bookmark className="w-4 h-4" /> Watchlist</>}
               </button>
             )}
@@ -887,7 +887,7 @@ function PersonalizedHero({ slots, backdropOverrides = {}, onOpenModal, onToggle
           {slots.map((_, i) => (
             <button key={i} onClick={() => { setCurrent(i); startInterval(); }}
               className="h-[3px] rounded-full transition-all duration-300"
-              style={{ width: i === current ? 20 : 8, background: i === current ? '#9B7BD7' : 'rgba(255,255,255,0.35)' }}
+              style={{ width: i === current ? 20 : 8, background: i === current ? 'var(--reel-accent-hex)' : 'rgba(255,255,255,0.35)' }}
             />
           ))}
         </div>
@@ -1212,7 +1212,7 @@ export function DiscoverTab() {
             onClick={() => setMediaType('movie')}
             className="px-6 py-1.5 rounded-full text-sm font-semibold transition-all duration-200"
             style={mediaType === 'movie'
-              ? { background: 'rgba(124,93,189,0.85)', color: '#fff' }
+              ? { background: 'color-mix(in srgb, var(--reel-accent-hex) 85%, transparent)', color: '#fff' }
               : { color: '#6b7280' }}
           >
             Movies
@@ -1221,7 +1221,7 @@ export function DiscoverTab() {
             onClick={() => setMediaType('show')}
             className="px-6 py-1.5 rounded-full text-sm font-semibold transition-all duration-200"
             style={mediaType === 'show'
-              ? { background: 'rgba(124,93,189,0.85)', color: '#fff' }
+              ? { background: 'color-mix(in srgb, var(--reel-accent-hex) 85%, transparent)', color: '#fff' }
               : { color: '#6b7280' }}
           >
             Shows
@@ -1239,7 +1239,7 @@ export function DiscoverTab() {
           style={{ scrollbarWidth: 'none' } as React.CSSProperties}
         >
           {visibleProviderTabs.map(p => {
-            const color     = PROVIDER_COLOR[p.id] ?? '#7C5DBD';
+            const color     = PROVIDER_COLOR[p.id] ?? 'var(--reel-accent-hex)';
             const isActive  = activeProvider === p.id;
             const isHovered = hoveredProvider === p.id;
             const logo      = p.id !== 'all' ? PROVIDER_LOGOS[p.id] : null;

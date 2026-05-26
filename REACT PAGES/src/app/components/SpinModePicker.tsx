@@ -44,14 +44,14 @@ export function SpinModePicker() {
           onClick={() => navigate('/home/roulette')}
           className="flex-1 flex flex-col items-center justify-center gap-3 md:gap-5 p-5 md:p-10 group transition-all duration-300"
           style={{ background: 'transparent' }}
-          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(124,93,189,0.07)')}
+          onMouseEnter={e => (e.currentTarget.style.background = 'color-mix(in srgb, var(--reel-accent-hex) 7%, transparent)')}
           onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
         >
           <div
             className="w-12 h-12 md:w-16 md:h-16 rounded-2xl flex items-center justify-center transition-transform duration-300 group-hover:scale-110"
-            style={{ background: 'rgba(124,93,189,0.12)', border: '1px solid rgba(124,93,189,0.2)' }}
+            style={{ background: 'color-mix(in srgb, var(--reel-accent-hex) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--reel-accent-hex) 20%, transparent)' }}
           >
-            <Shuffle className="w-5 h-5 md:w-7 md:h-7" style={{ color: '#9B7BD7' }} />
+            <Shuffle className="w-5 h-5 md:w-7 md:h-7" style={{ color: 'var(--reel-accent-hex)' }} />
           </div>
 
           <div className="text-center">
@@ -75,9 +75,9 @@ export function SpinModePicker() {
             <span
               className="inline-block px-3 py-1 rounded-full text-xs font-semibold"
               style={{
-                background: 'rgba(124,93,189,0.15)',
-                color: '#9B7BD7',
-                border: '1px solid rgba(124,93,189,0.3)',
+                background: 'color-mix(in srgb, var(--reel-accent-hex) 15%, transparent)',
+                color: 'var(--reel-accent-hex)',
+                border: '1px solid color-mix(in srgb, var(--reel-accent-hex) 30%, transparent)',
                 fontFamily: 'DM Sans, system-ui, sans-serif',
               }}
             >

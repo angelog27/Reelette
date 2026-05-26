@@ -463,7 +463,7 @@ export function ProfileandSettingsTab() {
         style={{ backgroundImage: `url(${FILM_GRAIN})` }} />
       {/* Ambient glow */}
       <div className="pointer-events-none fixed inset-0 z-0"
-        style={{ background: 'radial-gradient(ellipse at top right, rgba(124,93,189,0.04) 0%, transparent 60%)' }} />
+        style={{ background: 'radial-gradient(ellipse at top right, color-mix(in srgb, var(--reel-accent-hex) 4%, transparent) 0%, transparent 60%)' }} />
 
       {viewProfileId && <UserProfileModal userId={viewProfileId} onClose={() => setViewProfileId(null)} />}
       {showDeleteModal && <DeleteModal onConfirm={handleDeleteAccount} onCancel={() => setShowDeleteModal(false)} loading={deleteLoading} />}
@@ -861,10 +861,10 @@ export function ProfileandSettingsTab() {
                       style={{ ringColor: active ? t.accent : undefined } as React.CSSProperties}
                     >
                       {/* Preview gradient */}
-                      <div className="h-20 w-full" style={{ background: t.cardGradient }}>
+                      <div className="h-20 w-full relative" style={{ background: t.cardGradient }}>
                         {/* Accent dot */}
-                        <div className="absolute top-3 left-3 w-6 h-6 rounded-full shadow-lg"
-                          style={{ background: t.accent, boxShadow: `0 0 12px ${t.accent}80` }} />
+                        <div className="absolute top-3 left-3 w-5 h-5 rounded-full shadow-lg"
+                          style={{ background: t.accent, boxShadow: `0 0 10px ${t.accent}80` }} />
                         {/* Active checkmark */}
                         {active && (
                           <div className="absolute top-3 right-3 w-5 h-5 rounded-full flex items-center justify-center"
@@ -874,16 +874,18 @@ export function ProfileandSettingsTab() {
                         )}
                         {/* Effect label */}
                         {t.effect && (
-                          <div className="absolute bottom-2 right-2 text-[9px] font-bold tracking-widest uppercase opacity-60"
+                          <div className="absolute bottom-2 right-2 text-[9px] font-bold tracking-widest uppercase opacity-50"
                             style={{ color: t.accent }}>
                             {t.effect}
                           </div>
                         )}
                       </div>
-                      {/* Name */}
+                      {/* Name + font sample */}
                       <div className="px-3 py-2.5 bg-[#0d0d0d]">
-                        <p className="text-white text-xs font-semibold leading-none">{t.name}</p>
-                        <p className="text-zinc-600 text-[10px] mt-0.5">{t.tagline}</p>
+                        <p className="text-white text-xs font-semibold leading-none"
+                          style={{ fontFamily: t.fontFamily }}>{t.name}</p>
+                        <p className="text-zinc-600 text-[10px] mt-0.5 truncate"
+                          style={{ fontFamily: t.fontFamily }}>{t.tagline}</p>
                       </div>
                     </button>
                   );
@@ -898,8 +900,8 @@ export function ProfileandSettingsTab() {
                 <div className="w-14 h-14 rounded-2xl shadow-lg shrink-0"
                   style={{ background: theme.accent, boxShadow: `0 0 24px ${theme.accent}60` }} />
                 <div>
-                  <p className="text-white text-sm font-semibold">{theme.name}</p>
-                  <p className="text-zinc-500 text-xs mt-0.5">{theme.tagline}</p>
+                  <p className="text-white text-sm font-semibold" style={{ fontFamily: theme.fontFamily }}>{theme.name}</p>
+                  <p className="text-zinc-500 text-xs mt-0.5" style={{ fontFamily: theme.fontFamily }}>{theme.tagline}</p>
                   <p className="text-zinc-600 text-[11px] mt-1 font-mono">{theme.accent}</p>
                 </div>
               </div>

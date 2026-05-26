@@ -367,7 +367,7 @@ export function RouletteTab() {
               onClick={() => { setMediaType('movie'); setGenre(''); setActiveMood(''); }}
               className="flex items-center gap-1.5 px-5 py-1.5 rounded-full text-sm font-semibold transition-all duration-200"
               style={mediaType === 'movie'
-                ? { background: 'rgba(124,93,189,0.85)', color: '#fff' }
+                ? { background: 'color-mix(in srgb, var(--reel-accent-hex) 85%, transparent)', color: '#fff' }
                 : { color: '#6b7280' }}
             >
               <Film className="w-3.5 h-3.5" /> Movies
@@ -376,7 +376,7 @@ export function RouletteTab() {
               onClick={() => { setMediaType('show'); setGenre(''); setActiveMood(''); }}
               className="flex items-center gap-1.5 px-5 py-1.5 rounded-full text-sm font-semibold transition-all duration-200"
               style={mediaType === 'show'
-                ? { background: 'rgba(124,93,189,0.85)', color: '#fff' }
+                ? { background: 'color-mix(in srgb, var(--reel-accent-hex) 85%, transparent)', color: '#fff' }
                 : { color: '#6b7280' }}
             >
               <Tv className="w-3.5 h-3.5" /> Shows
@@ -604,7 +604,7 @@ export function RouletteTab() {
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-full border text-sm font-semibold transition-all active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50"
                   style={
                     smartSpinAvailable && !smartSpinLoading && !smartSpinResting
-                      ? { borderColor: '#7C5DBD', color: '#c4b5fd', background: 'rgba(124,93,189,0.08)' }
+                      ? { borderColor: 'var(--reel-accent-hex)', color: 'var(--reel-accent-hex)', background: 'color-mix(in srgb, var(--reel-accent-hex) 8%, transparent)' }
                       : { borderColor: '#2a2a2a', color: '#4b5563', background: 'transparent' }
                   }
                 >

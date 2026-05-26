@@ -53,7 +53,7 @@ function getAccent(genres: string[]): string {
   for (const g of genres) {
     if (GENRE_ACCENT[g]) return GENRE_ACCENT[g];
   }
-  return '#7C5DBD';
+  return 'var(--reel-accent-hex)';
 }
 
 // ─────────────────────────────────────────────────────────────

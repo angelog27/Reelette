@@ -474,7 +474,7 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
                   <button
                     onClick={() => setTrailerOpen(v => !v)}
                     className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-white/30 bg-white/5 hover:bg-white/15 text-white text-sm font-medium transition-colors"
-                    style={trailerOpen ? { borderColor: 'rgba(124,93,189,0.6)', background: 'rgba(124,93,189,0.15)' } : {}}
+                    style={trailerOpen ? { borderColor: 'color-mix(in srgb, var(--reel-accent-hex) 60%, transparent)', background: 'color-mix(in srgb, var(--reel-accent-hex) 15%, transparent)' } : {}}
                   >
                     <Play className="w-4 h-4" />
                     {trailerOpen ? 'Hide Trailer' : 'Watch Trailer'}

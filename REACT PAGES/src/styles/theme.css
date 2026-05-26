@@ -457,6 +457,61 @@ html[data-theme="forest"] body::before {
 }
 
 /* ─────────────────────────────────────────────────────────────
+   Accent override — replaces every hardcoded #7C5DBD / #9B7BD7
+   Tailwind class with the active theme's accent token.
+   The default theme keeps --reel-accent-hex: #7C5DBD so it's
+   visually identical; non-default themes pick up their color.
+──────────────────────────────────────────────────────────────*/
+
+/* Text */
+.text-\[\#7C5DBD\]                       { color: var(--reel-accent-hex) !important; }
+.text-\[\#9B7BD7\]                       { color: var(--reel-accent-hex) !important; }
+.hover\:text-\[\#7C5DBD\]:hover          { color: var(--reel-accent-hex) !important; }
+.hover\:text-\[\#9B7BD7\]:hover          { color: var(--reel-accent-hex) !important; }
+.group:hover .group-hover\:text-\[\#9B7BD7\] { color: var(--reel-accent-hex) !important; }
+
+/* Background — solid */
+.bg-\[\#7C5DBD\]                         { background-color: var(--reel-accent-hex) !important; }
+.hover\:bg-\[\#7C5DBD\]:hover            { background-color: var(--reel-accent-hex) !important; }
+.hover\:bg-\[\#9B7BD7\]:hover            { background-color: var(--reel-accent-hex) !important; }
+.hover\:bg-\[\#6B4DAD\]:hover            { background-color: color-mix(in srgb, var(--reel-accent-hex) 85%, #000) !important; }
+.bg-\[\#6B4DAD\]                         { background-color: color-mix(in srgb, var(--reel-accent-hex) 85%, #000) !important; }
+
+/* Background — opacity variants */
+.bg-\[\#7C5DBD\]\/10                     { background-color: color-mix(in srgb, var(--reel-accent-hex) 10%, transparent) !important; }
+.bg-\[\#7C5DBD\]\/15                     { background-color: color-mix(in srgb, var(--reel-accent-hex) 15%, transparent) !important; }
+.bg-\[\#7C5DBD\]\/20                     { background-color: color-mix(in srgb, var(--reel-accent-hex) 20%, transparent) !important; }
+.bg-\[\#7C5DBD\]\/25                     { background-color: color-mix(in srgb, var(--reel-accent-hex) 25%, transparent) !important; }
+.bg-\[\#7C5DBD\]\/30                     { background-color: color-mix(in srgb, var(--reel-accent-hex) 30%, transparent) !important; }
+.hover\:bg-\[\#7C5DBD\]\/20:hover        { background-color: color-mix(in srgb, var(--reel-accent-hex) 20%, transparent) !important; }
+.hover\:bg-\[\#7C5DBD\]\/25:hover        { background-color: color-mix(in srgb, var(--reel-accent-hex) 25%, transparent) !important; }
+.hover\:bg-\[\#7C5DBD\]\/30:hover        { background-color: color-mix(in srgb, var(--reel-accent-hex) 30%, transparent) !important; }
+
+/* Border — solid */
+.border-\[\#7C5DBD\]                     { border-color: var(--reel-accent-hex) !important; }
+.hover\:border-\[\#7C5DBD\]:hover        { border-color: var(--reel-accent-hex) !important; }
+.focus\:border-\[\#7C5DBD\]:focus        { border-color: var(--reel-accent-hex) !important; }
+
+/* Border — opacity variants */
+.border-\[\#7C5DBD\]\/20                 { border-color: color-mix(in srgb, var(--reel-accent-hex) 20%, transparent) !important; }
+.border-\[\#7C5DBD\]\/30                 { border-color: color-mix(in srgb, var(--reel-accent-hex) 30%, transparent) !important; }
+.border-\[\#7C5DBD\]\/40                 { border-color: color-mix(in srgb, var(--reel-accent-hex) 40%, transparent) !important; }
+.border-\[\#7C5DBD\]\/50                 { border-color: color-mix(in srgb, var(--reel-accent-hex) 50%, transparent) !important; }
+.hover\:border-\[\#7C5DBD\]\/50:hover   { border-color: color-mix(in srgb, var(--reel-accent-hex) 50%, transparent) !important; }
+.focus\:border-\[\#7C5DBD\]\/40:focus   { border-color: color-mix(in srgb, var(--reel-accent-hex) 40%, transparent) !important; }
+.focus\:border-\[\#7C5DBD\]\/50:focus   { border-color: color-mix(in srgb, var(--reel-accent-hex) 50%, transparent) !important; }
+
+/* Fill (SVG) */
+.fill-\[\#7C5DBD\]                       { fill: var(--reel-accent-hex) !important; }
+
+/* Shadow */
+.shadow-\[\#7C5DBD\]\/20                 { --tw-shadow-color: color-mix(in srgb, var(--reel-accent-hex) 20%, transparent) !important; }
+.shadow-\[\#7C5DBD\]\/30                 { --tw-shadow-color: color-mix(in srgb, var(--reel-accent-hex) 30%, transparent) !important; }
+
+/* Ring */
+.ring-\[\#7C5DBD\]\/60                   { --tw-ring-color: color-mix(in srgb, var(--reel-accent-hex) 60%, transparent) !important; }
+
+/* ─────────────────────────────────────────────────────────────
    Emil Kowalski easing system
    Strong ease-out for UI interactions (enters, expands)
    Drawer curve for panels that slide from an edge

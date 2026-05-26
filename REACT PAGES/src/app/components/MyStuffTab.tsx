@@ -235,7 +235,7 @@ export function MyStuffTab() {
                 key={f}
                 onClick={() => { setMediaFilter(f); setPage(1); }}
                 className="px-3 py-1.5 rounded-full text-xs font-medium transition-colors"
-                style={mediaFilter === f ? { background: '#7C5DBD', color: '#fff' } : { color: '#9ca3af' }}
+                style={mediaFilter === f ? { background: 'var(--reel-accent-hex)', color: '#fff' } : { color: '#9ca3af' }}
               >
                 {f === 'all' ? 'All' : f === 'movie' ? 'Movies' : 'Shows'}
               </button>
@@ -354,7 +354,7 @@ export function MyStuffTab() {
                     onClick={() => setPage(p)}
                     className="px-3 py-1.5 rounded-lg text-sm border transition-colors"
                     style={p === page
-                      ? { background: '#7C5DBD', borderColor: '#7C5DBD', color: '#fff' }
+                      ? { background: 'var(--reel-accent-hex)', borderColor: 'var(--reel-accent-hex)', color: '#fff' }
                       : { background: '#111', borderColor: '#2A2A2A', color: '#9ca3af' }}
                   >
                     {p}

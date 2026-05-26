@@ -46,7 +46,7 @@ function sortedFeedPosts(): FeedPost[] {
 const SERVICE_KEYS = ['netflix', 'hulu', 'disneyPlus', 'hboMax', 'amazonPrime', 'appleTV', 'paramount', 'peacock'] as const;
 
 const WHEEL_COLORS = [
-  '#7C5DBD', '#8E44AD', '#2471A3', '#1E8449', '#D68910',
+  'var(--reel-accent-hex)', '#8E44AD', '#2471A3', '#1E8449', '#D68910',
   '#784212', '#717D7E', '#6C3483', '#1A5276', '#1D6A39',
   '#B7950B', '#6E2F1A', '#2C3E50', '#512E5F',
 ];
@@ -143,7 +143,7 @@ function SpinWheel({ items, onSpinEnd }: { items: GroupMovie[]; onSpinEnd: (m: G
         <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 z-10"
           style={{ width: 0, height: 0, borderLeft: '12px solid transparent', borderRight: '12px solid transparent', borderTop: '22px solid var(--reel-accent-hex)' }} />
         <svg width="400" height="400" viewBox="0 0 400 400"
-          style={{ filter: 'drop-shadow(0 0 24px rgba(124,93,189,0.4))' }}>
+          style={{ filter: 'drop-shadow(0 0 24px color-mix(in srgb, var(--reel-accent-hex) 40%, transparent))' }}>
           <circle cx={cx} cy={cy} r={r + 8} fill="none" stroke="#2a2a2e" strokeWidth="8" />
           <g style={{ transformOrigin: `${cx}px ${cy}px`, transform: `rotate(${rotation}deg)`, transition: spinning ? 'transform 4s cubic-bezier(0.17,0.67,0.12,0.99)' : 'none' }}
             onTransitionEnd={() => { setSpinning(false); if (pendingWinner) onSpinEnd(pendingWinner); }}>
@@ -418,7 +418,7 @@ function PostMovieSearch({ onSelect, selected }: { onSelect: (m: MovieOption | n
                 <p className="text-zinc-500 text-xs">{m.year}</p>
               </div>
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0"
-                style={{ background: m.media_type === 'show' ? 'rgba(124,93,189,0.25)' : 'rgba(255,255,255,0.07)', color: m.media_type === 'show' ? '#9B7BD7' : '#6b7280' }}>
+                style={{ background: m.media_type === 'show' ? 'color-mix(in srgb, var(--reel-accent-hex) 25%, transparent)' : 'rgba(255,255,255,0.07)', color: m.media_type === 'show' ? 'var(--reel-accent-hex)' : '#6b7280' }}>
                 {m.media_type === 'show' ? 'TV' : 'FILM'}
               </span>
             </button>

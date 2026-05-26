@@ -158,7 +158,7 @@ export function SearchTab() {
           onClick={() => setMediaType('movie')}
           className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all duration-200 border"
           style={mediaType === 'movie'
-            ? { background: 'rgba(124,93,189,0.85)', color: '#fff', borderColor: 'rgba(124,93,189,0.85)' }
+            ? { background: 'color-mix(in srgb, var(--reel-accent-hex) 85%, transparent)', color: '#fff', borderColor: 'color-mix(in srgb, var(--reel-accent-hex) 85%, transparent)' }
             : { background: 'transparent', color: '#6b7280', borderColor: '#2A2A2A' }}
         >
           Movies
@@ -167,7 +167,7 @@ export function SearchTab() {
           onClick={() => setMediaType('show')}
           className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all duration-200 border"
           style={mediaType === 'show'
-            ? { background: 'rgba(124,93,189,0.85)', color: '#fff', borderColor: 'rgba(124,93,189,0.85)' }
+            ? { background: 'color-mix(in srgb, var(--reel-accent-hex) 85%, transparent)', color: '#fff', borderColor: 'color-mix(in srgb, var(--reel-accent-hex) 85%, transparent)' }
             : { background: 'transparent', color: '#6b7280', borderColor: '#2A2A2A' }}
         >
           Shows

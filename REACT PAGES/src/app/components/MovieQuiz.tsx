@@ -439,8 +439,8 @@ export function MovieQuiz({ onComplete, onSkip }: MovieQuizProps) {
     return (
       <EndScreen
         icon={Film}
-        iconBg="rgba(124,93,189,0.2)"
-        iconColor="#7C5DBD"
+        iconBg="color-mix(in srgb, var(--reel-accent-hex) 20%, transparent)"
+        iconColor="var(--reel-accent-hex)"
         title="Welcome to Reelette"
         subtitle="Your personalized movie journey begins now. Explore films tailored to your unique taste."
       />
@@ -467,9 +467,9 @@ export function MovieQuiz({ onComplete, onSkip }: MovieQuizProps) {
             <div style={{
               display: "inline-flex", alignItems: "center", justifyContent: "center",
               width: 64, height: 64, borderRadius: "50%",
-              background: "rgba(124,93,189,0.2)", marginBottom: 24,
+              background: "color-mix(in srgb, var(--reel-accent-hex) 20%, transparent)", marginBottom: 24,
             }}>
-              <Sparkles style={{ width: 32, height: 32, color: "#7C5DBD" }} />
+              <Sparkles style={{ width: 32, height: 32, color: "var(--reel-accent-hex)" }} />
             </div>
             <p style={{
               fontSize: 12, textTransform: "uppercase",
@@ -480,7 +480,7 @@ export function MovieQuiz({ onComplete, onSkip }: MovieQuizProps) {
             <div style={{
               display: "inline-block", padding: "6px 16px", borderRadius: 999,
               fontSize: 14, fontWeight: 500, marginBottom: 16,
-              background: "rgba(124,93,189,0.2)", color: "#7C5DBD",
+              background: "color-mix(in srgb, var(--reel-accent-hex) 20%, transparent)", color: "var(--reel-accent-hex)",
             }}>
               {genreLabels[topGenre]}
             </div>
@@ -497,7 +497,7 @@ export function MovieQuiz({ onComplete, onSkip }: MovieQuizProps) {
               onClick={() => setShowWelcome(true)}
               style={{
                 width: "100%", height: 48, fontSize: 16,
-                background: "#7C5DBD", color: "#fff", borderRadius: 8,
+                background: "var(--reel-accent-hex)", color: "#fff", borderRadius: 8,
               }}
             >
               Continue to Reelette
@@ -556,13 +556,13 @@ export function MovieQuiz({ onComplete, onSkip }: MovieQuizProps) {
       <div style={{ padding: "0 1.5rem", position: "relative", zIndex: 1 }}>
         <div style={{
           height: 8, borderRadius: 999,
-          background: "rgba(124,93,189,0.15)", overflow: "hidden",
+          background: "color-mix(in srgb, var(--reel-accent-hex) 15%, transparent)", overflow: "hidden",
         }}>
           <div style={{
             height: "100%", borderRadius: 999,
             width: `${progress}%`,
-            background: "#7C5DBD",
-            boxShadow: "0 0 12px rgba(124,93,189,0.6), 0 0 24px rgba(124,93,189,0.3)",
+            background: "var(--reel-accent-hex)",
+            boxShadow: "0 0 12px color-mix(in srgb, var(--reel-accent-hex) 60%, transparent), 0 0 24px color-mix(in srgb, var(--reel-accent-hex) 30%, transparent)",
             transition: "width 0.3s ease-out",
           }} />
         </div>
@@ -600,9 +600,9 @@ export function MovieQuiz({ onComplete, onSkip }: MovieQuizProps) {
                     style={{
                       display: "flex", alignItems: "center", gap: 16,
                       padding: "1rem", borderRadius: 8, textAlign: "left",
-                      background: isSelected ? "rgba(124,93,189,0.15)" : "rgba(26,26,26,0.8)",
+                      background: isSelected ? "color-mix(in srgb, var(--reel-accent-hex) 15%, transparent)" : "rgba(26,26,26,0.8)",
                       border: "1px solid rgba(255,255,255,0.05)",
-                      borderLeft: `3px solid ${isSelected ? "#7C5DBD" : "transparent"}`,
+                      borderLeft: `3px solid ${isSelected ? "var(--reel-accent-hex)" : "transparent"}`,
                       transition: "all 0.2s",
                       color: "#FAFAFA", cursor: "pointer",
                     }}
@@ -611,7 +611,7 @@ export function MovieQuiz({ onComplete, onSkip }: MovieQuizProps) {
                       flexShrink: 0, width: 32, height: 32, borderRadius: 8,
                       display: "flex", alignItems: "center", justifyContent: "center",
                       fontSize: 14, fontWeight: 500,
-                      background: isSelected ? "#7C5DBD" : "#1A1A1A",
+                      background: isSelected ? "var(--reel-accent-hex)" : "#1A1A1A",
                       color: isSelected ? "#fff" : "#888",
                       transition: "all 0.2s",
                     }}>
@@ -634,7 +634,7 @@ export function MovieQuiz({ onComplete, onSkip }: MovieQuizProps) {
             disabled={!selectedAnswer}
             style={{
               width: "100%", height: 48, fontSize: 16,
-              background: selectedAnswer ? "#7C5DBD" : "transparent",
+              background: selectedAnswer ? "var(--reel-accent-hex)" : "transparent",
               color: selectedAnswer ? "#fff" : "#FAFAFA",
               opacity: selectedAnswer ? 1 : 0.3,
               border: selectedAnswer ? "none" : "1px solid rgba(255,255,255,0.1)",
