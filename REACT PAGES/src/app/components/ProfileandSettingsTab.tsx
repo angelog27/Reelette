@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import {
   Camera, Edit2, Save, X, User, Mail, Film, Users, Eye, Lock,
   Bell, LogOut, Trash2, CheckCheck, Loader2, UserPlus, Heart,
-  MessageCircle, Shield, ChevronRight,
+  MessageCircle, Shield, ChevronRight, Palette, Check,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { UserProfileModal } from './UserProfileModal';
 import { PROVIDER_LOGOS } from '../constants/providers';
+import { useTheme, THEMES } from './ThemeContext';
 import {
   BASE_URL, getUser, clearUser, clearServices, saveServices,
   getFriends, getUserPublicProfile, saveSocialSettings,
@@ -21,20 +22,6 @@ import {
 // ── Film grain texture ────────────────────────────────────────────
 
 const FILM_GRAIN = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZmlsdGVyIGlkPSJuIj48ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iMC45IiBudW1PY3RhdmVzPSI0Ii8+PC9maWx0ZXI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsdGVyPSJ1cmwoI24pIiBvcGFjaXR5PSIxIi8+PC9zdmc+";
-
-// ── Banner presets ────────────────────────────────────────────────
-
-const BANNERS = [
-  { id: 'default',  label: 'Cinematic', swatch: '#27272a', gradient: 'linear-gradient(135deg,#18181b 0%,#09090b 60%,#000 100%)' },
-  { id: 'crimson',  label: 'Crimson',   swatch: '#7f1d1d', gradient: 'linear-gradient(135deg,#450a0a 0%,#0d0d0d 60%,#000 100%)' },
-  { id: 'midnight', label: 'Midnight',  swatch: '#1e3a8a', gradient: 'linear-gradient(135deg,#0c1a3d 0%,#0d0d0d 60%,#000 100%)' },
-  { id: 'dusk',     label: 'Dusk',      swatch: '#4c1d95', gradient: 'linear-gradient(135deg,#2e1065 0%,#0d0d0d 60%,#000 100%)' },
-  { id: 'forest',   label: 'Forest',    swatch: '#14532d', gradient: 'linear-gradient(135deg,#052e16 0%,#0d0d0d 60%,#000 100%)' },
-  { id: 'ember',    label: 'Ember',     swatch: '#92400e', gradient: 'linear-gradient(135deg,#451a03 0%,#0d0d0d 60%,#000 100%)' },
-  { id: 'ocean',    label: 'Ocean',     swatch: '#134e4a', gradient: 'linear-gradient(135deg,#042f2e 0%,#0d0d0d 60%,#000 100%)' },
-  { id: 'rose',     label: 'Rose',      swatch: '#9f1239', gradient: 'linear-gradient(135deg,#500724 0%,#0d0d0d 60%,#000 100%)' },
-];
-const getBannerGradient = (id: string) => (BANNERS.find(b => b.id === id) ?? BANNERS[0]).gradient;
 
 // ── Streaming services ────────────────────────────────────────────
 
@@ -210,7 +197,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
 
 // ── Main component ────────────────────────────────────────────────
 
-type Tab = 'profile' | 'streaming' | 'notifications' | 'security';
+type Tab = 'profile' | 'streaming' | 'notifications' | 'appearance' | 'security';
 
 export function ProfileandSettingsTab() {
   const navigate = useNavigate();
@@ -227,8 +214,8 @@ export function ProfileandSettingsTab() {
   const [activeTab, setActiveTab] = useState<Tab>('profile');
 
   // ── Profile data ─────────────────────────────────────────────────
-  const [profile, setProfile] = useState({ displayName: '', username: '', bio: '', email: '', avatarUrl: '', bannerBg: 'default' });
-  const [draft, setDraft]     = useState({ displayName: '', username: '', bio: '', email: '', avatarUrl: '', bannerBg: 'default' });
+  const [profile, setProfile] = useState({ displayName: '', username: '', bio: '', email: '', avatarUrl: '' });
+  const [draft, setDraft]     = useState({ displayName: '', username: '', bio: '', email: '', avatarUrl: '' });
   const [editing, setEditing] = useState(false);
   const [saving, setSaving]   = useState(false);
   const [emailSaving, setEmailSaving] = useState(false);
@@ -287,7 +274,7 @@ export function ProfileandSettingsTab() {
         const p = {
           displayName: d.displayName || '', username: d.username || '',
           bio: d.bio || '', email: d.email || '',
-          avatarUrl: d.avatarUrl || '', bannerBg: d.profileBannerBg || 'default',
+          avatarUrl: d.avatarUrl || '',
         };
         setProfile(p); setDraft(p);
         setSocialSettings({ showOnlineStatus: d.socialSettings?.showOnlineStatus ?? true, showMyStuffPublicly: d.socialSettings?.showMyStuffPublicly ?? false });
@@ -329,7 +316,7 @@ export function ProfileandSettingsTab() {
       const res = await fetch(`${BASE_URL}/user/${userId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ displayName: draft.displayName, username: draft.username, bio: draft.bio, profileBannerBg: draft.bannerBg }),
+        body: JSON.stringify({ displayName: draft.displayName, username: draft.username, bio: draft.bio }),
       });
       const r = await res.json();
       if (!r.success) throw new Error(r.message);
@@ -458,13 +445,14 @@ export function ProfileandSettingsTab() {
     );
   }
 
-  const bannerGradient = getBannerGradient(editing ? draft.bannerBg : profile.bannerBg);
+  const { themeId, setThemeId, theme } = useTheme();
   const unreadCount = notifs.filter(n => !n.read).length;
 
   const TABS: { id: Tab; label: string; short: string; badge?: number }[] = [
     { id: 'profile',       label: 'Profile',       short: 'Profile' },
-    { id: 'streaming',     label: 'Streaming',     short: 'Streaming' },
+    { id: 'streaming',     label: 'Streaming',     short: 'Streams' },
     { id: 'notifications', label: 'Notifications', short: 'Notifs', badge: unreadCount },
+    { id: 'appearance',    label: 'Appearance',    short: 'Theme' },
     { id: 'security',      label: 'Security',      short: 'Security' },
   ];
 
@@ -484,23 +472,16 @@ export function ProfileandSettingsTab() {
 
         {/* ── Banner + Avatar ────────────────────────────────────────── */}
         <div className="relative mb-0">
-          {/* Banner */}
-          <div className="h-44 relative overflow-hidden" style={{ background: bannerGradient }}>
-            <div className="absolute inset-0 bg-gradient-to-r from-black/25 to-transparent pointer-events-none" />
-            {/* Scanline texture */}
-            <div className="absolute inset-0 pointer-events-none opacity-[0.05]"
+          {/* Banner — driven by active theme accent */}
+          <div className="h-36 sm:h-44 relative overflow-hidden"
+            style={{ background: `linear-gradient(135deg, color-mix(in srgb, ${theme.accent} 18%, #000) 0%, #090909 100%)` }}>
+            <div className="absolute inset-0 pointer-events-none opacity-[0.04]"
               style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.3) 2px, rgba(0,0,0,0.3) 4px)' }} />
-            {/* Banner picker — edit mode */}
-            {editing && (
-              <div className="absolute bottom-3 right-4 flex items-center gap-1.5 bg-black/60 backdrop-blur-sm rounded-full px-3 py-1.5">
-                <span className="text-zinc-500 text-[9px] uppercase tracking-widest mr-1">Banner</span>
-                {BANNERS.map(b => (
-                  <button key={b.id} title={b.label} onClick={() => setDraft(p => ({ ...p, bannerBg: b.id }))}
-                    className="w-4 h-4 rounded-full border-2 transition-transform hover:scale-125"
-                    style={{ backgroundColor: b.swatch, borderColor: draft.bannerBg === b.id ? '#fff' : 'transparent' }} />
-                ))}
-              </div>
-            )}
+            {/* Theme badge */}
+            <div className="absolute bottom-3 right-4 flex items-center gap-1.5 bg-black/50 backdrop-blur-sm rounded-full px-3 py-1">
+              <span className="w-2 h-2 rounded-full shrink-0" style={{ background: theme.accent }} />
+              <span className="text-[10px] font-semibold text-zinc-300">{theme.name}</span>
+            </div>
           </div>
 
           {/* Avatar + name row */}
@@ -859,6 +840,88 @@ export function ProfileandSettingsTab() {
               </div>
             )}
           </Card>
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════════ */}
+        {/* APPEARANCE TAB                                              */}
+        {/* ═══════════════════════════════════════════════════════════ */}
+        {activeTab === 'appearance' && (
+          <div className="space-y-5">
+            <Card>
+              <SectionTitle label="App theme" icon={<Palette size={16} />} />
+              <p className="text-zinc-500 text-sm mb-6">
+                Choose a visual theme. The accent color, background tint, and ambient effects change site‑wide instantly.
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {THEMES.map(t => {
+                  const active = themeId === t.id;
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => setThemeId(t.id)}
+                      className={`relative rounded-2xl overflow-hidden text-left transition-all duration-200 focus:outline-none ${
+                        active ? 'ring-2 scale-[1.02]' : 'ring-1 ring-white/[0.08] hover:ring-white/20 hover:scale-[1.01]'
+                      }`}
+                      style={{ ringColor: active ? t.accent : undefined } as React.CSSProperties}
+                    >
+                      {/* Preview gradient */}
+                      <div className="h-20 w-full" style={{ background: t.cardGradient }}>
+                        {/* Accent dot */}
+                        <div className="absolute top-3 left-3 w-6 h-6 rounded-full shadow-lg"
+                          style={{ background: t.accent, boxShadow: `0 0 12px ${t.accent}80` }} />
+                        {/* Active checkmark */}
+                        {active && (
+                          <div className="absolute top-3 right-3 w-5 h-5 rounded-full flex items-center justify-center"
+                            style={{ background: t.accent }}>
+                            <Check size={11} className="text-black font-bold" />
+                          </div>
+                        )}
+                        {/* Effect label */}
+                        {t.effect && (
+                          <div className="absolute bottom-2 right-2 text-[9px] font-bold tracking-widest uppercase opacity-60"
+                            style={{ color: t.accent }}>
+                            {t.effect}
+                          </div>
+                        )}
+                      </div>
+                      {/* Name */}
+                      <div className="px-3 py-2.5 bg-[#0d0d0d]">
+                        <p className="text-white text-xs font-semibold leading-none">{t.name}</p>
+                        <p className="text-zinc-600 text-[10px] mt-0.5">{t.tagline}</p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </Card>
+
+            {/* Live preview strip */}
+            <Card>
+              <SectionTitle label="Current accent" icon={<Palette size={16} />} />
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl shadow-lg shrink-0"
+                  style={{ background: theme.accent, boxShadow: `0 0 24px ${theme.accent}60` }} />
+                <div>
+                  <p className="text-white text-sm font-semibold">{theme.name}</p>
+                  <p className="text-zinc-500 text-xs mt-0.5">{theme.tagline}</p>
+                  <p className="text-zinc-600 text-[11px] mt-1 font-mono">{theme.accent}</p>
+                </div>
+              </div>
+              <div className="mt-4 flex gap-2 flex-wrap">
+                {(['bg', 'button', 'ring'] as const).map(role => (
+                  <div key={role} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#0a0a0a] border border-[#1e1e1e]">
+                    <div className="w-4 h-4 rounded-md shrink-0"
+                      style={{
+                        background:  role === 'bg'     ? `${theme.accent}22` : 'transparent',
+                        border:      role === 'ring'   ? `2px solid ${theme.accent}` : role === 'button' ? 'none' : `1px solid ${theme.accent}44`,
+                        boxShadow:   role === 'button' ? `inset 0 0 0 100px ${theme.accent}` : undefined,
+                      }} />
+                    <span className="text-zinc-500 text-[11px] capitalize">{role}</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
           </div>
         )}
 

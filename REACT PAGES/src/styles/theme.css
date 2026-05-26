@@ -305,6 +305,158 @@ html.light ::-webkit-scrollbar-thumb  { background: var(--reel-raised); border-r
 html.light ::-webkit-scrollbar-thumb:hover { background: var(--reel-hover); }
 
 /* ─────────────────────────────────────────────────────────────
+   Visual themes — all dark-mode. Applied via html[data-theme="X"].
+   Each theme overrides the accent tokens. Background effects use
+   body::before so they sit beneath all app content.
+──────────────────────────────────────────────────────────────*/
+
+html[data-theme="default"] {
+  --reel-accent-hex: #7C5DBD;
+  --reel-accent:     oklch(0.60 0.13 289);
+  --reel-accent-lo:  oklch(0.24 0.06 289);
+}
+
+/* ── Star Wars — gold ────────────────────────────────────────*/
+html[data-theme="starwars"] {
+  --reel-accent-hex: #FFE81A;
+  --reel-accent:     oklch(0.92 0.19 96);
+  --reel-accent-lo:  oklch(0.30 0.08 96);
+}
+html[data-theme="starwars"] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    radial-gradient(1px 1px at 10%  8%,  rgba(255,255,255,0.55) 0%, transparent 100%),
+    radial-gradient(1px 1px at 22%  3%,  rgba(255,255,255,0.40) 0%, transparent 100%),
+    radial-gradient(1px 1px at 38% 14%,  rgba(255,255,255,0.50) 0%, transparent 100%),
+    radial-gradient(2px 2px at 54%  6%,  rgba(255,255,255,0.30) 0%, transparent 100%),
+    radial-gradient(1px 1px at 71% 20%,  rgba(255,255,255,0.45) 0%, transparent 100%),
+    radial-gradient(1px 1px at 85%  9%,  rgba(255,255,255,0.55) 0%, transparent 100%),
+    radial-gradient(1px 1px at 96% 26%,  rgba(255,255,255,0.35) 0%, transparent 100%),
+    radial-gradient(1px 1px at  4% 38%,  rgba(255,255,255,0.40) 0%, transparent 100%),
+    radial-gradient(1px 1px at 17% 51%,  rgba(255,255,255,0.50) 0%, transparent 100%),
+    radial-gradient(2px 2px at 32% 44%,  rgba(255,255,255,0.25) 0%, transparent 100%),
+    radial-gradient(1px 1px at 49% 59%,  rgba(255,255,255,0.45) 0%, transparent 100%),
+    radial-gradient(1px 1px at 63% 36%,  rgba(255,255,255,0.35) 0%, transparent 100%),
+    radial-gradient(1px 1px at 77% 52%,  rgba(255,255,255,0.50) 0%, transparent 100%),
+    radial-gradient(1px 1px at 91% 42%,  rgba(255,255,255,0.40) 0%, transparent 100%),
+    radial-gradient(1px 1px at  8% 68%,  rgba(255,255,255,0.55) 0%, transparent 100%),
+    radial-gradient(1px 1px at 24% 76%,  rgba(255,255,255,0.35) 0%, transparent 100%),
+    radial-gradient(2px 2px at 41% 83%,  rgba(255,255,255,0.25) 0%, transparent 100%),
+    radial-gradient(1px 1px at 58% 71%,  rgba(255,255,255,0.45) 0%, transparent 100%),
+    radial-gradient(1px 1px at 73% 88%,  rgba(255,255,255,0.40) 0%, transparent 100%),
+    radial-gradient(1px 1px at 87% 64%,  rgba(255,255,255,0.55) 0%, transparent 100%),
+    radial-gradient(1px 1px at 95% 79%,  rgba(255,255,255,0.35) 0%, transparent 100%),
+    radial-gradient(1px 1px at 14% 92%,  rgba(255,255,255,0.45) 0%, transparent 100%),
+    radial-gradient(1px 1px at 47% 97%,  rgba(255,255,255,0.30) 0%, transparent 100%),
+    radial-gradient(1px 1px at 69% 95%,  rgba(255,255,255,0.50) 0%, transparent 100%);
+}
+
+/* ── Tron — electric cyan ────────────────────────────────────*/
+html[data-theme="tron"] {
+  --reel-accent-hex: #00F5FF;
+  --reel-accent:     oklch(0.88 0.14 195);
+  --reel-accent-lo:  oklch(0.25 0.06 195);
+}
+html[data-theme="tron"] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    linear-gradient(rgba(0,245,255,0.028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,245,255,0.028) 1px, transparent 1px);
+  background-size: 56px 56px;
+}
+
+/* ── Matrix — neon green ─────────────────────────────────────*/
+html[data-theme="matrix"] {
+  --reel-accent-hex: #00FF41;
+  --reel-accent:     oklch(0.87 0.24 142);
+  --reel-accent-lo:  oklch(0.25 0.09 142);
+}
+html[data-theme="matrix"] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    rgba(0, 255, 65, 0.014) 3px,
+    rgba(0, 255, 65, 0.014) 4px
+  );
+}
+
+/* ── Synthwave — hot pink ────────────────────────────────────*/
+html[data-theme="synthwave"] {
+  --reel-accent-hex: #FF2D87;
+  --reel-accent:     oklch(0.65 0.26 347);
+  --reel-accent-lo:  oklch(0.24 0.10 347);
+}
+html[data-theme="synthwave"] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse at 50% 105%, rgba(255,45,135,0.12) 0%, transparent 55%),
+    radial-gradient(ellipse at 80% 15%,  rgba(138,0,255,0.07)  0%, transparent 45%);
+}
+
+/* ── Midnight — deep blue ────────────────────────────────────*/
+html[data-theme="midnight"] {
+  --reel-accent-hex: #4A9EFF;
+  --reel-accent:     oklch(0.70 0.15 233);
+  --reel-accent-lo:  oklch(0.24 0.07 233);
+}
+html[data-theme="midnight"] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(ellipse at 60% 0%, rgba(74,158,255,0.07) 0%, transparent 55%);
+}
+
+/* ── Crimson — bold red ──────────────────────────────────────*/
+html[data-theme="crimson"] {
+  --reel-accent-hex: #FF3B30;
+  --reel-accent:     oklch(0.65 0.22 29);
+  --reel-accent-lo:  oklch(0.25 0.09 29);
+}
+html[data-theme="crimson"] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(ellipse at 30% 0%, rgba(255,59,48,0.08) 0%, transparent 55%);
+}
+
+/* ── Forest — emerald ────────────────────────────────────────*/
+html[data-theme="forest"] {
+  --reel-accent-hex: #34D399;
+  --reel-accent:     oklch(0.79 0.14 162);
+  --reel-accent-lo:  oklch(0.25 0.06 162);
+}
+html[data-theme="forest"] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(ellipse at 70% 100%, rgba(52,211,153,0.07) 0%, transparent 55%);
+}
+
+/* ─────────────────────────────────────────────────────────────
    Emil Kowalski easing system
    Strong ease-out for UI interactions (enters, expands)
    Drawer curve for panels that slide from an edge

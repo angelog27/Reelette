@@ -106,7 +106,7 @@ const TTL = {
 
 // ── Admin ─────────────────────────────────────────────────────────
 // Used for badge display only — every actual action is re-verified server-side.
-export const ADMIN_UID = 'DErwtoDpkRS8ZoudSIX5awlDMqo1';
+export const ADMIN_UID = 'iiBMPhonpAR4RWTGCwlykGiDIH63';
 
 export async function adminDeletePost(post_id: string): Promise<{ success: boolean }> {
   const token = await getIdToken();
