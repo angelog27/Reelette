@@ -221,7 +221,8 @@ export function ProfileandSettingsTab() {
   const [emailSaving, setEmailSaving] = useState(false);
 
   // ── Profile banner ────────────────────────────────────────────────
-  const [bannerUrl, setBannerUrl]               = useState<string | null>(null);
+  const BANNER_LS_KEY = `reel-banner-${userId}`;
+  const [bannerUrl, setBannerUrl]               = useState<string | null>(() => localStorage.getItem(`reel-banner-${userId}`));
   const [bannerQuery, setBannerQuery]           = useState('');
   const [bannerResults, setBannerResults]       = useState<Movie[]>([]);
   const [bannerSearching, setBannerSearching]   = useState(false);
@@ -256,6 +257,7 @@ export function ProfileandSettingsTab() {
     const r = await updateProfileBanner(userId, url);
     if (r.success) {
       setBannerUrl(url);
+      localStorage.setItem(BANNER_LS_KEY, url);
       setSelectedBannerMovie(null);
       setMovieBackdrops([]);
       toast.success('Banner updated');
@@ -266,8 +268,11 @@ export function ProfileandSettingsTab() {
   async function handleRemoveBanner() {
     setBannerSaving(true);
     const r = await updateProfileBanner(userId, null);
-    if (r.success) { setBannerUrl(null); toast.success('Banner removed'); }
-    else toast.error('Failed to remove banner');
+    if (r.success) {
+      setBannerUrl(null);
+      localStorage.removeItem(BANNER_LS_KEY);
+      toast.success('Banner removed');
+    } else toast.error('Failed to remove banner');
     setBannerSaving(false);
   }
 
@@ -329,7 +334,10 @@ export function ProfileandSettingsTab() {
         };
         setProfile(p); setDraft(p);
         setSocialSettings({ showOnlineStatus: d.socialSettings?.showOnlineStatus ?? true, showMyStuffPublicly: d.socialSettings?.showMyStuffPublicly ?? false });
-        setBannerUrl(d.profileBannerUrl ?? null);
+        const loadedBanner = d.profileBannerUrl ?? null;
+        setBannerUrl(loadedBanner);
+        if (loadedBanner) localStorage.setItem(`reel-banner-${userId}`, loadedBanner);
+        else localStorage.removeItem(`reel-banner-${userId}`);
         const s = d.streamingServices || {};
         const resolved = Object.fromEntries(SERVICES.map(sv => [sv.key, !!s[sv.key]]));
         setServices(resolved);
@@ -523,10 +531,21 @@ export function ProfileandSettingsTab() {
       <div className="relative z-10 max-w-4xl mx-auto px-4 pb-16">
 
         {/* ── Profile header ────────────────────────────────────────── */}
-        <div className="relative pt-6 pb-5 px-3 sm:px-6 overflow-hidden">
-          {/* Subtle accent glow — no banner box */}
-          <div className="pointer-events-none absolute -top-12 -left-8 w-72 h-72 rounded-full opacity-[0.12] blur-3xl"
-            style={{ background: theme.accent }} />
+        <div className="relative pt-6 pb-5 px-3 sm:px-6 overflow-hidden rounded-2xl mt-2">
+          {/* Movie backdrop banner */}
+          {bannerUrl ? (
+            <>
+              <img
+                src={bannerUrl}
+                alt="Profile banner"
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/55 to-black/80" />
+            </>
+          ) : (
+            <div className="pointer-events-none absolute -top-12 -left-8 w-72 h-72 rounded-full opacity-[0.12] blur-3xl"
+              style={{ background: theme.accent }} />
+          )}
 
           <div className="relative z-10 flex items-center gap-4 sm:gap-6">
             {/* Avatar */}
@@ -688,74 +707,74 @@ export function ProfileandSettingsTab() {
                 )}
               </div>
 
-              {/* Step 1: search — hidden once a movie is selected */}
+              {/* Search input — always visible unless viewing backdrop gallery */}
               {!selectedBannerMovie && (
-                <>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={bannerQuery}
-                      onChange={e => handleBannerSearch(e.target.value)}
-                      placeholder="Search for a movie or show…"
-                      className="w-full bg-[#0a0a0a] border border-[#222] rounded-xl px-4 py-2.5 text-white text-sm
-                        focus:outline-none transition-all placeholder-zinc-700"
-                      onFocus={e => { e.currentTarget.style.borderColor = 'var(--reel-accent-hex)'; }}
-                      onBlur={e => { e.currentTarget.style.borderColor = '#222'; }}
-                    />
-                    {bannerSearching && (
-                      <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-zinc-500" />
-                    )}
-                  </div>
-
-                  {/* Movie results — click to drill into backdrops */}
-                  {bannerResults.length > 0 && (
-                    <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
-                      {bannerResults.slice(0, 9).map(m => (
-                        <button
-                          key={m.id}
-                          onClick={() => handleSelectBannerMovie(m)}
-                          className="relative rounded-lg overflow-hidden border-2 border-transparent hover:border-[var(--reel-accent-hex)] transition-all group text-left"
-                        >
-                          <img src={m.backdrop!} alt={m.title} className="w-full aspect-video object-cover" />
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                            <ChevronRight size={20} className="text-white" />
-                          </div>
-                          <div className="absolute bottom-0 left-0 right-0 px-2 py-1 bg-gradient-to-t from-black/80 to-transparent">
-                            <p className="text-white text-[10px] font-medium truncate">{m.title}</p>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={bannerQuery}
+                    onChange={e => handleBannerSearch(e.target.value)}
+                    placeholder="Search a movie or show…"
+                    className="w-full bg-[#0a0a0a] border border-[#222] rounded-xl px-4 py-2.5 text-white text-sm
+                      focus:outline-none transition-all placeholder-zinc-700"
+                    onFocus={e => { e.currentTarget.style.borderColor = 'var(--reel-accent-hex)'; }}
+                    onBlur={e => { e.currentTarget.style.borderColor = '#222'; }}
+                  />
+                  {bannerSearching && (
+                    <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-zinc-500" />
                   )}
-
-                  {bannerResults.length === 0 && bannerQuery.trim() && !bannerSearching && (
-                    <p className="text-zinc-600 text-xs mt-3">No results with a landscape image found.</p>
-                  )}
-                </>
+                </div>
               )}
 
-              {/* Step 2: backdrop gallery for selected movie */}
+              {/* Movie list — clean rows, click to load all backdrops */}
+              {!selectedBannerMovie && bannerResults.length > 0 && (
+                <div className="mt-2 rounded-xl border border-[#222] overflow-hidden">
+                  {bannerResults.slice(0, 8).map((m, i) => (
+                    <button
+                      key={m.id}
+                      onClick={() => handleSelectBannerMovie(m)}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 hover:bg-white/[0.05] transition-colors text-left ${i > 0 ? 'border-t border-[#1a1a1a]' : ''}`}
+                    >
+                      {m.poster
+                        ? <img src={m.poster} alt={m.title} className="w-9 h-[54px] object-cover rounded-md shrink-0" />
+                        : <div className="w-9 h-[54px] bg-[#1a1a1a] rounded-md shrink-0 flex items-center justify-center"><Film size={14} className="text-zinc-600" /></div>
+                      }
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white text-sm font-medium truncate">{m.title}</p>
+                        <p className="text-zinc-500 text-xs">{m.year}{m.type === 'show' ? ' · Series' : ''}</p>
+                      </div>
+                      <ChevronRight size={16} className="text-zinc-600 shrink-0" />
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {!selectedBannerMovie && bannerResults.length === 0 && bannerQuery.trim() && !bannerSearching && (
+                <p className="text-zinc-600 text-xs mt-3">No results found.</p>
+              )}
+
+              {/* Backdrop gallery for the selected movie */}
               {selectedBannerMovie && (
                 <div>
                   <div className="flex items-center gap-2 mb-3">
                     <button
                       onClick={() => { setSelectedBannerMovie(null); setMovieBackdrops([]); }}
-                      className="flex items-center gap-1 text-xs text-zinc-500 hover:text-white transition-colors"
+                      className="flex items-center gap-1 text-xs text-zinc-500 hover:text-white transition-colors shrink-0"
                     >
                       <ChevronLeft size={14} /> Back
                     </button>
                     <span className="text-zinc-300 text-sm font-medium truncate">{selectedBannerMovie.title}</span>
                     <span className="text-zinc-600 text-xs ml-auto shrink-0">
-                      {backdropsLoading ? '…' : `${movieBackdrops.length} image${movieBackdrops.length !== 1 ? 's' : ''}`}
+                      {backdropsLoading ? '…' : `${movieBackdrops.length} backdrop${movieBackdrops.length !== 1 ? 's' : ''}`}
                     </span>
                   </div>
 
                   {backdropsLoading ? (
-                    <div className="flex items-center justify-center py-8 gap-2 text-zinc-600 text-sm">
-                      <Loader2 size={16} className="animate-spin" /> Loading backdrops…
+                    <div className="flex items-center justify-center py-10 gap-2 text-zinc-600 text-sm">
+                      <Loader2 size={16} className="animate-spin" /> Loading…
                     </div>
                   ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-72 overflow-y-auto pr-1">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-80 overflow-y-auto pr-1">
                       {movieBackdrops.map((url, i) => (
                         <button
                           key={i}
