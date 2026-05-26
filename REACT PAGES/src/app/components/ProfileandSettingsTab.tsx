@@ -16,6 +16,7 @@ import {
   getNotifPrefs, saveNotifPrefs,
   updateUserAvatar, updateUserEmail, deleteUserAccount,
   updateUserStreaming, updateProfileBanner, searchMovies, getMovieBackdrops,
+  updateUserProfile,
   type AppNotification, type Friend, type NotifPrefs, type Movie,
 } from '../services/api';
 
@@ -230,16 +231,30 @@ export function ProfileandSettingsTab() {
   const [selectedBannerMovie, setSelectedBannerMovie] = useState<Movie | null>(null);
   const [movieBackdrops, setMovieBackdrops]     = useState<string[]>([]);
   const [backdropsLoading, setBackdropsLoading] = useState(false);
+  const bannerDebounceRef                       = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  async function handleBannerSearch(q: string) {
-    setBannerQuery(q);
-    setSelectedBannerMovie(null);
-    setMovieBackdrops([]);
-    if (!q.trim()) { setBannerResults([]); return; }
+  async function runBannerSearch(q: string) {
+    if (!q.trim()) { setBannerResults([]); setBannerSearching(false); return; }
     setBannerSearching(true);
     const results = await searchMovies(q);
     setBannerResults(results.filter(m => m.backdrop));
     setBannerSearching(false);
+  }
+
+  function handleBannerQueryChange(q: string) {
+    setBannerQuery(q);
+    setSelectedBannerMovie(null);
+    setMovieBackdrops([]);
+    if (bannerDebounceRef.current) clearTimeout(bannerDebounceRef.current);
+    if (!q.trim()) { setBannerResults([]); return; }
+    bannerDebounceRef.current = setTimeout(() => runBannerSearch(q), 2000);
+  }
+
+  function handleBannerKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter') {
+      if (bannerDebounceRef.current) clearTimeout(bannerDebounceRef.current);
+      runBannerSearch(bannerQuery);
+    }
   }
 
   async function handleSelectBannerMovie(movie: Movie) {
@@ -373,12 +388,7 @@ export function ProfileandSettingsTab() {
   async function handleSave() {
     setSaving(true);
     try {
-      const res = await fetch(`${BASE_URL}/user/${userId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ displayName: draft.displayName, username: draft.username, bio: draft.bio }),
-      });
-      const r = await res.json();
+      const r = await updateUserProfile(userId, { displayName: draft.displayName, username: draft.username, bio: draft.bio });
       if (!r.success) throw new Error(r.message);
       setProfile(p => ({ ...p, ...draft }));
       setEditing(false);
@@ -713,7 +723,8 @@ export function ProfileandSettingsTab() {
                   <input
                     type="text"
                     value={bannerQuery}
-                    onChange={e => handleBannerSearch(e.target.value)}
+                    onChange={e => handleBannerQueryChange(e.target.value)}
+                    onKeyDown={handleBannerKeyDown}
                     placeholder="Search a movie or show…"
                     className="w-full bg-[#0a0a0a] border border-[#222] rounded-xl px-4 py-2.5 text-white text-sm
                       focus:outline-none transition-all placeholder-zinc-700"

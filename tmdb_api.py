@@ -284,13 +284,13 @@ def get_backdrop_url(backdrop_path, size="w1280"):
     return None
 
 def get_movie_images(movie_id):
-    """Return all backdrop file paths for a movie, sorted by vote_average desc."""
+    """Return all backdrop URLs for a movie across all languages, sorted by vote_average desc."""
     cache_key = f"movie_images:{movie_id}"
     cached = _cache_get(cache_key)
     if cached is not None:
         return cached
     url = f"{TMDB_BASE_URL}/movie/{movie_id}/images"
-    params = {"api_key": TMDB_API_KEY}
+    params = {"api_key": TMDB_API_KEY, "include_image_language": "en,null"}
     try:
         r = requests.get(url, params=params, timeout=10)
         r.raise_for_status()
@@ -304,13 +304,13 @@ def get_movie_images(movie_id):
 
 
 def get_show_images(show_id):
-    """Return all backdrop file paths for a TV show, sorted by vote_average desc."""
+    """Return all backdrop URLs for a TV show across all languages, sorted by vote_average desc."""
     cache_key = f"show_images:{show_id}"
     cached = _cache_get(cache_key)
     if cached is not None:
         return cached
     url = f"{TMDB_BASE_URL}/tv/{show_id}/images"
-    params = {"api_key": TMDB_API_KEY}
+    params = {"api_key": TMDB_API_KEY, "include_image_language": "en,null"}
     try:
         r = requests.get(url, params=params, timeout=10)
         r.raise_for_status()
