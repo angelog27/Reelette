@@ -328,8 +328,19 @@ export function UserProfileModal({ userId, onClose }: Props) {
         <div className="bg-[#1C1C1C] border border-[#2A2A2A] rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh]">
 
           {/* Header banner */}
-          <div className="h-28 bg-gradient-to-br from-zinc-900 via-zinc-950 to-black relative rounded-t-2xl shrink-0">
-            <div className="absolute inset-0 bg-gradient-to-r from-red-950/30 to-transparent rounded-t-2xl" />
+          <div className="h-28 relative rounded-t-2xl shrink-0 overflow-hidden bg-gradient-to-br from-zinc-900 via-zinc-950 to-black">
+            {profile?.profileBannerUrl ? (
+              <>
+                <img
+                  src={profile.profileBannerUrl}
+                  alt="Profile banner"
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+              </>
+            ) : (
+              <div className="absolute inset-0 bg-gradient-to-r from-red-950/30 to-transparent" />
+            )}
             <button
               onClick={onClose}
               className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/50 hover:bg-black/80 flex items-center justify-center text-gray-400 hover:text-white transition-colors z-10"

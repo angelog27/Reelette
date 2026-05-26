@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Camera, Edit2, Save, X, User, Mail, Film, Users, Eye, Lock,
   Bell, LogOut, Trash2, CheckCheck, Loader2, UserPlus, Heart,
-  MessageCircle, Shield, ChevronRight, Palette, Check,
+  MessageCircle, Shield, ChevronRight, ChevronLeft, Palette, Check,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { UserProfileModal } from './UserProfileModal';
@@ -15,8 +15,8 @@ import {
   getNotifications, markNotificationRead, markAllNotificationsRead,
   getNotifPrefs, saveNotifPrefs,
   updateUserAvatar, updateUserEmail, deleteUserAccount,
-  updateUserStreaming,
-  type AppNotification, type Friend, type NotifPrefs,
+  updateUserStreaming, updateProfileBanner, searchMovies, getMovieBackdrops,
+  type AppNotification, type Friend, type NotifPrefs, type Movie,
 } from '../services/api';
 
 // ── Film grain texture ────────────────────────────────────────────
@@ -220,6 +220,57 @@ export function ProfileandSettingsTab() {
   const [saving, setSaving]   = useState(false);
   const [emailSaving, setEmailSaving] = useState(false);
 
+  // ── Profile banner ────────────────────────────────────────────────
+  const [bannerUrl, setBannerUrl]               = useState<string | null>(null);
+  const [bannerQuery, setBannerQuery]           = useState('');
+  const [bannerResults, setBannerResults]       = useState<Movie[]>([]);
+  const [bannerSearching, setBannerSearching]   = useState(false);
+  const [bannerSaving, setBannerSaving]         = useState(false);
+  const [selectedBannerMovie, setSelectedBannerMovie] = useState<Movie | null>(null);
+  const [movieBackdrops, setMovieBackdrops]     = useState<string[]>([]);
+  const [backdropsLoading, setBackdropsLoading] = useState(false);
+
+  async function handleBannerSearch(q: string) {
+    setBannerQuery(q);
+    setSelectedBannerMovie(null);
+    setMovieBackdrops([]);
+    if (!q.trim()) { setBannerResults([]); return; }
+    setBannerSearching(true);
+    const results = await searchMovies(q);
+    setBannerResults(results.filter(m => m.backdrop));
+    setBannerSearching(false);
+  }
+
+  async function handleSelectBannerMovie(movie: Movie) {
+    setSelectedBannerMovie(movie);
+    setBannerResults([]);
+    setBannerQuery('');
+    setBackdropsLoading(true);
+    const backdrops = await getMovieBackdrops(movie.id, movie.type ?? 'movie');
+    setMovieBackdrops(backdrops.length ? backdrops : (movie.backdrop ? [movie.backdrop] : []));
+    setBackdropsLoading(false);
+  }
+
+  async function handleSetBanner(url: string) {
+    setBannerSaving(true);
+    const r = await updateProfileBanner(userId, url);
+    if (r.success) {
+      setBannerUrl(url);
+      setSelectedBannerMovie(null);
+      setMovieBackdrops([]);
+      toast.success('Banner updated');
+    } else toast.error('Failed to save banner');
+    setBannerSaving(false);
+  }
+
+  async function handleRemoveBanner() {
+    setBannerSaving(true);
+    const r = await updateProfileBanner(userId, null);
+    if (r.success) { setBannerUrl(null); toast.success('Banner removed'); }
+    else toast.error('Failed to remove banner');
+    setBannerSaving(false);
+  }
+
   // ── Social ────────────────────────────────────────────────────────
   const [socialSettings, setSocialSettings] = useState({ showOnlineStatus: true, showMyStuffPublicly: false });
   const [friends, setFriends]               = useState<(Friend & { avatarUrl?: string; displayName?: string })[]>([]);
@@ -278,6 +329,7 @@ export function ProfileandSettingsTab() {
         };
         setProfile(p); setDraft(p);
         setSocialSettings({ showOnlineStatus: d.socialSettings?.showOnlineStatus ?? true, showMyStuffPublicly: d.socialSettings?.showMyStuffPublicly ?? false });
+        setBannerUrl(d.profileBannerUrl ?? null);
         const s = d.streamingServices || {};
         const resolved = Object.fromEntries(SERVICES.map(sv => [sv.key, !!s[sv.key]]));
         setServices(resolved);
@@ -608,6 +660,119 @@ export function ProfileandSettingsTab() {
                   <span className="text-[10px] px-2 py-0.5 rounded-full border text-zinc-500 border-zinc-700">verified</span>
                 </div>
               </div>
+            </Card>
+
+            {/* Profile banner */}
+            <Card>
+              <SectionTitle label="Profile Banner" icon={<Film size={16} />} />
+
+              {/* Current banner preview */}
+              <div className="relative w-full h-28 rounded-xl overflow-hidden mb-4 bg-[#0a0a0a] border border-[#222]">
+                {bannerUrl ? (
+                  <>
+                    <img src={bannerUrl} alt="Profile banner" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                    <button
+                      onClick={handleRemoveBanner}
+                      disabled={bannerSaving}
+                      className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/70 hover:bg-black flex items-center justify-center text-zinc-400 hover:text-white transition-colors"
+                    >
+                      <X size={14} />
+                    </button>
+                  </>
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center gap-2">
+                    <Film size={22} className="text-zinc-700" />
+                    <span className="text-zinc-600 text-xs">No banner set — search a movie below</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Step 1: search — hidden once a movie is selected */}
+              {!selectedBannerMovie && (
+                <>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={bannerQuery}
+                      onChange={e => handleBannerSearch(e.target.value)}
+                      placeholder="Search for a movie or show…"
+                      className="w-full bg-[#0a0a0a] border border-[#222] rounded-xl px-4 py-2.5 text-white text-sm
+                        focus:outline-none transition-all placeholder-zinc-700"
+                      onFocus={e => { e.currentTarget.style.borderColor = 'var(--reel-accent-hex)'; }}
+                      onBlur={e => { e.currentTarget.style.borderColor = '#222'; }}
+                    />
+                    {bannerSearching && (
+                      <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-zinc-500" />
+                    )}
+                  </div>
+
+                  {/* Movie results — click to drill into backdrops */}
+                  {bannerResults.length > 0 && (
+                    <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {bannerResults.slice(0, 9).map(m => (
+                        <button
+                          key={m.id}
+                          onClick={() => handleSelectBannerMovie(m)}
+                          className="relative rounded-lg overflow-hidden border-2 border-transparent hover:border-[var(--reel-accent-hex)] transition-all group text-left"
+                        >
+                          <img src={m.backdrop!} alt={m.title} className="w-full aspect-video object-cover" />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <ChevronRight size={20} className="text-white" />
+                          </div>
+                          <div className="absolute bottom-0 left-0 right-0 px-2 py-1 bg-gradient-to-t from-black/80 to-transparent">
+                            <p className="text-white text-[10px] font-medium truncate">{m.title}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {bannerResults.length === 0 && bannerQuery.trim() && !bannerSearching && (
+                    <p className="text-zinc-600 text-xs mt-3">No results with a landscape image found.</p>
+                  )}
+                </>
+              )}
+
+              {/* Step 2: backdrop gallery for selected movie */}
+              {selectedBannerMovie && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <button
+                      onClick={() => { setSelectedBannerMovie(null); setMovieBackdrops([]); }}
+                      className="flex items-center gap-1 text-xs text-zinc-500 hover:text-white transition-colors"
+                    >
+                      <ChevronLeft size={14} /> Back
+                    </button>
+                    <span className="text-zinc-300 text-sm font-medium truncate">{selectedBannerMovie.title}</span>
+                    <span className="text-zinc-600 text-xs ml-auto shrink-0">
+                      {backdropsLoading ? '…' : `${movieBackdrops.length} image${movieBackdrops.length !== 1 ? 's' : ''}`}
+                    </span>
+                  </div>
+
+                  {backdropsLoading ? (
+                    <div className="flex items-center justify-center py-8 gap-2 text-zinc-600 text-sm">
+                      <Loader2 size={16} className="animate-spin" /> Loading backdrops…
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-72 overflow-y-auto pr-1">
+                      {movieBackdrops.map((url, i) => (
+                        <button
+                          key={i}
+                          onClick={() => handleSetBanner(url)}
+                          disabled={bannerSaving}
+                          className="relative rounded-lg overflow-hidden border-2 border-transparent hover:border-[var(--reel-accent-hex)] transition-all group disabled:opacity-50"
+                        >
+                          <img src={url} alt={`Backdrop ${i + 1}`} className="w-full aspect-video object-cover" loading="lazy" />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            {bannerSaving ? <Loader2 size={16} className="animate-spin text-white" /> : <Check size={18} className="text-white" />}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </Card>
 
             {/* Social settings */}

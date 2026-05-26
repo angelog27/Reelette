@@ -61,6 +61,7 @@ from tmdb_api import (
     get_now_playing_movies, get_movie_recommendations, get_upcoming_movies,
     search_tv_shows, get_popular_tv_shows, get_top_rated_tv_shows, get_trending_tv_shows,
     get_tv_show_details, discover_tv_shows, get_tv_genres, get_tv_streaming_providers,
+    get_movie_images, get_show_images,
 )
 
 app = Flask(__name__)
@@ -635,6 +636,12 @@ def movie_details(movie_id):
 def movie_providers(movie_id):
     data = get_streaming_providers(movie_id)
     return jsonify(data or {})
+
+@app.route('/api/movies/<int:movie_id>/backdrops', methods=['GET'])
+def movie_backdrops(movie_id):
+    media_type = request.args.get('type', 'movie')
+    backdrops = get_show_images(movie_id) if media_type == 'show' else get_movie_images(movie_id)
+    return jsonify({'backdrops': backdrops})
 
 @app.route('/api/genres', methods=['GET'])
 def genres():

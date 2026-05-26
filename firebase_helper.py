@@ -665,7 +665,7 @@ def get_post(post_id):
 def update_user_profile(user_id, data):
     """Update editable profile fields: displayName, bio, username, phone, socialSettings"""
     try:
-        allowed = {'displayName', 'bio', 'username', 'phone', 'profileBannerBg', 'socialSettings'}
+        allowed = {'displayName', 'bio', 'username', 'phone', 'profileBannerBg', 'profileBannerUrl', 'socialSettings'}
         update_data = {k: v for k, v in data.items() if k in allowed}
         if not update_data:
             return {'success': False, 'message': 'No valid fields to update'}
@@ -1005,7 +1005,7 @@ def get_user_public_profile(user_id):
     """Return a user's public profile including computed stats"""
     try:
         doc = db.collection('users').document(user_id).get(
-            field_paths=['username', 'displayName', 'bio', 'avatarUrl', 'createdAt', 'lastSeen', 'socialSettings']
+            field_paths=['username', 'displayName', 'bio', 'avatarUrl', 'createdAt', 'lastSeen', 'socialSettings', 'profileBannerUrl']
         )
         if not doc.exists:
             return None
@@ -1028,6 +1028,7 @@ def get_user_public_profile(user_id):
             'friendsCount':        friends_count,
             'showMyStuffPublicly': social.get('showMyStuffPublicly', False),
             'showOnlineStatus':    social.get('showOnlineStatus', True),
+            'profileBannerUrl':    d.get('profileBannerUrl'),
         }
     except Exception as e:
         print(f"Error getting public profile: {e}")

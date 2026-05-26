@@ -283,6 +283,46 @@ def get_backdrop_url(backdrop_path, size="w1280"):
         return f"{TMDB_IMAGE_BASE}/{size}{backdrop_path}"
     return None
 
+def get_movie_images(movie_id):
+    """Return all backdrop file paths for a movie, sorted by vote_average desc."""
+    cache_key = f"movie_images:{movie_id}"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
+    url = f"{TMDB_BASE_URL}/movie/{movie_id}/images"
+    params = {"api_key": TMDB_API_KEY}
+    try:
+        r = requests.get(url, params=params, timeout=10)
+        r.raise_for_status()
+        data = r.json()
+        backdrops = sorted(data.get('backdrops', []), key=lambda x: x.get('vote_average', 0), reverse=True)
+        result = [get_backdrop_url(b['file_path']) for b in backdrops if b.get('file_path')]
+        _cache_set(cache_key, result)
+        return result
+    except Exception:
+        return []
+
+
+def get_show_images(show_id):
+    """Return all backdrop file paths for a TV show, sorted by vote_average desc."""
+    cache_key = f"show_images:{show_id}"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
+    url = f"{TMDB_BASE_URL}/tv/{show_id}/images"
+    params = {"api_key": TMDB_API_KEY}
+    try:
+        r = requests.get(url, params=params, timeout=10)
+        r.raise_for_status()
+        data = r.json()
+        backdrops = sorted(data.get('backdrops', []), key=lambda x: x.get('vote_average', 0), reverse=True)
+        result = [get_backdrop_url(b['file_path']) for b in backdrops if b.get('file_path')]
+        _cache_set(cache_key, result)
+        return result
+    except Exception:
+        return []
+
+
 def get_upcoming_movies(page=1):
     cache_key = f"upcoming:{page}"
     cached = _cache_get(cache_key)

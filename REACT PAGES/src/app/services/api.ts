@@ -404,6 +404,17 @@ export function searchMovies(query: string, page = 1): Promise<Movie[]> {
   });
 }
 
+export function getMovieBackdrops(movieId: string, type: 'movie' | 'show' = 'movie'): Promise<string[]> {
+  return fromCache(`backdrops:${movieId}:${type}`, TTL.CATALOG, async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/movies/${movieId}/backdrops?type=${type}`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.backdrops ?? [];
+    } catch { return []; }
+  });
+}
+
 
 export function discoverMovies(filters: {
   genre_id?: string;
@@ -868,6 +879,7 @@ export interface UserPublicProfile {
   friendsCount: number;
   showMyStuffPublicly: boolean;
   showOnlineStatus: boolean;
+  profileBannerUrl?: string | null;
 }
 
 export function getUserPublicProfile(user_id: string): Promise<UserPublicProfile | null> {
@@ -921,6 +933,16 @@ export async function updateUserProfile(user_id: string, data: Partial<Pick<User
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
+  });
+  return res.json();
+}
+
+export async function updateProfileBanner(user_id: string, bannerUrl: string | null) {
+  bustCachePrefix(`profile:public:${user_id}`);
+  const res = await authedFetch(`${BASE_URL}/user/${user_id}/profile`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ profileBannerUrl: bannerUrl }),
   });
   return res.json();
 }
