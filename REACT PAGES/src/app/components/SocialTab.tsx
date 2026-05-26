@@ -141,7 +141,7 @@ function SpinWheel({ items, onSpinEnd }: { items: GroupMovie[]; onSpinEnd: (m: G
     <div className="flex flex-col items-center gap-6">
       <div className="relative">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 z-10"
-          style={{ width: 0, height: 0, borderLeft: '12px solid transparent', borderRight: '12px solid transparent', borderTop: '22px solid #7C5DBD' }} />
+          style={{ width: 0, height: 0, borderLeft: '12px solid transparent', borderRight: '12px solid transparent', borderTop: '22px solid var(--reel-accent-hex)' }} />
         <svg width="400" height="400" viewBox="0 0 400 400"
           style={{ filter: 'drop-shadow(0 0 24px rgba(124,93,189,0.4))' }}>
           <circle cx={cx} cy={cy} r={r + 8} fill="none" stroke="#2a2a2e" strokeWidth="8" />
@@ -168,12 +168,13 @@ function SpinWheel({ items, onSpinEnd }: { items: GroupMovie[]; onSpinEnd: (m: G
               );
             })}
             <circle cx={cx} cy={cy} r={28} fill="#141416" stroke="#2a2a2e" strokeWidth="3" />
-            <circle cx={cx} cy={cy} r={10} fill="#7C5DBD" />
+            <circle cx={cx} cy={cy} r={10} fill="var(--reel-accent-hex)" />
           </g>
         </svg>
       </div>
       <button onClick={handleSpin} disabled={spinning}
-        className="flex items-center gap-3 px-10 py-4 bg-[#7C5DBD] hover:bg-[#6B4DAD] disabled:opacity-50 text-white font-bold text-lg rounded-full shadow-xl shadow-[#7C5DBD]/30 transition-all hover:scale-105 disabled:scale-100">
+        className="flex items-center gap-3 px-10 py-4 disabled:opacity-50 text-white font-bold text-lg rounded-full shadow-xl transition-all hover:scale-105 disabled:scale-100 hover:brightness-110"
+        style={{ background: 'var(--reel-accent-hex)', boxShadow: '0 20px 25px -5px color-mix(in srgb, var(--reel-accent-hex) 30%, transparent)' }}>
         <Shuffle className="w-6 h-6" />{spinning ? 'Spinning…' : 'Spin!'}
       </button>
     </div>
@@ -325,8 +326,8 @@ function renderMessage(message: string, onOpenProfile: (userId: string) => void)
             const match = results.find((r: { username: string; user_id: string }) => r.username.toLowerCase() === uname.toLowerCase());
             if (match) onOpenProfile(match.user_id);
           }}
-          className="text-[#7C5DBD] font-semibold hover:underline cursor-pointer"
-          style={{ background: 'none', border: 'none', padding: 0 }}>
+          className="font-semibold hover:underline cursor-pointer"
+          style={{ color: 'var(--reel-accent-hex)', background: 'none', border: 'none', padding: 0 }}>
           {part}
         </button>
       );
@@ -554,12 +555,19 @@ function ComposeBox({ currentUser, onPostCreated }: {
           onClick={() => setExpanded(true)}
           className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-[#0f0f11] transition-colors text-left"
         >
-          <UserAvatar 
-          username={currentUser.username} 
+          <UserAvatar
+          username={currentUser.username}
           avatarUrl={currentUser.avatarUrl}
           size={38} />
-          <span className="flex-1 text-zinc-600 text-[15px]">What did you watch?</span>
-          <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-[#7C5DBD]/20 text-[#9B7BD7] border border-[#7C5DBD]/30">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <span className="text-zinc-400 text-xs font-medium">@{currentUser.username}</span>
+              {currentUser.user_id === ADMIN_UID && <Crown className="w-3 h-3 text-amber-400 fill-amber-400" />}
+            </div>
+            <span className="text-zinc-600 text-[14px]">What did you watch?</span>
+          </div>
+          <span className="text-xs font-semibold px-3 py-1.5 rounded-full border shrink-0"
+            style={{ background: 'color-mix(in srgb, var(--reel-accent-hex) 20%, transparent)', color: 'var(--reel-accent-hex)', borderColor: 'color-mix(in srgb, var(--reel-accent-hex) 30%, transparent)' }}>
             Post
           </span>
         </button>
@@ -661,8 +669,9 @@ function ComposeBox({ currentUser, onPostCreated }: {
               <button
                 onClick={() => { setMovieSearchOpen(v => !v); setRatingOpen(false); }}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                  movieSearchOpen || selectedMovie ? 'text-[#9B7BD7] bg-[#7C5DBD]/15' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.05]'
+                  movieSearchOpen || selectedMovie ? '' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.05]'
                 }`}
+                style={movieSearchOpen || selectedMovie ? { color: 'var(--reel-accent-hex)', background: 'color-mix(in srgb, var(--reel-accent-hex) 15%, transparent)' } : {}}
               >
                 <Film className="w-3.5 h-3.5" />
                 {selectedMovie ? selectedMovie.title.length > 14 ? selectedMovie.title.slice(0, 13) + '…' : selectedMovie.title : 'Tag Media'}
@@ -680,7 +689,8 @@ function ComposeBox({ currentUser, onPostCreated }: {
             <div className="flex items-center gap-2">
               <button onClick={handleReset} className="text-zinc-600 hover:text-zinc-400 text-sm transition-colors">Cancel</button>
               <button onClick={handleSubmit} disabled={posting || !selectedMovie}
-                className="px-4 py-1.5 bg-[#7C5DBD] hover:bg-[#6B4DAD] disabled:opacity-40 text-white text-sm font-semibold rounded-full transition-colors">
+                className="px-4 py-1.5 disabled:opacity-40 text-white text-sm font-semibold rounded-full transition-all hover:brightness-110"
+                style={{ background: 'var(--reel-accent-hex)' }}>
                 {posting ? 'Posting…' : 'Post'}
               </button>
             </div>
@@ -959,9 +969,11 @@ function ActivityCard({ post, currentUserId, currentUsername, isAdmin, onLike, o
               {/* 6. Like + emoji reactions */}
               <div className="flex items-center gap-0.5 -ml-1.5">
                 <button onClick={handleLikeClick}
-                  style={{ transition: 'transform 0.25s cubic-bezier(0.34,1.56,0.64,1)', transform: likeAnim ? 'scale(1.4)' : 'scale(1)' }}
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-[#7C5DBD]/[0.08] hover:text-[#9B7BD7] ${isLiked ? 'text-[#7C5DBD]' : 'text-zinc-600'}`}>
-                  <Heart className={`w-[13px] h-[13px] ${isLiked ? 'fill-[#7C5DBD]' : ''}`} />
+                  style={{ transition: 'transform 0.25s cubic-bezier(0.34,1.56,0.64,1)', transform: likeAnim ? 'scale(1.4)' : 'scale(1)', ...(isLiked ? { color: 'var(--reel-accent-hex)' } : {}) }}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${isLiked ? '' : 'text-zinc-600'}`}
+                  onMouseEnter={e => { if (!isLiked) { (e.currentTarget as HTMLButtonElement).style.background = 'color-mix(in srgb, var(--reel-accent-hex) 8%, transparent)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--reel-accent-hex)'; } }}
+                  onMouseLeave={e => { if (!isLiked) { (e.currentTarget as HTMLButtonElement).style.background = ''; (e.currentTarget as HTMLButtonElement).style.color = ''; } }}>
+                  <Heart className="w-[13px] h-[13px]" style={isLiked ? { fill: 'var(--reel-accent-hex)' } : {}} />
                   {post.likes > 0 && <span className="tabular-nums">{post.likes}</span>}
                 </button>
                 <div className="relative" ref={emojiRef}>
@@ -1037,9 +1049,11 @@ function ActivityCard({ post, currentUserId, currentUsername, isAdmin, onLike, o
             )}
             <div className="flex items-center gap-0.5 -ml-1.5">
               <button onClick={handleLikeClick}
-                style={{ transition: 'transform 0.25s cubic-bezier(0.34,1.56,0.64,1)', transform: likeAnim ? 'scale(1.4)' : 'scale(1)' }}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-[#7C5DBD]/[0.08] hover:text-[#9B7BD7] ${isLiked ? 'text-[#7C5DBD]' : 'text-zinc-600'}`}>
-                <Heart className={`w-[13px] h-[13px] ${isLiked ? 'fill-[#7C5DBD]' : ''}`} />
+                style={{ transition: 'transform 0.25s cubic-bezier(0.34,1.56,0.64,1)', transform: likeAnim ? 'scale(1.4)' : 'scale(1)', ...(isLiked ? { color: 'var(--reel-accent-hex)' } : {}) }}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${isLiked ? '' : 'text-zinc-600'}`}
+                onMouseEnter={e => { if (!isLiked) { (e.currentTarget as HTMLButtonElement).style.background = 'color-mix(in srgb, var(--reel-accent-hex) 8%, transparent)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--reel-accent-hex)'; } }}
+                onMouseLeave={e => { if (!isLiked) { (e.currentTarget as HTMLButtonElement).style.background = ''; (e.currentTarget as HTMLButtonElement).style.color = ''; } }}>
+                <Heart className="w-[13px] h-[13px]" style={isLiked ? { fill: 'var(--reel-accent-hex)' } : {}} />
                 {post.likes > 0 && <span className="tabular-nums">{post.likes}</span>}
               </button>
               <div className="relative" ref={emojiRef}>
@@ -1395,7 +1409,7 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
               className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-semibold transition-colors relative capitalize ${innerTab === t ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'}`}>
               {t === 'group' ? <Clapperboard className="w-4 h-4" /> : <MessageCircle className="w-4 h-4" />}
               {t === 'group' ? 'Group' : 'Chat'}
-              {innerTab === t && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-10 h-[2px] bg-[#7C5DBD] rounded-full" />}
+              {innerTab === t && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-10 h-[2px] rounded-full" style={{ background: 'var(--reel-accent-hex)' }} />}
             </button>
           ))}
         </div>
@@ -1542,7 +1556,8 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
                     )}
                     <div className={`max-w-[75%] flex flex-col gap-0.5 ${isMine ? 'items-end' : 'items-start'}`}>
                       {!isMine && <span className="text-[10px] text-zinc-600 px-1">@{msg.sender_username}</span>}
-                      <div className={`px-3.5 py-2.5 rounded-2xl text-sm leading-snug ${isMine ? 'bg-[#7C5DBD] text-white rounded-br-sm' : 'bg-[#1a1a1e] text-zinc-200 rounded-bl-sm'}`}>
+                      <div className={`px-3.5 py-2.5 rounded-2xl text-sm leading-snug ${isMine ? 'text-white rounded-br-sm' : 'bg-[#1a1a1e] text-zinc-200 rounded-bl-sm'}`}
+                        style={isMine ? { background: 'var(--reel-accent-hex)' } : {}}>
                         {msg.text}
                       </div>
                       {msg.sent_at && <span className="text-[9px] text-zinc-700 px-1">{timeAgo(msg.sent_at)}</span>}
@@ -1556,9 +1571,12 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
               <input ref={chatInputRef} value={chatDraft} onChange={e => setChatDraft(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleChatSend(); } }}
                 placeholder="Message the group…"
-                className="flex-1 bg-[#141416] border border-[#2a2a2e] rounded-full px-4 py-2 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-[#7C5DBD]/40" />
+                className="flex-1 bg-[#141416] border border-[#2a2a2e] rounded-full px-4 py-2 text-sm text-white placeholder:text-zinc-600 focus:outline-none"
+                onFocus={e => { e.currentTarget.style.borderColor = 'color-mix(in srgb, var(--reel-accent-hex) 40%, transparent)'; }}
+                onBlur={e => { e.currentTarget.style.borderColor = ''; }} />
               <button onClick={handleChatSend} disabled={!chatDraft.trim() || chatSending}
-                className="w-9 h-9 flex items-center justify-center rounded-full bg-[#7C5DBD] hover:bg-[#9B7BD7] disabled:opacity-40 transition-colors shrink-0">
+                className="w-9 h-9 flex items-center justify-center rounded-full disabled:opacity-40 transition-all hover:brightness-110 shrink-0"
+                style={{ background: 'var(--reel-accent-hex)' }}>
                 <Send className="w-4 h-4 text-white" />
               </button>
             </div>
@@ -2397,12 +2415,12 @@ export function SocialTab() {
                 <button onClick={() => setFeedMode('all')}
                   className={`flex-1 py-3.5 text-sm font-semibold relative transition-colors ${feedMode === 'all' ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'}`}>
                   For You
-                  {feedMode === 'all' && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-[2px] bg-[#7C5DBD] rounded-full" />}
+                  {feedMode === 'all' && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-[2px] rounded-full" style={{ background: 'var(--reel-accent-hex)' }} />}
                 </button>
                 <button onClick={() => setFeedMode('friends')}
                   className={`flex-1 py-3.5 text-sm font-semibold relative transition-colors ${feedMode === 'friends' ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'}`}>
                   Friends
-                  {feedMode === 'friends' && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-[2px] bg-[#7C5DBD] rounded-full" />}
+                  {feedMode === 'friends' && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-[2px] rounded-full" style={{ background: 'var(--reel-accent-hex)' }} />}
                 </button>
                 <button onClick={handleRefresh} disabled={refreshing} title="Refresh"
                   className="px-4 py-3.5 text-zinc-600 hover:text-zinc-300 transition-colors disabled:opacity-40">
@@ -2462,9 +2480,10 @@ export function SocialTab() {
             onClick={() => { setSidebarView(item.id); setActiveGroup(null); }}
             className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 transition-colors ${
               sidebarView === item.id && !activeGroup
-                ? 'text-[#9B7BD7]'
+                ? ''
                 : 'text-zinc-600 hover:text-zinc-400'
             }`}
+            style={sidebarView === item.id && !activeGroup ? { color: 'var(--reel-accent-hex)' } : {}}
           >
             {item.icon}
             <span className="text-[10px] font-medium">{item.label}</span>

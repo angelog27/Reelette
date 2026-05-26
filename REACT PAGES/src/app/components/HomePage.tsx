@@ -429,7 +429,7 @@ export function HomePage() {
                     {tab.icon && <tab.icon className="w-[22px] h-[22px] shrink-0" />}
                     <span style={{ fontSize: 15 }}>{tab.label}</span>
                   </div>
-                  {isActive && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#7C5DBD]" />}
+                  {isActive && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full" style={{ background: 'var(--reel-accent-hex)' }} />}
                 </div>
               )}
             </NavLink>
@@ -447,7 +447,7 @@ export function HomePage() {
               <label style={{
                 position: 'relative', display: 'block', borderRadius: '10px',
                 border: '2px solid #5e5757', padding: '6px 44px 6px 12px',
-                boxShadow: '8px 8px 30px #7C5DBD, -8px -8px 30px rgba(255,255,255,0.2)',
+                boxShadow: '8px 8px 30px var(--reel-accent-hex), -8px -8px 30px rgba(255,255,255,0.2)',
                 cursor: 'text',
               }}>
                 <span className="hidden md:inline" style={{
@@ -482,7 +482,7 @@ export function HomePage() {
                 if (!searchVisible) setTimeout(() => searchInputRef.current?.focus(), 50);
               }}
               className="flex items-center justify-center w-10 h-10 md:w-[38px] md:h-[38px] rounded-full border transition-all active:scale-95"
-              style={searchVisible ? { background: 'rgba(124,93,189,0.2)', borderColor: '#7C5DBD' } : { background: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.1)' }}
+              style={searchVisible ? { background: 'color-mix(in srgb, var(--reel-accent-hex) 20%, transparent)', borderColor: 'var(--reel-accent-hex)' } : { background: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.1)' }}
               title="Search (⌘K)"
             >
               <Search className="w-4 h-4 text-white" />
@@ -730,17 +730,18 @@ export function HomePage() {
                 <div className="flex flex-col items-center justify-center gap-0.5 py-2 min-h-[52px]">
                   {tab.icon && (
                     <tab.icon
-                      className={`w-[22px] h-[22px] transition-colors duration-150 ${isActive ? 'text-[#7C5DBD]' : 'text-zinc-500'}`}
+                      className={`w-[22px] h-[22px] transition-colors duration-150 ${isActive ? '' : 'text-zinc-500'}`}
+                      style={isActive ? { color: 'var(--reel-accent-hex)' } : {}}
                     />
                   )}
                   <span
-                    className={`text-[10px] transition-colors duration-150 ${isActive ? 'text-[#7C5DBD]' : 'text-zinc-500'}`}
-                    style={{ fontFamily: 'SanFran, system-ui, sans-serif', fontWeight: 400 }}
+                    className={`text-[10px] transition-colors duration-150 ${isActive ? '' : 'text-zinc-500'}`}
+                    style={{ fontFamily: 'SanFran, system-ui, sans-serif', fontWeight: 400, ...(isActive ? { color: 'var(--reel-accent-hex)' } : {}) }}
                   >
                     {tab.label}
                   </span>
                   {isActive && (
-                    <span className="w-1 h-1 rounded-full bg-[#7C5DBD]" />
+                    <span className="w-1 h-1 rounded-full" style={{ background: 'var(--reel-accent-hex)' }} />
                   )}
                 </div>
               )}

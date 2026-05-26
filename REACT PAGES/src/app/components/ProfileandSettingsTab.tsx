@@ -470,85 +470,80 @@ export function ProfileandSettingsTab() {
 
       <div className="relative z-10 max-w-4xl mx-auto px-4 pb-16">
 
-        {/* ── Banner + Avatar ────────────────────────────────────────── */}
-        <div className="relative mb-0">
-          {/* Banner — driven by active theme accent */}
-          <div className="h-36 sm:h-44 relative overflow-hidden"
-            style={{ background: `linear-gradient(135deg, color-mix(in srgb, ${theme.accent} 18%, #000) 0%, #090909 100%)` }}>
-            <div className="absolute inset-0 pointer-events-none opacity-[0.04]"
-              style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.3) 2px, rgba(0,0,0,0.3) 4px)' }} />
-            {/* Theme badge */}
-            <div className="absolute bottom-3 right-4 flex items-center gap-1.5 bg-black/50 backdrop-blur-sm rounded-full px-3 py-1">
-              <span className="w-2 h-2 rounded-full shrink-0" style={{ background: theme.accent }} />
-              <span className="text-[10px] font-semibold text-zinc-300">{theme.name}</span>
-            </div>
-          </div>
+        {/* ── Profile header ────────────────────────────────────────── */}
+        <div className="relative pt-6 pb-5 px-3 sm:px-6 overflow-hidden">
+          {/* Subtle accent glow — no banner box */}
+          <div className="pointer-events-none absolute -top-12 -left-8 w-72 h-72 rounded-full opacity-[0.12] blur-3xl"
+            style={{ background: theme.accent }} />
 
-          {/* Avatar + name row */}
-          <div className="px-3 sm:px-6 pb-5 bg-[#090909]">
-            <div className="flex items-end justify-between" style={{ marginTop: -44 }}>
-              {/* Avatar */}
-              <div className="relative group z-10">
-                <div className="w-28 h-28 rounded-full bg-[#1a1a1a] border-4 border-[#090909] overflow-hidden shadow-2xl">
-                  {profile.avatarUrl
-                    ? <img src={profile.avatarUrl} alt="avatar" className="w-full h-full object-cover" />
-                    : <div className="w-full h-full flex items-center justify-center text-zinc-700"><User size={40} /></div>
-                  }
+          <div className="relative z-10 flex items-center gap-4 sm:gap-6">
+            {/* Avatar */}
+            <div className="relative group shrink-0">
+              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-[#1a1a1a] border-2 overflow-hidden shadow-2xl"
+                style={{ borderColor: theme.accent + '40' }}>
+                {profile.avatarUrl
+                  ? <img src={profile.avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+                  : <div className="w-full h-full flex items-center justify-center text-zinc-700"><User size={36} /></div>
+                }
+              </div>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="absolute bottom-0.5 right-0.5 w-7 h-7 rounded-full flex items-center justify-center shadow-lg transition-all opacity-0 group-hover:opacity-100 active:scale-95"
+                style={{ background: 'var(--reel-accent-hex)' }}
+                title="Change photo"
+              >
+                <Camera size={13} className="text-white" />
+              </button>
+              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+            </div>
+
+            {/* Name + buttons */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  {editing ? (
+                    <input
+                      name="displayName" value={draft.displayName} onChange={handleChange}
+                      className="bg-transparent text-white text-xl font-semibold w-full focus:outline-none border-b pb-0.5 transition-colors"
+                      style={{ borderBottomColor: 'var(--reel-accent-hex)' }}
+                    />
+                  ) : (
+                    <h1 className="text-white text-xl font-semibold truncate">{profile.displayName || profile.username}</h1>
+                  )}
+                  <p className="text-zinc-500 text-sm mt-0.5">@{profile.username}</p>
                 </div>
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="absolute bottom-0.5 right-0.5 w-8 h-8 rounded-full flex items-center justify-center shadow-lg transition-all opacity-0 group-hover:opacity-100 active:scale-95"
-                  style={{ background: 'var(--reel-accent-hex)' }}
-                  title="Change photo"
-                >
-                  <Camera size={14} className="text-white" />
-                </button>
-                <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+
+                {/* Edit / Save buttons */}
+                <div className="flex items-center gap-2 shrink-0 pt-0.5">
+                  {editing ? (
+                    <>
+                      <button
+                        onClick={() => { setDraft(profile); setEditing(false); }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-xs transition-all"
+                      >
+                        <X size={13} /> Cancel
+                      </button>
+                      <button
+                        onClick={handleSave} disabled={saving}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-white rounded-xl text-xs font-semibold transition-all disabled:opacity-60"
+                        style={{ background: 'var(--reel-accent-hex)' }}
+                      >
+                        {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+                        Save
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => setEditing(true)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-xs transition-all border border-zinc-700"
+                    >
+                      <Edit2 size={13} /> Edit
+                    </button>
+                  )}
+                </div>
               </div>
 
-              {/* Edit / Save buttons */}
-              <div className="flex items-center gap-2 pb-1">
-                {editing ? (
-                  <>
-                    <button
-                      onClick={() => { setDraft(profile); setEditing(false); }}
-                      className="flex items-center gap-1.5 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-sm transition-all"
-                    >
-                      <X size={14} /> Cancel
-                    </button>
-                    <button
-                      onClick={handleSave} disabled={saving}
-                      className="flex items-center gap-1.5 px-4 py-2 text-white rounded-xl text-sm font-semibold transition-all disabled:opacity-60"
-                      style={{ background: 'var(--reel-accent-hex)' }}
-                    >
-                      {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                      Save
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    onClick={() => setEditing(true)}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-sm transition-all border border-zinc-700"
-                  >
-                    <Edit2 size={14} /> Edit profile
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Name / username / bio */}
-            <div className="mt-3 space-y-0.5">
-              {editing ? (
-                <input
-                  name="displayName" value={draft.displayName} onChange={handleChange}
-                  className="bg-transparent text-white text-xl font-semibold w-full focus:outline-none border-b border-zinc-700 pb-0.5 transition-colors"
-                  style={{ borderBottomColor: 'var(--reel-accent-hex)' }}
-                />
-              ) : (
-                <h1 className="text-white text-xl font-semibold">{profile.displayName || profile.username}</h1>
-              )}
-              <p className="text-zinc-500 text-sm">@{profile.username}</p>
-              {!editing && profile.bio && <p className="text-zinc-400 text-sm mt-1 max-w-lg">{profile.bio}</p>}
+              {!editing && profile.bio && <p className="text-zinc-400 text-sm mt-1.5 line-clamp-2">{profile.bio}</p>}
             </div>
           </div>
         </div>
