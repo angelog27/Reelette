@@ -57,7 +57,8 @@ def get_movie_details(movie_id):
     params = {
         "api_key": TMDB_API_KEY,
         "language": "en-US",
-        "append_to_response": "credits,videos,watch/providers,similar,keywords"
+        "append_to_response": "credits,videos,watch/providers,similar,keywords,images",
+        "include_image_language": "en,null",
     }
     
     try:
@@ -533,7 +534,8 @@ def get_tv_show_details(show_id):
     params = {
         "api_key": TMDB_API_KEY,
         "language": "en-US",
-        "append_to_response": "credits,videos,watch/providers,similar,aggregate_credits",
+        "append_to_response": "credits,videos,watch/providers,similar,aggregate_credits,images",
+        "include_image_language": "en,null",
     }
     try:
         response = requests.get(url, params=params)

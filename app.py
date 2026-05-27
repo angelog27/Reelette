@@ -639,15 +639,25 @@ def discover():
     _cache_set(cache_key, movies, _MOVIE_LIST_TTL)
     return jsonify({'movies': movies})
 
+def _extract_logo_url(data: dict) -> str | None:
+    images = data.get('images') or {}
+    logos  = images.get('logos') or []
+    if not logos:
+        return None
+    eng  = [l for l in logos if l.get('iso_639_1') in ('en', None)]
+    best = max(eng or logos, key=lambda x: x.get('vote_average', 0), default=None)
+    return f"https://image.tmdb.org/t/p/w500{best['file_path']}" if best else None
+
 @app.route('/api/movies/<int:movie_id>', methods=['GET'])
 def movie_details(movie_id):
-    cache_key = f'detail:{movie_id}'
+    cache_key = f'detail_v2:{movie_id}'
     cached = _cache_get(cache_key)
     if cached:
         return jsonify(cached)
     data = get_movie_details(movie_id)
     if not data:
         return jsonify({'error': 'Movie not found'}), 404
+    data['logo_url'] = _extract_logo_url(data)
     _cache_set(cache_key, data, _MOVIE_DETAIL_TTL)
     return jsonify(data)
 
@@ -793,7 +803,7 @@ def discover_shows():
 
 @app.route('/api/shows/<int:show_id>', methods=['GET'])
 def show_details(show_id):
-    cache_key = f'tv_detail:{show_id}'
+    cache_key = f'tv_detail_v2:{show_id}'
     cached = _cache_get(cache_key)
     if cached:
         return jsonify(cached)
@@ -801,6 +811,7 @@ def show_details(show_id):
     if not data:
         return jsonify({'error': 'Show not found'}), 404
     data['media_type'] = 'tv'
+    data['logo_url'] = _extract_logo_url(data)
     _cache_set(cache_key, data, _MOVIE_DETAIL_TTL)
     return jsonify(data)
 

@@ -4,7 +4,7 @@ import { MovieDetailModal } from './MovieDetailModal';
 import {
   watchMovieLater, removeFromWatchLater, getUser, getServices,
   getFeed, getFriends, getMovieDetails, getShowDetails, getWatchedMovies, getUserPublicProfile,
-  searchMovies, discoverMovies, discoverShows, getMovieLogo,
+  searchMovies, discoverMovies, discoverShows,
   type AIRecommendationRow,
 } from '../services/api';
 
@@ -483,8 +483,9 @@ function LandscapeCard({ movie, onClick }: { movie: Movie; onClick: () => void }
   const detailsFetchedRef = useRef(false);
 
   useEffect(() => {
-    getMovieLogo(movie.id, movie.type ?? 'movie')
-      .then(url => setLogoUrl(url ?? null))
+    const fetchFn = movie.type === 'show' ? getShowDetails : getMovieDetails;
+    fetchFn(movie.id)
+      .then(d => setLogoUrl((d.logo_url as string | null) ?? null))
       .catch(() => setLogoUrl(null));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [movie.id]);
@@ -500,7 +501,7 @@ function LandscapeCard({ movie, onClick }: { movie: Movie; onClick: () => void }
       const fetchFn = movie.type === 'show' ? getShowDetails : getMovieDetails;
       fetchFn(movie.id).then((d) => {
         const bd = (d.backdrop as string) ||
-          (d.backdrop_path ? `https://image.tmdb.org/t/p/w1280${d.backdrop_path as string}` : null);
+          (d.backdrop_path ? `https://image.tmdb.org/t/p/original${d.backdrop_path as string}` : null);
         if (bd) setBackdrop(bd);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const videos: Array<{ site: string; type: string; key: string }> = (d.videos as any)?.results ?? [];
@@ -697,7 +698,7 @@ const SLOT_META: Record<PersonalizedSlot['kind'], { label: string; color: string
 
 function PersonalizedHeroSkeleton() {
   return (
-    <div className="full-bleed relative animate-pulse bg-[#141414]" style={{ height: 'clamp(300px, 80vw, 520px)', marginTop: -32 }}>
+    <div className="full-bleed relative animate-pulse bg-[#141414]" style={{ height: 'calc(clamp(300px, 80vw, 520px) + 62px)', marginTop: -62 }}>
       <div className="absolute left-5 sm:left-10 md:left-16 bottom-8 sm:bottom-14 flex flex-col gap-3">
         <div className="h-3 w-40 rounded bg-[#222]" />
         <div className="h-14 w-80 rounded bg-[#222]" />
@@ -725,8 +726,9 @@ function PersonalizedHero({ slots, backdropOverrides = {}, onOpenModal, onToggle
   useEffect(() => {
     slots.forEach(s => {
       if (!(s.movie.id in logos)) {
-        getMovieLogo(s.movie.id, s.movie.type ?? 'movie')
-          .then(url => setLogos(prev => ({ ...prev, [s.movie.id]: url ?? null })));
+        const fetchFn = s.movie.type === 'show' ? getShowDetails : getMovieDetails;
+        fetchFn(s.movie.id)
+          .then(d => setLogos(prev => ({ ...prev, [s.movie.id]: (d.logo_url as string | null) ?? null })));
       }
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -747,7 +749,7 @@ function PersonalizedHero({ slots, backdropOverrides = {}, onOpenModal, onToggle
   const isInWatchlist = watchlistIds.includes(slot.movie.id);
 
   return (
-    <div className="full-bleed relative overflow-hidden group/hero" style={{ height: 'clamp(300px, 80vw, 520px)', marginTop: -32 }}>
+    <div className="full-bleed relative overflow-hidden group/hero" style={{ height: 'calc(clamp(300px, 80vw, 520px) + 62px)', marginTop: -62 }}>
       {/* Backdrop layers */}
       {slots.map((s, i) => {
         const bg = backdropOverrides[s.movie.id] || s.movie.backdrop || '';
@@ -1007,7 +1009,7 @@ export function DiscoverTab() {
         try {
           const d = await getMovieDetails(post.movie_id);
           backdrop = (d.backdrop as string) ||
-            (d.backdrop_path ? `https://image.tmdb.org/t/p/w1280${d.backdrop_path}` : '');
+            (d.backdrop_path ? `https://image.tmdb.org/t/p/original${d.backdrop_path}` : '');
         } catch {}
         let friendAvatar: string | undefined;
         try { const pr = await getUserPublicProfile(post.user_id); friendAvatar = pr?.avatarUrl; } catch {}
@@ -1037,7 +1039,7 @@ export function DiscoverTab() {
           let backdrop = '';
           try {
             const d = await getMovieDetails(w.movie_id);
-            backdrop = (d.backdrop as string) || (d.backdrop_path ? `https://image.tmdb.org/t/p/w1280${d.backdrop_path}` : '');
+            backdrop = (d.backdrop as string) || (d.backdrop_path ? `https://image.tmdb.org/t/p/original${d.backdrop_path}` : '');
           } catch {}
           const friendProfile = await getUserPublicProfile(friend.friend_id).catch(() => null);
           if (!cancelled) {
@@ -1202,7 +1204,7 @@ export function DiscoverTab() {
       fetchedBackdropsRef.current.add(id);
 
       const extractBackdrop = (d: Record<string, unknown>) =>
-        (d.backdrop as string) || (d.backdrop_path ? `https://image.tmdb.org/t/p/w1280${d.backdrop_path}` : '');
+        (d.backdrop as string) || (d.backdrop_path ? `https://image.tmdb.org/t/p/original${d.backdrop_path}` : '');
 
       const applyIfFound = (bd: string) => {
         if (bd) setBackdropOverrides(prev => ({ ...prev, [id]: bd }));

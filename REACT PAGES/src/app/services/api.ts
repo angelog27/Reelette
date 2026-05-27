@@ -501,7 +501,7 @@ export function getMovieLogo(movie_id: string, type: 'movie' | 'show' = 'movie')
 }
 
 export function getMovieDetails(movie_id: string): Promise<Record<string, unknown>> {
-  return fromCache(`movie:${movie_id}`, TTL.MOVIE, async () => {
+  return fromCache(`movie_v2:${movie_id}`, TTL.MOVIE, async () => {
     try {
       const res = await fetch(`${BASE_URL}/movies/${movie_id}`);
       if (!res.ok) return {};
@@ -511,7 +511,7 @@ export function getMovieDetails(movie_id: string): Promise<Record<string, unknow
 }
 
 export function getShowDetails(show_id: string): Promise<Record<string, unknown>> {
-  return fromCache(`show:${show_id}`, TTL.MOVIE, async () => {
+  return fromCache(`show_v2:${show_id}`, TTL.MOVIE, async () => {
     try {
       const res = await fetch(`${BASE_URL}/shows/${show_id}`);
       if (!res.ok) return {};
