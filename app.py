@@ -1946,7 +1946,7 @@ def delete_ranking_route(ranking_id):
 
 @app.route('/api/friends/<user_id>/rankings', methods=['GET'])
 def get_friend_rankings_route(user_id):
-    cache_key = f'friend_rankings:{user_id}'
+    cache_key = f'friend_rankings_v2:{user_id}'
     cached = _cache_get(cache_key)
     if cached is not None:
         return jsonify({'rankings': cached})

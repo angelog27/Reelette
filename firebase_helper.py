@@ -1929,20 +1929,31 @@ def delete_ranking(ranking_id, user_id):
 
 def get_friends_rankings(user_id, limit_per_friend=3):
     """Return recent public rankings from all friends, newest first overall."""
+    def _ts(r):
+        ts = r.get('updated_at')
+        try:
+            return ts.timestamp() if ts else 0.0
+        except Exception:
+            return 0.0
+
     try:
         friend_docs = db.collection('users').document(user_id).collection('friends').stream()
         friend_ids = [d.to_dict().get('friend_id') for d in friend_docs if d.to_dict().get('friend_id')]
         all_rankings = []
         for fid in friend_ids:
-            docs = (
-                db.collection('users').document(fid).collection('rankings')
-                .where('is_public', '==', True)
-                .order_by('updated_at', direction=firestore.Query.DESCENDING)
-                .limit(limit_per_friend)
-                .stream()
-            )
-            all_rankings.extend([d.to_dict() for d in docs])
-        all_rankings.sort(key=lambda r: r.get('updated_at', datetime.min), reverse=True)
+            try:
+                # Fetch without where+order_by combo — avoids composite index requirement.
+                # Filter and sort locally; rankings subcollections are small.
+                docs = db.collection('users').document(fid).collection('rankings').stream()
+                friend_rankings = [
+                    d.to_dict() for d in docs
+                    if d.to_dict().get('is_public', True)
+                ]
+                friend_rankings.sort(key=_ts, reverse=True)
+                all_rankings.extend(friend_rankings[:limit_per_friend])
+            except Exception as inner_e:
+                print(f'get_friends_rankings: skipping friend {fid}: {inner_e}')
+        all_rankings.sort(key=_ts, reverse=True)
         return all_rankings[:30]
     except Exception as e:
         print(f'get_friends_rankings error: {e}')

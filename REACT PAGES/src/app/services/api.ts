@@ -1604,7 +1604,7 @@ export async function deleteRanking(ranking_id: string): Promise<{ success: bool
 }
 
 export function getFriendsRankings(user_id: string): Promise<MovieRanking[]> {
-  return fromCachePersisted(`friend_rankings:${user_id}`, 3 * 60 * 1000, 10 * 60 * 1000, async () => {
+  return fromCachePersisted(`friend_rankings_v2:${user_id}`, 3 * 60 * 1000, 10 * 60 * 1000, async () => {
     try {
       const res = await fetch(`${BASE_URL}/friends/${user_id}/rankings`);
       if (!res.ok) return [];

@@ -538,38 +538,46 @@ export function ProfileandSettingsTab() {
       {viewProfileId && <UserProfileModal userId={viewProfileId} onClose={() => setViewProfileId(null)} />}
       {showDeleteModal && <DeleteModal onConfirm={handleDeleteAccount} onCancel={() => setShowDeleteModal(false)} loading={deleteLoading} />}
 
-      <div className="relative z-10 max-w-4xl mx-auto px-4 pb-16">
-
-        {/* ── Profile header ────────────────────────────────────────── */}
-        <div className="relative pt-6 pb-5 px-3 sm:px-6 overflow-hidden rounded-2xl mt-2">
-          {/* Movie backdrop banner */}
-          {bannerUrl ? (
-            <>
-              <img
-                src={bannerUrl}
-                alt="Profile banner"
-                className="absolute inset-0 w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/55 to-black/80" />
-            </>
-          ) : (
-            <div className="pointer-events-none absolute -top-12 -left-8 w-72 h-72 rounded-full opacity-[0.12] blur-3xl"
+      {/* ── Full-width banner ─────────────────────────────────────────── */}
+      <div className="relative z-10 h-56 sm:h-72 lg:h-80 w-full overflow-hidden">
+        {bannerUrl ? (
+          <>
+            <img
+              src={bannerUrl}
+              alt="Profile banner"
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-[#090909]/90" />
+          </>
+        ) : (
+          <>
+            <div className="pointer-events-none absolute inset-0"
+              style={{ background: `linear-gradient(145deg, ${theme.accent}22 0%, transparent 55%), linear-gradient(to bottom, transparent 50%, #090909 100%)` }} />
+            <div className="pointer-events-none absolute -top-32 -left-20 w-[600px] h-[600px] rounded-full opacity-[0.12] blur-3xl"
               style={{ background: theme.accent }} />
-          )}
+          </>
+        )}
+      </div>
 
-          <div className="relative z-10 flex items-center gap-4 sm:gap-6">
+      {/* ── Content (constrained) ──────────────────────────────────── */}
+      <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 pb-16">
+
+        {/* ── Avatar + profile info — overlaps banner ──────────────── */}
+        <div className="-mt-14 sm:-mt-16 mb-5 flex items-end justify-between gap-3">
+          <div className="flex items-end gap-4 min-w-0 flex-1">
             {/* Avatar */}
             <div className="relative group shrink-0">
-              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-[#1a1a1a] border-2 overflow-hidden shadow-2xl"
-                style={{ borderColor: theme.accent + '40' }}>
+              <div
+                className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-[#1a1a1a] overflow-hidden"
+                style={{ boxShadow: `0 0 0 4px #090909, 0 8px 40px ${theme.accent}40` }}>
                 {profile.avatarUrl
                   ? <img src={profile.avatarUrl} alt="avatar" className="w-full h-full object-cover" />
-                  : <div className="w-full h-full flex items-center justify-center text-zinc-700"><User size={36} /></div>
+                  : <div className="w-full h-full flex items-center justify-center text-zinc-700"><User size={40} /></div>
                 }
               </div>
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="absolute bottom-0.5 right-0.5 w-7 h-7 rounded-full flex items-center justify-center shadow-lg transition-all opacity-0 group-hover:opacity-100 active:scale-95"
+                className="absolute bottom-1 right-1 w-7 h-7 rounded-full flex items-center justify-center shadow-lg transition-all opacity-0 group-hover:opacity-100 active:scale-95"
                 style={{ background: 'var(--reel-accent-hex)' }}
                 title="Change photo"
               >
@@ -578,59 +586,54 @@ export function ProfileandSettingsTab() {
               <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
             </div>
 
-            {/* Name + buttons */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0 flex-1">
-                  {editing ? (
-                    <input
-                      name="displayName" value={draft.displayName} onChange={handleChange}
-                      className="bg-transparent text-white text-xl font-semibold w-full focus:outline-none border-b pb-0.5 transition-colors"
-                      style={{ borderBottomColor: 'var(--reel-accent-hex)' }}
-                    />
-                  ) : (
-                    <h1 className="text-white text-xl font-semibold truncate">{profile.displayName || profile.username}</h1>
-                  )}
-                  <p className="text-zinc-500 text-sm mt-0.5">@{profile.username}</p>
-                </div>
-
-                {/* Edit / Save buttons */}
-                <div className="flex items-center gap-2 shrink-0 pt-0.5">
-                  {editing ? (
-                    <>
-                      <button
-                        onClick={() => { setDraft(profile); setEditing(false); }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-xs transition-all"
-                      >
-                        <X size={13} /> Cancel
-                      </button>
-                      <button
-                        onClick={handleSave} disabled={saving}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-white rounded-xl text-xs font-semibold transition-all disabled:opacity-60"
-                        style={{ background: 'var(--reel-accent-hex)' }}
-                      >
-                        {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
-                        Save
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      onClick={() => setEditing(true)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-xs transition-all border border-zinc-700"
-                    >
-                      <Edit2 size={13} /> Edit
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {!editing && profile.bio && <p className="text-zinc-400 text-sm mt-1.5 line-clamp-2">{profile.bio}</p>}
+            {/* Name + username + bio */}
+            <div className="flex-1 min-w-0 pb-1" style={{ textShadow: bannerUrl ? '0 1px 6px rgba(0,0,0,0.9)' : undefined }}>
+              {editing ? (
+                <input
+                  name="displayName" value={draft.displayName} onChange={handleChange}
+                  className="bg-transparent text-white text-2xl font-bold w-full focus:outline-none border-b pb-0.5 transition-colors"
+                  style={{ borderBottomColor: 'var(--reel-accent-hex)' }}
+                />
+              ) : (
+                <h1 className="text-white text-2xl font-bold truncate">{profile.displayName || profile.username}</h1>
+              )}
+              <p className="text-zinc-400 text-sm mt-0.5">@{profile.username}</p>
+              {!editing && profile.bio && <p className="text-zinc-400 text-sm mt-1 line-clamp-2">{profile.bio}</p>}
             </div>
+          </div>
+
+          {/* Edit / Save buttons */}
+          <div className="flex items-center gap-2 shrink-0 pb-1">
+            {editing ? (
+              <>
+                <button
+                  onClick={() => { setDraft(profile); setEditing(false); }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-xs transition-all"
+                >
+                  <X size={13} /> Cancel
+                </button>
+                <button
+                  onClick={handleSave} disabled={saving}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-white rounded-xl text-xs font-semibold transition-all disabled:opacity-60"
+                  style={{ background: 'var(--reel-accent-hex)' }}
+                >
+                  {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+                  Save
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => setEditing(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 rounded-xl text-xs transition-all border border-zinc-700/60 backdrop-blur-sm"
+              >
+                <Edit2 size={13} /> Edit
+              </button>
+            )}
           </div>
         </div>
 
-        {/* ── Tab bar ───────────────────────────────────────────────── */}
-        <div className="flex gap-1 bg-[#0a0a0a] rounded-xl p-1 mb-6 mt-3 border border-[#1e1e1e]">
+        {/* ── Tab bar ─────────────────────────────────────────────── */}
+        <div className="flex gap-1 bg-[#0a0a0a] rounded-xl p-1 mb-6 border border-[#1e1e1e]">
           {TABS.map(tab => (
             <button
               key={tab.id}

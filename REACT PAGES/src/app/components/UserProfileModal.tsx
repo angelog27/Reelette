@@ -140,7 +140,7 @@ function MyStuffFullscreen({
                   {m.poster ? (
                     <img src={m.poster} alt={m.title} className="w-full aspect-[2/3] object-cover" />
                   ) : (
-                    <div className="w-full aspect-[2/3] bg-[#2A2A2A] flex items-center justify-center">
+                    <div className="w-full aspect-[2/3] bg-white/[0.05] flex items-center justify-center">
                       <Film className="w-6 h-6 text-gray-600" />
                     </div>
                   )}
@@ -169,7 +169,7 @@ function MyStuffFullscreen({
                   {m.poster ? (
                     <img src={m.poster} alt={m.title} className="w-full aspect-[2/3] object-cover" />
                   ) : (
-                    <div className="w-full aspect-[2/3] bg-[#2A2A2A] flex items-center justify-center">
+                    <div className="w-full aspect-[2/3] bg-white/[0.05] flex items-center justify-center">
                       <Film className="w-6 h-6 text-gray-600" />
                     </div>
                   )}
@@ -195,7 +195,7 @@ function MyStuffFullscreen({
                   {m.poster ? (
                     <img src={m.poster} alt={m.title} className="w-full aspect-[2/3] object-cover" />
                   ) : (
-                    <div className="w-full aspect-[2/3] bg-[#2A2A2A] flex items-center justify-center">
+                    <div className="w-full aspect-[2/3] bg-white/[0.05] flex items-center justify-center">
                       <Film className="w-6 h-6 text-gray-600" />
                     </div>
                   )}
@@ -327,10 +327,13 @@ export function UserProfileModal({ userId, onClose }: Props) {
         className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[200] p-4"
         onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
       >
-        <div className="bg-[#1C1C1C] border border-[#2A2A2A] rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh]">
+        <div
+          className="border border-white/[0.07] rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh]"
+          style={{ background: ownerTheme.cardGradient }}
+        >
 
           {/* Header banner — overflow visible so the avatar can bleed below */}
-          <div className="h-28 relative rounded-t-2xl shrink-0 bg-gradient-to-br from-zinc-900 via-zinc-950 to-black">
+          <div className="h-36 relative shrink-0 bg-black">
             {/* image + overlays are clipped inside their own container */}
             <div className="absolute inset-0 rounded-t-2xl overflow-hidden">
               {profile?.profileBannerUrl ? (
@@ -362,7 +365,7 @@ export function UserProfileModal({ userId, onClose }: Props) {
             {/* Avatar anchored to bottom-left of banner so it's never clipped */}
             <div className="absolute -bottom-12 left-6 z-10">
               <div className="relative shrink-0">
-                <div className="w-24 h-24 rounded-full border-4 border-[#1C1C1C] overflow-hidden bg-[#141414] shadow-xl">
+                <div className="w-24 h-24 rounded-full border-4 border-black overflow-hidden bg-[#0a0a0a] shadow-xl">
                   {loading ? (
                     <div className="w-full h-full flex items-center justify-center">
                       <Loader2 className="w-6 h-6 text-gray-600 animate-spin" />
@@ -377,7 +380,7 @@ export function UserProfileModal({ userId, onClose }: Props) {
                 </div>
                 {!loading && profile?.showOnlineStatus && (
                   <span
-                    className={`absolute bottom-1 right-1 w-4 h-4 rounded-full border-2 border-[#1C1C1C] ${
+                    className={`absolute bottom-1 right-1 w-4 h-4 rounded-full border-2 border-black ${
                       online ? 'bg-green-500' : 'bg-zinc-600'
                     }`}
                     title={online ? 'Online' : 'Offline'}
@@ -388,9 +391,18 @@ export function UserProfileModal({ userId, onClose }: Props) {
           </div>
 
           {/* Scrollable body */}
-          <div className="overflow-y-auto flex-1 rounded-b-2xl">
+          <div className="overflow-y-auto flex-1 rounded-b-2xl relative">
+            {/* Theme accent glow — fills the body atmosphere */}
+            <div
+              className="pointer-events-none absolute -top-24 -right-24 w-[420px] h-[420px] rounded-full opacity-[0.13] blur-3xl z-0"
+              style={{ background: ownerTheme.accent }}
+            />
+            <div
+              className="pointer-events-none absolute bottom-0 -left-24 w-[300px] h-[300px] rounded-full opacity-[0.07] blur-3xl z-0"
+              style={{ background: ownerTheme.accent }}
+            />
             {/* Space for avatar overlap + friend button row */}
-            <div className="px-6 pt-14 pb-5">
+            <div className="relative z-10 px-6 pt-14 pb-5">
               <div className="flex items-end justify-between mb-4">
                 {/* Spacer so the friend button aligns to the right while avatar is in the banner */}
                 <div />
@@ -447,10 +459,10 @@ export function UserProfileModal({ userId, onClose }: Props) {
                   )}
 
                   {/* Stats */}
-                  <div className="grid grid-cols-3 gap-3 mt-5 pt-4 border-t border-[#2A2A2A]">
+                  <div className="grid grid-cols-3 gap-3 mt-5 pt-4 border-t border-white/[0.06]">
                     {statBlocks.map((s) => (
-                      <div key={s.label} className="flex flex-col items-center gap-1 p-3 bg-[#141414] rounded-xl border border-[#2A2A2A]">
-                        <span className="text-[#7C5DBD]">{s.icon}</span>
+                      <div key={s.label} className="flex flex-col items-center gap-1 p-3 bg-white/[0.04] rounded-xl border border-white/[0.06]">
+                        <span style={{ color: ownerTheme.accent }}>{s.icon}</span>
                         <span className="text-white font-bold text-lg">{s.value}</span>
                         <span className="text-gray-600 text-xs">{s.label}</span>
                       </div>
@@ -458,13 +470,14 @@ export function UserProfileModal({ userId, onClose }: Props) {
                   </div>
 
                   {/* MyStuff section — always visible, gated by showMyStuffPublicly */}
-                  <div className="mt-5 pt-4 border-t border-[#2A2A2A]">
+                  <div className="mt-5 pt-4 border-t border-white/[0.06]">
                     <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
                       <p className="text-white text-sm font-semibold">MyStuff</p>
                       {profile.showMyStuffPublicly && (
                         <button
                           onClick={() => setMyStuffOpen(true)}
-                          className="flex items-center gap-1.5 text-xs text-[#7C5DBD] hover:text-[#9B7BD7] transition-colors"
+                          className="flex items-center gap-1.5 text-xs transition-colors opacity-80 hover:opacity-100"
+                          style={{ color: ownerTheme.accent }}
                         >
                           <Maximize2 className="w-3.5 h-3.5" />
                           View All
@@ -473,8 +486,8 @@ export function UserProfileModal({ userId, onClose }: Props) {
                     </div>
 
                     {!profile.showMyStuffPublicly ? (
-                      <div className="flex items-center gap-3 py-4 px-4 bg-[#141414] rounded-xl border border-[#2A2A2A]">
-                        <div className="w-8 h-8 rounded-full bg-[#2A2A2A] flex items-center justify-center shrink-0">
+                      <div className="flex items-center gap-3 py-4 px-4 bg-white/[0.04] rounded-xl border border-white/[0.06]">
+                        <div className="w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center shrink-0">
                           <BookMarked className="w-4 h-4 text-gray-500" />
                         </div>
                         <div>
@@ -499,12 +512,12 @@ export function UserProfileModal({ userId, onClose }: Props) {
                               {previewWatched.map((m) => (
                                 <div
                                   key={m.movie_id}
-                                  className="relative shrink-0 w-16 rounded-lg overflow-hidden border border-[#2A2A2A]"
+                                  className="relative shrink-0 w-16 rounded-lg overflow-hidden border border-white/[0.08]"
                                 >
                                   {m.poster ? (
                                     <img src={m.poster} alt={m.title} className="w-full aspect-[2/3] object-cover" />
                                   ) : (
-                                    <div className="w-full aspect-[2/3] bg-[#2A2A2A] flex items-center justify-center">
+                                    <div className="w-full aspect-[2/3] bg-white/[0.05] flex items-center justify-center">
                                       <Film className="w-4 h-4 text-gray-600" />
                                     </div>
                                   )}
@@ -532,7 +545,7 @@ export function UserProfileModal({ userId, onClose }: Props) {
                               </p>
                               <div className="flex gap-2 overflow-x-auto pb-1">
                                 {top10Preview.map((m, i) => (
-                                  <div key={m.movie_id} className="relative shrink-0 w-16 rounded-lg overflow-hidden border border-[#2A2A2A]">
+                                  <div key={m.movie_id} className="relative shrink-0 w-16 rounded-lg overflow-hidden border border-white/[0.08]">
                                     <div
                                       className="absolute top-1 left-1 z-10 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold"
                                       style={{
@@ -545,7 +558,7 @@ export function UserProfileModal({ userId, onClose }: Props) {
                                     {m.poster ? (
                                       <img src={m.poster} alt={m.title} className="w-full aspect-[2/3] object-cover" />
                                     ) : (
-                                      <div className="w-full aspect-[2/3] bg-[#2A2A2A] flex items-center justify-center">
+                                      <div className="w-full aspect-[2/3] bg-white/[0.05] flex items-center justify-center">
                                         <Film className="w-4 h-4 text-gray-600" />
                                       </div>
                                     )}
@@ -571,12 +584,12 @@ export function UserProfileModal({ userId, onClose }: Props) {
                               {previewWatchLater.map((m) => (
                                 <div
                                   key={m.movie_id}
-                                  className="relative shrink-0 w-16 rounded-lg overflow-hidden border border-[#2A2A2A]"
+                                  className="relative shrink-0 w-16 rounded-lg overflow-hidden border border-white/[0.08]"
                                 >
                                   {m.poster ? (
                                     <img src={m.poster} alt={m.title} className="w-full aspect-[2/3] object-cover" />
                                   ) : (
-                                    <div className="w-full aspect-[2/3] bg-[#2A2A2A] flex items-center justify-center">
+                                    <div className="w-full aspect-[2/3] bg-white/[0.05] flex items-center justify-center">
                                       <Film className="w-4 h-4 text-gray-600" />
                                     </div>
                                   )}
