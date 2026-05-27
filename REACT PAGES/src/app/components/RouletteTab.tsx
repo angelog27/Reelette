@@ -1,8 +1,6 @@
-﻿import { useState, useEffect, useRef } from "react";
-import { Shuffle, ChevronDown, ThumbsUp, ThumbsDown, Film, Tv, SlidersHorizontal } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Shuffle, Film, Tv, SlidersHorizontal, ChevronDown, ThumbsUp, ThumbsDown, Zap } from "lucide-react";
 import { MovieDetailModal } from "./MovieDetailModal";
-import { RouletteWheelModal, getWheelColor } from "./RouletteWheelModal";
-import { Switch } from "./ui/switch";
 import { Slider } from "./ui/slider";
 import { Input } from "./ui/input";
 import { PROVIDER_LOGOS } from "../constants/providers";
@@ -23,19 +21,6 @@ import {
   type Movie,
   type RouletteSpin,
 } from "../services/api";
-
-// ── Groq icon (inline SVG — lightning bolt, orange/red gradient) ──
-const GroqIcon = ({ size = 16 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
-    <path d="M9.5 1L3 9h5l-1.5 6L14 7H9L9.5 1Z" fill="url(#groq-g)" />
-    <defs>
-      <linearGradient id="groq-g" x1="0" y1="0" x2="16" y2="16" gradientUnits="userSpaceOnUse">
-        <stop offset="0%"   stopColor="#FF6B35" />
-        <stop offset="100%" stopColor="#E63946" />
-      </linearGradient>
-    </defs>
-  </svg>
-);
 
 const GENRES = [
   { label: "Action",          value: "28"    },
@@ -58,14 +43,6 @@ const GENRES = [
   { label: "Western",         value: "37"    },
 ];
 
-const MOODS = [
-  { label: "Mind-bender", genre: "878"   },
-  { label: "Cozy",        genre: "35"    },
-  { label: "Date night",  genre: "10749" },
-  { label: "Horror",      genre: "27"    },
-  { label: "Action",      genre: "28"    },
-];
-
 const TV_GENRES = [
   { label: "Action & Adventure", value: "10759" },
   { label: "Animation",          value: "16"    },
@@ -79,32 +56,17 @@ const TV_GENRES = [
   { label: "Western",            value: "37"    },
 ];
 
-const TV_MOODS = [
-  { label: "Drama",   genre: "18"    },
-  { label: "Cozy",    genre: "35"    },
-  { label: "Sci-Fi",  genre: "10765" },
-  { label: "Crime",   genre: "80"    },
-  { label: "Action",  genre: "10759" },
-];
-
-// Film strip holes — rendered as a static row
-const FILM_HOLES = Array.from({ length: 48 });
-
-function FilmStrip({ position }: { position: "top" | "bottom" }) {
-  return (
-    <div
-      className={`absolute inset-x-0 z-20 flex items-center h-[22px] bg-[#0c0c0c] ${
-        position === "top" ? "top-0 border-b border-[#1a1a1a]" : "bottom-0 border-t border-[#1a1a1a]"
-      }`}
-    >
-      {FILM_HOLES.map((_, i) => (
-        <div key={i} className="shrink-0 flex-1 px-[3px]">
-          <div className="h-[13px] rounded-[2px] bg-[#050505]" />
-        </div>
-      ))}
-    </div>
-  );
-}
+const GroqIcon = ({ size = 16 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+    <path d="M9.5 1L3 9h5l-1.5 6L14 7H9L9.5 1Z" fill="url(#groq-reel)" />
+    <defs>
+      <linearGradient id="groq-reel" x1="0" y1="0" x2="16" y2="16" gradientUnits="userSpaceOnUse">
+        <stop offset="0%"   stopColor="#FF6B35" />
+        <stop offset="100%" stopColor="#E63946" />
+      </linearGradient>
+    </defs>
+  </svg>
+);
 
 function dicebearUrl(seed: string) {
   return `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(seed)}`;
@@ -117,12 +79,10 @@ async function buildPool(
   const pages = new Set<number>();
   pages.add(1);
   while (pages.size < 3) pages.add(Math.floor(Math.random() * 8) + 1);
-
   const results = await Promise.all(
-    [...pages].map(page => discoverMovies({ ...filters, page }).catch(() => [] as Movie[])),
+    [...pages].map(p => discoverMovies({ ...filters, page: p }).catch(() => [] as Movie[])),
   );
-
-  const seen        = new Set<string>();
+  const seen = new Set<string>();
   const dislikedSet = new Set(dislikedIds);
   const pool: Movie[] = [];
   for (const page of results)
@@ -138,12 +98,10 @@ async function buildShowPool(
   const pages = new Set<number>();
   pages.add(1);
   while (pages.size < 3) pages.add(Math.floor(Math.random() * 8) + 1);
-
   const results = await Promise.all(
-    [...pages].map(page => discoverShows({ ...filters, page }).catch(() => [] as Movie[])),
+    [...pages].map(p => discoverShows({ ...filters, page: p }).catch(() => [] as Movie[])),
   );
-
-  const seen        = new Set<string>();
+  const seen = new Set<string>();
   const dislikedSet = new Set(dislikedIds);
   const pool: Movie[] = [];
   for (const page of results)
@@ -153,45 +111,42 @@ async function buildShowPool(
 }
 
 export function RouletteTab() {
-  const [mediaType, setMediaType]              = useState<'movie' | 'show'>('movie');
-  const [filtersExpanded, setFiltersExpanded] = useState(false);
-  const [filterStreaming, setFilterStreaming]  = useState(false);
-  const [genre, setGenre]                      = useState("");
-  const [yearFrom, setYearFrom]                = useState("");
-  const [yearTo, setYearTo]                    = useState("");
-  const [minRating, setMinRating]              = useState([0]);
-  const [spinning, setSpinning]                = useState(false);
-  const [canFinish, setCanFinish]              = useState(false);
-  const [poolSize, setPoolSize]                = useState<number | null>(null);
-  const filtersDropdownRef                     = useRef<HTMLDivElement>(null);
+  const [mediaType, setMediaType]            = useState<'movie' | 'show'>('movie');
+  const [genre, setGenre]                    = useState("");
+  const [yearFrom, setYearFrom]              = useState("");
+  const [yearTo, setYearTo]                  = useState("");
+  const [minRating, setMinRating]            = useState([0]);
+  const [selectedProviders, setSelectedProviders] = useState<string[]>([]);
+  const [filtersOpen, setFiltersOpen]        = useState(false);
+  const filtersRef                           = useRef<HTMLDivElement>(null);
 
-  const [selectedMovieId, setSelectedMovieId] = useState<string | null>(null);
-  const [pendingMovie, setPendingMovie]        = useState<Movie | null>(null);
-  const [awaitingVote, setAwaitingVote]        = useState(false);
-  const [userVote, setUserVote]                = useState<"like" | "dislike" | null>(null);
+  const [spinning, setSpinning]              = useState(false);
+  const [pendingMovie, setPendingMovie]      = useState<Movie | null>(null);
+  const [awaitingVote, setAwaitingVote]      = useState(false);
+  const [userVote, setUserVote]              = useState<"like" | "dislike" | null>(null);
+  const [error, setError]                    = useState("");
 
-  // Smart Spin state
-  const [smartSpinAvailable,    setSmartSpinAvailable]    = useState(true);
-  const [hoursUntilReset,       setHoursUntilReset]       = useState(0);
-  const [smartSpinLoading,      setSmartSpinLoading]      = useState(false);
-  const [smartPreferences,      setSmartPreferences]      = useState("");
-  const [smartResult,           setSmartResult]           = useState<{ movie: Movie; reason: string } | null>(null);
-  const [smartError,            setSmartError]            = useState("");
-  const [smartSpinResting,      setSmartSpinResting]      = useState(false);
-  const smartResultRef = useRef<HTMLDivElement>(null);
+  const [selectedMovieId, setSelectedMovieId]     = useState<string | null>(null);
+  const [selectedMovieType, setSelectedMovieType] = useState<'movie' | 'show'>('movie');
 
-  const [error, setError]                      = useState("");
-  const [activeMood, setActiveMood]            = useState("");
-  const [friendSpins, setFriendSpins]          = useState<
+  const [smartSpinAvailable, setSmartSpinAvailable] = useState(true);
+  const [hoursUntilReset, setHoursUntilReset]       = useState(0);
+  const [smartSpinLoading, setSmartSpinLoading]     = useState(false);
+  const [smartPreferences, setSmartPreferences]     = useState("");
+  const [smartResult, setSmartResult]               = useState<{ movie: Movie; reason: string } | null>(null);
+  const [smartError, setSmartError]                 = useState("");
+  const [smartSpinResting, setSmartSpinResting]     = useState(false);
+  const smartResultRef                              = useRef<HTMLDivElement>(null);
+
+  const [friendSpins, setFriendSpins] = useState<
     { friend_id: string; friend_username: string; avatarUrl?: string; spins: RouletteSpin[] }[]
   >([]);
-  const [recentSpins, setRecentSpins]          = useState<RouletteSpin[]>([]);
-  const [spinsLoaded, setSpinsLoaded]          = useState(false);
+  const [recentSpins, setRecentSpins] = useState<RouletteSpin[]>([]);
+  const [spinsLoaded, setSpinsLoaded] = useState(false);
 
   const user         = getUser();
   const userServices = getServices();
   const hasServices  = hasServicesConfigured(userServices);
-  const btnColor     = getWheelColor(genre);
 
   useEffect(() => {
     if (!user) return;
@@ -205,13 +160,34 @@ export function RouletteTab() {
       .catch(() => {});
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    if (!user) { setSpinsLoaded(true); return; }
+    getRouletteHistory(user.user_id, 12)
+      .then(s => { setRecentSpins(s); setSpinsLoaded(true); })
+      .catch(() => setSpinsLoaded(true));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (filtersRef.current && !filtersRef.current.contains(e.target as Node))
+        setFiltersOpen(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+
+  const refreshSpins = () => {
+    if (!user) return;
+    getRouletteHistory(user.user_id, 12).then(setRecentSpins).catch(() => {});
+  };
+
   const handleSmartSpin = async () => {
     if (!user || smartSpinLoading) return;
     setSmartSpinLoading(true);
     setSmartError("");
     setSmartResult(null);
     try {
-      const res = await doSmartSpin(smartPreferences, activeMood, genre);
+      const res = await doSmartSpin(smartPreferences, "", genre);
       setSmartResult({ movie: res.movie, reason: res.reason });
       setSmartSpinAvailable(false);
       setHoursUntilReset(24);
@@ -221,9 +197,9 @@ export function RouletteTab() {
       if (e.status === 429) {
         setSmartSpinAvailable(false);
         setHoursUntilReset(e.data?.hoursUntilReset ?? 24);
-        setSmartError("Smart Spin resets tomorrow!");
+        setSmartError("Smart Watch resets tomorrow!");
       } else if (e.status === 503) {
-        setSmartError("Smart Spin is resting — try again soon.");
+        setSmartError("Smart Watch is resting — try again soon.");
         setSmartSpinResting(true);
         setTimeout(() => { setSmartSpinResting(false); setSmartError(""); }, 60000);
       } else {
@@ -234,35 +210,12 @@ export function RouletteTab() {
     }
   };
 
-  useEffect(() => {
-    if (!user) { setSpinsLoaded(true); return; }
-    getRouletteHistory(user.user_id, 8)
-      .then(s => { setRecentSpins(s); setSpinsLoaded(true); })
-      .catch(() => setSpinsLoaded(true));
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    const h = (e: MouseEvent) => {
-      if (filtersDropdownRef.current && !filtersDropdownRef.current.contains(e.target as Node))
-        setFiltersExpanded(false);
-    };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, []);
-
-  const refreshSpins = () => {
-    if (!user) return;
-    getRouletteHistory(user.user_id, 8).then(setRecentSpins).catch(() => {});
-  };
-
   const spin = async () => {
     setSpinning(true);
-    setCanFinish(false);
     setPendingMovie(null);
     setAwaitingVote(false);
     setUserVote(null);
     setSelectedMovieId(null);
-    setPoolSize(null);
     setError("");
 
     const filters = {
@@ -270,7 +223,9 @@ export function RouletteTab() {
       year_from:       yearFrom || undefined,
       year_to:         yearTo || undefined,
       min_rating:      minRating[0] > 0 ? minRating[0] : undefined,
-      services_filter: filterStreaming && hasServices ? userServices : undefined,
+      services_filter: selectedProviders.length > 0
+        ? Object.fromEntries(selectedProviders.map(p => [p, true]))
+        : undefined,
     };
 
     const dislikedIds = user ? getRoulettePrefs(user.user_id).disliked : [];
@@ -284,263 +239,210 @@ export function RouletteTab() {
           ? await buildShowPool(filters, [])
           : await buildPool(filters, []);
       }
-
       if (pool.length === 0) {
         setError(`No ${mediaType === 'show' ? 'shows' : 'movies'} found — try loosening your filters.`);
         setSpinning(false);
         return;
       }
-
-      setPoolSize(pool.length);
       const pick = pool[Math.floor(Math.random() * pool.length)];
       setPendingMovie(pick);
-      setCanFinish(true);
-
+      setAwaitingVote(true);
       if (user) {
         logRouletteSpin(user.user_id, user.avatarUrl, pick.id, pick.title, pick.poster).catch(() => {});
         setTimeout(refreshSpins, 800);
       }
     } catch {
       setError("Something went wrong. Please try again.");
+    } finally {
       setSpinning(false);
     }
-  };
-
-  const handleWheelFinished = () => {
-    setSpinning(false);
-    setCanFinish(false);
-    if (pendingMovie) setAwaitingVote(true);
   };
 
   const handleVote = (vote: "like" | "dislike") => {
     if (!pendingMovie) return;
     setUserVote(vote);
     if (user) setRoulettePref(user.user_id, pendingMovie.id, vote);
-    if (vote === "like") setSelectedMovieId(pendingMovie.id);
-    else setTimeout(() => spin(), 400);
+    if (vote === "like") {
+      setSelectedMovieId(pendingMovie.id);
+      setSelectedMovieType(mediaType);
+    } else {
+      setTimeout(() => spin(), 400);
+    }
+  };
+
+  const toggleProvider = (name: string) => {
+    setSelectedProviders(prev =>
+      prev.includes(name) ? prev.filter(p => p !== name) : [...prev, name],
+    );
   };
 
   const hasActiveFilters = !!genre || minRating[0] > 0 || !!yearFrom || !!yearTo;
 
   return (
     <div className="flex flex-col">
+      <div className="max-w-7xl mx-auto w-full px-4 md:px-8 pt-10 pb-20">
 
-      {/* ── Hero ── */}
-      <div className="full-bleed">
-        <div className="flex flex-col items-center justify-center px-6 text-center" style={{ paddingBottom: 36 }}>
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-12 items-start">
 
-          {/* Main tagline */}
-          <h1
-            style={{
-              fontFamily: "SanFran, system-ui, sans-serif",
-              fontWeight: 100,
-              fontSize: "clamp(1.8rem, 3.5vw, 3rem)",
-              lineHeight: 1.15,
-              color: "#fff",
-              letterSpacing: "-0.01em",
-            }}
-          >
-            Don't know what to watch?
-          </h1>
+          {/* ── LEFT COLUMN ── */}
+          <div className="flex flex-col gap-8">
 
-          {/* Subtitle */}
-          <p
-            className="mt-3 text-gray-400 font-medium"
-            style={{
-              fontFamily: "SanFran, system-ui, sans-serif",
-              fontSize: "1.1rem",
-              letterSpacing: "0.04em",
-              fontWeight: 100,
-            }}
-          >
-            Let fate decide.
-          </p>
+            {/* Headline */}
+            <div>
+              <h1
+                style={{
+                  fontFamily: "SanFran, system-ui, sans-serif",
+                  fontWeight: 800,
+                  fontSize: "clamp(2.4rem, 5.5vw, 4rem)",
+                  lineHeight: 1.08,
+                  color: "#ffffff",
+                  letterSpacing: "-0.035em",
+                }}
+              >
+                What can you<br />watch tonight?
+              </h1>
+              <p
+                style={{
+                  fontFamily: "SanFran, system-ui, sans-serif",
+                  fontSize: "0.7rem",
+                  letterSpacing: "0.16em",
+                  color: "#374151",
+                  marginTop: "0.65rem",
+                  textTransform: "uppercase",
+                  fontWeight: 600,
+                }}
+              >
+                stop scrolling, start watching
+              </p>
+            </div>
 
-        
-
-          {/* Movies / Shows toggle */}
-          <div
-            className="mt-5 flex items-center p-1 rounded-full"
-            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
-          >
-            <button
-              onClick={() => { setMediaType('movie'); setGenre(''); setActiveMood(''); }}
-              className="flex items-center gap-1.5 px-5 py-1.5 rounded-full text-sm font-semibold transition-all duration-200"
-              style={mediaType === 'movie'
-                ? { background: 'color-mix(in srgb, var(--reel-accent-hex) 85%, transparent)', color: '#fff' }
-                : { color: '#6b7280' }}
-            >
-              <Film className="w-3.5 h-3.5" /> Movies
-            </button>
-            <button
-              onClick={() => { setMediaType('show'); setGenre(''); setActiveMood(''); }}
-              className="flex items-center gap-1.5 px-5 py-1.5 rounded-full text-sm font-semibold transition-all duration-200"
-              style={mediaType === 'show'
-                ? { background: 'color-mix(in srgb, var(--reel-accent-hex) 85%, transparent)', color: '#fff' }
-                : { color: '#6b7280' }}
-            >
-              <Tv className="w-3.5 h-3.5" /> Shows
-            </button>
-          </div>
-
-          {/* Pool size badge */}
-          {poolSize !== null && (
+            {/* Movies / Shows toggle */}
             <div
-              className="mt-4 flex items-center gap-1.5 border px-3 py-1.5 rounded-full text-xs text-gray-400 animate-in fade-in duration-300"
-              style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.09)" }}
+              className="flex items-center gap-0.5 p-1 rounded-full w-fit"
+              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
             >
-              {mediaType === 'show' ? <Tv className="w-3 h-3" /> : <Film className="w-3 h-3" />}
-              Picking from <span className="text-white font-semibold mx-0.5">{poolSize}</span> {mediaType === 'show' ? 'shows' : 'movies'}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── Main three-column layout ── */}
-      <div className="grid grid-cols-1 md:grid-cols-[280px_1fr_280px] gap-6 items-start px-2 md:px-6 pt-8 pb-12">
-
-        {/* ── Left: My Recent Spins ── */}
-        <aside className="hidden md:flex flex-col gap-1">
-          <p
-            className="text-[10px] font-bold tracking-[0.2em] text-gray-600 uppercase px-1 mb-3"
-            style={{ fontFamily: "'Courier New', monospace" }}
-          >
-            My Recent Spins
-          </p>
-
-          {!spinsLoaded && (
-            [...Array(6)].map((_, i) => (
-              <div key={i} className="flex items-center gap-3 py-2 animate-pulse">
-                <div className="w-14 h-[82px] rounded-lg bg-[#1C1C1C] shrink-0" />
-                <div className="flex-1 space-y-2">
-                  <div className="h-3 bg-[#1C1C1C] rounded w-3/4" />
-                  <div className="h-2.5 bg-[#1C1C1C] rounded w-1/2" />
-                </div>
-              </div>
-            ))
-          )}
-
-          {spinsLoaded && recentSpins.length === 0 && (
-            <p className="text-gray-600 text-xs px-1 leading-relaxed">
-              {user ? "Your spins will appear here." : "Log in to track your spins."}
-            </p>
-          )}
-
-          {spinsLoaded && recentSpins.map((s, i) => (
-            <div key={i} className="flex items-center gap-3 py-2 group cursor-default">
-              <div className="w-14 h-[82px] rounded-lg overflow-hidden bg-[#1C1C1C] shrink-0 ring-1 ring-white/5">
-                {s.poster_url
-                  ? <img src={s.poster_url} alt={s.movie_title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" />
-                  : <div className="w-full h-full bg-[#252525]" />
-                }
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-white text-xs font-semibold leading-snug line-clamp-2">{s.movie_title}</p>
-                <p className="text-gray-600 text-[11px] mt-1">{timeAgo(s.spun_at)}</p>
-              </div>
-            </div>
-          ))}
-        </aside>
-
-        {/* ── Center: Wheel + controls ── */}
-        <div className="flex flex-col items-center gap-5">
-
-          {/* Mood chips — swap to TV moods when in shows mode */}
-          <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-0.5" style={{ maxWidth: 400, width: '100%' }}>
-            <button
-              onClick={() => { setActiveMood(""); setGenre(""); }}
-              className="flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition duration-150 active:scale-[0.97]"
-              style={
-                !activeMood
-                  ? { backgroundColor: 'oklch(0.35 0.08 278)', borderColor: 'oklch(0.55 0.11 278)', color: '#d4c9f5' }
-                  : { backgroundColor: '#111', borderColor: '#222', color: '#6b7280' }
-              }
-            >
-              Any
-            </button>
-            {(mediaType === 'show' ? TV_MOODS : MOODS).map(mood => {
-              const isActive = activeMood === mood.label;
-              const moodColor = getWheelColor(mood.genre);
-              return (
-                <button
-                  key={mood.label}
-                  onClick={() => {
-                    if (isActive) { setActiveMood(""); setGenre(""); }
-                    else { setActiveMood(mood.label); setGenre(mood.genre); }
-                  }}
-                  className="flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition duration-150 active:scale-[0.97]"
-                  style={
-                    isActive
-                      ? { backgroundColor: moodColor, borderColor: moodColor, color: '#fff', boxShadow: `0 0 14px ${moodColor}55` }
-                      : { backgroundColor: '#111', borderColor: '#222', color: '#9ca3af' }
-                  }
-                >
-                  {mood.label}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Secondary controls */}
-          <div className="flex items-center gap-3 flex-wrap justify-center">
-            <div className="flex items-center gap-2 bg-[#111] border border-[#1e1e1e] rounded-full px-3.5 py-2">
-              <Switch
-                checked={filterStreaming}
-                onCheckedChange={setFilterStreaming}
-                className="data-[state=checked]:bg-[#7C5DBD] scale-90"
-              />
-              <span
-                className="text-xs text-gray-300 cursor-pointer whitespace-nowrap"
-                onClick={() => setFilterStreaming(v => !v)}
-              >
-                My services only
-                {filterStreaming && !hasServices && (
-                  <span className="text-yellow-500 ml-1 text-[10px]">(none set)</span>
-                )}
-              </span>
-            </div>
-
-            <div className="relative" ref={filtersDropdownRef}>
               <button
-                onClick={() => setFiltersExpanded(v => !v)}
-                className={`flex items-center gap-1.5 text-xs border rounded-full px-3.5 py-2 transition-colors ${
-                  (minRating[0] > 0 || !!yearFrom || !!yearTo)
-                    ? "bg-[#111] border-[#3d3566] text-[#a89de0]"
-                    : "bg-[#111] border-[#1e1e1e] text-gray-400 hover:text-white hover:border-[#333]"
-                }`}
+                onClick={() => { setMediaType('movie'); setGenre(''); }}
+                className="flex items-center gap-1.5 px-5 py-2 rounded-full text-sm font-semibold transition-all duration-200"
+                style={mediaType === 'movie'
+                  ? { background: 'rgba(255,255,255,0.10)', color: '#fff' }
+                  : { color: '#4b5563' }}
               >
-                <SlidersHorizontal className="w-3 h-3" />
-                Filters
-                {(minRating[0] > 0 || !!yearFrom || !!yearTo) && (
-                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--reel-accent)' }} />
+                <Film className="w-3.5 h-3.5" /> Movies
+              </button>
+              <button
+                onClick={() => { setMediaType('show'); setGenre(''); }}
+                className="flex items-center gap-1.5 px-5 py-2 rounded-full text-sm font-semibold transition-all duration-200"
+                style={mediaType === 'show'
+                  ? { background: 'rgba(255,255,255,0.10)', color: '#fff' }
+                  : { color: '#4b5563' }}
+              >
+                <Tv className="w-3.5 h-3.5" /> Shows
+              </button>
+            </div>
+
+            {/* Your services */}
+            {hasServices && (
+              <div>
+                <p
+                  className="text-[10px] font-bold tracking-[0.18em] uppercase mb-3"
+                  style={{ color: '#374151' }}
+                >
+                  Your services
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(userServices).filter(([, on]) => on).map(([service]) => {
+                    const logo = PROVIDER_LOGOS[service];
+                    if (!logo) return null;
+                    const isSelected = selectedProviders.includes(service);
+                    return (
+                      <button
+                        key={service}
+                        onClick={() => toggleProvider(service)}
+                        className="relative w-12 h-12 rounded-xl overflow-hidden transition-all duration-150 active:scale-95"
+                        style={{
+                          opacity: selectedProviders.length === 0 || isSelected ? 1 : 0.25,
+                          outline: isSelected ? '2px solid rgba(255,255,255,0.55)' : '1px solid rgba(255,255,255,0.08)',
+                          outlineOffset: isSelected ? '2px' : '0px',
+                        }}
+                        title={service}
+                      >
+                        <img src={logo} alt={service} className="w-full h-full object-cover" />
+                      </button>
+                    );
+                  })}
+                </div>
+                {selectedProviders.length > 0 && (
+                  <button
+                    onClick={() => setSelectedProviders([])}
+                    className="text-[11px] mt-2 transition-colors hover:opacity-70"
+                    style={{ color: '#4b5563' }}
+                  >
+                    Clear provider filter
+                  </button>
                 )}
-                <ChevronDown className={`w-3 h-3 transition-transform ${filtersExpanded ? "rotate-180" : ""}`} />
+              </div>
+            )}
+
+            {/* Filters */}
+            <div ref={filtersRef} className="relative">
+              <button
+                onClick={() => setFiltersOpen(v => !v)}
+                className="flex items-center gap-2 text-xs rounded-full px-4 py-2 transition-colors"
+                style={
+                  hasActiveFilters
+                    ? { background: 'rgba(124,93,189,0.1)', border: '1px solid rgba(124,93,189,0.35)', color: '#a89de0' }
+                    : { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#6b7280' }
+                }
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+                Filters
+                {hasActiveFilters && (
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--reel-accent)' }} />
+                )}
+                <ChevronDown className={`w-3 h-3 transition-transform ${filtersOpen ? 'rotate-180' : ''}`} />
               </button>
 
-              {filtersExpanded && (
-                <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-72 bg-[#111] border border-[#1e1e1e] rounded-2xl shadow-2xl z-50 p-5 space-y-5 panel-enter" style={{ transformOrigin: 'top center' }}>
+              {filtersOpen && (
+                <div
+                  className="absolute left-0 top-full mt-2 w-80 rounded-2xl p-5 space-y-5 z-50"
+                  style={{ background: '#0d0d0d', border: '1px solid rgba(255,255,255,0.08)' }}
+                >
                   <div className="space-y-1.5">
                     <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Genre</p>
                     <select
                       value={genre}
-                      onChange={e => { setGenre(e.target.value); setActiveMood(""); }}
-                      className="w-full bg-[#0a0a0a] border border-[#252525] text-white text-xs rounded-lg px-2.5 py-2 focus:outline-none"
+                      onChange={e => setGenre(e.target.value)}
+                      className="w-full text-white text-xs rounded-lg px-2.5 py-2 focus:outline-none"
+                      style={{ background: '#070707', border: '1px solid rgba(255,255,255,0.08)' }}
                     >
                       <option value="">Any Genre</option>
-                      {(mediaType === 'show' ? TV_GENRES : GENRES).map(g => <option key={g.value} value={g.value}>{g.label}</option>)}
+                      {(mediaType === 'show' ? TV_GENRES : GENRES).map(g => (
+                        <option key={g.value} value={g.value}>{g.label}</option>
+                      ))}
                     </select>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
-                      <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">From</p>
-                      <Input value={yearFrom} onChange={e => setYearFrom(e.target.value)} placeholder="1990"
-                        className="bg-[#0a0a0a] border-[#252525] text-white text-xs h-8 rounded-lg" />
+                      <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Year from</p>
+                      <Input
+                        value={yearFrom}
+                        onChange={e => setYearFrom(e.target.value)}
+                        placeholder="1990"
+                        className="bg-[#070707] text-white text-xs h-8 rounded-lg"
+                        style={{ border: '1px solid rgba(255,255,255,0.08)' }}
+                      />
                     </div>
                     <div className="space-y-1.5">
-                      <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">To</p>
-                      <Input value={yearTo} onChange={e => setYearTo(e.target.value)} placeholder="2025"
-                        className="bg-[#0a0a0a] border-[#252525] text-white text-xs h-8 rounded-lg" />
+                      <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Year to</p>
+                      <Input
+                        value={yearTo}
+                        onChange={e => setYearTo(e.target.value)}
+                        placeholder="2025"
+                        className="bg-[#070707] text-white text-xs h-8 rounded-lg"
+                        style={{ border: '1px solid rgba(255,255,255,0.08)' }}
+                      />
                     </div>
                   </div>
 
@@ -556,8 +458,8 @@ export function RouletteTab() {
 
                   {hasActiveFilters && (
                     <button
-                      onClick={() => { setGenre(""); setActiveMood(""); setMinRating([0]); setYearFrom(""); setYearTo(""); }}
-                      className="text-xs hover:opacity-80 transition-opacity font-medium"
+                      onClick={() => { setGenre(""); setMinRating([0]); setYearFrom(""); setYearTo(""); }}
+                      className="text-xs font-medium hover:opacity-70 transition-opacity"
                       style={{ color: 'var(--reel-accent)' }}
                     >
                       Clear all filters
@@ -566,288 +468,441 @@ export function RouletteTab() {
                 </div>
               )}
             </div>
-          </div>
 
-          {/* ── Smart Spin divider ── */}
-          {user && (
-            <div className="w-full max-w-[400px]">
-              {/* Divider */}
-              <div className="flex items-center gap-3 my-1">
-                <div className="flex-1 h-px bg-[#1e1e1e]" />
-                <span className="text-[11px] text-gray-600 font-medium whitespace-nowrap">or let AI decide</span>
-                <div className="flex-1 h-px bg-[#1e1e1e]" />
-              </div>
+            {/* Smart Watch */}
+            {user && (
+              <div
+                className="rounded-2xl p-5 space-y-3"
+                style={{ background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.07)' }}
+              >
+                <div className="flex items-center gap-2">
+                  <GroqIcon size={14} />
+                  <p className="text-sm font-semibold text-white">Smart Watch</p>
+                  <span className="text-[10px] ml-auto" style={{ color: '#374151' }}>
+                    {smartSpinAvailable ? "1 use remaining today" : `Resets in ${hoursUntilReset}h`}
+                  </span>
+                </div>
 
-              {/* Textarea */}
-              <div className="mt-3 space-y-1">
-                <label className="text-[11px] text-gray-500 font-medium">
-                  Tell the AI what you're in the mood for (optional)
-                </label>
                 <textarea
                   value={smartPreferences}
                   onChange={e => setSmartPreferences(e.target.value)}
                   maxLength={300}
-                  disabled={!smartSpinAvailable || smartSpinLoading}
-                  placeholder="e.g. I want a romantic 7/10 movie from the 90s, nothing too sad..."
-                  rows={2}
-                  className="w-full bg-[#0a0a0a] border border-[#252525] text-white text-xs rounded-xl px-3 py-2.5 resize-none focus:outline-none focus:border-[#3d3566] placeholder-gray-700 transition-colors disabled:opacity-50"
-                  style={{ fontFamily: "SanFran, system-ui, sans-serif" }}
+                  disabled={smartSpinLoading}
+                  placeholder="Describe what you want to watch tonight…"
+                  rows={3}
+                  className="w-full text-xs rounded-xl px-3 py-2.5 resize-none focus:outline-none placeholder-[#2d2d2d] transition-colors disabled:opacity-40"
+                  style={{
+                    background: 'rgba(0,0,0,0.6)',
+                    border: '1px solid rgba(255,255,255,0.07)',
+                    color: '#fff',
+                    fontFamily: "SanFran, system-ui, sans-serif",
+                  }}
                 />
-                <p className="text-[10px] text-gray-700 text-right">{smartPreferences.length}/300</p>
-              </div>
 
-              {/* Smart Spin button */}
-              <div className="mt-2">
                 <button
-                  onClick={handleSmartSpin}
-                  disabled={!smartSpinAvailable || smartSpinLoading || smartSpinResting}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-full border text-sm font-semibold transition-all active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={smartSpinAvailable ? handleSmartSpin : spin}
+                  disabled={smartSpinLoading || smartSpinResting}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed"
                   style={
-                    smartSpinAvailable && !smartSpinLoading && !smartSpinResting
-                      ? { borderColor: 'var(--reel-accent-hex)', color: 'var(--reel-accent-hex)', background: 'color-mix(in srgb, var(--reel-accent-hex) 8%, transparent)' }
-                      : { borderColor: '#2a2a2a', color: '#4b5563', background: 'transparent' }
+                    smartSpinAvailable && !smartSpinResting
+                      ? {
+                          background: 'rgba(255,107,53,0.08)',
+                          border: '1px solid rgba(255,107,53,0.25)',
+                          color: '#FF6B35',
+                        }
+                      : {
+                          background: 'rgba(255,255,255,0.03)',
+                          border: '1px solid rgba(255,255,255,0.07)',
+                          color: '#4b5563',
+                        }
                   }
                 >
-                  <GroqIcon size={14} />
+                  <GroqIcon size={13} />
                   {smartSpinLoading
-                    ? "Finding your perfect movie…"
+                    ? "Finding your perfect pick…"
                     : smartSpinResting
-                    ? "Smart Spin is resting…"
-                    : !smartSpinAvailable
-                    ? `Next Smart Spin in ${hoursUntilReset}h`
-                    : "Smart Spin"}
+                    ? "Smart Watch is resting…"
+                    : smartSpinAvailable
+                    ? "Smart Watch"
+                    : "Find Movie"}
                 </button>
-                <p className="text-[10px] text-gray-700 text-center mt-1.5">
-                  {smartSpinAvailable ? "1 of 1 smart spin remaining today" : "0 of 1 smart spins remaining today"}
-                </p>
-              </div>
 
-              {/* Smart Spin error */}
-              {smartError && (
-                <p className="text-yellow-500 text-xs text-center mt-2">{smartError}</p>
-              )}
+                {smartError && (
+                  <p className="text-yellow-500 text-xs text-center">{smartError}</p>
+                )}
 
-              {/* Smart Spin result card */}
-              {smartResult && (
-                <div
-                  ref={smartResultRef}
-                  className="mt-4 w-full bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl overflow-hidden shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-400 cursor-pointer"
-                  onClick={() => setSelectedMovieId(smartResult.movie.id)}
-                >
-                  <div className="flex gap-4 p-4">
-                    {smartResult.movie.poster ? (
-                      <img
-                        src={smartResult.movie.poster}
-                        alt={smartResult.movie.title}
-                        className="w-20 h-[120px] rounded-xl object-cover shadow-lg ring-1 ring-white/10 shrink-0"
-                      />
-                    ) : (
-                      <div className="w-20 h-[120px] rounded-xl bg-[#1a1a1a] flex items-center justify-center shrink-0">
-                        <Film className="w-5 h-5 text-gray-600" />
+                {smartResult && (
+                  <div
+                    ref={smartResultRef}
+                    className="rounded-xl overflow-hidden cursor-pointer animate-in fade-in duration-300"
+                    style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
+                    onClick={() => {
+                      setSelectedMovieId(smartResult.movie.id);
+                      setSelectedMovieType('movie');
+                    }}
+                  >
+                    <div className="flex gap-4 p-4">
+                      {smartResult.movie.poster ? (
+                        <img
+                          src={smartResult.movie.poster}
+                          alt={smartResult.movie.title}
+                          className="w-16 h-24 rounded-lg object-cover shrink-0"
+                          style={{ border: '1px solid rgba(255,255,255,0.08)' }}
+                        />
+                      ) : (
+                        <div className="w-16 h-24 rounded-lg bg-[#1a1a1a] flex items-center justify-center shrink-0">
+                          <Film className="w-5 h-5 text-gray-700" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
+                        <p className="text-white font-bold text-sm leading-snug line-clamp-2">
+                          {smartResult.movie.title}
+                        </p>
+                        <div className="flex items-center gap-2 text-xs">
+                          {smartResult.movie.year > 0 && (
+                            <span className="text-gray-500">{smartResult.movie.year}</span>
+                          )}
+                          {smartResult.movie.rating > 0 && (
+                            <span className="text-yellow-400 font-semibold">★ {smartResult.movie.rating.toFixed(1)}</span>
+                          )}
+                        </div>
+                        <p className="text-gray-500 text-[11px] italic leading-relaxed line-clamp-3">
+                          {smartResult.reason}
+                        </p>
                       </div>
-                    )}
-                    <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
-                      <p className="text-white font-bold text-sm leading-snug line-clamp-2">
-                        {smartResult.movie.title}
-                      </p>
-                      <div className="flex items-center gap-2 text-xs">
-                        {smartResult.movie.year > 0 && <span className="text-gray-500">{smartResult.movie.year}</span>}
-                        {smartResult.movie.rating > 0 && (
-                          <span className="text-yellow-400 font-semibold">★ {smartResult.movie.rating.toFixed(1)}</span>
-                        )}
-                      </div>
-                      {/* Reason */}
-                      <p className="text-gray-400 text-[11px] italic leading-relaxed line-clamp-3 mt-0.5">
-                        {smartResult.reason}
-                      </p>
+                    </div>
+                    <div className="flex items-center justify-end gap-1 px-4 pb-3">
+                      <GroqIcon size={10} />
+                      <span className="text-[10px] text-gray-700">Powered by Groq</span>
                     </div>
                   </div>
-                  {/* Groq badge */}
-                  <div className="flex items-center justify-end gap-1 px-4 pb-3">
-                    <GroqIcon size={11} />
-                    <span className="text-[10px] text-gray-600">⚡ Powered by Groq</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+                )}
+              </div>
+            )}
 
-          {/* Spin button — above the wheel */}
-          {!awaitingVote && (
-            <div className="relative w-full max-w-[340px]">
-              <div
-                className={`absolute -inset-2 rounded-full blur-xl transition-opacity duration-500 ${spinning ? "opacity-0" : "opacity-60 animate-pulse"}`}
-                style={{ backgroundColor: `${btnColor}60` }}
-              />
+            {/* Spin button */}
+            {!awaitingVote && (
               <button
                 onClick={spin}
                 disabled={spinning}
-                className="relative w-full py-5 flex items-center justify-center gap-3 disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-full shadow-xl active:scale-[0.97]"
+                className="flex items-center justify-center gap-3 py-4 rounded-2xl text-white font-bold text-lg transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
                 style={{
-                  backgroundColor: btnColor,
-                  boxShadow: `0 8px 40px ${btnColor}60`,
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.1)',
                   fontFamily: "SanFran, system-ui, sans-serif",
-                  fontWeight: 700,
-                  fontSize: "1.3rem",
-                  letterSpacing: "0.01em",
-                  transition: 'transform 150ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 300ms ease, opacity 200ms ease',
+                  letterSpacing: '-0.01em',
                 }}
               >
-                <Shuffle className={`w-6 h-6 ${spinning ? "animate-spin" : ""} shrink-0`} style={{ fontStyle: "normal" }} />
-                {spinning ? "Spinning…" : "Spin the Reel"}
+                <Shuffle className={`w-5 h-5 ${spinning ? 'animate-spin' : ''}`} />
+                {spinning ? "Finding something for you…" : "Spin the Reel"}
               </button>
-            </div>
-          )}
+            )}
 
-          {/* Wheel */}
-          <div
-            style={{
-              filter: awaitingVote ? "brightness(0.35) blur(2px)" : "none",
-              transition: "filter 0.4s ease",
-              pointerEvents: awaitingVote ? "none" : "auto",
-            }}
-          >
-            <RouletteWheelModal
-              genre={genre}
-              isSpinning={spinning}
-              canFinish={canFinish}
-              onFinished={handleWheelFinished}
-            />
+            {error && <p className="text-yellow-500 text-sm">{error}</p>}
+
+            {/* Vote card */}
+            {awaitingVote && pendingMovie && (
+              <div
+                className="rounded-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-3 duration-300"
+                style={{ background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.09)' }}
+              >
+                <div className="flex gap-5 p-5 pb-3">
+                  <div className="relative shrink-0">
+                    {pendingMovie.poster ? (
+                      <img
+                        src={pendingMovie.poster}
+                        alt={pendingMovie.title}
+                        className="w-24 h-36 rounded-xl object-cover shadow-xl"
+                        style={{ border: '1px solid rgba(255,255,255,0.08)' }}
+                      />
+                    ) : (
+                      <div className="w-24 h-36 rounded-xl bg-[#1a1a1a] flex items-center justify-center">
+                        <Film className="w-6 h-6 text-gray-700" />
+                      </div>
+                    )}
+                    {pendingMovie.streamingService && PROVIDER_LOGOS[pendingMovie.streamingService] && (
+                      <div className="absolute -bottom-1.5 -right-1.5 w-8 h-8 rounded-lg overflow-hidden shadow-lg ring-1 ring-black">
+                        <img
+                          src={PROVIDER_LOGOS[pendingMovie.streamingService]}
+                          alt={pendingMovie.streamingService}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
+                    <p
+                      className="text-white font-bold leading-snug line-clamp-2"
+                      style={{ fontFamily: "SanFran, system-ui, sans-serif", fontSize: '1rem' }}
+                    >
+                      {pendingMovie.title}
+                    </p>
+                    <div className="flex items-center gap-2 text-xs">
+                      {pendingMovie.year > 0 && <span className="text-gray-500">{pendingMovie.year}</span>}
+                      {pendingMovie.rating > 0 && (
+                        <span className="text-yellow-400 font-semibold">★ {pendingMovie.rating.toFixed(1)}</span>
+                      )}
+                    </div>
+                    {pendingMovie.genres.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-0.5">
+                        {pendingMovie.genres.slice(0, 2).map(g => (
+                          <span
+                            key={g}
+                            className="text-[10px] px-2 py-0.5 rounded-full text-gray-500"
+                            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
+                          >
+                            {g}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <p
+                  className="text-[11px] text-gray-600 text-center italic px-5 pb-3"
+                  style={{ fontFamily: "SanFran, system-ui, sans-serif" }}
+                >
+                  Fate has spoken. Your verdict?
+                </p>
+
+                <div className="grid grid-cols-2 gap-3 px-4 pb-3">
+                  <button
+                    onClick={() => handleVote("dislike")}
+                    disabled={userVote !== null}
+                    className="flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-semibold transition-all text-gray-400 hover:text-red-400 disabled:opacity-40"
+                    style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)' }}
+                  >
+                    <ThumbsDown className="w-4 h-4" /> Pass
+                  </button>
+                  <button
+                    onClick={() => handleVote("like")}
+                    disabled={userVote !== null}
+                    className="flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-semibold transition-all text-emerald-400 hover:text-emerald-300 disabled:opacity-40"
+                    style={{ background: 'rgba(52,211,153,0.07)', border: '1px solid rgba(52,211,153,0.18)' }}
+                  >
+                    <ThumbsUp className="w-4 h-4" /> I'm in
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between px-4 pb-4">
+                  <button
+                    onClick={() => { setAwaitingVote(false); setPendingMovie(null); spin(); }}
+                    className="text-xs text-gray-600 hover:text-gray-400 transition-colors"
+                  >
+                    Skip &amp; respin
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSelectedMovieId(pendingMovie.id);
+                      setSelectedMovieType(mediaType);
+                    }}
+                    className="text-xs text-gray-400 hover:text-white transition-colors font-medium"
+                  >
+                    More info →
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* SpeedSwipe Beta */}
+            <div className="flex items-center gap-3 pt-2">
+              <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.05)' }} />
+              <button
+                className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-full text-gray-600 hover:text-gray-400 transition-colors"
+                style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}
+              >
+                <Zap className="w-3 h-3" />
+                SpeedSwipe
+                <span
+                  className="text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wide text-yellow-600"
+                  style={{ background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.15)' }}
+                >
+                  Beta
+                </span>
+              </button>
+              <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.05)' }} />
+            </div>
+
           </div>
 
-          {error && <p className="text-yellow-500 text-sm text-center">{error}</p>}
+          {/* ── RIGHT COLUMN — Spins ── */}
+          <div className="hidden lg:flex flex-col gap-10">
 
-          {/* Vote card */}
-          {awaitingVote && pendingMovie && (
-            <div className="w-full max-w-[420px] bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl overflow-hidden shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-400">
-              <div className="flex gap-5 p-5 pb-3">
-                <div className="relative shrink-0">
-                  {pendingMovie.poster ? (
-                    <img src={pendingMovie.poster} alt={pendingMovie.title}
-                      className="w-24 h-36 rounded-xl object-cover shadow-xl ring-1 ring-white/10" />
-                  ) : (
-                    <div className="w-24 h-36 rounded-xl bg-[#1a1a1a] flex items-center justify-center ring-1 ring-white/5">
-                      <Film className="w-6 h-6 text-gray-600" />
-                    </div>
-                  )}
-                  {pendingMovie.streamingService && PROVIDER_LOGOS[pendingMovie.streamingService] && (
-                    <div className="absolute -bottom-1.5 -right-1.5 w-8 h-8 rounded-lg overflow-hidden shadow-lg ring-1 ring-black">
-                      <img src={PROVIDER_LOGOS[pendingMovie.streamingService]} alt={pendingMovie.streamingService} className="w-full h-full object-cover" />
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
-                  <p
-                    className="text-white font-bold leading-snug line-clamp-2"
-                    style={{ fontFamily: "SanFran, system-ui, sans-serif", fontSize: '1rem' }}
-                  >
-                    {pendingMovie.title}
-                  </p>
-                  <div className="flex items-center gap-2 text-xs">
-                    {pendingMovie.year > 0 && <span className="text-gray-500">{pendingMovie.year}</span>}
-                    {pendingMovie.rating > 0 && <span className="text-yellow-400 font-semibold">★ {pendingMovie.rating.toFixed(1)}</span>}
-                  </div>
-                  {pendingMovie.genres.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-0.5">
-                      {pendingMovie.genres.slice(0, 2).map(g => (
-                        <span key={g} className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.04] text-gray-500 border border-white/[0.06]">{g}</span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
+            {/* Recent Spins */}
+            <div>
               <p
-                className="text-[11px] text-gray-600 text-center italic px-5 pb-3"
-                style={{ fontFamily: "SanFran, system-ui, sans-serif" }}
+                className="text-[10px] font-bold tracking-[0.18em] uppercase mb-4"
+                style={{ color: '#374151' }}
               >
-                Fate has spoken. Your verdict?
+                Recent Spins
               </p>
 
-              <div className="grid grid-cols-2 gap-3 px-4 pb-3">
-                <button
-                  onClick={() => handleVote("dislike")}
-                  disabled={userVote !== null}
-                  className="flex items-center justify-center gap-2 py-3.5 rounded-xl border border-[#222] bg-white/[0.02] hover:bg-red-500/10 hover:border-red-500/30 transition-all text-sm font-semibold text-gray-400 hover:text-red-400 disabled:opacity-40"
-                >
-                  <ThumbsDown className="w-4 h-4" /> Pass
-                </button>
-                <button
-                  onClick={() => handleVote("like")}
-                  disabled={userVote !== null}
-                  className="flex items-center justify-center gap-2 py-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20 hover:border-emerald-500/40 transition-all text-sm font-semibold text-emerald-400 hover:text-emerald-300 disabled:opacity-40"
-                >
-                  <ThumbsUp className="w-4 h-4" /> I'm in
-                </button>
-              </div>
-
-              <div className="flex items-center justify-between px-4 pb-4">
-                <button
-                  onClick={() => { setAwaitingVote(false); setPendingMovie(null); spin(); }}
-                  className="text-xs text-gray-600 hover:text-gray-400 transition-colors"
-                >
-                  Skip &amp; respin
-                </button>
-                <button
-                  onClick={() => setSelectedMovieId(pendingMovie.id)}
-                  className="text-xs text-gray-400 hover:text-white transition-colors font-medium"
-                >
-                  More info →
-                </button>
-              </div>
-            </div>
-          )}
-
-        </div>
-
-        {/* ── Right: Friends' Spins ── */}
-        <aside className="hidden md:flex flex-col gap-1">
-          <p
-            className="text-[10px] font-bold tracking-[0.2em] text-gray-600 uppercase px-1 mb-3"
-            style={{ fontFamily: "'Courier New', monospace" }}
-          >
-            Friends' Spins
-          </p>
-          {friendSpins.length === 0 && (
-            <p className="text-gray-600 text-xs px-1">
-              {user ? "No friend spins yet." : "Log in to see friends' spins."}
-            </p>
-          )}
-          {friendSpins.slice(0, 8).map(entry => {
-            const s = entry.spins[0];
-            return (
-              <div key={entry.friend_id} className="flex items-center gap-3 py-2 group cursor-default">
-                {s.poster_url ? (
-                  <div className="relative w-14 h-[82px] rounded-lg overflow-hidden bg-[#1C1C1C] shrink-0 ring-1 ring-white/5">
-                    <img src={s.poster_url} alt={s.movie_title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" />
-                    <img
-                      src={entry.avatarUrl || dicebearUrl(entry.friend_username)}
-                      alt={entry.friend_username}
-                      className="absolute bottom-1 right-1 w-6 h-6 rounded-full object-cover bg-[#1a1a1a] ring-1 ring-black"
-                      onError={e => { (e.target as HTMLImageElement).src = dicebearUrl(entry.friend_username); }}
+              {!spinsLoaded && (
+                <div className="grid grid-cols-3 gap-2">
+                  {[...Array(9)].map((_, i) => (
+                    <div
+                      key={i}
+                      className="rounded-xl animate-pulse"
+                      style={{ aspectRatio: '2/3', background: '#111' }}
                     />
-                  </div>
-                ) : (
-                  <img
-                    src={entry.avatarUrl || dicebearUrl(entry.friend_username)}
-                    alt={entry.friend_username}
-                    className="w-10 h-10 rounded-full object-cover shrink-0 bg-[#1a1a1a] ring-1 ring-white/10"
-                    onError={e => { (e.target as HTMLImageElement).src = dicebearUrl(entry.friend_username); }}
-                  />
-                )}
-                <div className="min-w-0 flex-1">
-                  <p className="text-white text-xs font-semibold leading-snug line-clamp-2">{s.movie_title}</p>
-                  <p className="text-gray-500 text-[11px] mt-0.5">@{entry.friend_username}</p>
-                  <p className="text-gray-700 text-[10px] mt-0.5">{timeAgo(s.spun_at)}</p>
+                  ))}
+                </div>
+              )}
+
+              {spinsLoaded && recentSpins.length === 0 && (
+                <p className="text-xs leading-relaxed" style={{ color: '#374151' }}>
+                  {user ? "Your spin history will appear here." : "Log in to track spins."}
+                </p>
+              )}
+
+              {spinsLoaded && recentSpins.length > 0 && (
+                <div className="grid grid-cols-3 gap-2">
+                  {recentSpins.map((s, i) => (
+                    <button
+                      key={i}
+                      onClick={() => {
+                        setSelectedMovieId(s.movie_id);
+                        setSelectedMovieType('movie');
+                      }}
+                      className="group relative rounded-xl overflow-hidden transition-all duration-200 hover:scale-[1.04]"
+                      style={{
+                        aspectRatio: '2/3',
+                        background: '#111',
+                        border: '1px solid rgba(255,255,255,0.06)',
+                      }}
+                    >
+                      {s.poster_url ? (
+                        <img
+                          src={s.poster_url}
+                          alt={s.movie_title}
+                          className="w-full h-full object-cover group-hover:brightness-90 transition-all duration-200"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center" style={{ background: '#1a1a1a' }}>
+                          <Film className="w-5 h-5 text-gray-700" />
+                        </div>
+                      )}
+                      <div
+                        className="absolute inset-x-0 bottom-0 p-2"
+                        style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, transparent 100%)' }}
+                      >
+                        <p className="text-white text-[9px] font-semibold line-clamp-2 leading-tight">
+                          {s.movie_title}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Friends' Spins */}
+            {friendSpins.length > 0 && (
+              <div>
+                <p
+                  className="text-[10px] font-bold tracking-[0.18em] uppercase mb-4"
+                  style={{ color: '#374151' }}
+                >
+                  Friends' Spins
+                </p>
+                <div className="flex flex-col gap-3">
+                  {friendSpins.slice(0, 6).map(entry => {
+                    const s = entry.spins[0];
+                    return (
+                      <button
+                        key={entry.friend_id}
+                        onClick={() => {
+                          setSelectedMovieId(s.movie_id);
+                          setSelectedMovieType('movie');
+                        }}
+                        className="group flex items-center gap-3 text-left hover:opacity-75 transition-opacity"
+                      >
+                        <div
+                          className="relative w-11 h-16 rounded-lg overflow-hidden shrink-0"
+                          style={{ background: '#111', border: '1px solid rgba(255,255,255,0.07)' }}
+                        >
+                          {s.poster_url ? (
+                            <img src={s.poster_url} alt={s.movie_title} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full" style={{ background: '#1a1a1a' }} />
+                          )}
+                          <img
+                            src={entry.avatarUrl || dicebearUrl(entry.friend_username)}
+                            alt={entry.friend_username}
+                            className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full object-cover ring-1 ring-black"
+                            style={{ background: '#1a1a1a' }}
+                            onError={e => { (e.target as HTMLImageElement).src = dicebearUrl(entry.friend_username); }}
+                          />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-white text-xs font-semibold line-clamp-1 leading-snug">
+                            {s.movie_title}
+                          </p>
+                          <p className="text-[10px] mt-0.5" style={{ color: '#4b5563' }}>
+                            @{entry.friend_username}
+                          </p>
+                          <p className="text-[10px]" style={{ color: '#374151' }}>
+                            {timeAgo(s.spun_at)}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
-            );
-          })}
-        </aside>
+            )}
+
+            {/* Mobile recent spins — shown below controls on small screens */}
+          </div>
+        </div>
+
+        {/* Mobile recent spins */}
+        <div className="lg:hidden mt-10">
+          <p
+            className="text-[10px] font-bold tracking-[0.18em] uppercase mb-4"
+            style={{ color: '#374151' }}
+          >
+            Recent Spins
+          </p>
+          {spinsLoaded && recentSpins.length > 0 && (
+            <div className="grid grid-cols-4 gap-2">
+              {recentSpins.slice(0, 8).map((s, i) => (
+                <button
+                  key={i}
+                  onClick={() => { setSelectedMovieId(s.movie_id); setSelectedMovieType('movie'); }}
+                  className="group relative rounded-xl overflow-hidden transition-all duration-200 hover:scale-[1.04]"
+                  style={{ aspectRatio: '2/3', background: '#111', border: '1px solid rgba(255,255,255,0.06)' }}
+                >
+                  {s.poster_url ? (
+                    <img src={s.poster_url} alt={s.movie_title} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center" style={{ background: '#1a1a1a' }}>
+                      <Film className="w-4 h-4 text-gray-700" />
+                    </div>
+                  )}
+                  <div
+                    className="absolute inset-x-0 bottom-0 p-1.5"
+                    style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%)' }}
+                  >
+                    <p className="text-white text-[8px] font-semibold line-clamp-2 leading-tight">
+                      {s.movie_title}
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
       </div>
 
       {selectedMovieId && (
-        <MovieDetailModal movieId={selectedMovieId} type={mediaType} onClose={() => setSelectedMovieId(null)} />
+        <MovieDetailModal
+          movieId={selectedMovieId}
+          type={selectedMovieType}
+          onClose={() => setSelectedMovieId(null)}
+        />
       )}
     </div>
   );
