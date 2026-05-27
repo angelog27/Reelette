@@ -34,7 +34,7 @@ from firebase_helper import (
     update_streaming_services, get_user_streaming_services,
     add_to_watchlist, get_watchlist, remove_from_watchlist,
     add_watched_movie, get_watched_movies, get_watched_movie, update_watched_rating,
-    create_post, get_feed, like_post, add_reply, get_replies, delete_post, toggle_reply_like, toggle_reply_dislike, send_password_reset_email,
+    create_post, create_repost, get_feed, like_post, add_reply, get_replies, delete_post, toggle_reply_like, toggle_reply_dislike, send_password_reset_email,
     update_user_profile, get_user_movie_preferences, update_movie_preferences, search_users,
     send_friend_request, get_friend_requests, accept_friend_request, reject_friend_request,
     remove_friend, get_friends,
@@ -183,7 +183,7 @@ def require_auth(f):
 # The admin UID is the only source of truth for elevated privileges.
 # It is verified server-side on every request via a fresh Firebase token —
 # the frontend badge is cosmetic only and cannot grant any access.
-ADMIN_UID = "iiBMPhonpAR4RWTGCwlykGiDIH63"
+ADMIN_UID = "IiBMPhonpAR4RWTGCwlykGiDIH63"
 
 def require_admin(f):
     """Must follow @require_auth. Rejects with 403 if the caller is not the admin."""
@@ -1009,6 +1009,23 @@ def create_feed_post():
                 if tagged_id and tagged_id != _uid:
                     send_tagged_in_post_email(tagged_id, _uname, _pid, _title)
         threading.Thread(target=_notify_tagged, daemon=True).start()
+    return jsonify(result)
+
+@app.route('/api/feed/<post_id>/repost', methods=['POST'])
+@require_auth
+@limiter.limit("10 per minute; 30 per hour")
+def repost_feed_post(post_id):
+    data = request.get_json() or {}
+    username = data.get('username', '').strip()
+    comment  = data.get('comment', '').strip()
+    if not username:
+        return jsonify({'success': False, 'message': 'username is required'}), 400
+    if len(comment) > 500:
+        return jsonify({'success': False, 'message': 'comment must be 500 characters or fewer'}), 400
+    result = create_repost(g.verified_uid, username, post_id, comment)
+    if result.get('success'):
+        for key in [k for k in _cache if k.startswith('feed:')]:
+            _cache.pop(key, None)
     return jsonify(result)
 
 @app.route('/api/feed/<post_id>/like', methods=['POST'])

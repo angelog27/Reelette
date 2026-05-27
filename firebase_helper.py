@@ -487,6 +487,48 @@ def create_post(user_id, username, message, movie_title, movie_id, movie_poster,
     except Exception as e:
         return {'success': False, 'message': str(e)}
 
+def create_repost(reposter_id, reposter_username, original_post_id, repost_comment=''):
+    try:
+        original_ref = db.collection('posts').document(original_post_id)
+        original_doc = original_ref.get()
+        if not original_doc.exists:
+            return {'success': False, 'message': 'Original post not found'}
+        original = original_doc.to_dict()
+        # prevent reposting a repost (only allow reposting original posts)
+        if original.get('is_repost'):
+            original_post_id = original.get('repost_of', original_post_id)
+            original_root_ref = db.collection('posts').document(original_post_id)
+            original_root_doc = original_root_ref.get()
+            if original_root_doc.exists:
+                original = original_root_doc.to_dict()
+        orig_ts = original.get('created_at')
+        orig_ts_str = orig_ts.isoformat() if hasattr(orig_ts, 'isoformat') else str(orig_ts) if orig_ts else ''
+        post_ref = db.collection('posts').document()
+        post_ref.set({
+            'post_id': post_ref.id,
+            'user_id': reposter_id,
+            'username': reposter_username,
+            'message': repost_comment,
+            'movie_title': original.get('movie_title', ''),
+            'movie_id': str(original.get('movie_id', '')),
+            'movie_poster': original.get('movie_poster', ''),
+            'rating': 0,
+            'likes': 0,
+            'liked_by': [],
+            'created_at': datetime.now(),
+            'is_repost': True,
+            'repost_of': original_post_id,
+            'original_user_id': original.get('user_id', ''),
+            'original_username': original.get('username', ''),
+            'original_message': original.get('message', ''),
+            'original_rating': original.get('rating', 0),
+            'original_created_at': orig_ts_str,
+        })
+        return {'success': True, 'post_id': post_ref.id}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+
 # pulls the most recent posts from the feed, newest first.
 # when `since` is an ISO timestamp, only returns posts newer than that timestamp.
 def get_feed(limit=20, since=None):

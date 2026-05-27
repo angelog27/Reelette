@@ -299,7 +299,7 @@ def get_movie_images(movie_id):
         data = r.json()
         backdrops = sorted(data.get('backdrops', []), key=lambda x: x.get('vote_average', 0), reverse=True)
         result = [get_backdrop_url(b['file_path']) for b in backdrops if b.get('file_path')]
-        _cache_set(cache_key, result)
+        _cache_set(cache_key, result, 86400)  # 24 h — backdrops rarely change
         return result
     except Exception as e:
         print(f"[images] movie {movie_id} error: {e}")
@@ -320,7 +320,7 @@ def get_show_images(show_id):
         data = r.json()
         backdrops = sorted(data.get('backdrops', []), key=lambda x: x.get('vote_average', 0), reverse=True)
         result = [get_backdrop_url(b['file_path']) for b in backdrops if b.get('file_path')]
-        _cache_set(cache_key, result)
+        _cache_set(cache_key, result, 86400)  # 24 h
         return result
     except Exception as e:
         print(f"[images] show {show_id} error: {e}")

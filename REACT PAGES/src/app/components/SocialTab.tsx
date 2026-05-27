@@ -3,11 +3,11 @@ import {
   Heart, MessageCircle, Plus, Star, Trash2, Users, UserPlus, UserMinus,
   Search, Check, X, Film, Shuffle, Popcorn, Crown, LogOut,
   Tv, Wifi, WifiOff, Loader2, Clapperboard, Send, RefreshCw,
-  Clock, TrendingUp, ArrowLeft, ThumbsUp, ThumbsDown,
+  Clock, TrendingUp, ArrowLeft, ThumbsUp, ThumbsDown, Repeat2,
 } from 'lucide-react';
 import {
   getFeed, getFeedSince, bustFeedCache, createPost, likePost, deletePost, getUser, timeAgo,
-  ADMIN_UID, adminDeletePost, adminDeleteReply,
+  ADMIN_UID, adminDeletePost, adminDeleteReply, repostPost,
   getFriends, getFriendRequests, sendFriendRequest, acceptFriendRequest,
   rejectFriendRequest, searchUsers,
   getUserGroups, createGroup, getGroup, addGroupMember, removeGroupMember,
@@ -73,8 +73,9 @@ function OnlineDot({ online }: { online: boolean }) {
 
 function AdminBadge() {
   return (
-    <span title="Site Admin" className="inline-flex items-center ml-0.5">
-      <Crown className="w-3 h-3 text-amber-400 fill-amber-400" />
+    <span title="Site Admin" className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-400/10 ml-0.5">
+      <Crown className="w-2.5 h-2.5 text-amber-400 fill-amber-400" />
+      <span className="text-[9px] font-bold tracking-widest text-amber-400 uppercase">Admin</span>
     </span>
   );
 }
@@ -716,10 +717,11 @@ function saveReactions(postId: string, data: Record<string, string[]>) {
 }
 
 // ── Activity Card ─────────────────────────────────────────────
-function ActivityCard({ post, currentUserId, currentUsername, isAdmin, onLike, onDelete, onOpenProfile }: {
+function ActivityCard({ post, currentUserId, currentUsername, isAdmin, onLike, onDelete, onRepost, onOpenProfile }: {
   post: FeedPost; currentUserId: string; currentUsername: string; isAdmin: boolean;
   onLike: (id: string) => void;
   onDelete: (id: string) => void;
+  onRepost: () => void;
   onOpenProfile: (userId: string) => void;
 }) {
   const isLiked = post.liked_by.includes(currentUserId);
@@ -739,6 +741,9 @@ function ActivityCard({ post, currentUserId, currentUsername, isAdmin, onLike, o
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [mentionResults, setMentionResults] = useState<{ user_id: string; username: string }[]>([]);
   const [replyReactions, setReplyReactions] = useState<Record<string, { likes: number; liked_by: string[]; dislikes: number; disliked_by: string[] }>>({});
+  const [showRepostInput, setShowRepostInput] = useState(false);
+  const [repostComment, setRepostComment] = useState('');
+  const [submittingRepost, setSubmittingRepost] = useState(false);
 
   useEffect(() => {
     if (!post.movie_id) return;
@@ -864,6 +869,19 @@ function ActivityCard({ post, currentUserId, currentUsername, isAdmin, onLike, o
     setSubmittingReply(false);
   };
 
+  const handleSubmitRepost = async () => {
+    if (!currentUserId) return;
+    setSubmittingRepost(true);
+    const targetPostId = post.is_repost && post.repost_of ? post.repost_of : post.post_id;
+    const result = await repostPost(targetPostId, currentUsername, repostComment.trim());
+    if (result.success) {
+      setShowRepostInput(false);
+      setRepostComment('');
+      onRepost();
+    }
+    setSubmittingRepost(false);
+  };
+
   // Auto-load replies so the right panel is always populated
   useEffect(() => {
     loadReplies();
@@ -871,6 +889,16 @@ function ActivityCard({ post, currentUserId, currentUsername, isAdmin, onLike, o
 
   return (
     <article className="rounded-2xl bg-white/[0.035] border border-white/[0.06] p-4 shadow-lg shadow-black/30">
+      {/* Repost banner */}
+      {post.is_repost && (
+        <div className="flex items-center gap-1.5 mb-3 text-[11px] text-zinc-500">
+          <Repeat2 className="w-3.5 h-3.5 text-emerald-500/70" />
+          <button onClick={() => onOpenProfile(post.user_id)} className="font-semibold text-zinc-400 hover:text-white transition-colors">
+            {(post as { displayName?: string }).displayName || post.username}
+          </button>
+          <span>reposted</span>
+        </div>
+      )}
       <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,60%)_minmax(300px,40%)] gap-5 items-start">
 
         {/* ── LEFT: Review block ──────────────────────────────── */}
@@ -951,6 +979,19 @@ function ActivityCard({ post, currentUserId, currentUsername, isAdmin, onLike, o
                 </p>
               )}
 
+              {/* Original post quoted block for reposts */}
+              {post.is_repost && post.original_message && (
+                <div className="border-l-2 border-emerald-500/30 pl-3 py-1 bg-white/[0.02] rounded-r-lg">
+                  <p className="text-[11px] text-zinc-500 mb-0.5">
+                    <button onClick={() => onOpenProfile(post.original_user_id!)} className="font-semibold text-zinc-400 hover:text-white transition-colors">
+                      @{post.original_username}
+                    </button>
+                    {' '}originally wrote:
+                  </p>
+                  <p className="text-zinc-400 text-xs leading-relaxed line-clamp-3">{post.original_message}</p>
+                </div>
+              )}
+
               {/* 5. Genres + TMDB fan rating */}
               {((movieMeta?.genres && movieMeta.genres.length > 0) || (movieMeta?.voteAverage ?? 0) > 0) && (
                 <div className="flex items-center gap-2 flex-wrap">
@@ -1000,7 +1041,28 @@ function ActivityCard({ post, currentUserId, currentUsername, isAdmin, onLike, o
                     <span className="tabular-nums">{users.length}</span>
                   </button>
                 ))}
+                <button onClick={() => setShowRepostInput(s => !s)}
+                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs transition-colors ml-auto ${showRepostInput ? 'text-emerald-400' : 'text-zinc-600 hover:text-emerald-400 hover:bg-emerald-400/5'}`}>
+                  <Repeat2 className="w-[13px] h-[13px]" />
+                </button>
               </div>
+              {showRepostInput && (
+                <div className="flex gap-2 mt-1">
+                  <input
+                    type="text" placeholder="Add a comment… (optional)"
+                    value={repostComment}
+                    onChange={e => setRepostComment(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') handleSubmitRepost(); if (e.key === 'Escape') { setShowRepostInput(false); setRepostComment(''); } }}
+                    maxLength={500}
+                    className="flex-1 bg-white/[0.05] rounded-full px-3.5 py-1.5 text-white text-xs placeholder:text-zinc-600 focus:outline-none focus:bg-white/[0.08] transition-colors"
+                    autoFocus
+                  />
+                  <button onClick={handleSubmitRepost} disabled={submittingRepost}
+                    className="p-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white rounded-full transition-colors shrink-0">
+                    {submittingRepost ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Repeat2 className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         ) : (
@@ -1048,6 +1110,17 @@ function ActivityCard({ post, currentUserId, currentUsername, isAdmin, onLike, o
                 {renderMessage(post.message, onOpenProfile)}
               </p>
             )}
+            {post.is_repost && post.original_message && (
+              <div className="border-l-2 border-emerald-500/30 pl-3 py-1 bg-white/[0.02] rounded-r-lg">
+                <p className="text-[11px] text-zinc-500 mb-0.5">
+                  <button onClick={() => onOpenProfile(post.original_user_id!)} className="font-semibold text-zinc-400 hover:text-white transition-colors">
+                    @{post.original_username}
+                  </button>
+                  {' '}originally wrote:
+                </p>
+                <p className="text-zinc-400 text-xs leading-relaxed line-clamp-3">{post.original_message}</p>
+              </div>
+            )}
             <div className="flex items-center gap-0.5 -ml-1.5">
               <button onClick={handleLikeClick}
                 style={{ transition: 'transform 0.25s cubic-bezier(0.34,1.56,0.64,1)', transform: likeAnim ? 'scale(1.4)' : 'scale(1)', ...(isLiked ? { color: 'var(--reel-accent-hex)' } : {}) }}
@@ -1080,7 +1153,28 @@ function ActivityCard({ post, currentUserId, currentUsername, isAdmin, onLike, o
                   <span className="tabular-nums">{users.length}</span>
                 </button>
               ))}
+              <button onClick={() => setShowRepostInput(s => !s)}
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs transition-colors ml-auto ${showRepostInput ? 'text-emerald-400' : 'text-zinc-600 hover:text-emerald-400 hover:bg-emerald-400/5'}`}>
+                <Repeat2 className="w-[13px] h-[13px]" />
+              </button>
             </div>
+            {showRepostInput && (
+              <div className="flex gap-2 mt-1">
+                <input
+                  type="text" placeholder="Add a comment… (optional)"
+                  value={repostComment}
+                  onChange={e => setRepostComment(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleSubmitRepost(); if (e.key === 'Escape') { setShowRepostInput(false); setRepostComment(''); } }}
+                  maxLength={500}
+                  className="flex-1 bg-white/[0.05] rounded-full px-3.5 py-1.5 text-white text-xs placeholder:text-zinc-600 focus:outline-none focus:bg-white/[0.08] transition-colors"
+                  autoFocus
+                />
+                <button onClick={handleSubmitRepost} disabled={submittingRepost}
+                  className="p-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white rounded-full transition-colors shrink-0">
+                  {submittingRepost ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Repeat2 className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -2467,6 +2561,7 @@ export function SocialTab() {
                       <ActivityCard post={post} currentUserId={currentUserId}
                         currentUsername={currentUsername} isAdmin={isAdmin}
                         onLike={handleLike} onDelete={handleDelete}
+                        onRepost={handlePostCreated}
                         onOpenProfile={setProfileUserId} />
                     </div>
                   ))

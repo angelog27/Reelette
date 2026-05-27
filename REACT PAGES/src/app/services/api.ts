@@ -106,7 +106,7 @@ const TTL = {
 
 // ── Admin ─────────────────────────────────────────────────────────
 // Used for badge display only — every actual action is re-verified server-side.
-export const ADMIN_UID = 'iiBMPhonpAR4RWTGCwlykGiDIH63';
+export const ADMIN_UID = 'IiBMPhonpAR4RWTGCwlykGiDIH63';
 
 export async function adminDeletePost(post_id: string): Promise<{ success: boolean }> {
   const token = await getIdToken();
@@ -124,6 +124,15 @@ export async function adminDeleteReply(post_id: string, reply_id: string): Promi
   const res = await fetch(`${BASE_URL}/admin/posts/${post_id}/replies/${reply_id}`, {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.ok ? res.json() : { success: false };
+}
+
+export async function repostPost(post_id: string, username: string, comment: string): Promise<{ success: boolean; post_id?: string }> {
+  const res = await authedFetch(`${BASE_URL}/feed/${post_id}/repost`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, comment }),
   });
   return res.ok ? res.json() : { success: false };
 }
@@ -185,6 +194,13 @@ export interface FeedPost {
   liked_by: string[];
   created_at: string;
   reply_count?: number;
+  is_repost?: boolean;
+  repost_of?: string;
+  original_user_id?: string;
+  original_username?: string;
+  original_message?: string;
+  original_rating?: number;
+  original_created_at?: string;
 }
 
 
