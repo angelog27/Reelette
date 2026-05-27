@@ -365,7 +365,7 @@ export function HomePage() {
     <div className="min-h-[100dvh] bg-[#0A0A0A] text-white flex flex-col">
 
       {/* ── Top nav bar ──────────────────────────────────────────── */}
-      <header className={`sticky top-0 z-50 flex items-center px-5 h-[62px] bg-[#0A0A0A]/95 backdrop-blur-sm transition-transform duration-300 ease-in-out ${navHidden ? '-translate-y-full' : 'translate-y-0'}`}>
+      <header className={`sticky top-0 z-50 flex items-center px-5 h-[62px] bg-black/30 backdrop-blur-xl border-b border-black/50 transition-transform duration-300 ease-in-out ${navHidden ? '-translate-y-full' : 'translate-y-0'}`}>
 
         {/* ── Left: avatar + wordmark ── */}
         <div className="flex items-center gap-3 shrink-0">

@@ -489,6 +489,17 @@ export async function fetchProviderCategory(
 }
 
 
+export function getMovieLogo(movie_id: string, type: 'movie' | 'show' = 'movie'): Promise<string | null> {
+  return fromCache(`logo:${type}:${movie_id}`, 24 * 60 * 60 * 1000, async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/movies/${movie_id}/logo?type=${type}`);
+      if (!res.ok) return null;
+      const data = await res.json();
+      return (data.logo as string | null) ?? null;
+    } catch { return null; }
+  });
+}
+
 export function getMovieDetails(movie_id: string): Promise<Record<string, unknown>> {
   return fromCache(`movie:${movie_id}`, TTL.MOVIE, async () => {
     try {

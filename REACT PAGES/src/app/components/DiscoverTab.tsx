@@ -4,7 +4,7 @@ import { MovieDetailModal } from './MovieDetailModal';
 import {
   watchMovieLater, removeFromWatchLater, getUser, getServices,
   getFeed, getFriends, getMovieDetails, getShowDetails, getWatchedMovies, getUserPublicProfile,
-  searchMovies, discoverMovies, discoverShows,
+  searchMovies, discoverMovies, discoverShows, getMovieLogo,
   type AIRecommendationRow,
 } from '../services/api';
 
@@ -478,8 +478,16 @@ function LandscapeCard({ movie, onClick }: { movie: Movie; onClick: () => void }
   const [timerDone, setTimerDone] = useState(false);
   const [showTrailer, setShowTrailer] = useState(false);
   const [barKey, setBarKey] = useState(0);
+  const [logoUrl, setLogoUrl] = useState<string | null | undefined>(undefined);
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const detailsFetchedRef = useRef(false);
+
+  useEffect(() => {
+    getMovieLogo(movie.id, movie.type ?? 'movie')
+      .then(url => setLogoUrl(url ?? null))
+      .catch(() => setLogoUrl(null));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [movie.id]);
 
   const handleMouseEnter = () => {
     setTimerDone(false);
@@ -556,12 +564,35 @@ function LandscapeCard({ movie, onClick }: { movie: Movie; onClick: () => void }
             position: 'absolute', inset: 0, pointerEvents: 'none',
             background: 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.35) 35%, transparent 65%)',
           }} />
-          <div style={{ position: 'absolute', bottom: 14, left: 14, right: 14, pointerEvents: 'none' }}>
-            <p className="line-clamp-2" style={{
-              color: '#fff', fontWeight: 700, fontSize: 15, lineHeight: 1.3, margin: '0 0 5px',
-            }}>
-              {movie.title}
-            </p>
+
+          {/* Logo — middle left */}
+          <div style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', maxWidth: '55%' }}>
+            {logoUrl
+              ? (
+                <img
+                  src={logoUrl}
+                  alt={movie.title}
+                  style={{
+                    maxWidth: 200,
+                    maxHeight: 72,
+                    objectFit: 'contain',
+                    objectPosition: 'left center',
+                    filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.95))',
+                    display: 'block',
+                  }}
+                />
+              )
+              : (
+                <p style={{ color: '#fff', fontWeight: 700, fontSize: 15, lineHeight: 1.3, margin: 0,
+                  display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' } as React.CSSProperties}>
+                  {movie.title}
+                </p>
+              )
+            }
+          </div>
+
+          {/* Bottom: year + rating + provider */}
+          <div style={{ position: 'absolute', bottom: 10, left: 14, right: 14, pointerEvents: 'none' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               {movie.year > 0 && <span style={{ color: '#9ca3af', fontSize: 12 }}>{movie.year}</span>}
               {movie.rating > 0 && (
@@ -689,6 +720,17 @@ function PersonalizedHero({ slots, backdropOverrides = {}, onOpenModal, onToggle
   const [current, setCurrent] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const total = slots.length;
+  const [logos, setLogos] = useState<Record<string, string | null>>({});
+
+  useEffect(() => {
+    slots.forEach(s => {
+      if (!(s.movie.id in logos)) {
+        getMovieLogo(s.movie.id, s.movie.type ?? 'movie')
+          .then(url => setLogos(prev => ({ ...prev, [s.movie.id]: url ?? null })));
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slots]);
 
   const startInterval = useCallback(() => {
     if (intervalRef.current) clearInterval(intervalRef.current);
@@ -746,10 +788,28 @@ function PersonalizedHero({ slots, backdropOverrides = {}, onOpenModal, onToggle
             </div>
           )}
 
-          <h1 className="text-white leading-none mb-3"
-            style={{ fontFamily: "SanFran, system-ui, sans-serif", fontWeight: 100, fontSize: 'clamp(2.2rem, 4.5vw, 4rem)' }}>
-            {slot.movie.title}
-          </h1>
+          {logos[slot.movie.id]
+            ? (
+              <img
+                src={logos[slot.movie.id]!}
+                alt={slot.movie.title}
+                className="mb-3"
+                style={{
+                  maxWidth: 340,
+                  maxHeight: 110,
+                  objectFit: 'contain',
+                  objectPosition: 'left center',
+                  filter: 'drop-shadow(0 2px 12px rgba(0,0,0,0.9))',
+                }}
+              />
+            )
+            : (
+              <h1 className="text-white leading-none mb-3"
+                style={{ fontFamily: "SanFran, system-ui, sans-serif", fontWeight: 100, fontSize: 'clamp(2.2rem, 4.5vw, 4rem)' }}>
+                {slot.movie.title}
+              </h1>
+            )
+          }
 
           <div className="flex items-center gap-3 mb-3 text-sm">
             {slot.movie.rating > 0 && (

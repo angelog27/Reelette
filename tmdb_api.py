@@ -327,6 +327,52 @@ def get_show_images(show_id):
         return []
 
 
+def get_movie_logo(movie_id):
+    """Return the best English logo URL for a movie, or None."""
+    cache_key = f"movie_logo_v1:{movie_id}"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
+    url = f"{TMDB_BASE_URL}/movie/{movie_id}/images"
+    params = {"api_key": TMDB_API_KEY, "include_image_language": "en,null"}
+    try:
+        r = requests.get(url, params=params, timeout=10)
+        r.raise_for_status()
+        data = r.json()
+        logos = data.get('logos', [])
+        eng = [l for l in logos if l.get('iso_639_1') == 'en']
+        best = max(eng or logos, key=lambda x: x.get('vote_average', 0), default=None)
+        result = f"https://image.tmdb.org/t/p/w500{best['file_path']}" if best else None
+        _cache_set(cache_key, result, 86400)
+        return result
+    except Exception as e:
+        print(f"[logo] movie {movie_id} error: {e}")
+        return None
+
+
+def get_show_logo(show_id):
+    """Return the best English logo URL for a TV show, or None."""
+    cache_key = f"show_logo_v1:{show_id}"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
+    url = f"{TMDB_BASE_URL}/tv/{show_id}/images"
+    params = {"api_key": TMDB_API_KEY, "include_image_language": "en,null"}
+    try:
+        r = requests.get(url, params=params, timeout=10)
+        r.raise_for_status()
+        data = r.json()
+        logos = data.get('logos', [])
+        eng = [l for l in logos if l.get('iso_639_1') == 'en']
+        best = max(eng or logos, key=lambda x: x.get('vote_average', 0), default=None)
+        result = f"https://image.tmdb.org/t/p/w500{best['file_path']}" if best else None
+        _cache_set(cache_key, result, 86400)
+        return result
+    except Exception as e:
+        print(f"[logo] show {show_id} error: {e}")
+        return None
+
+
 def get_upcoming_movies(page=1):
     cache_key = f"upcoming:{page}"
     cached = _cache_get(cache_key)
