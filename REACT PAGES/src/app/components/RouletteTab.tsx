@@ -15,7 +15,6 @@ import {
   getRouletteHistory,
   getRoulettePrefs,
   setRoulettePref,
-  timeAgo,
   getSmartSpinStatus,
   doSmartSpin,
   type Movie,
@@ -56,6 +55,28 @@ const TV_GENRES = [
   { label: "Western",            value: "37"    },
 ];
 
+const SERVICE_META: Record<string, { label: string; color: string }> = {
+  netflix:     { label: 'Netflix',     color: '#E50914' },
+  hboMax:      { label: 'Max',         color: '#5B4BDB' },
+  disneyPlus:  { label: 'Disney+',     color: '#113CCF' },
+  amazonPrime: { label: 'Prime Video', color: '#00A8E1' },
+  appleTV:     { label: 'Apple TV+',   color: '#555555' },
+  paramount:   { label: 'Paramount+',  color: '#0064FF' },
+  peacock:     { label: 'Peacock',     color: '#6B38FB' },
+  hulu:        { label: 'Hulu',        color: '#3DBB3D' },
+};
+
+const KEY_TO_DISPLAY: Record<string, string> = {
+  netflix:     'Netflix',
+  hboMax:      'Max',
+  disneyPlus:  'Disney+',
+  amazonPrime: 'Prime Video',
+  appleTV:     'Apple TV+',
+  paramount:   'Paramount+',
+  peacock:     'Peacock',
+  hulu:        'Hulu',
+};
+
 const GroqIcon = ({ size = 16 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
     <path d="M9.5 1L3 9h5l-1.5 6L14 7H9L9.5 1Z" fill="url(#groq-reel)" />
@@ -67,10 +88,6 @@ const GroqIcon = ({ size = 16 }: { size?: number }) => (
     </defs>
   </svg>
 );
-
-function dicebearUrl(seed: string) {
-  return `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(seed)}`;
-}
 
 async function buildPool(
   filters: Parameters<typeof discoverMovies>[0],
@@ -344,43 +361,71 @@ export function RouletteTab() {
             {/* Your services */}
             {hasServices && (
               <div>
-                <p
-                  className="text-[10px] font-bold tracking-[0.18em] uppercase mb-3"
-                  style={{ color: '#374151' }}
-                >
-                  Your services
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {Object.entries(userServices).filter(([, on]) => on).map(([service]) => {
-                    const logo = PROVIDER_LOGOS[service];
-                    if (!logo) return null;
-                    const isSelected = selectedProviders.includes(service);
+                <div className="flex items-center justify-between mb-3">
+                  <p
+                    className="text-[10px] font-bold tracking-[0.18em] uppercase"
+                    style={{ color: '#374151' }}
+                  >
+                    Your services
+                  </p>
+                  {selectedProviders.length > 0 && (
+                    <button
+                      onClick={() => setSelectedProviders([])}
+                      className="text-[10px] transition-colors hover:opacity-70"
+                      style={{ color: '#4b5563' }}
+                    >
+                      Clear filter
+                    </button>
+                  )}
+                </div>
+                <div className="grid grid-cols-4 gap-3">
+                  {Object.entries(userServices).filter(([, on]) => on).map(([key]) => {
+                    const displayName = KEY_TO_DISPLAY[key];
+                    const logo = PROVIDER_LOGOS[displayName];
+                    const meta = SERVICE_META[key];
+                    if (!logo || !meta) return null;
+                    const isFiltered = selectedProviders.includes(key);
+                    const isVisible  = selectedProviders.length === 0 || isFiltered;
                     return (
                       <button
-                        key={service}
-                        onClick={() => toggleProvider(service)}
-                        className="relative w-12 h-12 rounded-xl overflow-hidden transition-all duration-150 active:scale-95"
-                        style={{
-                          opacity: selectedProviders.length === 0 || isSelected ? 1 : 0.25,
-                          outline: isSelected ? '2px solid rgba(255,255,255,0.55)' : '1px solid rgba(255,255,255,0.08)',
-                          outlineOffset: isSelected ? '2px' : '0px',
-                        }}
-                        title={service}
+                        key={key}
+                        onClick={() => toggleProvider(key)}
+                        className="flex flex-col items-center gap-2 transition-all duration-200"
+                        style={{ opacity: isVisible ? 1 : 0.35 }}
                       >
-                        <img src={logo} alt={service} className="w-full h-full object-cover" />
+                        <div className="relative w-full">
+                          <img
+                            src={logo}
+                            alt={meta.label}
+                            className="w-full aspect-square rounded-2xl object-cover transition-all duration-200"
+                            style={{
+                              boxShadow: isFiltered
+                                ? `0 0 28px ${meta.color}70, 0 0 8px ${meta.color}40`
+                                : 'none',
+                              transform: isFiltered ? 'scale(1.04)' : 'scale(1)',
+                            }}
+                          />
+                          {isFiltered && (
+                            <div className="absolute inset-0 rounded-2xl ring-2 ring-white/20" />
+                          )}
+                        </div>
+                        <span
+                          className="text-[10px] font-semibold tracking-wide"
+                          style={{ color: isFiltered ? '#fff' : '#6b7280' }}
+                        >
+                          {meta.label}
+                        </span>
+                        <div style={{
+                          height: 2,
+                          width: isFiltered ? '60%' : 0,
+                          background: meta.color,
+                          borderRadius: 1,
+                          transition: 'width 0.25s',
+                        }} />
                       </button>
                     );
                   })}
                 </div>
-                {selectedProviders.length > 0 && (
-                  <button
-                    onClick={() => setSelectedProviders([])}
-                    className="text-[11px] mt-2 transition-colors hover:opacity-70"
-                    style={{ color: '#4b5563' }}
-                  >
-                    Clear provider filter
-                  </button>
-                )}
               </div>
             )}
 
@@ -797,7 +842,7 @@ export function RouletteTab() {
               )}
             </div>
 
-            {/* Friends' Spins */}
+            {/* Friends' Spins — horizontal scroll poster grid */}
             {friendSpins.length > 0 && (
               <div>
                 <p
@@ -806,8 +851,8 @@ export function RouletteTab() {
                 >
                   Friends' Spins
                 </p>
-                <div className="flex flex-col gap-3">
-                  {friendSpins.slice(0, 6).map(entry => {
+                <div className="flex gap-2 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
+                  {friendSpins.slice(0, 10).map(entry => {
                     const s = entry.spins[0];
                     return (
                       <button
@@ -816,34 +861,41 @@ export function RouletteTab() {
                           setSelectedMovieId(s.movie_id);
                           setSelectedMovieType('movie');
                         }}
-                        className="group flex items-center gap-3 text-left hover:opacity-75 transition-opacity"
+                        className="group relative flex-shrink-0 rounded-xl overflow-hidden transition-all duration-200 hover:scale-[1.04]"
+                        style={{
+                          width: 100,
+                          aspectRatio: '2/3',
+                          background: '#111',
+                          border: '1px solid rgba(255,255,255,0.06)',
+                        }}
                       >
-                        <div
-                          className="relative w-11 h-16 rounded-lg overflow-hidden shrink-0"
-                          style={{ background: '#111', border: '1px solid rgba(255,255,255,0.07)' }}
-                        >
-                          {s.poster_url ? (
-                            <img src={s.poster_url} alt={s.movie_title} className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full" style={{ background: '#1a1a1a' }} />
-                          )}
+                        {s.poster_url ? (
                           <img
-                            src={entry.avatarUrl || dicebearUrl(entry.friend_username)}
-                            alt={entry.friend_username}
-                            className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full object-cover ring-1 ring-black"
-                            style={{ background: '#1a1a1a' }}
-                            onError={e => { (e.target as HTMLImageElement).src = dicebearUrl(entry.friend_username); }}
+                            src={s.poster_url}
+                            alt={s.movie_title}
+                            className="w-full h-full object-cover group-hover:brightness-90 transition-all duration-200"
                           />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-white text-xs font-semibold line-clamp-1 leading-snug">
-                            {s.movie_title}
-                          </p>
-                          <p className="text-[10px] mt-0.5" style={{ color: '#4b5563' }}>
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center" style={{ background: '#1a1a1a' }}>
+                            <Film className="w-5 h-5 text-gray-700" />
+                          </div>
+                        )}
+                        {/* Username at top */}
+                        <div
+                          className="absolute inset-x-0 top-0 p-1.5"
+                          style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.80) 0%, transparent 100%)' }}
+                        >
+                          <p className="text-white text-[9px] font-bold line-clamp-1 leading-tight">
                             @{entry.friend_username}
                           </p>
-                          <p className="text-[10px]" style={{ color: '#374151' }}>
-                            {timeAgo(s.spun_at)}
+                        </div>
+                        {/* Title at bottom */}
+                        <div
+                          className="absolute inset-x-0 bottom-0 p-1.5"
+                          style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, transparent 100%)' }}
+                        >
+                          <p className="text-white text-[9px] line-clamp-2 leading-tight">
+                            {s.movie_title}
                           </p>
                         </div>
                       </button>
@@ -852,8 +904,6 @@ export function RouletteTab() {
                 </div>
               </div>
             )}
-
-            {/* Mobile recent spins — shown below controls on small screens */}
           </div>
         </div>
 
