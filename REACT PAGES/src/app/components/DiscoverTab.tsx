@@ -1378,26 +1378,28 @@ export function DiscoverTab() {
           </>
         ) : (
           <>
+            {user && (
+              <LandscapeRow title="Based on Your Providers" movies={providerBasedMovies} onMovieClick={openModal} />
+            )}
+            {user && recentSpins !== null && recentSpins.length > 0 && (
+              <MovieRow title="Your Recent Spins"     movies={recentSpins}    onMovieClick={openModal} />
+            )}
+            
             {user && top10.length > 0 && (
               <MovieRow title="Your Top 10"           movies={top10}          onMovieClick={openModal} />
             )}
             {user && (
               <LandscapeRow title="Recommended for You" movies={recommended} onMovieClick={openModal} />
             )}
-            {user && recentSpins !== null && recentSpins.length > 0 && (
-              <MovieRow title="Your Recent Spins"     movies={recentSpins}    onMovieClick={openModal} />
-            )}
-            {user && (
-              <LandscapeRow title="Based on Your Providers" movies={providerBasedMovies} onMovieClick={openModal} />
-            )}
-            <MovieRow title="Trending Now"            movies={trendingMovies} onMovieClick={openModal} />
+            
             <MovieRow title="New Releases"            movies={newReleases}    onMovieClick={openModal} />
-            <MovieRow title="Top Rated"               movies={topRated}       onMovieClick={openModal} />
+            <MovieRow title="Trending Now"            movies={trendingMovies} onMovieClick={openModal} />
             <MovieRow title="Classics"                movies={classics}       onMovieClick={openModal} />
-            <MovieRow title="Action & Adventure"      movies={actionMovies}   onMovieClick={openModal} />
             <MovieRow title="Comedy"                  movies={comedyMovies}   onMovieClick={openModal} />
-            <MovieRow title="Horror"                  movies={horrorMovies}   onMovieClick={openModal} />
             <MovieRow title="Sci-Fi"                  movies={scifiMovies}    onMovieClick={openModal} />
+            <MovieRow title="Top Rated"               movies={topRated}       onMovieClick={openModal} />
+            <MovieRow title="Horror"                  movies={horrorMovies}   onMovieClick={openModal} />
+            <MovieRow title="Action & Adventure"      movies={actionMovies}   onMovieClick={openModal} />
             <MovieRow title="Critically Acclaimed"    movies={acclaimed}      onMovieClick={openModal} />
             <MovieRow title="Coming Soon"             movies={comingSoon}     onMovieClick={openModal} />
 

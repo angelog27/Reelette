@@ -366,7 +366,7 @@ export function RouletteTab() {
                     className="text-[10px] font-bold tracking-[0.18em] uppercase"
                     style={{ color: '#374151' }}
                   >
-                    Your services
+                    Your services - Toggle services on or off for certain results
                   </p>
                   {selectedProviders.length > 0 && (
                     <button
@@ -514,6 +514,28 @@ export function RouletteTab() {
               )}
             </div>
 
+
+            {/* Spin button */}
+            {!awaitingVote && (
+              <button
+                onClick={spin}
+                disabled={spinning}
+                className="flex items-center justify-center gap-3 py-4 rounded-2xl text-white font-bold text-lg transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
+                style={{
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  fontFamily: "SanFran, system-ui, sans-serif",
+                  letterSpacing: '-0.01em',
+                }}
+              >
+                <Shuffle className={`w-5 h-5 ${spinning ? 'animate-spin' : ''}`} />
+                {spinning ? "Finding something for you…" : "Spin the Reel"}
+              </button>
+            )}
+
+
+
+
             {/* Smart Watch */}
             {user && (
               <div
@@ -625,23 +647,6 @@ export function RouletteTab() {
               </div>
             )}
 
-            {/* Spin button */}
-            {!awaitingVote && (
-              <button
-                onClick={spin}
-                disabled={spinning}
-                className="flex items-center justify-center gap-3 py-4 rounded-2xl text-white font-bold text-lg transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
-                style={{
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  fontFamily: "SanFran, system-ui, sans-serif",
-                  letterSpacing: '-0.01em',
-                }}
-              >
-                <Shuffle className={`w-5 h-5 ${spinning ? 'animate-spin' : ''}`} />
-                {spinning ? "Finding something for you…" : "Spin the Reel"}
-              </button>
-            )}
 
             {error && <p className="text-yellow-500 text-sm">{error}</p>}
 

@@ -30,7 +30,7 @@ export function SpinModePicker() {
             fontSize: '1.1rem',
           }}
         >
-          Let fate decide.
+          No more scrolling. Let us decide.
         </p>
       </div>
 
@@ -70,19 +70,8 @@ export function SpinModePicker() {
                 maxWidth: 180,
               }}
             >
-              Set your filters and spin for something precise.
+              Set your filters, toggle your providers on/off and spin for something precise.
             </p>
-            <span
-              className="inline-block px-3 py-1 rounded-full text-xs font-semibold"
-              style={{
-                background: 'color-mix(in srgb, var(--reel-accent-hex) 15%, transparent)',
-                color: 'var(--reel-accent-hex)',
-                border: '1px solid color-mix(in srgb, var(--reel-accent-hex) 30%, transparent)',
-                fontFamily: 'DM Sans, system-ui, sans-serif',
-              }}
-            >
-              Precise
-            </span>
           </div>
         </button>
 
@@ -105,12 +94,20 @@ export function SpinModePicker() {
           </div>
 
           <div className="text-center">
-            <h2
-              className="text-white mb-1 md:mb-2"
-              style={{ fontFamily: 'Syne, system-ui, sans-serif', fontWeight: 700, fontSize: 'clamp(1.1rem, 2.5vw, 1.5rem)' }}
-            >
-              SpeedSwipe
-            </h2>
+            <div className="flex items-center justify-center gap-2 mb-1 md:mb-2">
+              <h2
+                className="text-white"
+                style={{ fontFamily: 'Syne, system-ui, sans-serif', fontWeight: 700, fontSize: 'clamp(1.1rem, 2.5vw, 1.5rem)' }}
+              >
+                Speed Swipe
+              </h2>
+              <span
+                className="text-[10px] font-bold px-1.5 py-0.5 rounded-md tracking-wider"
+                style={{ background: 'rgba(74,222,128,0.12)', color: '#4ade80', border: '1px solid rgba(74,222,128,0.25)' }}
+              >
+                BETA
+              </span>
+            </div>
             <p
               className="text-gray-500 leading-relaxed mb-3 md:mb-4 hidden sm:block"
               style={{
@@ -120,19 +117,8 @@ export function SpinModePicker() {
                 maxWidth: 180,
               }}
             >
-              Swipe fast and rediscover movies, no thinking required.
+              Swipe fast and rediscover movies, no thinking required. Swipe left to pass, swipe right to rewatch.
             </p>
-            <span
-              className="inline-block px-3 py-1 rounded-full text-xs font-semibold"
-              style={{
-                background: 'rgba(74,222,128,0.1)',
-                color: '#4ade80',
-                border: '1px solid rgba(74,222,128,0.25)',
-                fontFamily: 'DM Sans, system-ui, sans-serif',
-              }}
-            >
-              Fast
-            </span>
           </div>
         </button>
       </div>
