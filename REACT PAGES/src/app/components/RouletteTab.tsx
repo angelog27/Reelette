@@ -450,7 +450,7 @@ export function RouletteTab() {
 
               {filtersOpen && (
                 <div
-                  className="absolute left-0 top-full mt-2 w-80 rounded-2xl p-5 space-y-5 z-50"
+                  className="absolute left-0 top-full mt-2 w-[min(320px,calc(100vw-2rem))] rounded-2xl p-5 space-y-5 z-50"
                   style={{ background: '#0d0d0d', border: '1px solid rgba(255,255,255,0.08)' }}
                 >
                   <div className="space-y-1.5">
@@ -750,24 +750,7 @@ export function RouletteTab() {
               </div>
             )}
 
-            {/* SpeedSwipe Beta */}
-            <div className="flex items-center gap-3 pt-2">
-              <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.05)' }} />
-              <button
-                className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-full text-gray-600 hover:text-gray-400 transition-colors"
-                style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}
-              >
-                <Zap className="w-3 h-3" />
-                SpeedSwipe
-                <span
-                  className="text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wide text-yellow-600"
-                  style={{ background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.15)' }}
-                >
-                  Beta
-                </span>
-              </button>
-              <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.05)' }} />
-            </div>
+      
 
           </div>
 
@@ -915,13 +898,25 @@ export function RouletteTab() {
           >
             Recent Spins
           </p>
+          {!spinsLoaded && (
+            <div className="grid grid-cols-4 gap-2">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="rounded-xl animate-pulse" style={{ aspectRatio: '2/3', background: '#111' }} />
+              ))}
+            </div>
+          )}
+          {spinsLoaded && recentSpins.length === 0 && (
+            <p className="text-xs" style={{ color: '#374151' }}>
+              {user ? "Your spin history will appear here." : "Log in to track spins."}
+            </p>
+          )}
           {spinsLoaded && recentSpins.length > 0 && (
             <div className="grid grid-cols-4 gap-2">
               {recentSpins.slice(0, 8).map((s, i) => (
                 <button
                   key={i}
                   onClick={() => { setSelectedMovieId(s.movie_id); setSelectedMovieType('movie'); }}
-                  className="group relative rounded-xl overflow-hidden transition-all duration-200 hover:scale-[1.04]"
+                  className="group relative rounded-xl overflow-hidden transition-all duration-200 active:scale-[0.96]"
                   style={{ aspectRatio: '2/3', background: '#111', border: '1px solid rgba(255,255,255,0.06)' }}
                 >
                   {s.poster_url ? (
@@ -944,6 +939,55 @@ export function RouletteTab() {
             </div>
           )}
         </div>
+
+        {/* Mobile friends' spins */}
+        {friendSpins.length > 0 && (
+          <div className="lg:hidden mt-8">
+            <p
+              className="text-[10px] font-bold tracking-[0.18em] uppercase mb-4"
+              style={{ color: '#374151' }}
+            >
+              Friends' Spins
+            </p>
+            <div className="flex gap-2 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
+              {friendSpins.slice(0, 10).map(entry => {
+                const s = entry.spins[0];
+                return (
+                  <button
+                    key={entry.friend_id}
+                    onClick={() => { setSelectedMovieId(s.movie_id); setSelectedMovieType('movie'); }}
+                    className="group relative flex-shrink-0 rounded-xl overflow-hidden transition-all duration-200 active:scale-[0.96]"
+                    style={{ width: 90, aspectRatio: '2/3', background: '#111', border: '1px solid rgba(255,255,255,0.06)' }}
+                  >
+                    {s.poster_url ? (
+                      <img src={s.poster_url} alt={s.movie_title} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center" style={{ background: '#1a1a1a' }}>
+                        <Film className="w-4 h-4 text-gray-700" />
+                      </div>
+                    )}
+                    <div
+                      className="absolute inset-x-0 top-0 p-1.5"
+                      style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.80) 0%, transparent 100%)' }}
+                    >
+                      <p className="text-white text-[8px] font-bold line-clamp-1 leading-tight">
+                        @{entry.friend_username}
+                      </p>
+                    </div>
+                    <div
+                      className="absolute inset-x-0 bottom-0 p-1.5"
+                      style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, transparent 100%)' }}
+                    >
+                      <p className="text-white text-[8px] line-clamp-2 leading-tight">
+                        {s.movie_title}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
       </div>
 

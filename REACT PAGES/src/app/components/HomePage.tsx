@@ -727,21 +727,15 @@ export function HomePage() {
           {tabs.map(tab => (
             <NavLink key={tab.id} to={tab.path} className="flex-1">
               {({ isActive }) => (
-                <div className="flex flex-col items-center justify-center gap-0.5 py-2 min-h-[52px]">
+                <div className="flex flex-col items-center justify-center py-3 min-h-[52px]">
                   {tab.icon && (
                     <tab.icon
-                      className={`w-[22px] h-[22px] transition-colors duration-150 ${isActive ? '' : 'text-zinc-500'}`}
+                      className={`w-6 h-6 transition-colors duration-150 ${isActive ? '' : 'text-zinc-500'}`}
                       style={isActive ? { color: 'var(--reel-accent-hex)' } : {}}
                     />
                   )}
-                  <span
-                    className={`text-[10px] transition-colors duration-150 ${isActive ? '' : 'text-zinc-500'}`}
-                    style={{ fontFamily: 'SanFran, system-ui, sans-serif', fontWeight: 400, ...(isActive ? { color: 'var(--reel-accent-hex)' } : {}) }}
-                  >
-                    {tab.label}
-                  </span>
                   {isActive && (
-                    <span className="w-1 h-1 rounded-full" style={{ background: 'var(--reel-accent-hex)' }} />
+                    <span className="w-1 h-1 rounded-full mt-1" style={{ background: 'var(--reel-accent-hex)' }} />
                   )}
                 </div>
               )}

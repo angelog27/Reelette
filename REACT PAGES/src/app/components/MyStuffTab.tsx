@@ -203,37 +203,37 @@ export function MyStuffTab() {
         <div className="flex gap-1 bg-[#111] border border-[#1e1e1e] rounded-full p-1 w-fit">
           <button
             onClick={() => handleTabChange('watched')}
-            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+            className={`flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
               activeTab === 'watched' ? 'bg-[#7C5DBD] text-white' : 'text-gray-400 hover:text-white'
             }`}
           >
-            <Star className="w-3.5 h-3.5" /> Watched
+            <Star className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Watched</span>
           </button>
           <button
             onClick={() => handleTabChange('watchlater')}
-            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+            className={`flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
               activeTab === 'watchlater' ? 'bg-[#7C5DBD] text-white' : 'text-gray-400 hover:text-white'
             }`}
           >
-            <Bookmark className="w-3.5 h-3.5" /> Watch Later
+            <Bookmark className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Watch Later</span>
           </button>
           <button
             onClick={() => handleTabChange('stats')}
-            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+            className={`flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
               activeTab === 'stats' ? 'text-white' : 'text-gray-400 hover:text-white'
             }`}
             style={activeTab === 'stats' ? { backgroundColor: '#f97316' } : {}}
           >
-            <BarChart2 className="w-3.5 h-3.5" /> Stats
+            <BarChart2 className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Stats</span>
           </button>
           <button
             onClick={() => handleTabChange('rankings')}
-            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+            className={`flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
               activeTab === 'rankings' ? 'text-white' : 'text-gray-400 hover:text-white'
             }`}
             style={activeTab === 'rankings' ? { background: 'var(--reel-accent-hex)' } : {}}
           >
-            <Trophy className="w-3.5 h-3.5" /> Rankings
+            <Trophy className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Rankings</span>
           </button>
         </div>
 

@@ -23,7 +23,7 @@ const GroqIcon = ({ size = 16 }: { size?: number }) => (
 import { getServiceCategoryMovies } from '../services/discoveryService';
 import type { Movie, WatchedMovie } from '../services/api';
 import { PROVIDER_LOGOS } from '../constants/providers';
-import { useDiscover, type ProviderRows } from '../contexts/DiscoverContext';
+import { useDiscover } from '../contexts/DiscoverContext';
 
 // ── Constants ─────────────────────────────────────────────────────
 
@@ -698,7 +698,7 @@ const SLOT_META: Record<PersonalizedSlot['kind'], { label: string; color: string
 
 function PersonalizedHeroSkeleton() {
   return (
-    <div className="full-bleed relative animate-pulse bg-[#141414]" style={{ height: 'calc(clamp(300px, 80vw, 520px) + 62px)', marginTop: -62 }}>
+    <div className="full-bleed relative animate-pulse bg-[#141414]" style={{ height: 'clamp(300px, 80vw, 520px)', marginTop: -62 }}>
       <div className="absolute left-5 sm:left-10 md:left-16 bottom-8 sm:bottom-14 flex flex-col gap-3">
         <div className="h-3 w-40 rounded bg-[#222]" />
         <div className="h-14 w-80 rounded bg-[#222]" />
@@ -749,7 +749,7 @@ function PersonalizedHero({ slots, backdropOverrides = {}, onOpenModal, onToggle
   const isInWatchlist = watchlistIds.includes(slot.movie.id);
 
   return (
-    <div className="full-bleed relative overflow-hidden group/hero" style={{ height: 'calc(clamp(300px, 80vw, 520px) + 62px)', marginTop: -62 }}>
+    <div className="full-bleed relative overflow-hidden group/hero" style={{ height: 'clamp(300px, 80vw, 520px)', marginTop: -62 }}>
       {/* Backdrop layers */}
       {slots.map((s, i) => {
         const bg = backdropOverrides[s.movie.id] || s.movie.backdrop || '';
@@ -770,7 +770,7 @@ function PersonalizedHero({ slots, backdropOverrides = {}, onOpenModal, onToggle
       <div className="absolute inset-0" style={{ zIndex: 2, background: 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, transparent 18%)' }} />
 
       {/* Content row */}
-      <div className="absolute inset-x-0 bottom-0 flex items-end justify-between px-5 sm:px-10 md:px-16 pb-6 sm:pb-12 gap-10" style={{ zIndex: 3 }}>
+      <div className="absolute inset-x-0 bottom-0 flex items-end justify-between px-4 sm:px-10 md:px-16 pb-8 sm:pb-12 gap-6 md:gap-10" style={{ zIndex: 3 }}>
 
         {/* ── Left: movie info ── */}
         <div className="flex flex-col min-w-0 max-w-[90vw] sm:max-w-[520px]">
@@ -1265,7 +1265,7 @@ export function DiscoverTab() {
       )}
 
       {/* ── Movies / Shows pill toggle ── */}
-      <div className="flex justify-center mt-10 mb-2">
+      <div className="flex justify-center mt-8 mb-2">
         <div
           className="flex items-center p-1 rounded-full"
           style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}

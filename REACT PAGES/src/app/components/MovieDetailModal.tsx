@@ -346,7 +346,7 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
         <div className="flex-1" />
 
         {/* ── Info block ───────────────────────────────────────── */}
-        <div className="px-5 md:px-16 pb-6 md:pb-8 max-w-2xl pb-safe">
+        <div className="px-5 md:px-16 pb-6 md:pb-8 max-w-2xl" style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom, 0px) + 1.5rem)' }}>
 
           {/* Genre badge */}
           <span className="inline-block bg-[#7C5DBD] text-white text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded mb-4">
@@ -637,7 +637,7 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
 
         {/* ── Similar movies strip — pinned to very bottom ─────── */}
         {similar.length > 0 && (
-          <div className="border-t border-white/10 bg-black/50 backdrop-blur-sm px-10 md:px-16 py-4">
+          <div className="border-t border-white/10 bg-black/50 backdrop-blur-sm px-4 sm:px-10 md:px-16 py-4">
             <p className="text-gray-400 text-xs font-semibold uppercase tracking-widest mb-3">
               {isShow ? 'Similar Shows' : 'Related Movies'}
             </p>

@@ -2448,7 +2448,7 @@ export function SocialTab() {
   return (
     <div
       className="text-white -mx-6 -mt-8 pt-6 flex overflow-hidden"
-      style={{ height: 'calc(100vh - 52px)' }}
+      style={{ height: 'calc(100dvh - 62px)' }}
     >
       <style>{`
         @keyframes feedCardIn {
