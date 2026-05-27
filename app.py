@@ -53,6 +53,7 @@ from firebase_helper import (
     send_welcome_email, send_tagged_in_post_email,
     send_post_reply_email, send_like_milestone_email,
     send_friend_request_email, send_group_added_email,
+    send_notification, get_username,
 )
 from tmdb_api import (
     search_movies, discover_movies, get_popular_movies, get_movie_details,
@@ -960,6 +961,20 @@ def add_user_watched(user_id):
     result = add_watched_movie(user_id, movie, user_rating, comment)
     if result.get('success'):
         _cache.pop(f'watched:{user_id}', None)
+        def _notify_friends(_uid=user_id, _movie=movie, _rating=user_rating):
+            actor_username = get_username(_uid)
+            if not actor_username:
+                return
+            friends = get_friends(_uid)
+            for f in friends:
+                fid = f.get('friend_id', '')
+                if fid:
+                    send_notification(fid, 'friend_watched', _uid, actor_username, {
+                        'movie_title': _movie.get('title', ''),
+                        'movie_id':    str(_movie.get('movie_id', '')),
+                        'user_rating': _rating,
+                    })
+        threading.Thread(target=_notify_friends, daemon=True).start()
     return jsonify(result)
 
 @app.route('/api/watched/<user_id>/<movie_id>', methods=['PUT'])
@@ -1052,11 +1067,17 @@ def like_feed_post(post_id):
     user_id = g.verified_uid
     result = like_post(post_id, user_id)
     if result.get('action') == 'liked':
-        def _check_milestone(_pid=post_id):
+        def _on_liked(_pid=post_id, _liker_id=user_id):
             post = get_post(_pid)
-            if post:
-                send_like_milestone_email(post['user_id'], post.get('likes', 0), _pid, post.get('movie_title', ''))
-        threading.Thread(target=_check_milestone, daemon=True).start()
+            if not post:
+                return
+            owner_id = post.get('user_id', '')
+            if owner_id and owner_id != _liker_id:
+                actor_username = get_username(_liker_id)
+                send_notification(owner_id, 'post_like', _liker_id, actor_username,
+                                  {'post_id': _pid, 'movie_title': post.get('movie_title', '')})
+            send_like_milestone_email(owner_id, post.get('likes', 0), _pid, post.get('movie_title', ''))
+        threading.Thread(target=_on_liked, daemon=True).start()
     return jsonify(result)
 
 @app.route('/api/feed/<post_id>/replies', methods=['GET'])
@@ -1080,7 +1101,11 @@ def reply_to_post(post_id):
         def _notify_poster(_pid=post_id, _uname=username, _msg=message, _sender=user_id):
             post = get_post(_pid)
             if post and post.get('user_id') != _sender:
-                send_post_reply_email(post['user_id'], _uname, _pid, post.get('movie_title', ''), _msg)
+                owner_id = post['user_id']
+                send_notification(owner_id, 'post_reply', _sender, _uname,
+                                  {'post_id': _pid, 'movie_title': post.get('movie_title', ''),
+                                   'reply_preview': _msg[:120]})
+                send_post_reply_email(owner_id, _uname, _pid, post.get('movie_title', ''), _msg)
         threading.Thread(target=_notify_poster, daemon=True).start()
     return jsonify(result)
 

@@ -797,11 +797,11 @@ function PersonalizedHero({ slots, backdropOverrides = {}, onOpenModal, onToggle
                 alt={slot.movie.title}
                 className="mb-3"
                 style={{
-                  maxWidth: 340,
-                  maxHeight: 110,
+                  maxWidth: 'clamp(280px, 40vw, 600px)',
+                  maxHeight: 200,
                   objectFit: 'contain',
                   objectPosition: 'left center',
-                  filter: 'drop-shadow(0 2px 12px rgba(0,0,0,0.9))',
+                  filter: 'drop-shadow(0 2px 16px rgba(0,0,0,0.95))',
                 }}
               />
             )

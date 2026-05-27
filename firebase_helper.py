@@ -1643,6 +1643,18 @@ def _send_notification(user_id, notif_type, actor_id, actor_username, data: dict
         'created_at':      datetime.now(),
     })
 
+# Public alias — imported by app.py for route-level notification dispatch.
+send_notification = _send_notification
+
+
+def get_username(user_id: str) -> str:
+    """Fetch the username for a given user_id. Returns '' on any error."""
+    try:
+        doc = db.collection('users').document(user_id).get()
+        return doc.to_dict().get('username', '') if doc.exists else ''
+    except Exception:
+        return ''
+
 
 def send_group_message(group_id, sender_id, sender_username, text):
     try:
