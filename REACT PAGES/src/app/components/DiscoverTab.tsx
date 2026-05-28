@@ -416,7 +416,7 @@ function MovieRow({ title, movies, onMovieClick }: {
     scrollRef.current?.scrollBy({ left: dir === 'left' ? -(CARD_W * 4) : (CARD_W * 4), behavior: 'smooth' });
 
   return (
-    <div className="mb-8">
+    <div className="mb-8 reel-enter">
       <h2 className="text-[15px] font-bold text-white mb-3"
         style={{ color: '#e8e8e8', letterSpacing: '-0.01em' }}>
         {title}
@@ -460,7 +460,7 @@ const LAND_H = 236; // 16:9
 
 function SkeletonLandscapeRow({ title }: { title: string }) {
   return (
-    <div className="mb-10">
+    <div className="mb-10 reel-enter">
       <h2 className="text-[15px] font-bold mb-3" style={{ color: '#e8e8e8', letterSpacing: '-0.01em' }}>{title}</h2>
       <div className="flex gap-3">
         {Array.from({ length: 4 }).map((_, i) => (
@@ -530,7 +530,7 @@ function LandscapeCard({ movie, onClick }: { movie: Movie; onClick: () => void }
 
   return (
     <div
-      className="flex-shrink-0 relative rounded-xl overflow-hidden cursor-pointer"
+      className="flex-shrink-0 relative rounded-xl overflow-hidden cursor-pointer interactive-card"
       style={{ width: LAND_W, height: LAND_H, maxWidth: 'calc(100vw - 24px)', aspectRatio: `${LAND_W} / ${LAND_H}` }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
@@ -643,7 +643,7 @@ function LandscapeRow({ title, movies, onMovieClick }: {
     scrollRef.current?.scrollBy({ left: dir === 'left' ? -(LAND_W * 2) : LAND_W * 2, behavior: 'smooth' });
 
   return (
-    <div className="mb-10">
+    <div className="mb-10 reel-enter">
       <h2 className="text-[15px] font-bold mb-3" style={{ color: '#e8e8e8', letterSpacing: '-0.01em' }}>{title}</h2>
       <div className="relative group">
         <button
@@ -698,7 +698,7 @@ const SLOT_META: Record<PersonalizedSlot['kind'], { label: string; color: string
 
 function PersonalizedHeroSkeleton() {
   return (
-    <div className="full-bleed relative animate-pulse bg-[#141414]" style={{ height: 'clamp(300px, 80vw, 520px)', marginTop: -62 }}>
+    <div className="full-bleed relative animate-pulse bg-[#141414]" style={{ height: 'clamp(300px, 80vw, 680px)', marginTop: -62 }}>
       <div className="absolute left-5 sm:left-10 md:left-16 bottom-8 sm:bottom-14 flex flex-col gap-3">
         <div className="h-3 w-40 rounded bg-[#222]" />
         <div className="h-14 w-80 rounded bg-[#222]" />
@@ -749,7 +749,7 @@ function PersonalizedHero({ slots, backdropOverrides = {}, onOpenModal, onToggle
   const isInWatchlist = watchlistIds.includes(slot.movie.id);
 
   return (
-    <div className="full-bleed relative overflow-hidden group/hero" style={{ height: 'clamp(300px, 80vw, 520px)', marginTop: -62 }}>
+    <div className="full-bleed relative overflow-hidden group/hero" style={{ height: 'clamp(300px, 80vw, 680px)', marginTop: -62 }}>
       {/* Backdrop layers */}
       {slots.map((s, i) => {
         const bg = backdropOverrides[s.movie.id] || s.movie.backdrop || '';
@@ -766,8 +766,15 @@ function PersonalizedHero({ slots, backdropOverrides = {}, onOpenModal, onToggle
 
       {/* Gradient overlays */}
       <div className="absolute inset-0" style={{ zIndex: 2, background: 'linear-gradient(to right, rgba(0,0,0,0.94) 0%, rgba(0,0,0,0.70) 38%, rgba(0,0,0,0.25) 62%, rgba(0,0,0,0.05) 100%)' }} />
-      <div className="absolute inset-0" style={{ zIndex: 2, background: 'linear-gradient(to top, rgba(9,9,9,1) 0%, rgba(9,9,9,0.55) 22%, transparent 55%)' }} />
+      <div className="absolute inset-0" style={{ zIndex: 2, background: 'linear-gradient(to top, rgba(9,9,9,1) 0%, rgba(9,9,9,0.75) 18%, rgba(9,9,9,0.15) 42%, transparent 62%)' }} />
       <div className="absolute inset-0" style={{ zIndex: 2, background: 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, transparent 18%)' }} />
+      {/* Theme-accent tint — subtle colour bleed at the hero bottom tied to active theme */}
+      <div className="absolute inset-x-0 bottom-0 pointer-events-none" style={{
+        zIndex: 2, height: '32%',
+        background: 'var(--reel-accent-hex)', opacity: 0.11,
+        maskImage: 'linear-gradient(to top, black 0%, transparent 100%)',
+        WebkitMaskImage: 'linear-gradient(to top, black 0%, transparent 100%)',
+      }} />
 
       {/* Content row */}
       <div className="absolute inset-x-0 bottom-0 flex items-end justify-between px-4 sm:px-10 md:px-16 pb-8 sm:pb-12 gap-6 md:gap-10" style={{ zIndex: 3 }}>
@@ -833,12 +840,12 @@ function PersonalizedHero({ slots, backdropOverrides = {}, onOpenModal, onToggle
 
           <div className="flex flex-wrap gap-3">
             <button onClick={() => onOpenModal(slot.movie.id, slot.movie.type ?? 'movie', slot.movie.title)}
-              className="flex items-center gap-2 px-6 py-2.5 bg-white/90 text-zinc-900 font-semibold rounded-lg text-sm hover:bg-white transition-colors duration-150">
+              className="flex items-center gap-2 px-6 py-2.5 bg-white/90 text-zinc-900 font-semibold rounded-lg text-sm hover:bg-white active:scale-[0.97] transition duration-150">
               <Info className="w-4 h-4" /> More Info
             </button>
             {hasUser && (
               <button onClick={() => onToggleWatchlist(slot.movie)}
-                className="flex items-center gap-2 px-5 py-2.5 font-semibold rounded-lg text-sm transition-colors duration-150"
+                className="flex items-center gap-2 px-5 py-2.5 font-semibold rounded-lg text-sm active:scale-[0.97] transition duration-150"
                 style={isInWatchlist ? { background: 'var(--reel-accent-hex)', color: '#fff' } : { background: 'rgba(109,109,110,0.7)', color: '#fff' }}>
                 {isInWatchlist ? <><BookmarkCheck className="w-4 h-4" /> In Watchlist</> : <><Bookmark className="w-4 h-4" /> Watchlist</>}
               </button>
@@ -1264,15 +1271,16 @@ export function DiscoverTab() {
         />
       )}
 
-      {/* ── Movies / Shows pill toggle ── */}
-      <div className="flex justify-center mt-8 mb-2">
+      {/* ── Movies / Shows pill toggle + Provider bar — pulled up on desktop to sit above providers ── */}
+      <div className="relative z-[5] mt-8 md:-mt-14">
+      <div className="flex justify-center mb-2">
         <div
           className="flex items-center p-1 rounded-full"
           style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
         >
           <button
             onClick={() => setMediaType('movie')}
-            className="px-6 py-1.5 rounded-full text-sm font-semibold transition-all duration-200"
+            className="px-6 py-1.5 rounded-full text-sm font-semibold active:scale-[0.97] transition duration-200"
             style={mediaType === 'movie'
               ? { background: 'color-mix(in srgb, var(--reel-accent-hex) 85%, transparent)', color: '#fff' }
               : { color: '#6b7280' }}
@@ -1281,7 +1289,7 @@ export function DiscoverTab() {
           </button>
           <button
             onClick={() => setMediaType('show')}
-            className="px-6 py-1.5 rounded-full text-sm font-semibold transition-all duration-200"
+            className="px-6 py-1.5 rounded-full text-sm font-semibold active:scale-[0.97] transition duration-200"
             style={mediaType === 'show'
               ? { background: 'color-mix(in srgb, var(--reel-accent-hex) 85%, transparent)', color: '#fff' }
               : { color: '#6b7280' }}
@@ -1337,6 +1345,7 @@ export function DiscoverTab() {
           })}
         </div>
       </div>
+      </div>{/* end toggle + provider wrapper */}
 
       {/* ── Movie rows ── */}
       <div>

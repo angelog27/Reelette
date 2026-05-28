@@ -996,9 +996,9 @@ function ActivityCard({ post, currentUserId, currentUsername, isAdmin, onLike, o
                 </div>
               )}
 
-              {/* 5. Genres + TMDB fan rating */}
+              {/* 5. Genres + TMDB fan rating — desktop only */}
               {((movieMeta?.genres && movieMeta.genres.length > 0) || (movieMeta?.voteAverage ?? 0) > 0) && (
-                <div className="flex items-center gap-2 flex-wrap">
+                <div className="hidden sm:flex items-center gap-2 flex-wrap">
                   {movieMeta?.genres?.map(g => (
                     <span key={g} className="text-[10px] px-2 py-0.5 rounded-full bg-[#7C5DBD]/10 text-[#9B7BD7]">{g}</span>
                   ))}

@@ -355,14 +355,14 @@ export function HomePage() {
     <div className="min-h-[100dvh] bg-[#0A0A0A] text-white flex flex-col">
 
       {/* ── Top nav bar ──────────────────────────────────────────── */}
-      <header className={`sticky top-0 z-50 flex items-center px-5 h-[62px] bg-black/30 backdrop-blur-xl border-b border-black/50 transition-transform duration-300 ease-in-out ${navHidden ? '-translate-y-full' : 'translate-y-0'}`}>
+      <header className={`sticky top-0 z-50 flex items-center px-4 sm:px-5 h-[62px] bg-black/30 backdrop-blur-xl border-b border-black/50 transition-transform duration-300 ease-in-out ${navHidden ? '-translate-y-full' : 'translate-y-0'}`}>
 
         {/* ── Left: avatar + wordmark ── */}
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           <div className="relative shrink-0" ref={avatarMenuRef}>
             <button
               onClick={() => setAvatarMenuOpen(o => !o)}
-              className="w-9 h-9 rounded-full overflow-hidden border border-white/10 hover:border-white/30 transition-all duration-150 active:scale-95"
+              className="w-9 h-9 rounded-full overflow-hidden border border-white/10 hover:border-white/30 transition duration-150 active:scale-[0.97]"
               title="Profile"
             >
               {navAvatarUrl ? (
@@ -471,7 +471,7 @@ export function HomePage() {
                 setSearchVisible(v => !v);
                 if (!searchVisible) setTimeout(() => searchInputRef.current?.focus(), 50);
               }}
-              className="flex items-center justify-center w-10 h-10 md:w-[38px] md:h-[38px] rounded-full border transition-all active:scale-95"
+              className="flex items-center justify-center w-9 h-9 rounded-full border transition active:scale-[0.97]"
               style={searchVisible ? { background: 'color-mix(in srgb, var(--reel-accent-hex) 20%, transparent)', borderColor: 'var(--reel-accent-hex)' } : { background: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.1)' }}
               title="Search (⌘K)"
             >
