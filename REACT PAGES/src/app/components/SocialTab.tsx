@@ -2610,33 +2610,44 @@ export function SocialTab() {
           <>
             {/* Feed tab bar */}
             <div className="sticky top-0 z-10 bg-[#0A0A0A]/95 backdrop-blur-sm">
-              <div className="flex items-center">
+              <div className="relative flex items-center">
                 <button onClick={() => setFeedMode('all')}
-                  className={`flex-1 py-3.5 text-sm font-semibold relative transition-colors ${feedMode === 'all' ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'}`}>
+                  className="flex-1 py-3.5 text-sm font-semibold relative"
+                  style={{ color: feedMode === 'all' ? '#fff' : '#71717a', transition: 'color 180ms cubic-bezier(0.23, 1, 0.32, 1)' }}>
                   For You
-                  {feedMode === 'all' && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-[2px] rounded-full" style={{ background: 'var(--reel-accent-hex)' }} />}
                 </button>
                 <button onClick={() => setFeedMode('friends')}
-                  className={`flex-1 py-3.5 text-sm font-semibold relative transition-colors ${feedMode === 'friends' ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'}`}>
+                  className="flex-1 py-3.5 text-sm font-semibold relative"
+                  style={{ color: feedMode === 'friends' ? '#fff' : '#71717a', transition: 'color 180ms cubic-bezier(0.23, 1, 0.32, 1)' }}>
                   Friends
-                  {feedMode === 'friends' && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-[2px] rounded-full" style={{ background: 'var(--reel-accent-hex)' }} />}
                 </button>
                 <button onClick={handleRefresh} disabled={refreshing} title="Refresh"
-                  className="px-4 py-3.5 text-zinc-600 hover:text-zinc-300 transition-colors disabled:opacity-40">
+                  className="px-4 py-3.5 text-zinc-600 hover:text-zinc-300 active:scale-[0.97] transition-colors disabled:opacity-40">
                   <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
                 </button>
+                {/* Sliding underline — always rendered, animates position */}
+                <span
+                  className="absolute bottom-0 h-[2px] w-10 rounded-full pointer-events-none"
+                  style={{
+                    background: 'var(--reel-accent-hex)',
+                    left: feedMode === 'all' ? 'calc(25% - 20px)' : 'calc(75% - 20px - 28px)',
+                    transition: 'left 220ms cubic-bezier(0.23, 1, 0.32, 1)',
+                  }}
+                />
               </div>
             </div>
 
-            {/* Pull-to-refresh indicator */}
+            {/* Pull-to-refresh indicator — opacity + transform only (GPU) */}
             {(pullProgress > 0 || refreshing) && (
-              <div className="sm:hidden flex items-center justify-center overflow-hidden"
-                style={{ height: refreshing ? 44 : `${pullProgress * 44}px`, transition: refreshing ? 'none' : 'height 0.05s' }}>
+              <div className="sm:hidden flex items-center justify-center" style={{ height: 44 }}>
                 <RefreshCw
-                  className={`w-5 h-5 ${pullProgress >= 1 || refreshing ? 'animate-spin' : ''} transition-colors duration-200`}
-                  style={{ color: pullProgress >= 1 || refreshing ? 'var(--reel-accent-hex)' : '#52525b',
-                    transform: `rotate(${pullProgress * 270}deg)`,
-                    transition: pullProgress >= 1 ? 'none' : 'transform 0.05s' }}
+                  className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`}
+                  style={{
+                    color: pullProgress >= 1 || refreshing ? 'var(--reel-accent-hex)' : '#52525b',
+                    opacity: Math.max(pullProgress * 1.4, refreshing ? 1 : 0),
+                    transform: !refreshing ? `rotate(${pullProgress * 270}deg)` : undefined,
+                    transition: 'color 200ms cubic-bezier(0.23, 1, 0.32, 1), opacity 120ms',
+                  }}
                 />
               </div>
             )}

@@ -141,34 +141,55 @@ export function SearchTab() {
       </div>
 
       {/* Search Bar */}
-      <div className="relative">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 w-5 h-5" />
+      <div className="relative group">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none z-10" style={{ color: '#52525b', transition: 'color 180ms cubic-bezier(0.23, 1, 0.32, 1)' }} />
         <Input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder={`Search by title or keyword...`}
-          className="w-full bg-[#1C1C1C] border-[#2A2A2A] text-white placeholder:text-gray-600 pl-12 h-14 rounded-xl focus:border-[#7C5DBD]"
+          placeholder="Search by title or keyword..."
+          className="w-full bg-[#1C1C1C] border-[#2A2A2A] text-white placeholder:text-gray-600 pl-12 h-14 rounded-xl"
+          style={{
+            transition: 'border-color 180ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 180ms cubic-bezier(0.23, 1, 0.32, 1)',
+          }}
+          onFocus={(e) => {
+            e.currentTarget.style.borderColor = 'var(--reel-accent-hex)';
+            e.currentTarget.style.boxShadow = '0 0 0 3px color-mix(in srgb, var(--reel-accent-hex) 20%, transparent)';
+            const icon = e.currentTarget.previousElementSibling as HTMLElement | null;
+            if (icon) icon.style.color = 'var(--reel-accent-hex)';
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.borderColor = '';
+            e.currentTarget.style.boxShadow = '';
+            const icon = e.currentTarget.previousElementSibling as HTMLElement | null;
+            if (icon) icon.style.color = '';
+          }}
         />
       </div>
 
-      {/* Media type toggle — prominent row below search */}
-      <div className="flex gap-3">
+      {/* Media type toggle — sliding pill */}
+      <div className="relative flex p-1 rounded-xl" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+        {/* Sliding indicator */}
+        <div style={{
+          position: 'absolute', top: 4, bottom: 4, left: 4,
+          width: 'calc(50% - 4px)',
+          background: 'color-mix(in srgb, var(--reel-accent-hex) 82%, transparent)',
+          borderRadius: '0.625rem',
+          transform: mediaType === 'show' ? 'translateX(100%)' : 'translateX(0)',
+          transition: 'transform 220ms cubic-bezier(0.23, 1, 0.32, 1)',
+          pointerEvents: 'none',
+        }} />
         <button
           onClick={() => setMediaType('movie')}
-          className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all duration-200 border"
-          style={mediaType === 'movie'
-            ? { background: 'color-mix(in srgb, var(--reel-accent-hex) 85%, transparent)', color: '#fff', borderColor: 'color-mix(in srgb, var(--reel-accent-hex) 85%, transparent)' }
-            : { background: 'transparent', color: '#6b7280', borderColor: '#2A2A2A' }}
+          className="relative z-10 flex-1 py-2.5 text-sm font-semibold active:scale-[0.97]"
+          style={{ color: mediaType === 'movie' ? '#fff' : '#6b7280', transition: 'color 150ms cubic-bezier(0.23, 1, 0.32, 1)' }}
         >
           Movies
         </button>
         <button
           onClick={() => setMediaType('show')}
-          className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all duration-200 border"
-          style={mediaType === 'show'
-            ? { background: 'color-mix(in srgb, var(--reel-accent-hex) 85%, transparent)', color: '#fff', borderColor: 'color-mix(in srgb, var(--reel-accent-hex) 85%, transparent)' }
-            : { background: 'transparent', color: '#6b7280', borderColor: '#2A2A2A' }}
+          className="relative z-10 flex-1 py-2.5 text-sm font-semibold active:scale-[0.97]"
+          style={{ color: mediaType === 'show' ? '#fff' : '#6b7280', transition: 'color 150ms cubic-bezier(0.23, 1, 0.32, 1)' }}
         >
           Shows
         </button>

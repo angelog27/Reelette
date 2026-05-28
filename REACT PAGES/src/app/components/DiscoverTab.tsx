@@ -766,7 +766,7 @@ function PersonalizedHero({ slots, backdropOverrides = {}, onOpenModal, onToggle
 
       {/* Gradient overlays */}
       <div className="absolute inset-0" style={{ zIndex: 2, background: 'linear-gradient(to right, rgba(0,0,0,0.94) 0%, rgba(0,0,0,0.70) 38%, rgba(0,0,0,0.25) 62%, rgba(0,0,0,0.05) 100%)' }} />
-      <div className="absolute inset-0" style={{ zIndex: 2, background: 'linear-gradient(to top, rgba(9,9,9,1) 0%, rgba(9,9,9,0.75) 18%, rgba(9,9,9,0.15) 42%, transparent 62%)' }} />
+      <div className="absolute inset-0" style={{ zIndex: 2, background: 'linear-gradient(to top, rgb(10,10,10) 0%, rgba(10,10,10,0.75) 18%, rgba(10,10,10,0.15) 42%, transparent 62%)' }} />
       <div className="absolute inset-0" style={{ zIndex: 2, background: 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, transparent 18%)' }} />
       {/* Theme-accent tint — subtle colour bleed at the hero bottom tied to active theme */}
       <div className="absolute inset-x-0 bottom-0 pointer-events-none" style={{
@@ -1271,28 +1271,43 @@ export function DiscoverTab() {
         />
       )}
 
+      {/* Hero bottom bleed — smooth gradient continuation below the hero's hard edge */}
+      <div
+        className="full-bleed pointer-events-none hidden md:block"
+        style={{
+          marginTop: -110, height: 130,
+          background: 'linear-gradient(to bottom, transparent 0%, rgb(10,10,10) 60%)',
+          position: 'relative', zIndex: 3,
+        }}
+      />
+
       {/* ── Movies / Shows pill toggle + Provider bar — pulled up on desktop to sit above providers ── */}
       <div className="relative z-[5] mt-8 md:-mt-14">
       <div className="flex justify-center mb-2">
-        <div
-          className="flex items-center p-1 rounded-full"
-          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
-        >
+        {/* Sliding pill toggle — GPU-accelerated translateX instead of background color swap */}
+        <div className="relative flex items-center p-1 rounded-full"
+          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+          {/* Sliding indicator */}
+          <div style={{
+            position: 'absolute', top: 4, bottom: 4, left: 4,
+            width: 'calc(50% - 4px)',
+            background: 'color-mix(in srgb, var(--reel-accent-hex) 82%, transparent)',
+            borderRadius: 9999,
+            transform: mediaType === 'show' ? 'translateX(100%)' : 'translateX(0)',
+            transition: 'transform 220ms cubic-bezier(0.23, 1, 0.32, 1)',
+            pointerEvents: 'none',
+          }} />
           <button
             onClick={() => setMediaType('movie')}
-            className="px-6 py-1.5 rounded-full text-sm font-semibold active:scale-[0.97] transition duration-200"
-            style={mediaType === 'movie'
-              ? { background: 'color-mix(in srgb, var(--reel-accent-hex) 85%, transparent)', color: '#fff' }
-              : { color: '#6b7280' }}
+            className="relative z-10 px-6 py-1.5 rounded-full text-sm font-semibold active:scale-[0.97]"
+            style={{ color: mediaType === 'movie' ? '#fff' : '#6b7280', transition: 'color 150ms cubic-bezier(0.23, 1, 0.32, 1)' }}
           >
             Movies
           </button>
           <button
             onClick={() => setMediaType('show')}
-            className="px-6 py-1.5 rounded-full text-sm font-semibold active:scale-[0.97] transition duration-200"
-            style={mediaType === 'show'
-              ? { background: 'color-mix(in srgb, var(--reel-accent-hex) 85%, transparent)', color: '#fff' }
-              : { color: '#6b7280' }}
+            className="relative z-10 px-6 py-1.5 rounded-full text-sm font-semibold active:scale-[0.97]"
+            style={{ color: mediaType === 'show' ? '#fff' : '#6b7280', transition: 'color 150ms cubic-bezier(0.23, 1, 0.32, 1)' }}
           >
             Shows
           </button>

@@ -333,26 +333,30 @@ export function RouletteTab() {
               </p>
             </div>
 
-            {/* Movies / Shows toggle */}
-            <div
-              className="flex items-center gap-0.5 p-1 rounded-full w-fit"
-              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
-            >
+            {/* Movies / Shows toggle — sliding pill */}
+            <div className="relative flex items-center p-1 rounded-full w-fit"
+              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+              {/* Sliding indicator */}
+              <div style={{
+                position: 'absolute', top: 4, bottom: 4, left: 4,
+                width: 'calc(50% - 4px)',
+                background: 'rgba(255,255,255,0.12)',
+                borderRadius: 9999,
+                transform: mediaType === 'show' ? 'translateX(100%)' : 'translateX(0)',
+                transition: 'transform 220ms cubic-bezier(0.23, 1, 0.32, 1)',
+                pointerEvents: 'none',
+              }} />
               <button
                 onClick={() => { setMediaType('movie'); setGenre(''); }}
-                className="flex items-center gap-1.5 px-5 py-2 rounded-full text-sm font-semibold transition-all duration-200"
-                style={mediaType === 'movie'
-                  ? { background: 'rgba(255,255,255,0.10)', color: '#fff' }
-                  : { color: '#4b5563' }}
+                className="relative z-10 flex items-center gap-1.5 px-5 py-2 rounded-full text-sm font-semibold active:scale-[0.97]"
+                style={{ color: mediaType === 'movie' ? '#fff' : '#4b5563', transition: 'color 150ms cubic-bezier(0.23, 1, 0.32, 1)' }}
               >
                 <Film className="w-3.5 h-3.5" /> Movies
               </button>
               <button
                 onClick={() => { setMediaType('show'); setGenre(''); }}
-                className="flex items-center gap-1.5 px-5 py-2 rounded-full text-sm font-semibold transition-all duration-200"
-                style={mediaType === 'show'
-                  ? { background: 'rgba(255,255,255,0.10)', color: '#fff' }
-                  : { color: '#4b5563' }}
+                className="relative z-10 flex items-center gap-1.5 px-5 py-2 rounded-full text-sm font-semibold active:scale-[0.97]"
+                style={{ color: mediaType === 'show' ? '#fff' : '#4b5563', transition: 'color 150ms cubic-bezier(0.23, 1, 0.32, 1)' }}
               >
                 <Tv className="w-3.5 h-3.5" /> Shows
               </button>
