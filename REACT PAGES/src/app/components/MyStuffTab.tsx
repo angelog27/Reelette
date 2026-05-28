@@ -205,10 +205,10 @@ export function MyStuffTab() {
           const tabIdx = TAB_ORDER.indexOf(activeTab);
           const indicatorColor = activeTab === 'stats' ? '#f97316' : 'var(--reel-accent-hex)';
           return (
-            <div className="relative flex bg-[#111] border border-[#1e1e1e] rounded-full p-1">
+            <div className="relative flex rounded-full p-1" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(16px)' }}>
               <div style={{
                 position: 'absolute', top: 4, bottom: 4, left: 4,
-                width: 'calc(25% - 2px)',
+                width: 'calc((100% - 8px) / 4)',
                 background: indicatorColor,
                 borderRadius: 9999,
                 transform: `translateX(${tabIdx * 100}%)`,
@@ -238,10 +238,10 @@ export function MyStuffTab() {
           const FILTERS: MediaFilter[] = ['all', 'movie', 'show'];
           const filterIdx = FILTERS.indexOf(mediaFilter);
           return (
-            <div className="relative flex bg-[#111] border border-[#1e1e1e] rounded-full p-1">
+            <div className="relative flex rounded-full p-1" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(16px)' }}>
               <div style={{
                 position: 'absolute', top: 4, bottom: 4, left: 4,
-                width: 'calc(33.33% - 2.67px)',
+                width: 'calc((100% - 8px) / 3)',
                 background: 'var(--reel-accent-hex)',
                 borderRadius: 9999,
                 transform: `translateX(${filterIdx * 100}%)`,
@@ -265,7 +265,8 @@ export function MyStuffTab() {
           <div className="relative ml-auto" ref={sortRef}>
             <button
               onClick={() => setSortOpen(v => !v)}
-              className="flex items-center gap-2 text-sm border rounded-full px-3.5 py-2 transition-colors bg-[#111] border-[#1e1e1e] text-gray-400 hover:text-white hover:border-[#333]"
+              className="flex items-center gap-2 text-sm rounded-full px-3.5 py-2 transition-colors text-zinc-400 hover:text-white"
+              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(16px)' }}
             >
               <ArrowUpDown className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">{currentSortLabel}</span>
@@ -273,7 +274,7 @@ export function MyStuffTab() {
             </button>
 
             {sortOpen && (
-              <div className="absolute right-0 top-full mt-2 w-52 bg-[#111] border border-[#1e1e1e] rounded-2xl shadow-2xl z-50 py-1.5 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="absolute right-0 top-full mt-2 w-52 rounded-2xl shadow-2xl z-50 py-1.5 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150" style={{ background: 'rgba(18,18,22,0.92)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(24px)' }}>
                 {/* Tiny "SORT BY" header inside dropdown */}
                 <p
                   className="text-[9px] font-bold tracking-[0.2em] text-gray-600 uppercase px-4 pt-2 pb-1.5"

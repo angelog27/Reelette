@@ -258,7 +258,7 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
   // ── Loading / error ───────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="fixed inset-x-0 z-40 bg-[#0A0A0A] flex items-center justify-center" style={{ top: 62, bottom: 0 }}>
+      <div className="fixed inset-0 z-40 bg-[#0A0A0A] flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--reel-accent-hex)', borderTopColor: 'transparent' }} />
           <p className="text-zinc-500 text-sm">Loading…</p>
@@ -269,7 +269,7 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
 
   if (!movie || movie.error) {
     return (
-      <div className="fixed inset-x-0 z-40 bg-[#0A0A0A] flex items-center justify-center" style={{ top: 62, bottom: 0 }}>
+      <div className="fixed inset-0 z-40 bg-[#0A0A0A] flex items-center justify-center">
         <div className="text-center">
           <p className="text-zinc-400 mb-4">Could not load details.</p>
           <button onClick={onClose} className="text-sm font-medium" style={{ color: 'var(--reel-accent-hex)' }}>Close</button>
@@ -370,8 +370,8 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
   return (
     <div
       ref={scrollRef}
-      className="fixed inset-x-0 z-40 bg-[#0A0A0A] overflow-y-auto overscroll-contain"
-      style={{ top: 62, bottom: 0, scrollBehavior: 'smooth' }}
+      className="fixed inset-0 z-40 bg-[#0A0A0A] overflow-y-auto overscroll-contain"
+      style={{ scrollBehavior: 'smooth' }}
     >
 
       {/* ── MOBILE hero — portrait poster ───────────────────────── */}
@@ -394,10 +394,10 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
         <div className="absolute inset-0 pointer-events-none"
           style={{ background: 'linear-gradient(to bottom, transparent 40%, rgba(10,10,10,0.6) 68%, rgba(10,10,10,0.92) 86%, #0A0A0A 100%)' }} />
 
-        {/* Close button */}
+        {/* Close button — below nav bar */}
         <button
           onClick={onClose}
-          className="absolute top-3 right-3 z-10 flex items-center justify-center w-9 h-9 rounded-full transition-colors active:scale-[0.97]"
+          className="absolute top-[68px] right-4 z-10 flex items-center justify-center w-9 h-9 rounded-full transition-colors active:scale-[0.97]"
           style={{ background: 'rgba(10,10,10,0.6)', border: '1px solid rgba(255,255,255,0.12)', backdropFilter: 'blur(12px)' }}
         >
           <X className="w-4 h-4 text-white" />
@@ -457,10 +457,10 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
         <div className="absolute inset-0 pointer-events-none"
           style={{ background: 'linear-gradient(to bottom, transparent 28%, rgba(10,10,10,0.5) 58%, rgba(10,10,10,0.88) 76%, #0A0A0A 100%)' }} />
 
-        {/* Close button */}
+        {/* Close button — below nav bar */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-5 z-10 flex items-center justify-center w-9 h-9 rounded-full transition-colors active:scale-[0.97]"
+          className="absolute top-[68px] right-5 z-10 flex items-center justify-center w-9 h-9 rounded-full transition-colors active:scale-[0.97]"
           style={{ background: 'rgba(10,10,10,0.6)', border: '1px solid rgba(255,255,255,0.12)', backdropFilter: 'blur(12px)' }}
         >
           <X className="w-4 h-4 text-white" />
@@ -764,28 +764,22 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
 
         {/* ── Sub-tabs: Watch / Cast / Extras ─────────────────── */}
         <div>
-          {/* Sliding pill tab bar */}
-          <div className="relative flex rounded-xl p-1 mb-6"
-            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
-            {/* Sliding indicator */}
-            <div
-              className="absolute inset-1 rounded-lg"
-              style={{
-                width: 'calc(33.33% - 2.67px)',
-                background: 'var(--reel-accent-hex)',
-                transform: `translateX(${tabIdx * 100}%)`,
-                transition: 'transform 220ms cubic-bezier(0.23, 1, 0.32, 1)',
-                boxShadow: '0 1px 8px color-mix(in srgb, var(--reel-accent-hex) 40%, transparent)',
-              }}
-            />
+          {/* Underline tab bar — nav-style */}
+          <div className="relative flex border-b mb-6" style={{ borderBottomColor: 'rgba(255,255,255,0.08)' }}>
             {INFO_TABS.map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveInfoTab(tab)}
-                className="relative z-10 flex-1 py-2 text-xs font-semibold text-center rounded-lg transition-colors active:scale-[0.97]"
-                style={{ color: activeInfoTab === tab ? '#fff' : 'rgba(255,255,255,0.45)' }}
+                className="relative pb-3 mr-7 text-sm font-medium transition-colors active:scale-[0.97]"
+                style={{ color: activeInfoTab === tab ? '#fff' : 'rgba(255,255,255,0.38)' }}
               >
                 {tab === 'watch' ? 'Watch' : tab === 'cast' ? 'Cast' : 'Extras'}
+                {activeInfoTab === tab && (
+                  <span
+                    className="absolute bottom-0 left-0 right-0 h-[2px] rounded-full"
+                    style={{ background: 'var(--reel-accent-hex)' }}
+                  />
+                )}
               </button>
             ))}
           </div>

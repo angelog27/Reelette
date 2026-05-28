@@ -358,7 +358,7 @@ export function HomePage() {
       <header
         className={`sticky top-0 z-50 flex items-center px-4 sm:px-5 h-[62px] backdrop-blur-2xl border-b transition-transform duration-300 ease-in-out ${navHidden ? '-translate-y-full' : 'translate-y-0'}`}
         style={{
-          background: 'rgba(10,10,10,0.55)',
+          background: 'rgba(10,10,10,0.75)',
           borderBottomColor: 'rgba(255,255,255,0.055)',
           boxShadow: '0 1px 0 rgba(255,255,255,0.03), inset 0 1px 0 rgba(255,255,255,0.03)',
         }}
