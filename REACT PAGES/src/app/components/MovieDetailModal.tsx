@@ -374,7 +374,7 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
             )}
             {year    && <span className="text-gray-300 font-medium">{year}</span>}
             {runtime && <span className="text-gray-300">{runtime}</span>}
-            {genres.slice(0, 3).map((g) => (
+            {genres.slice(0, isMobile ? 2 : 3).map((g) => (
               <span key={g.id} className="text-gray-400">{g.name}</span>
             ))}
           </div>
@@ -399,28 +399,30 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
           )}
 
           {/* Cast / creator / networks */}
-          <div className="mb-5">
+          <div className="mb-5 text-sm">
             {isShow ? (
               <>
                 {creators.length > 0 && (
-                  <p className="text-gray-400 text-sm mb-1">
+                  <p className="text-gray-400 mb-1">
                     Created by <span className="text-white">{creators.map((c: any) => c.name).join(', ')}</span>
                   </p>
                 )}
-                {networks.length > 0 && (
-                  <p className="text-gray-400 text-sm mb-1">
-                    Network <span className="text-white">{networks.map((n: any) => n.name).join(', ')}</span>
-                  </p>
-                )}
-                {movie.number_of_episodes && (
-                  <p className="text-gray-400 text-sm mb-1">
-                    <span className="text-white">{movie.number_of_episodes as number}</span> episodes
-                  </p>
-                )}
+                <div className="hidden sm:block">
+                  {networks.length > 0 && (
+                    <p className="text-gray-400 mb-1">
+                      Network <span className="text-white">{networks.map((n: any) => n.name).join(', ')}</span>
+                    </p>
+                  )}
+                  {movie.number_of_episodes && (
+                    <p className="text-gray-400 mb-1">
+                      <span className="text-white">{movie.number_of_episodes as number}</span> episodes
+                    </p>
+                  )}
+                </div>
                 {(movie.aggregate_credits?.cast ?? movie.credits?.cast) && (
-                  <p className="text-gray-400 text-sm">
+                  <p className="text-gray-400">
                     Starring <span className="text-white">
-                      {((movie.aggregate_credits?.cast ?? movie.credits?.cast) as any[]).slice(0, 6).map((c: any) => c.name).join(', ')}
+                      {((movie.aggregate_credits?.cast ?? movie.credits?.cast) as any[]).slice(0, isMobile ? 3 : 6).map((c: any) => c.name).join(', ')}
                     </span>
                   </p>
                 )}
@@ -428,13 +430,13 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
             ) : (
               <>
                 {movie.credits?.crew && (
-                  <p className="text-gray-400 text-sm mb-1">
+                  <p className="text-gray-400 mb-1">
                     Directed by <span className="text-white">{(movie.credits.crew as any[]).find((c: any) => c.job === 'Director')?.name}</span>
                   </p>
                 )}
                 {movie.credits?.cast && (
-                  <p className="text-gray-400 text-sm">
-                    Starring <span className="text-white">{(movie.credits.cast as any[]).slice(0, 6).map((c: any) => c.name).join(', ')}</span>
+                  <p className="text-gray-400">
+                    Starring <span className="text-white">{(movie.credits.cast as any[]).slice(0, isMobile ? 3 : 6).map((c: any) => c.name).join(', ')}</span>
                   </p>
                 )}
               </>
@@ -462,14 +464,14 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
             <div className="space-y-3">
 
               {/* Primary row: Play Now + Watch Later + Mark as Watched */}
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
 
                 {/* Play Now — opens streaming service */}
                 <a
                   href={playNowUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-white text-black text-sm font-bold transition-opacity hover:opacity-90 shadow-lg"
+                  className="flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 rounded-full bg-white text-black text-sm font-bold transition-opacity hover:opacity-90 shadow-lg"
                 >
                   <Play className="w-4 h-4 fill-black" />
                   Play Now
@@ -479,7 +481,7 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
                 {trailer && (
                   <button
                     onClick={() => setTrailerOpen(v => !v)}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-white/30 bg-white/5 hover:bg-white/15 text-white text-sm font-medium transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 rounded-full border border-white/30 bg-white/5 hover:bg-white/15 text-white text-sm font-medium transition-colors"
                     style={trailerOpen ? { borderColor: 'color-mix(in srgb, var(--reel-accent-hex) 60%, transparent)', background: 'color-mix(in srgb, var(--reel-accent-hex) 15%, transparent)' } : {}}
                   >
                     <Play className="w-4 h-4" />
@@ -492,7 +494,7 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
                   <button
                     onClick={handleToggleWatchLater}
                     disabled={watchLaterLoading}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-white/30 bg-white/5 hover:bg-white/15 text-white text-sm font-medium transition-colors disabled:opacity-50"
+                    className="flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 rounded-full border border-white/30 bg-white/5 hover:bg-white/15 text-white text-sm font-medium transition-colors disabled:opacity-50"
                   >
                     {inWatchLater
                       ? <BookmarkCheck className="w-4 h-4 text-[#7C5DBD]" />
@@ -521,7 +523,7 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
                   ) : (
                     <button
                       onClick={() => setShowWatchForm(true)}
-                      className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#7C5DBD] hover:bg-[#9B7BD7] text-white text-sm font-medium transition-colors shadow-lg shadow-[#7C5DBD]/30"
+                      className="flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 rounded-full bg-[#7C5DBD] hover:bg-[#9B7BD7] text-white text-sm font-medium transition-colors shadow-lg shadow-[#7C5DBD]/30"
                     >
                       <Star className="w-4 h-4" />
                       {isShow ? 'Mark as Seen' : 'Mark as Watched'}

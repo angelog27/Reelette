@@ -341,8 +341,8 @@ function renderMessage(message: string, onOpenProfile: (userId: string) => void)
 // ── Activity Skeleton ─────────────────────────────────────────
 function ActivitySkeleton() {
   return (
-    <div className="mb-3 rounded-2xl bg-[#0d0d0f] overflow-hidden">
-      <div className="px-4 py-3 flex gap-3">
+    <div className="border-b border-white/[0.05] sm:mb-3 sm:rounded-2xl sm:bg-[#0d0d0f] overflow-hidden">
+      <div className="px-4 py-4 flex gap-3">
         <div className="w-10 h-10 bg-[#1a1a1e] rounded-full animate-pulse shrink-0" />
         <div className="flex-1 space-y-2 pt-1">
           <div className="h-3 w-32 bg-[#1a1a1e] rounded-full animate-pulse" />
@@ -892,7 +892,7 @@ function ActivityCard({ post, currentUserId, currentUsername, isAdmin, onLike, o
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <article className="rounded-2xl bg-white/[0.035] border border-white/[0.06] p-4 shadow-lg shadow-black/30">
+    <article className="border-b border-white/[0.05] px-4 py-4 sm:rounded-2xl sm:bg-white/[0.035] sm:border sm:border-white/[0.06] sm:p-4 sm:shadow-lg sm:shadow-black/30 sm:mb-3">
       {/* Repost banner */}
       {post.is_repost && (
         <div className="flex items-center gap-1.5 mb-3 text-[11px] text-zinc-500">
@@ -912,9 +912,9 @@ function ActivityCard({ post, currentUserId, currentUsername, isAdmin, onLike, o
             <div className="shrink-0 cursor-pointer" onClick={() => setOpenMovieId(post.movie_id)}>
               {post.movie_poster
                 ? <img src={post.movie_poster} alt={post.movie_title}
-                    className="w-[160px] h-[240px] object-cover rounded-xl shadow-2xl ring-1 ring-white/[0.07] hover:opacity-90 transition-opacity" />
-                : <div className="w-[160px] h-[240px] bg-white/[0.04] rounded-xl flex items-center justify-center">
-                    <Film className="w-8 h-8 text-zinc-700" />
+                    className="w-[76px] h-[114px] sm:w-[160px] sm:h-[240px] object-cover rounded-lg sm:rounded-xl shadow-xl ring-1 ring-white/[0.07] hover:opacity-90 transition-opacity" />
+                : <div className="w-[76px] h-[114px] sm:w-[160px] sm:h-[240px] bg-white/[0.04] rounded-lg sm:rounded-xl flex items-center justify-center">
+                    <Film className="w-5 h-5 sm:w-8 sm:h-8 text-zinc-700" />
                   </div>
               }
             </div>
@@ -1182,8 +1182,8 @@ function ActivityCard({ post, currentUserId, currentUsername, isAdmin, onLike, o
           </div>
         )}
 
-        {/* ── RIGHT: Comments panel ───────────────────────────── */}
-        <div className="flex flex-col rounded-xl bg-black/20 overflow-hidden min-h-[180px]">
+        {/* ── RIGHT: Comments panel — desktop only ─────────── */}
+        <div className="hidden sm:flex flex-col rounded-xl bg-black/20 overflow-hidden min-h-[180px]">
 
           {/* Comments list — scrollable only when needed */}
           <div className="overflow-y-auto px-3 pt-3 pb-2 space-y-3 max-h-[260px]">
@@ -1269,6 +1269,61 @@ function ActivityCard({ post, currentUserId, currentUsername, isAdmin, onLike, o
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Mobile-only inline replies */}
+      <div className="sm:hidden">
+        <button
+          onClick={toggleReplies}
+          className={`flex items-center gap-1.5 mt-1 px-1 py-1 text-xs transition-colors ${showReplies ? '' : 'text-zinc-600 hover:text-zinc-300'}`}
+          style={showReplies ? { color: 'var(--reel-accent-hex)' } : {}}
+        >
+          <MessageCircle className="w-3.5 h-3.5" />
+          {localReplyCount > 0 ? `${localReplyCount} ${localReplyCount === 1 ? 'reply' : 'replies'}` : 'Reply'}
+        </button>
+        {showReplies && (
+          <div className="mt-2 space-y-3 border-t border-white/[0.05] pt-3">
+            {loadingReplies && (
+              <div className="flex items-center gap-2 text-zinc-600 text-xs ml-1">
+                <Loader2 className="w-3 h-3 animate-spin" /> Loading…
+              </div>
+            )}
+            {replies.slice(0, 6).map(r => (
+              <div key={r.reply_id} className="flex items-start gap-2">
+                <UserAvatar username={r.username} avatarUrl={r.avatarUrl} size={22} onClick={() => onOpenProfile(r.user_id)} />
+                <div className="flex-1 min-w-0">
+                  <span className="text-white text-xs font-semibold">{r.username}</span>
+                  <span className="text-zinc-700 text-[10px] ml-1.5">{timeAgo(r.created_at)}</span>
+                  <p className="text-zinc-400 text-xs leading-snug mt-0.5">{renderMessage(r.message, onOpenProfile)}</p>
+                </div>
+              </div>
+            ))}
+            {replies.length > 6 && (
+              <p className="text-zinc-700 text-[10px] ml-1">+{replies.length - 6} more</p>
+            )}
+            <div className="relative flex gap-2 pt-1">
+              {mentionQuery !== null && mentionResults.length > 0 && (
+                <div className="absolute bottom-full left-0 right-10 mb-1 bg-[#1a1a1e] border border-white/[0.08] rounded-xl shadow-xl z-20 overflow-hidden">
+                  {mentionResults.map(u => (
+                    <button key={u.user_id} onMouseDown={e => { e.preventDefault(); selectMention(u.username); }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-white hover:bg-[#7C5DBD]/20 transition-colors text-left">
+                      <span className="text-[#9B7BD7] font-semibold">@{u.username}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <input ref={replyInputRef} type="text" placeholder="Add a reply…"
+                value={replyText}
+                onChange={handleReplyChange}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && mentionQuery === null) handleSubmitReply(); }}
+                className="flex-1 bg-white/[0.05] rounded-full px-3.5 py-1.5 text-white text-xs placeholder:text-zinc-600 focus:outline-none focus:bg-white/[0.08] transition-colors" />
+              <button onClick={handleSubmitReply} disabled={submittingReply || !replyText.trim()}
+                className="p-1.5 bg-[#7C5DBD] hover:bg-[#6B4DAD] disabled:opacity-40 text-white rounded-full transition-colors shrink-0">
+                {submittingReply ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {openMovieId && <MovieDetailModal movieId={openMovieId} onClose={() => setOpenMovieId(null)} />}
@@ -2313,6 +2368,9 @@ export function SocialTab() {
   const [friendsLoaded, setFriendsLoaded] = useState(false);
   const [profileUserId, setProfileUserId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [pullProgress, setPullProgress] = useState(0);
+  const mainRef = useRef<HTMLDivElement>(null);
+  const touchStartY = useRef(-1);
   const [groups, setGroups] = useState<MovieGroup[]>([]);
   const [groupsLoading, setGroupsLoading] = useState(true);
   const [activeGroup, setActiveGroup] = useState<MovieGroup | null>(null);
@@ -2437,6 +2495,38 @@ export function SocialTab() {
     setActiveGroup(full ?? g);
   };
 
+  // Pull-to-refresh: non-passive touchmove so we can preventDefault during pull
+  useEffect(() => {
+    const el = mainRef.current;
+    if (!el) return;
+    const onTouchStart = (e: TouchEvent) => {
+      if (el.scrollTop > 0) { touchStartY.current = -1; return; }
+      touchStartY.current = e.touches[0].clientY;
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      if (touchStartY.current < 0) return;
+      const dy = e.touches[0].clientY - touchStartY.current;
+      if (dy > 0 && el.scrollTop === 0) {
+        setPullProgress(Math.min(dy / 90, 1));
+        e.preventDefault();
+      }
+    };
+    const onTouchEnd = () => {
+      if (pullProgress >= 1) handleRefresh();
+      touchStartY.current = -1;
+      setPullProgress(0);
+    };
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
+    el.addEventListener('touchend', onTouchEnd);
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove', onTouchMove);
+      el.removeEventListener('touchend', onTouchEnd);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pullProgress]);
+
   const handleGroupBack = () => {
     setActiveGroup(null);
     loadGroups();
@@ -2476,7 +2566,7 @@ export function SocialTab() {
       />
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto no-scrollbar min-w-0 pb-16 md:pb-0">
+      <main ref={mainRef} className="flex-1 overflow-y-auto no-scrollbar min-w-0 pb-16 md:pb-0">
         {activeGroup ? (
           <GroupDetail
             group={activeGroup}
@@ -2538,13 +2628,26 @@ export function SocialTab() {
               </div>
             </div>
 
+            {/* Pull-to-refresh indicator */}
+            {(pullProgress > 0 || refreshing) && (
+              <div className="sm:hidden flex items-center justify-center overflow-hidden"
+                style={{ height: refreshing ? 44 : `${pullProgress * 44}px`, transition: refreshing ? 'none' : 'height 0.05s' }}>
+                <RefreshCw
+                  className={`w-5 h-5 ${pullProgress >= 1 || refreshing ? 'animate-spin' : ''} transition-colors duration-200`}
+                  style={{ color: pullProgress >= 1 || refreshing ? 'var(--reel-accent-hex)' : '#52525b',
+                    transform: `rotate(${pullProgress * 270}deg)`,
+                    transition: pullProgress >= 1 ? 'none' : 'transform 0.05s' }}
+                />
+              </div>
+            )}
+
             {/* Compose */}
-            <div className="px-3 sm:px-6 md:px-8">
+            <div className="px-4 sm:px-6 md:px-8 border-b border-white/[0.05] sm:border-0">
               <ComposeBox currentUser={currentUser ? { ...currentUser, avatarUrl: currentUserAvatarUrl } : null} onPostCreated={handlePostCreated} />
             </div>
 
             {/* Posts */}
-            <div className="px-3 sm:px-6 md:px-8">
+            <div className="sm:px-6 md:px-8">
               {loading
                 ? Array.from({ length: 5 }).map((_, i) => <ActivitySkeleton key={i} />)
                 : displayedPosts.length === 0

@@ -1199,25 +1199,40 @@ def get_friends_roulette_history(user_id, limit=1):
     """Return the most recent `limit` spins for each of the user's friends."""
     try:
         friends = get_friends(user_id)
-        result = []
+        if not friends:
+            return []
+
+        # Fetch all roulette histories in parallel
+        friends_with_spins = []
         for friend in friends:
             friend_id = friend.get('friend_id')
             if not friend_id:
                 continue
             spins = get_roulette_history(friend_id, limit=limit)
             if spins:
-                # Look up the friend's avatar from their user document directly
-                try:
-                    user_doc = db.collection('users').document(friend_id).get()
-                    avatar_url = user_doc.to_dict().get('avatarUrl') if user_doc.exists else None
-                except Exception:
-                    avatar_url = None
-                result.append({
-                    'friend_id': friend_id,
-                    'friend_username': friend.get('friend_username', ''),
-                    'avatarUrl': avatar_url,
-                    'spins': spins,
-                })
+                friends_with_spins.append((friend, spins))
+
+        if not friends_with_spins:
+            return []
+
+        # Batch-fetch all avatar docs in a single Firestore round-trip
+        friend_ids = [f.get('friend_id') for f, _ in friends_with_spins]
+        refs = [db.collection('users').document(fid) for fid in friend_ids]
+        docs = db.get_all(refs)
+        avatar_map = {}
+        for doc in docs:
+            if doc.exists:
+                avatar_map[doc.id] = doc.to_dict().get('avatarUrl')
+
+        result = []
+        for friend, spins in friends_with_spins:
+            friend_id = friend.get('friend_id')
+            result.append({
+                'friend_id': friend_id,
+                'friend_username': friend.get('friend_username', ''),
+                'avatarUrl': avatar_map.get(friend_id),
+                'spins': spins,
+            })
         return result
     except Exception as e:
         print(f"Error getting friends roulette history: {e}")

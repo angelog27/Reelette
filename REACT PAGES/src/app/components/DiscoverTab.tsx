@@ -465,7 +465,7 @@ function SkeletonLandscapeRow({ title }: { title: string }) {
       <div className="flex gap-3">
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="flex-shrink-0 animate-pulse rounded-xl bg-[#1e1e1e]"
-            style={{ width: LAND_W, height: LAND_H }} />
+            style={{ width: LAND_W, height: LAND_H, maxWidth: 'calc(100vw - 24px)', aspectRatio: `${LAND_W} / ${LAND_H}` }} />
         ))}
       </div>
     </div>
@@ -531,7 +531,7 @@ function LandscapeCard({ movie, onClick }: { movie: Movie; onClick: () => void }
   return (
     <div
       className="flex-shrink-0 relative rounded-xl overflow-hidden cursor-pointer"
-      style={{ width: LAND_W, height: LAND_H }}
+      style={{ width: LAND_W, height: LAND_H, maxWidth: 'calc(100vw - 24px)', aspectRatio: `${LAND_W} / ${LAND_H}` }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onClick={!showTrailer ? onClick : undefined}
