@@ -231,8 +231,7 @@ function SkeletonCard() {
 function SkeletonRow({ title }: { title: string }) {
   return (
     <div className="mb-8">
-      <h2 className="text-[15px] font-bold text-white mb-3"
-        style={{ color: '#e8e8e8', letterSpacing: '-0.01em' }}>
+      <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500 mb-2 md:text-[15px] md:font-bold md:normal-case md:tracking-[-0.01em] md:text-[#e8e8e8] md:mb-3">
         {title}
       </h2>
       <div className="flex gap-2">
@@ -417,8 +416,7 @@ function MovieRow({ title, movies, onMovieClick }: {
 
   return (
     <div className="mb-8 reel-enter">
-      <h2 className="text-[15px] font-bold text-white mb-3"
-        style={{ color: '#e8e8e8', letterSpacing: '-0.01em' }}>
+      <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500 mb-2 md:text-[15px] md:font-bold md:normal-case md:tracking-[-0.01em] md:text-[#e8e8e8] md:mb-3">
         {title}
       </h2>
       <div className="relative group">
@@ -698,7 +696,7 @@ const SLOT_META: Record<PersonalizedSlot['kind'], { label: string; color: string
 
 function PersonalizedHeroSkeleton() {
   return (
-    <div className="full-bleed relative animate-pulse bg-[#141414]" style={{ height: 'clamp(300px, 80vw, 680px)', marginTop: -62 }}>
+    <div className="full-bleed relative animate-pulse bg-[#141414] md:-mt-[62px]" style={{ height: 'clamp(300px, 80vw, 680px)' }}>
       <div className="absolute left-5 sm:left-10 md:left-16 bottom-8 sm:bottom-14 flex flex-col gap-3">
         <div className="h-3 w-40 rounded bg-[#222]" />
         <div className="h-14 w-80 rounded bg-[#222]" />
@@ -749,7 +747,7 @@ function PersonalizedHero({ slots, backdropOverrides = {}, onOpenModal, onToggle
   const isInWatchlist = watchlistIds.includes(slot.movie.id);
 
   return (
-    <div className="full-bleed relative overflow-hidden group/hero" style={{ height: 'clamp(300px, 80vw, 680px)', marginTop: -62 }}>
+    <div className="full-bleed relative overflow-hidden group/hero md:-mt-[62px]" style={{ height: 'clamp(300px, 80vw, 680px)' }}>
       {/* Backdrop layers */}
       {slots.map((s, i) => {
         const bg = backdropOverrides[s.movie.id] || s.movie.backdrop || '';
@@ -776,8 +774,45 @@ function PersonalizedHero({ slots, backdropOverrides = {}, onOpenModal, onToggle
         WebkitMaskImage: 'linear-gradient(to top, black 0%, transparent 100%)',
       }} />
 
+      {/* Mobile hero overlay — rating badge + icon-only action buttons */}
+      <div className="md:hidden absolute inset-x-0 bottom-0 flex items-end justify-between px-4 pb-5" style={{ zIndex: 3 }}>
+        {/* Rating badge bottom-left */}
+        <div className="flex items-center gap-1 rounded-full px-2.5 py-1.5" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.15)' }}>
+          {slot.movie.rating > 0 ? (
+            <>
+              <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+              <span className="text-white text-xs font-semibold">{slot.movie.rating.toFixed(1)}</span>
+            </>
+          ) : (
+            <span className="text-zinc-400 text-xs">{slot.movie.year > 0 ? slot.movie.year : ''}</span>
+          )}
+        </div>
+        {/* Icon-only buttons bottom-right */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => onOpenModal(slot.movie.id, slot.movie.type ?? 'movie', slot.movie.title)}
+            className="w-9 h-9 rounded-full flex items-center justify-center active:scale-[0.97]"
+            style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.15)' }}
+          >
+            <Info className="w-4 h-4 text-white" />
+          </button>
+          {hasUser && (
+            <button
+              onClick={() => onToggleWatchlist(slot.movie)}
+              className="w-9 h-9 rounded-full flex items-center justify-center active:scale-[0.97]"
+              style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.15)' }}
+            >
+              {isInWatchlist
+                ? <BookmarkCheck className="w-4 h-4" style={{ color: 'var(--reel-accent-hex)' }} />
+                : <Bookmark className="w-4 h-4 text-white" />
+              }
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Content row */}
-      <div className="absolute inset-x-0 bottom-0 flex items-end justify-between px-4 sm:px-10 md:px-16 pb-8 sm:pb-12 gap-6 md:gap-10" style={{ zIndex: 3 }}>
+      <div className="hidden md:flex absolute inset-x-0 bottom-0 items-end justify-between px-4 sm:px-10 md:px-16 pb-8 sm:pb-12 gap-6 md:gap-10" style={{ zIndex: 3 }}>
 
         {/* ── Left: movie info ── */}
         <div className="flex flex-col min-w-0 max-w-[90vw] sm:max-w-[520px]">
@@ -933,7 +968,7 @@ function PersonalizedHero({ slots, backdropOverrides = {}, onOpenModal, onToggle
         <>
           <button
             onClick={() => { setCurrent(c => (c - 1 + total) % total); startInterval(); }}
-            className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 opacity-0 hover:opacity-100 group-hover/hero:opacity-60 hover:!opacity-100"
+            className="absolute left-4 top-1/2 -translate-y-1/2 hidden md:flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 opacity-0 hover:opacity-100 group-hover/hero:opacity-60 hover:!opacity-100"
             style={{ zIndex: 3, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)', border: '1px solid rgba(255,255,255,0.12)' }}
             aria-label="Previous"
           >
@@ -941,7 +976,7 @@ function PersonalizedHero({ slots, backdropOverrides = {}, onOpenModal, onToggle
           </button>
           <button
             onClick={() => { setCurrent(c => (c + 1) % total); startInterval(); }}
-            className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 opacity-0 hover:opacity-100 group-hover/hero:opacity-60 hover:!opacity-100"
+            className="absolute right-4 top-1/2 -translate-y-1/2 hidden md:flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 opacity-0 hover:opacity-100 group-hover/hero:opacity-60 hover:!opacity-100"
             style={{ zIndex: 3, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)', border: '1px solid rgba(255,255,255,0.12)' }}
             aria-label="Next"
           >
@@ -952,7 +987,7 @@ function PersonalizedHero({ slots, backdropOverrides = {}, onOpenModal, onToggle
 
       {/* Slot indicator dots */}
       {total > 1 && (
-        <div className="absolute bottom-4 right-10 flex gap-1.5" style={{ zIndex: 3 }}>
+        <div className="absolute bottom-3 md:bottom-4 left-1/2 md:left-auto md:right-10 -translate-x-1/2 md:translate-x-0 flex gap-1.5" style={{ zIndex: 3 }}>
           {slots.map((_, i) => (
             <button key={i} onClick={() => { setCurrent(i); startInterval(); }}
               className="h-[3px] rounded-full transition-all duration-300"
@@ -1315,49 +1350,78 @@ export function DiscoverTab() {
       </div>
 
       {/* ── Provider tab bar ── */}
-      <div className="mt-6 mb-8">
-        <p className="text-xs font-semibold uppercase tracking-widest text-gray-500 text-center mb-5">
-          {mediaType === 'show' ? 'Browse Shows' : 'Your Providers'}
-        </p>
-        <div
-          className="hide-scrollbar flex gap-4 sm:gap-3 overflow-x-auto sm:justify-evenly px-2"
-          style={{ scrollbarWidth: 'none' } as React.CSSProperties}
-        >
-          {visibleProviderTabs.map(p => {
-            const color     = PROVIDER_COLOR[p.id] ?? 'var(--reel-accent-hex)';
-            const isActive  = activeProvider === p.id;
-            const isHovered = hoveredProvider === p.id;
-            const logo      = p.id !== 'all' ? PROVIDER_LOGOS[p.id] : null;
-            const lit       = isActive || isHovered;
-            return (
-              <button
-                key={p.id}
-                onClick={() => setActiveProvider(p.id)}
-                onMouseEnter={() => setHoveredProvider(p.id)}
-                onMouseLeave={() => setHoveredProvider(null)}
-                className="flex-shrink-0 flex flex-col items-center gap-2 transition-all duration-250"
-                style={{
-                  background: 'none', border: 'none', outline: 'none', padding: '4px 0 8px',
-                  transform: isHovered ? 'translateY(-4px) scale(1.08)' : 'translateY(0) scale(1)',
-                  opacity: lit ? 1 : 0.55,
-                  touchAction: 'manipulation',
-                }}
-              >
-                {logo ? (
-                  <img src={logo} alt={p.label}
-                    className="rounded-xl object-cover w-16 h-16 sm:w-[108px] sm:h-[108px]"
-                    style={{ boxShadow: lit ? `0 0 20px ${color}99` : 'none', transition: 'box-shadow 0.25s' }}
-                  />
-                ) : (
-                  <Layers className="w-12 h-12 sm:w-[68px] sm:h-[68px]" style={{ color: lit ? color : '#6b7280' }} />
-                )}
-                <span className="text-[11px] font-semibold tracking-wide" style={{ color: lit ? '#fff' : '#9ca3af' }}>
-                  {p.label}
-                </span>
-                <div style={{ height: 2, width: isActive ? '100%' : 0, background: color, borderRadius: 1, transition: 'width 0.25s' }} />
-              </button>
-            );
-          })}
+      <div className="mt-4 md:mt-6 mb-6 md:mb-8">
+
+        {/* Mobile: compact horizontal chip pills */}
+        <div className="md:hidden overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}>
+          <div className="flex gap-2 px-1 pb-1">
+            {visibleProviderTabs.map(p => {
+              const color    = PROVIDER_COLOR[p.id] ?? 'var(--reel-accent-hex)';
+              const isActive = activeProvider === p.id;
+              const logo     = p.id !== 'all' ? PROVIDER_LOGOS[p.id] : null;
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => setActiveProvider(p.id)}
+                  className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 active:scale-[0.97]"
+                  style={isActive
+                    ? { background: color, color: '#fff', border: `1.5px solid ${color}` }
+                    : { background: 'rgba(255,255,255,0.05)', color: '#9ca3af', border: '1.5px solid rgba(255,255,255,0.1)' }
+                  }
+                >
+                  {logo && <img src={logo} alt={p.label} className="w-4 h-4 rounded-sm object-cover flex-shrink-0" />}
+                  <span>{p.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Desktop: big logo icons with label */}
+        <div className="hidden md:block">
+          <p className="text-xs font-semibold uppercase tracking-widest text-gray-500 text-center mb-5">
+            {mediaType === 'show' ? 'Browse Shows' : 'Your Providers'}
+          </p>
+          <div
+            className="hide-scrollbar flex gap-4 sm:gap-3 overflow-x-auto sm:justify-evenly px-2"
+            style={{ scrollbarWidth: 'none' } as React.CSSProperties}
+          >
+            {visibleProviderTabs.map(p => {
+              const color     = PROVIDER_COLOR[p.id] ?? 'var(--reel-accent-hex)';
+              const isActive  = activeProvider === p.id;
+              const isHovered = hoveredProvider === p.id;
+              const logo      = p.id !== 'all' ? PROVIDER_LOGOS[p.id] : null;
+              const lit       = isActive || isHovered;
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => setActiveProvider(p.id)}
+                  onMouseEnter={() => setHoveredProvider(p.id)}
+                  onMouseLeave={() => setHoveredProvider(null)}
+                  className="flex-shrink-0 flex flex-col items-center gap-2 transition-all duration-250"
+                  style={{
+                    background: 'none', border: 'none', outline: 'none', padding: '4px 0 8px',
+                    transform: isHovered ? 'translateY(-4px) scale(1.08)' : 'translateY(0) scale(1)',
+                    opacity: lit ? 1 : 0.55,
+                    touchAction: 'manipulation',
+                  }}
+                >
+                  {logo ? (
+                    <img src={logo} alt={p.label}
+                      className="rounded-xl object-cover w-16 h-16 sm:w-[108px] sm:h-[108px]"
+                      style={{ boxShadow: lit ? `0 0 20px ${color}99` : 'none', transition: 'box-shadow 0.25s' }}
+                    />
+                  ) : (
+                    <Layers className="w-12 h-12 sm:w-[68px] sm:h-[68px]" style={{ color: lit ? color : '#6b7280' }} />
+                  )}
+                  <span className="text-[11px] font-semibold tracking-wide" style={{ color: lit ? '#fff' : '#9ca3af' }}>
+                    {p.label}
+                  </span>
+                  <div style={{ height: 2, width: isActive ? '100%' : 0, background: color, borderRadius: 1, transition: 'width 0.25s' }} />
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
       </div>{/* end toggle + provider wrapper */}

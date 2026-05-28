@@ -356,7 +356,7 @@ export function HomePage() {
 
       {/* ── Top nav bar ──────────────────────────────────────────── */}
       <header
-        className={`sticky top-0 z-50 flex items-center px-4 sm:px-5 h-[62px] backdrop-blur-2xl border-b transition-transform duration-300 ease-in-out ${navHidden ? '-translate-y-full' : 'translate-y-0'}`}
+        className={`hidden md:flex sticky top-0 z-50 items-center px-4 sm:px-5 h-[62px] backdrop-blur-2xl border-b transition-transform duration-300 ease-in-out ${navHidden ? '-translate-y-full' : 'translate-y-0'}`}
         style={{
           background: 'rgba(10,10,10,0.75)',
           borderBottomColor: 'rgba(255,255,255,0.055)',
@@ -619,11 +619,26 @@ export function HomePage() {
             <NavLink key={tab.id} to={tab.path} className="flex-1">
               {({ isActive }) => (
                 <div className="flex flex-col items-center justify-center py-3 min-h-[52px]">
-                  {tab.icon && (
-                    <tab.icon
-                      className={`w-6 h-6 transition-colors duration-150 ${isActive ? '' : 'text-zinc-500'}`}
-                      style={isActive ? { color: 'var(--reel-accent-hex)' } : {}}
-                    />
+                  {tab.id === 'profile' ? (
+                    navAvatarUrl ? (
+                      <img
+                        src={navAvatarUrl}
+                        alt="Profile"
+                        className={`w-7 h-7 rounded-full overflow-hidden border object-cover ${isActive ? 'border-white/50' : 'border-white/20'}`}
+                      />
+                    ) : (
+                      <div className={`w-7 h-7 rounded-full overflow-hidden border border-white/20 bg-[#2A2A2A] flex items-center justify-center text-[10px] font-semibold ${isActive ? '' : 'text-zinc-400'}`}
+                        style={isActive ? { color: 'var(--reel-accent-hex)' } : {}}>
+                        {currentUser?.username?.slice(0, 2).toUpperCase() ?? '?'}
+                      </div>
+                    )
+                  ) : (
+                    tab.icon && (
+                      <tab.icon
+                        className={`w-6 h-6 transition-colors duration-150 ${isActive ? '' : 'text-zinc-500'}`}
+                        style={isActive ? { color: 'var(--reel-accent-hex)' } : {}}
+                      />
+                    )
                   )}
                   {isActive && (
                     <span className="w-1 h-1 rounded-full mt-1" style={{ background: 'var(--reel-accent-hex)' }} />
