@@ -219,6 +219,8 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
   const posterUrl = movie.poster_path
     ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
     : null;
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  const bgSrc = isMobile ? (posterUrl ?? backdropUrl) : (backdropUrl ?? posterUrl);
 
   const displayTitle = isShow ? (movie.name ?? movie.title) : movie.title;
   const year = isShow
@@ -288,10 +290,14 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
 
       {/* ── Background ───────────────────────────────────────────── */}
       <div className="absolute inset-0">
-        {backdropUrl ? (
-          <img src={backdropUrl} alt={displayTitle as string} className="w-full h-full object-cover" draggable={false} />
-        ) : posterUrl ? (
-          <img src={posterUrl} alt={displayTitle as string} className="w-full h-full object-cover blur-sm scale-105" draggable={false} />
+        {bgSrc ? (
+          <img
+            src={bgSrc}
+            alt={displayTitle as string}
+            className="w-full h-full object-cover"
+            style={{ objectPosition: isMobile ? 'center top' : 'center' }}
+            draggable={false}
+          />
         ) : (
           <div className="w-full h-full bg-[#0A0A0A]" />
         )}
@@ -340,13 +346,13 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
       )}
 
       {/* ── Layout: content centered vertically, strip pinned to bottom ── */}
-      <div className="relative z-10 h-full flex flex-col">
+      <div className="relative z-10 h-full flex flex-col overflow-y-auto overscroll-contain">
 
-        {/* Flexible top spacer — pushes content into the middle */}
-        <div className="flex-1" />
+        {/* Flexible top spacer — pushes content into the middle (hidden on mobile so form is scrollable) */}
+        <div className="hidden sm:block flex-1" />
 
         {/* ── Info block ───────────────────────────────────────── */}
-        <div className="px-5 md:px-16 pb-6 md:pb-8 max-w-2xl" style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom, 0px) + 1.5rem)' }}>
+        <div className="px-5 md:px-16 pt-20 sm:pt-0 pb-6 md:pb-8 max-w-2xl" style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom, 0px) + 1.5rem)' }}>
 
           {/* Genre badge */}
           <span className="inline-block bg-[#7C5DBD] text-white text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded mb-4">

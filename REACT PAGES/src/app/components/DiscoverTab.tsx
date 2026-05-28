@@ -1138,7 +1138,7 @@ export function DiscoverTab() {
         if (cancelled) return;
         setProviderPopular(popularFinal.slice(0, ROW_LIMIT));
         setProviderNew(newFinal.slice(0, ROW_LIMIT));
-        setProviderShowsPopular(shows.slice(0, ROW_LIMIT));
+        setProviderShowsPopular(shows.slice(0, ROW_LIMIT).map(m => ({ ...m, type: 'show' as const })));
 
         const specificResults = await Promise.all(
           catalog.specificCategories.map(async cat => {
@@ -1248,7 +1248,7 @@ export function DiscoverTab() {
   const isProviderView = activeProvider !== 'all';
 
   return (
-    <div>
+    <div style={{ overflowX: 'hidden' }}>
 
       {/* ── Hero ── */}
       {heroSlots.length === 0 ? (
@@ -1317,6 +1317,7 @@ export function DiscoverTab() {
                   background: 'none', border: 'none', outline: 'none', padding: '4px 0 8px',
                   transform: isHovered ? 'translateY(-4px) scale(1.08)' : 'translateY(0) scale(1)',
                   opacity: lit ? 1 : 0.55,
+                  touchAction: 'manipulation',
                 }}
               >
                 {logo ? (

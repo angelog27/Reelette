@@ -73,7 +73,7 @@ function OnlineDot({ online }: { online: boolean }) {
 
 function AdminBadge() {
   return (
-    <span title="Site Admin" className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-400/10 ml-0.5">
+    <span title="Site Admin" className="inline-flex shrink-0 items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-400/10 ml-0.5">
       <Crown className="w-2.5 h-2.5 text-amber-400 fill-amber-400" />
       <span className="text-[9px] font-bold tracking-widest text-amber-400 uppercase">Admin</span>
     </span>
@@ -568,10 +568,10 @@ function ComposeBox({ currentUser, onPostCreated }: {
             </div>
             <span className="text-zinc-600 text-[14px]">What did you watch?</span>
           </div>
-          <span className="text-xs font-semibold px-3 py-1.5 rounded-full border shrink-0"
-            style={{ background: 'color-mix(in srgb, var(--reel-accent-hex) 20%, transparent)', color: 'var(--reel-accent-hex)', borderColor: 'color-mix(in srgb, var(--reel-accent-hex) 30%, transparent)' }}>
-            Post
-          </span>
+          <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+            style={{ background: 'var(--reel-accent-hex)' }}>
+            <Plus className="w-5 h-5 text-white" />
+          </div>
         </button>
       ) : (
         <div className="px-4 pt-4 pb-3 space-y-3">
@@ -670,18 +670,22 @@ function ComposeBox({ currentUser, onPostCreated }: {
             <div className="flex items-center gap-1">
               <button
                 onClick={() => { setMovieSearchOpen(v => !v); setRatingOpen(false); }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                  movieSearchOpen || selectedMovie ? '' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.05]'
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors ${
+                  movieSearchOpen || selectedMovie
+                    ? 'font-bold'
+                    : 'font-medium text-zinc-500 hover:text-zinc-300'
                 }`}
-                style={movieSearchOpen || selectedMovie ? { color: 'var(--reel-accent-hex)', background: 'color-mix(in srgb, var(--reel-accent-hex) 15%, transparent)' } : {}}
+                style={movieSearchOpen || selectedMovie ? { color: 'var(--reel-accent-hex)' } : {}}
               >
                 <Film className="w-3.5 h-3.5" />
                 {selectedMovie ? selectedMovie.title.length > 14 ? selectedMovie.title.slice(0, 13) + '…' : selectedMovie.title : 'Tag Media'}
               </button>
               <button
                 onClick={() => { setRatingOpen(v => !v); setMovieSearchOpen(false); }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                  ratingOpen || rating !== null ? 'text-yellow-400 bg-yellow-400/10' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.05]'
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors ${
+                  ratingOpen || rating !== null
+                    ? 'font-bold text-yellow-400'
+                    : 'font-medium text-zinc-500 hover:text-zinc-300'
                 }`}
               >
                 <Star className={`w-3.5 h-3.5 ${rating !== null ? 'fill-yellow-400' : ''}`} />
@@ -923,9 +927,9 @@ function ActivityCard({ post, currentUserId, currentUsername, isAdmin, onLike, o
                 <div className="flex items-center gap-2 min-w-0">
                   <UserAvatar username={post.username} avatarUrl={post.avatarUrl} size={26} onClick={() => onOpenProfile(post.user_id)} />
                   <div className="flex flex-col gap-0.5 min-w-0">
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 min-w-0 overflow-hidden">
                       <button onClick={() => onOpenProfile(post.user_id)}
-                        className="text-white text-sm font-semibold hover:text-[#9B7BD7] transition-colors leading-none">
+                        className="text-white text-sm font-semibold hover:text-[#9B7BD7] transition-colors leading-none truncate">
                         {(post as { displayName?: string }).displayName || post.username}
                       </button>
                       {post.user_id === ADMIN_UID && <AdminBadge />}

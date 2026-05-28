@@ -108,14 +108,15 @@ export function DiscoverProvider({ children }: { children: React.ReactNode }) {
   const triggerShowsFetch = useCallback(() => {
     if (showsFetchedRef.current) return;
     showsFetchedRef.current = true;
-    getTrendingShows().then(setShowsTrending).catch(() => setShowsTrending([]));
-    getPopularShows().then(setShowsPopular).catch(() => setShowsPopular([]));
-    getTopRatedShows().then(setShowsTopRated).catch(() => setShowsTopRated([]));
-    discoverShows({ genre_id: '18' }).then(setShowsDrama).catch(() => setShowsDrama([]));
-    discoverShows({ genre_id: '35' }).then(setShowsComedy).catch(() => setShowsComedy([]));
-    discoverShows({ genre_id: '80' }).then(setShowsCrime).catch(() => setShowsCrime([]));
-    discoverShows({ genre_id: '10765' }).then(setShowsScifi).catch(() => setShowsScifi([]));
-    discoverShows({ genre_id: '16' }).then(setShowsAnimation).catch(() => setShowsAnimation([]));
+    const tagShow = (arr: Movie[]) => arr.map(m => ({ ...m, type: 'show' as const }));
+    getTrendingShows().then(r => setShowsTrending(tagShow(r))).catch(() => setShowsTrending([]));
+    getPopularShows().then(r => setShowsPopular(tagShow(r))).catch(() => setShowsPopular([]));
+    getTopRatedShows().then(r => setShowsTopRated(tagShow(r))).catch(() => setShowsTopRated([]));
+    discoverShows({ genre_id: '18' }).then(r => setShowsDrama(tagShow(r))).catch(() => setShowsDrama([]));
+    discoverShows({ genre_id: '35' }).then(r => setShowsComedy(tagShow(r))).catch(() => setShowsComedy([]));
+    discoverShows({ genre_id: '80' }).then(r => setShowsCrime(tagShow(r))).catch(() => setShowsCrime([]));
+    discoverShows({ genre_id: '10765' }).then(r => setShowsScifi(tagShow(r))).catch(() => setShowsScifi([]));
+    discoverShows({ genre_id: '16' }).then(r => setShowsAnimation(tagShow(r))).catch(() => setShowsAnimation([]));
   }, []);
 
   // AI recommendation rows
