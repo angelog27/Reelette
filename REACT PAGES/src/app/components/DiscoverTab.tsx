@@ -1255,7 +1255,7 @@ export function DiscoverTab() {
   const isProviderView = activeProvider !== 'all';
 
   return (
-    <div style={{ overflowX: 'hidden' }}>
+    <div style={{ overflowX: 'clip' }}>
 
       {/* ── Hero ── */}
       {heroSlots.length === 0 ? (

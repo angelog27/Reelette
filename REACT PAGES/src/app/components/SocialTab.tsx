@@ -1045,6 +1045,13 @@ function ActivityCard({ post, currentUserId, currentUsername, isAdmin, onLike, o
                     <span className="tabular-nums">{users.length}</span>
                   </button>
                 ))}
+                {/* Comment button — mobile only (desktop shows replies in right panel) */}
+                <button onClick={toggleReplies}
+                  className={`sm:hidden flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs transition-colors ${showReplies ? '' : 'text-zinc-600 hover:text-zinc-300'}`}
+                  style={showReplies ? { color: 'var(--reel-accent-hex)' } : {}}>
+                  <MessageCircle className="w-[13px] h-[13px]" />
+                  {localReplyCount > 0 && <span className="tabular-nums">{localReplyCount}</span>}
+                </button>
                 <button onClick={() => setShowRepostInput(s => !s)}
                   className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs transition-colors ml-auto ${showRepostInput ? 'text-emerald-400' : 'text-zinc-600 hover:text-emerald-400 hover:bg-emerald-400/5'}`}>
                   <Repeat2 className="w-[13px] h-[13px]" />
@@ -1157,6 +1164,13 @@ function ActivityCard({ post, currentUserId, currentUsername, isAdmin, onLike, o
                   <span className="tabular-nums">{users.length}</span>
                 </button>
               ))}
+              {/* Comment button — mobile only */}
+              <button onClick={toggleReplies}
+                className={`sm:hidden flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs transition-colors ${showReplies ? '' : 'text-zinc-600 hover:text-zinc-300'}`}
+                style={showReplies ? { color: 'var(--reel-accent-hex)' } : {}}>
+                <MessageCircle className="w-[13px] h-[13px]" />
+                {localReplyCount > 0 && <span className="tabular-nums">{localReplyCount}</span>}
+              </button>
               <button onClick={() => setShowRepostInput(s => !s)}
                 className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs transition-colors ml-auto ${showRepostInput ? 'text-emerald-400' : 'text-zinc-600 hover:text-emerald-400 hover:bg-emerald-400/5'}`}>
                 <Repeat2 className="w-[13px] h-[13px]" />
@@ -1271,16 +1285,8 @@ function ActivityCard({ post, currentUserId, currentUsername, isAdmin, onLike, o
         </div>
       </div>
 
-      {/* Mobile-only inline replies */}
+      {/* Mobile-only inline replies — toggle button lives in the actions row above */}
       <div className="sm:hidden">
-        <button
-          onClick={toggleReplies}
-          className={`flex items-center gap-1.5 mt-1 px-1 py-1 text-xs transition-colors ${showReplies ? '' : 'text-zinc-600 hover:text-zinc-300'}`}
-          style={showReplies ? { color: 'var(--reel-accent-hex)' } : {}}
-        >
-          <MessageCircle className="w-3.5 h-3.5" />
-          {localReplyCount > 0 ? `${localReplyCount} ${localReplyCount === 1 ? 'reply' : 'replies'}` : 'Reply'}
-        </button>
         {showReplies && (
           <div className="mt-2 space-y-3 border-t border-white/[0.05] pt-3">
             {loadingReplies && (
@@ -2609,7 +2615,7 @@ export function SocialTab() {
         ) : (
           <>
             {/* Feed tab bar */}
-            <div className="sticky top-0 z-10 bg-[#0A0A0A]/95 backdrop-blur-sm">
+            <div className="sticky top-0 z-10 backdrop-blur-2xl border-b" style={{ background: 'rgba(10,10,10,0.55)', borderBottomColor: 'rgba(255,255,255,0.055)' }}>
               <div className="relative flex items-center">
                 <button onClick={() => setFeedMode('all')}
                   className="flex-1 py-3.5 text-sm font-semibold relative"

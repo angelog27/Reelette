@@ -599,7 +599,7 @@ export function HomePage() {
       </header>
 
       {/* Page content — extra bottom padding on mobile so bottom nav doesn't cover content */}
-      <main className="flex-1 px-3 md:px-6 py-0 pb-[calc(4rem+env(safe-area-inset-bottom,0px))] md:pb-0 overflow-x-hidden">
+      <main className="flex-1 px-3 md:px-6 py-0 pb-[calc(4rem+env(safe-area-inset-bottom,0px))] md:pb-0 [overflow-x:clip]">
         <DiscoverProvider>
           <Suspense fallback={
             <div className="flex items-center justify-center py-24 text-gray-500">Loading…</div>

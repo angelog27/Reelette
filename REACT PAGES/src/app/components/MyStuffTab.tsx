@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { Star, Bookmark, BarChart2, ArrowUpDown, Check, Trophy } from 'lucide-react';
 import { getWatchedMovies, getWatchLater, getMovieDetails, getShowDetails, getMovieProvider, getUser, getRouletteHistory } from '../services/api';
 import type { WatchedMovie, RouletteSpin } from '../services/api';
@@ -199,59 +199,66 @@ export function MyStuffTab() {
       {/* ── Controls row: tabs + sort ── */}
       <div className="px-3 sm:px-6 pt-10 pb-4 flex items-center gap-4 flex-wrap">
 
-        {/* Tab pills */}
-        <div className="flex gap-1 bg-[#111] border border-[#1e1e1e] rounded-full p-1 w-fit">
-          <button
-            onClick={() => handleTabChange('watched')}
-            className={`flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              activeTab === 'watched' ? 'bg-[#7C5DBD] text-white' : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            <Star className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Watched</span>
-          </button>
-          <button
-            onClick={() => handleTabChange('watchlater')}
-            className={`flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              activeTab === 'watchlater' ? 'bg-[#7C5DBD] text-white' : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            <Bookmark className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Watch Later</span>
-          </button>
-          <button
-            onClick={() => handleTabChange('stats')}
-            className={`flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              activeTab === 'stats' ? 'text-white' : 'text-gray-400 hover:text-white'
-            }`}
-            style={activeTab === 'stats' ? { backgroundColor: '#f97316' } : {}}
-          >
-            <BarChart2 className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Stats</span>
-          </button>
-          <button
-            onClick={() => handleTabChange('rankings')}
-            className={`flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              activeTab === 'rankings' ? 'text-white' : 'text-gray-400 hover:text-white'
-            }`}
-            style={activeTab === 'rankings' ? { background: 'var(--reel-accent-hex)' } : {}}
-          >
-            <Trophy className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Rankings</span>
-          </button>
-        </div>
+        {/* Tab pills — sliding indicator (GPU-accelerated translateX) */}
+        {(() => {
+          const TAB_ORDER: Tab[] = ['watched', 'watchlater', 'stats', 'rankings'];
+          const tabIdx = TAB_ORDER.indexOf(activeTab);
+          const indicatorColor = activeTab === 'stats' ? '#f97316' : 'var(--reel-accent-hex)';
+          return (
+            <div className="relative flex bg-[#111] border border-[#1e1e1e] rounded-full p-1">
+              <div style={{
+                position: 'absolute', top: 4, bottom: 4, left: 4,
+                width: 'calc(25% - 2px)',
+                background: indicatorColor,
+                borderRadius: 9999,
+                transform: `translateX(${tabIdx * 100}%)`,
+                transition: 'transform 220ms cubic-bezier(0.23, 1, 0.32, 1), background-color 150ms cubic-bezier(0.23, 1, 0.32, 1)',
+                pointerEvents: 'none',
+              }} />
+              {([
+                { id: 'watched',   Icon: Star,     label: 'Watched'      },
+                { id: 'watchlater', Icon: Bookmark, label: 'Watch Later'  },
+                { id: 'stats',     Icon: BarChart2, label: 'Stats'        },
+                { id: 'rankings',  Icon: Trophy,    label: 'Rankings'     },
+              ] as { id: Tab; Icon: React.ElementType; label: string }[]).map(t => (
+                <button key={t.id}
+                  onClick={() => handleTabChange(t.id)}
+                  className="relative z-10 flex-1 flex items-center justify-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-sm font-medium active:scale-[0.97]"
+                  style={{ color: activeTab === t.id ? '#fff' : '#9ca3af', transition: 'color 150ms cubic-bezier(0.23, 1, 0.32, 1)' }}>
+                  <t.Icon className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">{t.label}</span>
+                </button>
+              ))}
+            </div>
+          );
+        })()}
 
-        {/* Media filter — only on Watched tab */}
-        {activeTab === 'watched' && (
-          <div className="flex gap-1 bg-[#111] border border-[#1e1e1e] rounded-full p-1 w-fit">
-            {(['all', 'movie', 'show'] as MediaFilter[]).map(f => (
-              <button
-                key={f}
-                onClick={() => { setMediaFilter(f); setPage(1); }}
-                className="px-3 py-1.5 rounded-full text-xs font-medium transition-colors"
-                style={mediaFilter === f ? { background: 'var(--reel-accent-hex)', color: '#fff' } : { color: '#9ca3af' }}
-              >
-                {f === 'all' ? 'All' : f === 'movie' ? 'Movies' : 'Shows'}
-              </button>
-            ))}
-          </div>
-        )}
+        {/* Media filter — only on Watched tab, sliding indicator */}
+        {activeTab === 'watched' && (() => {
+          const FILTERS: MediaFilter[] = ['all', 'movie', 'show'];
+          const filterIdx = FILTERS.indexOf(mediaFilter);
+          return (
+            <div className="relative flex bg-[#111] border border-[#1e1e1e] rounded-full p-1">
+              <div style={{
+                position: 'absolute', top: 4, bottom: 4, left: 4,
+                width: 'calc(33.33% - 2.67px)',
+                background: 'var(--reel-accent-hex)',
+                borderRadius: 9999,
+                transform: `translateX(${filterIdx * 100}%)`,
+                transition: 'transform 220ms cubic-bezier(0.23, 1, 0.32, 1)',
+                pointerEvents: 'none',
+              }} />
+              {FILTERS.map(f => (
+                <button key={f}
+                  onClick={() => { setMediaFilter(f); setPage(1); }}
+                  className="relative z-10 flex-1 px-3 py-1.5 rounded-full text-xs font-medium active:scale-[0.97]"
+                  style={{ color: mediaFilter === f ? '#fff' : '#9ca3af', transition: 'color 150ms cubic-bezier(0.23, 1, 0.32, 1)' }}>
+                  {f === 'all' ? 'All' : f === 'movie' ? 'Movies' : 'Shows'}
+                </button>
+              ))}
+            </div>
+          );
+        })()}
 
         {/* Sort button — hidden on Stats and Rankings tabs, pushed to the far right */}
         {activeTab !== 'stats' && activeTab !== 'rankings' && (
