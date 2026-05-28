@@ -3,7 +3,7 @@ import { X, Bookmark, BookmarkCheck, Star, Play, ChevronDown, ChevronUp, User, H
 import {
   getMovieDetails, getShowDetails, getWatchedMovie, addWatchedMovie, updateWatchedMovie,
   getUser, getWatchLater, watchMovieLater, removeFromWatchLater,
-  getFriends, getMovieLogo, getFeed, timeAgo,
+  getFriends, getMovieLogo, getFeed, timeAgo, searchMovies, getUserPublicProfile,
 } from '../services/api';
 import type { WatchedMovie, FeedPost } from '../services/api';
 
@@ -55,6 +55,8 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
   const [trailerOpen, setTrailerOpen]           = useState(false);
   const [logoUrl, setLogoUrl]                   = useState<string | null>(null);
   const [socialPosts, setSocialPosts]           = useState<FeedPost[]>([]);
+  const [collectionMovies, setCollectionMovies] = useState<any[]>([]);
+  const [avatarMap, setAvatarMap]               = useState<Record<string, string>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const user = getUser();
@@ -104,6 +106,8 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
     setTrailerOpen(false);
     setLogoUrl(null);
     setSocialPosts([]);
+    setCollectionMovies([]);
+    setAvatarMap({});
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
 
     const fetchMedia = type === 'show'
@@ -116,18 +120,41 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
           return d;
         });
 
-    fetchMedia.then((data) => {
+    fetchMedia.then((data: any) => {
       setMovie(data);
       setLoading(false);
+
+      // Franchise / collection movies — prepend to "More Like This"
+      const collection = data?.belongs_to_collection;
+      if (collection?.name && type !== 'show') {
+        const term = (collection.name as string)
+          .replace(/\s+(Collection|Franchise|Series|Films|Universe|Saga|Trilogy|Cinematic Universe)$/i, '')
+          .trim();
+        searchMovies(term)
+          .then(results => setCollectionMovies(results.filter((m: any) => String(m.id) !== movieId)))
+          .catch(() => {});
+      }
     });
 
     // Logo
     const logoType = type === 'show' ? 'show' : 'movie';
     getMovieLogo(movieId, logoType).then(url => setLogoUrl(url));
 
-    // Social posts about this movie
+    // Social posts about this movie + resolve any missing avatarUrls
     getFeed(80).then(posts => {
-      setSocialPosts(posts.filter(p => p.movie_id === movieId));
+      const filtered = posts.filter(p => p.movie_id === movieId);
+      setSocialPosts(filtered);
+      // Fetch current avatarUrl for posts that don't have one saved
+      const needsAvatar = [...new Set(filtered.filter(p => !p.avatarUrl).map(p => p.user_id))];
+      if (needsAvatar.length > 0) {
+        Promise.all(needsAvatar.map(uid =>
+          getUserPublicProfile(uid).then(prof => ({ uid, url: prof?.avatarUrl ?? null })).catch(() => ({ uid, url: null }))
+        )).then(results => {
+          const map: Record<string, string> = {};
+          results.forEach(r => { if (r.url) map[r.uid] = r.url; });
+          if (Object.keys(map).length > 0) setAvatarMap(map);
+        });
+      }
     }).catch(() => {});
 
     if (user) {
@@ -250,7 +277,12 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
   const isShow = type === 'show' || movie.media_type === 'tv';
   const genres: { id: number; name: string }[] = movie.genres ?? [];
   const providers: any[] = movie['watch/providers']?.results?.US?.flatrate ?? [];
-  const similar: any[]   = movie.similar?.results ?? movie.recommendations?.results ?? [];
+  // Franchise movies first, then TMDB similar/recommendations (deduplicated)
+  const tmdbRelated: any[] = movie.similar?.results ?? movie.recommendations?.results ?? [];
+  const similar: any[] = [
+    ...collectionMovies,
+    ...tmdbRelated.filter((m: any) => !collectionMovies.some(cm => cm.id === m.id) && String(m.id) !== movieId),
+  ];
 
   const backdropUrl = movie.backdrop_path
     ? `https://image.tmdb.org/t/p/original${movie.backdrop_path}`
@@ -352,21 +384,21 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
         {/* Bottom fade into page bg */}
         <div className="absolute inset-0 pointer-events-none"
           style={{ background: 'linear-gradient(to bottom, transparent 45%, rgba(10,10,10,0.65) 72%, rgba(10,10,10,0.92) 88%, #0A0A0A 100%)' }} />
-        {/* Logo at bottom */}
-        <div className="absolute bottom-0 left-0 right-0 px-5 pb-5 flex items-end">
+        {/* Logo — centered at bottom of poster */}
+        <div className="absolute bottom-0 inset-x-0 px-5 pb-6 flex justify-center items-end">
           {logoUrl ? (
             <img
               src={logoUrl}
               alt={displayTitle as string}
               className="w-auto object-contain"
               style={{
-                maxHeight: 72,
-                maxWidth: '80%',
+                maxHeight: 90,
+                maxWidth: '75%',
                 filter: 'drop-shadow(0 2px 20px rgba(0,0,0,0.95))',
               }}
             />
           ) : (
-            <h1 className="text-3xl font-black text-white leading-tight"
+            <h1 className="text-3xl font-black text-white text-center leading-tight"
               style={{ textShadow: '0 2px 16px rgba(0,0,0,0.9)' }}>
               {displayTitle}
             </h1>
@@ -393,24 +425,21 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
         {/* Bottom fade */}
         <div className="absolute inset-0 pointer-events-none"
           style={{ background: 'linear-gradient(to bottom, transparent 30%, rgba(10,10,10,0.55) 60%, rgba(10,10,10,0.88) 78%, #0A0A0A 100%)' }} />
-        {/* Side vignette — left edge so text sits on darker bg */}
-        <div className="absolute inset-0 pointer-events-none"
-          style={{ background: 'linear-gradient(to right, rgba(10,10,10,0.32) 0%, transparent 45%)' }} />
-        {/* Logo */}
-        <div className="absolute bottom-0 left-0 px-14 pb-8 max-w-[55%]">
+        {/* Logo — centered at bottom */}
+        <div className="absolute bottom-0 inset-x-0 pb-10 flex justify-center items-end">
           {logoUrl ? (
             <img
               src={logoUrl}
               alt={displayTitle as string}
               className="w-auto object-contain"
               style={{
-                maxHeight: 'clamp(56px, 9vw, 140px)',
-                maxWidth: '100%',
-                filter: 'drop-shadow(0 2px 24px rgba(0,0,0,0.95)) drop-shadow(0 0 8px rgba(0,0,0,0.7))',
+                maxHeight: 'clamp(72px, 10vw, 160px)',
+                maxWidth: '55%',
+                filter: 'drop-shadow(0 2px 28px rgba(0,0,0,0.95)) drop-shadow(0 0 12px rgba(0,0,0,0.7))',
               }}
             />
           ) : (
-            <h1 className="text-5xl lg:text-6xl font-black text-white leading-tight"
+            <h1 className="text-5xl lg:text-6xl font-black text-white text-center leading-tight px-8"
               style={{ textShadow: '0 2px 20px rgba(0,0,0,0.9)' }}>
               {displayTitle}
             </h1>
@@ -442,7 +471,7 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
         {/* Overview */}
         {overviewText && (
           <div>
-            <p className="text-zinc-300 text-sm leading-relaxed">
+            <p className="text-zinc-300 text-base leading-relaxed">
               {displayOverview}
               {isLongOverview && (
                 <button
@@ -671,10 +700,10 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
         {cast.length > 0 && (
           <div>
             <SectionLabel>Cast</SectionLabel>
-            <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar -mx-1 px-1">
+            <div className="flex gap-4 md:gap-6 overflow-x-auto pb-2 no-scrollbar -mx-1 px-1">
               {cast.slice(0, 12).map((c: any) => (
-                <div key={c.id} className="flex flex-col items-center gap-1.5 shrink-0 w-[68px]">
-                  <div className="w-14 h-14 rounded-full overflow-hidden ring-1 ring-white/10 bg-zinc-800">
+                <div key={c.id} className="flex flex-col items-center gap-1.5 shrink-0 w-[72px] md:w-[96px]">
+                  <div className="w-14 h-14 md:w-20 md:h-20 rounded-full overflow-hidden ring-1 ring-white/10 bg-zinc-800">
                     {c.profile_path ? (
                       <img
                         src={`https://image.tmdb.org/t/p/w185${c.profile_path}`}
@@ -684,13 +713,13 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
-                        <User className="w-6 h-6 text-zinc-600" />
+                        <User className="w-6 h-6 md:w-8 md:h-8 text-zinc-600" />
                       </div>
                     )}
                   </div>
-                  <span className="text-white text-[10px] font-medium text-center leading-tight line-clamp-2">{c.name}</span>
+                  <span className="text-white text-[10px] md:text-xs font-medium text-center leading-tight line-clamp-2">{c.name}</span>
                   {c.character && (
-                    <span className="text-zinc-600 text-[9px] text-center leading-tight line-clamp-1">{c.character}</span>
+                    <span className="text-zinc-600 text-[9px] md:text-[10px] text-center leading-tight line-clamp-1">{c.character}</span>
                   )}
                 </div>
               ))}
@@ -727,7 +756,7 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
                       className="flex items-start gap-3 p-3.5 rounded-2xl"
                       style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.06)' }}>
                       <img
-                        src={p.avatarUrl ?? dicebear(p.username)}
+                        src={p.avatarUrl ?? avatarMap[p.user_id] ?? dicebear(p.username)}
                         alt={p.username}
                         className="w-8 h-8 rounded-full shrink-0 bg-zinc-800 object-cover"
                       />
