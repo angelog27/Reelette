@@ -22,7 +22,6 @@ interface Props {
   onWatchedChange?: () => void;
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────
 function dicebear(seed: string) {
   return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(seed)}`;
 }
@@ -34,6 +33,9 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
     </p>
   );
 }
+
+const INFO_TABS = ['watch', 'cast', 'extras'] as const;
+type InfoTab = typeof INFO_TABS[number];
 
 export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose, onWatchedChange }: Props) {
   const [movie, setMovie]                   = useState<any>(null);
@@ -57,6 +59,7 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
   const [socialPosts, setSocialPosts]           = useState<FeedPost[]>([]);
   const [collectionMovies, setCollectionMovies] = useState<any[]>([]);
   const [avatarMap, setAvatarMap]               = useState<Record<string, string>>({});
+  const [activeInfoTab, setActiveInfoTab]       = useState<InfoTab>('watch');
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const user = getUser();
@@ -108,6 +111,7 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
     setSocialPosts([]);
     setCollectionMovies([]);
     setAvatarMap({});
+    setActiveInfoTab('watch');
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
 
     const fetchMedia = type === 'show'
@@ -124,15 +128,28 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
       setMovie(data);
       setLoading(false);
 
-      // Franchise / collection movies — prepend to "More Like This"
-      const collection = data?.belongs_to_collection;
-      if (collection?.name && type !== 'show') {
-        const term = (collection.name as string)
-          .replace(/\s+(Collection|Franchise|Series|Films|Universe|Saga|Trilogy|Cinematic Universe)$/i, '')
-          .trim();
-        searchMovies(term)
-          .then(results => setCollectionMovies(results.filter((m: any) => String(m.id) !== movieId)))
-          .catch(() => {});
+      // Franchise / collection movies
+      if (type !== 'show') {
+        const collection = data?.belongs_to_collection;
+        if (collection?.name) {
+          const term = (collection.name as string)
+            .replace(/\s+(Collection|Franchise|Series|Films|Universe|Saga|Trilogy|Cinematic Universe)$/i, '')
+            .trim();
+          searchMovies(term)
+            .then(results => setCollectionMovies(results.filter((m: any) => String(m.id) !== movieId)))
+            .catch(() => {});
+        } else if (data?.title) {
+          // Title-based fallback: strip subtitles to get base franchise name
+          const baseTitle = (data.title as string)
+            .replace(/\s*[:\-].*$/, '')
+            .replace(/\s+(and\s+the\b.*)$/i, '')
+            .trim();
+          if (baseTitle.length > 3) {
+            searchMovies(baseTitle)
+              .then(results => setCollectionMovies(results.filter((m: any) => String(m.id) !== movieId).slice(0, 10)))
+              .catch(() => {});
+          }
+        }
       }
     });
 
@@ -140,11 +157,10 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
     const logoType = type === 'show' ? 'show' : 'movie';
     getMovieLogo(movieId, logoType).then(url => setLogoUrl(url));
 
-    // Social posts about this movie + resolve any missing avatarUrls
+    // Social posts + resolve missing avatarUrls
     getFeed(80).then(posts => {
       const filtered = posts.filter(p => p.movie_id === movieId);
       setSocialPosts(filtered);
-      // Fetch current avatarUrl for posts that don't have one saved
       const needsAvatar = [...new Set(filtered.filter(p => !p.avatarUrl).map(p => p.user_id))];
       if (needsAvatar.length > 0) {
         Promise.all(needsAvatar.map(uid =>
@@ -242,7 +258,7 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
   // ── Loading / error ───────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="fixed inset-0 z-50 bg-[#0A0A0A] flex items-center justify-center">
+      <div className="fixed inset-x-0 z-40 bg-[#0A0A0A] flex items-center justify-center" style={{ top: 62, bottom: 0 }}>
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--reel-accent-hex)', borderTopColor: 'transparent' }} />
           <p className="text-zinc-500 text-sm">Loading…</p>
@@ -253,7 +269,7 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
 
   if (!movie || movie.error) {
     return (
-      <div className="fixed inset-0 z-50 bg-[#0A0A0A] flex items-center justify-center">
+      <div className="fixed inset-x-0 z-40 bg-[#0A0A0A] flex items-center justify-center" style={{ top: 62, bottom: 0 }}>
         <div className="text-center">
           <p className="text-zinc-400 mb-4">Could not load details.</p>
           <button onClick={onClose} className="text-sm font-medium" style={{ color: 'var(--reel-accent-hex)' }}>Close</button>
@@ -262,7 +278,6 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
     );
   }
 
-  // Push into related movie view
   if (relatedMovieId) {
     return (
       <MovieDetailModal
@@ -277,8 +292,11 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
   const isShow = type === 'show' || movie.media_type === 'tv';
   const genres: { id: number; name: string }[] = movie.genres ?? [];
   const providers: any[] = movie['watch/providers']?.results?.US?.flatrate ?? [];
-  // Franchise movies first, then TMDB similar/recommendations (deduplicated)
-  const tmdbRelated: any[] = movie.similar?.results ?? movie.recommendations?.results ?? [];
+  // Combine recommendations + similar, franchise entries first
+  const tmdbRelated: any[] = [
+    ...(movie.recommendations?.results ?? []),
+    ...(movie.similar?.results ?? []),
+  ].filter((m, i, arr) => arr.findIndex((x: any) => x.id === m.id) === i);
   const similar: any[] = [
     ...collectionMovies,
     ...tmdbRelated.filter((m: any) => !collectionMovies.some(cm => cm.id === m.id) && String(m.id) !== movieId),
@@ -309,9 +327,9 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
   const cast: any[] = (movie.aggregate_credits?.cast ?? movie.credits?.cast ?? []) as any[];
 
   const overviewText   = movie.overview ?? '';
-  const isLongOverview = overviewText.length > 200;
+  const isLongOverview = overviewText.length > 280;
   const displayOverview = (!overviewExpanded && isLongOverview)
-    ? overviewText.slice(0, 200).trimEnd() + '…'
+    ? overviewText.slice(0, 280).trimEnd() + '…'
     : overviewText;
 
   const videos: any[] = movie.videos?.results ?? [];
@@ -339,34 +357,25 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
     ?? (providers.length > 0 ? providerUrl(providers[0]) : null)
     ?? `https://www.justwatch.com/us/search?q=${searchTitle}`;
 
+  const primaryProvider = providers[0] ?? null;
+
   const allCommunityItems = [
     ...socialPosts.map(p => ({ kind: 'social' as const, post: p })),
     ...friendReviews.map(r => ({ kind: 'friend' as const, review: r })),
   ];
 
+  const tabIdx = INFO_TABS.indexOf(activeInfoTab);
+
   // ── Render ───────────────────────────────────────────────────────
   return (
     <div
       ref={scrollRef}
-      className="fixed inset-0 z-50 bg-[#0A0A0A] overflow-y-auto overscroll-contain"
-      style={{ scrollBehavior: 'smooth' }}
+      className="fixed inset-x-0 z-40 bg-[#0A0A0A] overflow-y-auto overscroll-contain"
+      style={{ top: 62, bottom: 0, scrollBehavior: 'smooth' }}
     >
 
-      {/* ── Close button ─────────────────────────────────────── */}
-      <button
-        onClick={onClose}
-        className="fixed top-4 right-4 z-[60] flex items-center justify-center w-9 h-9 rounded-full transition-colors active:scale-[0.97]"
-        style={{ background: 'rgba(10,10,10,0.7)', border: '1px solid rgba(255,255,255,0.12)', backdropFilter: 'blur(12px)' }}
-      >
-        <X className="w-4 h-4 text-white" />
-      </button>
-
-      {/* ── Hero ─────────────────────────────────────────────────
-           Mobile: portrait poster, full width, scrolls naturally
-           Desktop: widescreen backdrop, fixed viewport height     */}
-
-      {/* MOBILE hero — portrait poster */}
-      <div className="relative w-full md:hidden" style={{ aspectRatio: '2/3', maxHeight: '80vh', overflow: 'hidden' }}>
+      {/* ── MOBILE hero — portrait poster ───────────────────────── */}
+      <div className="relative w-full md:hidden" style={{ aspectRatio: '2/3', maxHeight: '78vh', overflow: 'hidden' }}>
         {posterUrl ? (
           <img
             src={posterUrl}
@@ -380,20 +389,42 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
         )}
         {/* Top fade */}
         <div className="absolute inset-0 pointer-events-none"
-          style={{ background: 'linear-gradient(to bottom, rgba(10,10,10,0.5) 0%, transparent 18%)' }} />
-        {/* Bottom fade into page bg */}
+          style={{ background: 'linear-gradient(to bottom, rgba(10,10,10,0.4) 0%, transparent 15%)' }} />
+        {/* Bottom fade */}
         <div className="absolute inset-0 pointer-events-none"
-          style={{ background: 'linear-gradient(to bottom, transparent 45%, rgba(10,10,10,0.65) 72%, rgba(10,10,10,0.92) 88%, #0A0A0A 100%)' }} />
-        {/* Logo — centered at bottom of poster */}
-        <div className="absolute bottom-0 inset-x-0 px-5 pb-6 flex justify-center items-end">
+          style={{ background: 'linear-gradient(to bottom, transparent 40%, rgba(10,10,10,0.6) 68%, rgba(10,10,10,0.92) 86%, #0A0A0A 100%)' }} />
+
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          className="absolute top-3 right-3 z-10 flex items-center justify-center w-9 h-9 rounded-full transition-colors active:scale-[0.97]"
+          style={{ background: 'rgba(10,10,10,0.6)', border: '1px solid rgba(255,255,255,0.12)', backdropFilter: 'blur(12px)' }}
+        >
+          <X className="w-4 h-4 text-white" />
+        </button>
+
+        {/* Provider emblem — bottom-right */}
+        {primaryProvider?.logo_path && (
+          <div className="absolute bottom-5 right-4 z-10">
+            <img
+              src={`https://image.tmdb.org/t/p/original${primaryProvider.logo_path}`}
+              alt={primaryProvider.provider_name}
+              className="w-12 h-12 rounded-xl object-cover"
+              style={{ boxShadow: '0 4px 20px rgba(0,0,0,0.8)', border: '1.5px solid rgba(255,255,255,0.15)' }}
+            />
+          </div>
+        )}
+
+        {/* Logo — centered at bottom */}
+        <div className="absolute bottom-0 inset-x-0 px-5 pb-6 flex justify-center items-end" style={{ paddingRight: primaryProvider ? '5rem' : undefined }}>
           {logoUrl ? (
             <img
               src={logoUrl}
               alt={displayTitle as string}
               className="w-auto object-contain"
               style={{
-                maxHeight: 90,
-                maxWidth: '75%',
+                maxHeight: 180,
+                maxWidth: '70%',
                 filter: 'drop-shadow(0 2px 20px rgba(0,0,0,0.95))',
               }}
             />
@@ -406,8 +437,8 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
         </div>
       </div>
 
-      {/* DESKTOP hero — widescreen backdrop */}
-      <div className="relative w-full hidden md:block" style={{ height: 'clamp(300px, 52vw, 640px)' }}>
+      {/* ── DESKTOP hero — widescreen backdrop ──────────────────── */}
+      <div className="relative w-full hidden md:block" style={{ height: 'clamp(320px, 54vw, 660px)' }}>
         {(backdropUrl ?? posterUrl) ? (
           <img
             src={backdropUrl ?? posterUrl!}
@@ -421,19 +452,41 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
         )}
         {/* Top vignette */}
         <div className="absolute inset-0 pointer-events-none"
-          style={{ background: 'linear-gradient(to bottom, rgba(10,10,10,0.45) 0%, transparent 22%)' }} />
+          style={{ background: 'linear-gradient(to bottom, rgba(10,10,10,0.4) 0%, transparent 20%)' }} />
         {/* Bottom fade */}
         <div className="absolute inset-0 pointer-events-none"
-          style={{ background: 'linear-gradient(to bottom, transparent 30%, rgba(10,10,10,0.55) 60%, rgba(10,10,10,0.88) 78%, #0A0A0A 100%)' }} />
+          style={{ background: 'linear-gradient(to bottom, transparent 28%, rgba(10,10,10,0.5) 58%, rgba(10,10,10,0.88) 76%, #0A0A0A 100%)' }} />
+
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-5 z-10 flex items-center justify-center w-9 h-9 rounded-full transition-colors active:scale-[0.97]"
+          style={{ background: 'rgba(10,10,10,0.6)', border: '1px solid rgba(255,255,255,0.12)', backdropFilter: 'blur(12px)' }}
+        >
+          <X className="w-4 h-4 text-white" />
+        </button>
+
+        {/* Provider emblem — bottom-right */}
+        {primaryProvider?.logo_path && (
+          <div className="absolute bottom-8 right-8 z-10">
+            <img
+              src={`https://image.tmdb.org/t/p/original${primaryProvider.logo_path}`}
+              alt={primaryProvider.provider_name}
+              className="w-16 h-16 rounded-2xl object-cover"
+              style={{ boxShadow: '0 6px 28px rgba(0,0,0,0.85)', border: '1.5px solid rgba(255,255,255,0.15)' }}
+            />
+          </div>
+        )}
+
         {/* Logo — centered at bottom */}
-        <div className="absolute bottom-0 inset-x-0 pb-10 flex justify-center items-end">
+        <div className="absolute bottom-0 inset-x-0 pb-10 flex justify-center items-end" style={{ paddingRight: primaryProvider ? '6rem' : undefined }}>
           {logoUrl ? (
             <img
               src={logoUrl}
               alt={displayTitle as string}
               className="w-auto object-contain"
               style={{
-                maxHeight: 'clamp(72px, 10vw, 160px)',
+                maxHeight: 'clamp(144px, 18vw, 280px)',
                 maxWidth: '55%',
                 filter: 'drop-shadow(0 2px 28px rgba(0,0,0,0.95)) drop-shadow(0 0 12px rgba(0,0,0,0.7))',
               }}
@@ -448,10 +501,10 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
       </div>
 
       {/* ── Content ─────────────────────────────────────────────── */}
-      <div className="px-5 md:px-14 pb-16 space-y-8">
+      <div className="px-5 md:px-14 pb-16 space-y-7 mt-2">
 
         {/* Meta row */}
-        <div className="flex flex-wrap items-center gap-2.5 text-sm -mt-1">
+        <div className="flex flex-wrap items-center gap-2.5 text-sm">
           {(movie.vote_average as number) > 0 && (
             <div className="flex items-center gap-1 bg-yellow-400/10 border border-yellow-400/20 rounded-full px-2.5 py-0.5">
               <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
@@ -468,126 +521,78 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
           )}
         </div>
 
-        {/* Overview */}
+        {/* Overview — large clean font */}
         {overviewText && (
           <div>
-            <p className="text-zinc-300 text-base leading-relaxed">
+            <p className="text-zinc-200 text-lg leading-relaxed font-light">
               {displayOverview}
               {isLongOverview && (
                 <button
                   onClick={() => setOverviewExpanded(!overviewExpanded)}
-                  className="ml-1 inline-flex items-center gap-0.5 text-xs font-medium"
+                  className="ml-1.5 inline-flex items-center gap-0.5 text-sm font-medium"
                   style={{ color: 'var(--reel-accent-hex)' }}
                 >
                   {overviewExpanded
-                    ? <><ChevronUp className="w-3 h-3" /> Less</>
-                    : <><ChevronDown className="w-3 h-3" /> More</>}
+                    ? <><ChevronUp className="w-3.5 h-3.5" /> Less</>
+                    : <><ChevronDown className="w-3.5 h-3.5" /> More</>}
                 </button>
               )}
             </p>
           </div>
         )}
 
-        {/* Director / creators line */}
-        {(director || creators.length > 0) && (
-          <p className="text-zinc-500 text-xs -mt-4">
-            {isShow ? 'Created by' : 'Directed by'}{' '}
-            <span className="text-zinc-300">
-              {isShow ? creators.map((c: any) => c.name).join(', ') : director}
-            </span>
-          </p>
-        )}
-
-        {/* ── Action buttons ───────────────────────────────────── */}
+        {/* ── User action buttons ──────────────────────────────── */}
         {!showWatchForm ? (
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Play Now */}
-              <a
-                href={playNowUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-white text-black text-sm font-bold transition-opacity hover:opacity-90 active:scale-[0.97] shadow-lg"
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Play Now */}
+            <a
+              href={playNowUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-white text-black text-sm font-bold transition-opacity hover:opacity-90 active:scale-[0.97] shadow-lg"
+            >
+              <Play className="w-4 h-4 fill-black" />
+              Play Now
+            </a>
+
+            {user && (
+              <button
+                onClick={handleToggleWatchLater}
+                disabled={watchLaterLoading}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-full border text-white text-sm font-medium transition-colors active:scale-[0.97] disabled:opacity-50"
+                style={{ borderColor: 'rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.05)' }}
               >
-                <Play className="w-4 h-4 fill-black" />
-                Play Now
-              </a>
+                {inWatchLater
+                  ? <BookmarkCheck className="w-4 h-4" style={{ color: 'var(--reel-accent-hex)' }} />
+                  : <Bookmark className="w-4 h-4" />}
+                {inWatchLater ? 'Saved' : 'Watch Later'}
+              </button>
+            )}
 
-              {trailer && (
-                <button
-                  onClick={() => setTrailerOpen(v => !v)}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-full border text-white text-sm font-medium transition-colors active:scale-[0.97]"
-                  style={trailerOpen
-                    ? { borderColor: 'color-mix(in srgb, var(--reel-accent-hex) 60%, transparent)', background: 'color-mix(in srgb, var(--reel-accent-hex) 12%, transparent)' }
-                    : { borderColor: 'rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.05)' }}
-                >
-                  <Play className="w-4 h-4" />
-                  {trailerOpen ? 'Hide Trailer' : 'Trailer'}
-                </button>
-              )}
-
-              {user && (
-                <button
-                  onClick={handleToggleWatchLater}
-                  disabled={watchLaterLoading}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-full border text-white text-sm font-medium transition-colors active:scale-[0.97] disabled:opacity-50"
-                  style={{ borderColor: 'rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.05)' }}
-                >
-                  {inWatchLater
-                    ? <BookmarkCheck className="w-4 h-4" style={{ color: 'var(--reel-accent-hex)' }} />
-                    : <Bookmark className="w-4 h-4" />}
-                  {inWatchLater ? 'Saved' : 'Watch Later'}
-                </button>
-              )}
-
-              {user && (
-                (watchEntry && !saveSuccess) || (saveSuccess && watchEntry) ? (
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1.5 border border-white/10 rounded-full px-4 py-2">
-                      <Star className="w-3.5 h-3.5" style={{ fill: 'var(--reel-accent-hex)', color: 'var(--reel-accent-hex)' }} />
-                      <span className="text-white text-sm font-semibold">{watchEntry.user_rating}/10</span>
-                    </div>
-                    {!saveSuccess && (
-                      <button onClick={() => setShowWatchForm(true)}
-                        className="text-xs text-zinc-500 hover:text-white transition-colors underline underline-offset-2">
-                        Update
-                      </button>
-                    )}
+            {user && (
+              (watchEntry && !saveSuccess) || (saveSuccess && watchEntry) ? (
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 border border-white/10 rounded-full px-4 py-2">
+                    <Star className="w-3.5 h-3.5" style={{ fill: 'var(--reel-accent-hex)', color: 'var(--reel-accent-hex)' }} />
+                    <span className="text-white text-sm font-semibold">{watchEntry.user_rating}/10</span>
                   </div>
-                ) : (
-                  <button
-                    onClick={() => setShowWatchForm(true)}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-full text-white text-sm font-medium transition-colors active:scale-[0.97] shadow-lg"
-                    style={{ background: 'var(--reel-accent-hex)', boxShadow: '0 4px 20px color-mix(in srgb, var(--reel-accent-hex) 35%, transparent)' }}
-                  >
-                    <Star className="w-4 h-4" />
-                    {isShow ? 'Mark as Seen' : 'Mark as Watched'}
-                  </button>
-                )
-              )}
-            </div>
-
-            {/* Streaming providers */}
-            {providers.length > 0 && (
-              <div className="flex flex-wrap gap-2 pt-1">
-                {providers.map((p: any) => (
-                  <a
-                    key={p.provider_id}
-                    href={justwatchUrl ?? providerUrl(p)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 border rounded-full pl-1 pr-3 py-1 transition-colors active:scale-[0.97]"
-                    style={{ background: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.1)' }}
-                    title={`Watch on ${p.provider_name}`}
-                  >
-                    {p.logo_path && (
-                      <img src={`https://image.tmdb.org/t/p/original${p.logo_path}`}
-                        alt={p.provider_name} className="w-6 h-6 rounded-full" />
-                    )}
-                    <span className="text-white text-xs font-medium">{p.provider_name}</span>
-                  </a>
-                ))}
-              </div>
+                  {!saveSuccess && (
+                    <button onClick={() => setShowWatchForm(true)}
+                      className="text-xs text-zinc-500 hover:text-white transition-colors underline underline-offset-2">
+                      Update
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowWatchForm(true)}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-full text-white text-sm font-medium transition-colors active:scale-[0.97] shadow-lg"
+                  style={{ background: 'var(--reel-accent-hex)', boxShadow: '0 4px 20px color-mix(in srgb, var(--reel-accent-hex) 35%, transparent)' }}
+                >
+                  <Star className="w-4 h-4" />
+                  {isShow ? 'Mark as Seen' : 'Mark as Watched'}
+                </button>
+              )
             )}
           </div>
         ) : (
@@ -681,69 +686,7 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
           </div>
         )}
 
-        {/* Trailer inline */}
-        {trailerOpen && trailer && (
-          <div className="rounded-2xl overflow-hidden" style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)' }}>
-            <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
-              <iframe
-                src={`https://www.youtube.com/embed/${trailer.key}?autoplay=1&rel=0&modestbranding=1`}
-                allow="autoplay; encrypted-media; picture-in-picture"
-                allowFullScreen
-                title={`${displayTitle} Trailer`}
-                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* ── Cast ─────────────────────────────────────────────── */}
-        {cast.length > 0 && (
-          <div>
-            <SectionLabel>Cast</SectionLabel>
-            <div className="flex gap-4 md:gap-6 overflow-x-auto pb-2 no-scrollbar -mx-1 px-1">
-              {cast.slice(0, 12).map((c: any) => (
-                <div key={c.id} className="flex flex-col items-center gap-1.5 shrink-0 w-[72px] md:w-[96px]">
-                  <div className="w-14 h-14 md:w-20 md:h-20 rounded-full overflow-hidden ring-1 ring-white/10 bg-zinc-800">
-                    {c.profile_path ? (
-                      <img
-                        src={`https://image.tmdb.org/t/p/w185${c.profile_path}`}
-                        alt={c.name}
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <User className="w-6 h-6 md:w-8 md:h-8 text-zinc-600" />
-                      </div>
-                    )}
-                  </div>
-                  <span className="text-white text-[10px] md:text-xs font-medium text-center leading-tight line-clamp-2">{c.name}</span>
-                  {c.character && (
-                    <span className="text-zinc-600 text-[9px] md:text-[10px] text-center leading-tight line-clamp-1">{c.character}</span>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ── Season ratings (read mode) ────────────────────── */}
-        {isShow && Object.keys(seasonRatings).length > 0 && !showWatchForm && (
-          <div>
-            <SectionLabel>Your Season Ratings</SectionLabel>
-            <div className="flex flex-wrap gap-2">
-              {Object.entries(seasonRatings).sort((a, b) => Number(a[0]) - Number(b[0])).map(([s, r]) => (
-                <div key={s} className="flex items-center gap-1.5 border border-white/10 rounded-full px-3 py-1">
-                  <span className="text-zinc-400 text-xs">S{s}</span>
-                  <Star className="w-3 h-3" style={{ fill: 'var(--reel-accent-hex)', color: 'var(--reel-accent-hex)' }} />
-                  <span className="text-white text-xs font-semibold">{r}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ── Community ────────────────────────────────────────── */}
+        {/* ── Community (social posts + friend reviews) — before tabs */}
         {allCommunityItems.length > 0 && (
           <div>
             <SectionLabel>Community</SectionLabel>
@@ -819,29 +762,178 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
           </div>
         )}
 
-        {/* ── Similar ─────────────────────────────────────────── */}
-        {similar.length > 0 && (
-          <div>
-            <SectionLabel>{isShow ? 'Similar Shows' : 'More Like This'}</SectionLabel>
-            <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar -mx-1 px-1">
-              {similar.slice(0, 12).filter((m: any) => m.poster_path).map((m: any) => (
-                <div
-                  key={m.id}
-                  onClick={() => { setRelatedMovieId(String(m.id)); setRelatedItemType(isShow ? 'show' : 'movie'); }}
-                  className="shrink-0 w-24 md:w-28 cursor-pointer rounded-xl overflow-hidden ring-1 ring-white/10 hover:ring-white/25 transition-all active:scale-[0.97]"
-                  title={m.title ?? m.name}
-                >
-                  <img
-                    src={`https://image.tmdb.org/t/p/w200${m.poster_path}`}
-                    alt={m.title ?? m.name}
-                    className="w-full aspect-[2/3] object-cover"
-                    loading="lazy"
-                  />
-                </div>
-              ))}
-            </div>
+        {/* ── Sub-tabs: Watch / Cast / Extras ─────────────────── */}
+        <div>
+          {/* Sliding pill tab bar */}
+          <div className="relative flex rounded-xl p-1 mb-6"
+            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            {/* Sliding indicator */}
+            <div
+              className="absolute inset-1 rounded-lg"
+              style={{
+                width: 'calc(33.33% - 2.67px)',
+                background: 'var(--reel-accent-hex)',
+                transform: `translateX(${tabIdx * 100}%)`,
+                transition: 'transform 220ms cubic-bezier(0.23, 1, 0.32, 1)',
+                boxShadow: '0 1px 8px color-mix(in srgb, var(--reel-accent-hex) 40%, transparent)',
+              }}
+            />
+            {INFO_TABS.map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveInfoTab(tab)}
+                className="relative z-10 flex-1 py-2 text-xs font-semibold text-center rounded-lg transition-colors active:scale-[0.97]"
+                style={{ color: activeInfoTab === tab ? '#fff' : 'rgba(255,255,255,0.45)' }}
+              >
+                {tab === 'watch' ? 'Watch' : tab === 'cast' ? 'Cast' : 'Extras'}
+              </button>
+            ))}
           </div>
-        )}
+
+          {/* ── Watch tab ────────────────────────────────────── */}
+          {activeInfoTab === 'watch' && (
+            <div className="space-y-6">
+              {/* Providers */}
+              {providers.length > 0 ? (
+                <div>
+                  <SectionLabel>Streaming On</SectionLabel>
+                  <div className="flex flex-wrap gap-2.5">
+                    {providers.map((p: any) => (
+                      <a
+                        key={p.provider_id}
+                        href={justwatchUrl ?? providerUrl(p)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2.5 border rounded-xl pl-1.5 pr-4 py-1.5 transition-colors active:scale-[0.97]"
+                        style={{ background: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.1)' }}
+                        title={`Watch on ${p.provider_name}`}
+                      >
+                        {p.logo_path && (
+                          <img src={`https://image.tmdb.org/t/p/original${p.logo_path}`}
+                            alt={p.provider_name} className="w-8 h-8 rounded-lg" />
+                        )}
+                        <span className="text-white text-sm font-medium">{p.provider_name}</span>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-zinc-600 text-sm">No streaming info available.</p>
+              )}
+
+              {/* Trailer */}
+              {trailer && (
+                <div>
+                  <SectionLabel>Trailer</SectionLabel>
+                  <div className="rounded-2xl overflow-hidden" style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
+                      <iframe
+                        src={`https://www.youtube.com/embed/${trailer.key}?rel=0&modestbranding=1`}
+                        allow="encrypted-media; picture-in-picture"
+                        allowFullScreen
+                        title={`${displayTitle} Trailer`}
+                        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Cast tab ─────────────────────────────────────── */}
+          {activeInfoTab === 'cast' && (
+            <div>
+              {cast.length > 0 ? (
+                <div className="flex gap-4 md:gap-6 overflow-x-auto pb-2 no-scrollbar -mx-1 px-1">
+                  {cast.slice(0, 16).map((c: any) => (
+                    <div key={c.id} className="flex flex-col items-center gap-1.5 shrink-0 w-[72px] md:w-[96px]">
+                      <div className="w-14 h-14 md:w-20 md:h-20 rounded-full overflow-hidden ring-1 ring-white/10 bg-zinc-800">
+                        {c.profile_path ? (
+                          <img
+                            src={`https://image.tmdb.org/t/p/w185${c.profile_path}`}
+                            alt={c.name}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <User className="w-6 h-6 md:w-8 md:h-8 text-zinc-600" />
+                          </div>
+                        )}
+                      </div>
+                      <span className="text-white text-[10px] md:text-xs font-medium text-center leading-tight line-clamp-2">{c.name}</span>
+                      {c.character && (
+                        <span className="text-zinc-600 text-[9px] md:text-[10px] text-center leading-tight line-clamp-1">{c.character}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-zinc-600 text-sm">No cast information available.</p>
+              )}
+            </div>
+          )}
+
+          {/* ── Extras tab ───────────────────────────────────── */}
+          {activeInfoTab === 'extras' && (
+            <div className="space-y-7">
+              {/* Director / creators */}
+              {(director || creators.length > 0) && (
+                <div>
+                  <SectionLabel>{isShow ? 'Created By' : 'Directed By'}</SectionLabel>
+                  <p className="text-zinc-200 text-base font-medium">
+                    {isShow ? creators.map((c: any) => c.name).join(', ') : director}
+                  </p>
+                </div>
+              )}
+
+              {/* Season ratings (read mode) */}
+              {isShow && Object.keys(seasonRatings).length > 0 && !showWatchForm && (
+                <div>
+                  <SectionLabel>Your Season Ratings</SectionLabel>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(seasonRatings).sort((a, b) => Number(a[0]) - Number(b[0])).map(([s, r]) => (
+                      <div key={s} className="flex items-center gap-1.5 border border-white/10 rounded-full px-3 py-1">
+                        <span className="text-zinc-400 text-xs">S{s}</span>
+                        <Star className="w-3 h-3" style={{ fill: 'var(--reel-accent-hex)', color: 'var(--reel-accent-hex)' }} />
+                        <span className="text-white text-xs font-semibold">{r}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* More Like This */}
+              {similar.length > 0 && (
+                <div>
+                  <SectionLabel>{isShow ? 'Similar Shows' : 'More Like This'}</SectionLabel>
+                  <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar -mx-1 px-1">
+                    {similar.slice(0, 14).filter((m: any) => m.poster_path).map((m: any) => (
+                      <div
+                        key={m.id}
+                        onClick={() => { setRelatedMovieId(String(m.id)); setRelatedItemType(isShow ? 'show' : 'movie'); }}
+                        className="shrink-0 w-24 md:w-28 cursor-pointer rounded-xl overflow-hidden ring-1 ring-white/10 hover:ring-white/25 transition-all active:scale-[0.97]"
+                        title={m.title ?? m.name}
+                      >
+                        <img
+                          src={`https://image.tmdb.org/t/p/w200${m.poster_path}`}
+                          alt={m.title ?? m.name}
+                          className="w-full aspect-[2/3] object-cover"
+                          loading="lazy"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {similar.length === 0 && !director && creators.length === 0 && (
+                <p className="text-zinc-600 text-sm">No extras available.</p>
+              )}
+            </div>
+          )}
+        </div>
 
       </div>
     </div>
