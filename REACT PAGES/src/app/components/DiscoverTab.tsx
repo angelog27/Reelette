@@ -21,6 +21,8 @@ const GroqIcon = ({ size = 16 }: { size?: number }) => (
   </svg>
 );
 import { getServiceCategoryMovies } from '../services/discoveryService';
+import { MobileDiscoverView } from './MobileDiscoverView';
+import { ForYouView } from './ForYouView';
 import type { Movie, WatchedMovie } from '../services/api';
 import { PROVIDER_LOGOS } from '../constants/providers';
 import { useDiscover } from '../contexts/DiscoverContext';
@@ -1022,7 +1024,7 @@ export function DiscoverTab() {
   const [selectedItemTitle, setSelectedItemTitle] = useState<string | undefined>(undefined);
   const [activeProvider,   setActiveProvider]   = useState('all');
   const [hoveredProvider,  setHoveredProvider]  = useState<string | null>(null);
-  const [mediaType,        setMediaType]        = useState<'movie' | 'show'>('movie');
+  const [mediaType,        setMediaType]        = useState<'movie' | 'show' | 'foryou'>('movie');
 
   // ── Shows rows — loaded lazily via context on first switch to Shows mode ─
   useEffect(() => {
@@ -1289,8 +1291,26 @@ export function DiscoverTab() {
 
   const isProviderView = activeProvider !== 'all';
 
+  const mobileHeroMovie = recommended?.[0] ?? heroMovies?.[0] ?? trendingMovies?.[0] ?? null;
+  const mobileHeroReason = recommended?.length ? 'Recommended for you' : 'Featured tonight';
+
   return (
     <div style={{ overflowX: 'clip' }}>
+
+      {/* Mobile — full-screen replacement */}
+      <div className="md:hidden">
+        <MobileDiscoverView
+          heroMovie={mobileHeroMovie}
+          heroReason={mobileHeroReason}
+          watchlistIds={watchlistIds}
+          hasUser={!!user}
+          onToggleWatchlist={handleToggleWatchlist}
+          onOpenModal={openModal}
+        />
+      </div>
+
+      {/* Desktop */}
+      <div className="hidden md:block">
 
       {/* ── Hero ── */}
       {heroSlots.length === 0 ? (
@@ -1316,7 +1336,7 @@ export function DiscoverTab() {
         }}
       />
 
-      {/* ── Movies / Shows pill toggle + Provider bar — pulled up on desktop to sit above providers ── */}
+      {/* ── For You / Movies / Shows pill toggle + Provider bar — pulled up on desktop to sit above providers ── */}
       <div className="relative z-[5] mt-8 md:-mt-14">
       <div className="flex justify-center mb-2">
         {/* Sliding pill toggle — GPU-accelerated translateX instead of background color swap */}
@@ -1325,13 +1345,20 @@ export function DiscoverTab() {
           {/* Sliding indicator */}
           <div style={{
             position: 'absolute', top: 4, bottom: 4, left: 4,
-            width: 'calc(50% - 4px)',
+            width: 'calc((100% - 8px) / 3)',
             background: 'color-mix(in srgb, var(--reel-accent-hex) 82%, transparent)',
             borderRadius: 9999,
-            transform: mediaType === 'show' ? 'translateX(100%)' : 'translateX(0)',
+            transform: mediaType === 'foryou' ? 'translateX(0)' : mediaType === 'movie' ? 'translateX(100%)' : 'translateX(200%)',
             transition: 'transform 220ms cubic-bezier(0.23, 1, 0.32, 1)',
             pointerEvents: 'none',
           }} />
+          <button
+            onClick={() => setMediaType('foryou')}
+            className="relative z-10 px-6 py-1.5 rounded-full text-sm font-semibold active:scale-[0.97]"
+            style={{ color: mediaType === 'foryou' ? '#fff' : '#6b7280', transition: 'color 150ms cubic-bezier(0.23, 1, 0.32, 1)' }}
+          >
+            For You
+          </button>
           <button
             onClick={() => setMediaType('movie')}
             className="relative z-10 px-6 py-1.5 rounded-full text-sm font-semibold active:scale-[0.97]"
@@ -1350,6 +1377,7 @@ export function DiscoverTab() {
       </div>
 
       {/* ── Provider tab bar ── */}
+      {mediaType !== 'foryou' && (
       <div className="mt-4 md:mt-6 mb-6 md:mb-8">
 
         {/* Mobile: compact horizontal chip pills */}
@@ -1424,11 +1452,14 @@ export function DiscoverTab() {
           </div>
         </div>
       </div>
+      )}
       </div>{/* end toggle + provider wrapper */}
 
       {/* ── Movie rows ── */}
       <div>
-        {isProviderView ? (() => {
+        {mediaType === 'foryou' ? (
+          <ForYouView onOpenModal={openModal} />
+        ) : isProviderView ? (() => {
           const catalog = SERVICE_CATALOG[activeProvider];
           if (mediaType === 'show') {
             return (
@@ -1529,6 +1560,8 @@ export function DiscoverTab() {
           </>
         )}
       </div>
+
+      </div>{/* end desktop */}
 
       {selectedMovieId && (
         <MovieDetailModal movieId={selectedMovieId} type={selectedItemType} knownTitle={selectedItemTitle} onClose={() => setSelectedMovieId(null)} />
