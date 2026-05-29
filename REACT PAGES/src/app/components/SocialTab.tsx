@@ -2252,6 +2252,25 @@ function MobileFriendsPanel({ currentUserId, currentUsername, onOpenProfile }: {
   const [avatars, setAvatars] = useState<Record<string, string>>({});
   const [sentTo, setSentTo] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [peopleQuery, setPeopleQuery] = useState('');
+  const [peopleResults, setPeopleResults] = useState<{ user_id: string; username: string; displayName: string }[]>([]);
+  const [searching, setSearching] = useState(false);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    if (peopleQuery.trim().length < 2) { setPeopleResults([]); return; }
+    setSearching(true);
+    searchTimerRef.current = setTimeout(async () => {
+      try {
+        const results = await searchUsers(peopleQuery.trim(), currentUserId);
+        const friendSet = new Set(friends.map(f => f.friend_id));
+        setPeopleResults(results.filter(u => !friendSet.has(u.user_id)).slice(0, 8));
+      } catch { setPeopleResults([]); }
+      finally { setSearching(false); }
+    }, 350);
+    return () => { if (searchTimerRef.current) clearTimeout(searchTimerRef.current); };
+  }, [peopleQuery, currentUserId, friends]);
 
   const load = useCallback(async () => {
     if (!currentUserId) return;
@@ -2297,6 +2316,55 @@ function MobileFriendsPanel({ currentUserId, currentUsername, onOpenProfile }: {
 
   return (
     <div className="px-4 py-4 space-y-6">
+      {/* Search for people */}
+      <section>
+        <div
+          className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl"
+          style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}
+        >
+          <Search className="w-4 h-4 text-zinc-500 shrink-0" />
+          <input
+            type="text"
+            value={peopleQuery}
+            onChange={e => setPeopleQuery(e.target.value)}
+            placeholder="Find people by username…"
+            className="flex-1 bg-transparent text-white text-sm outline-none placeholder-zinc-600"
+          />
+          {searching && <Loader2 className="w-3.5 h-3.5 text-zinc-500 animate-spin shrink-0" />}
+          {peopleQuery.length > 0 && !searching && (
+            <button onClick={() => { setPeopleQuery(''); setPeopleResults([]); }}>
+              <X className="w-3.5 h-3.5 text-zinc-500" />
+            </button>
+          )}
+        </div>
+        {peopleResults.length > 0 && (
+          <div className="mt-2 space-y-1.5">
+            {peopleResults.map(u => (
+              <div key={u.user_id} className="flex items-center gap-2.5 p-2.5 bg-white/[0.03] rounded-xl">
+                <UserAvatar username={u.username} size={34} onClick={() => onOpenProfile(u.user_id)} />
+                <div className="flex-1 min-w-0">
+                  <button onClick={() => onOpenProfile(u.user_id)} className="text-white text-xs font-semibold hover:text-[#9B7BD7] transition-colors truncate block">{u.displayName || u.username}</button>
+                  <span className="text-zinc-500 text-[11px]">@{u.username}</span>
+                </div>
+                <button
+                  onClick={async () => {
+                    await sendFriendRequest(u.user_id, currentUserId, currentUsername);
+                    setSentTo(prev => new Set(prev).add(u.user_id));
+                  }}
+                  disabled={sentTo.has(u.user_id)}
+                  className="shrink-0 px-2.5 py-1 text-[11px] font-semibold rounded-full bg-[#7C5DBD]/15 text-[#9B7BD7] hover:bg-[#7C5DBD]/25 disabled:opacity-40 transition-colors"
+                >
+                  {sentTo.has(u.user_id) ? 'Sent' : 'Add'}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        {peopleQuery.trim().length >= 2 && !searching && peopleResults.length === 0 && (
+          <p className="text-zinc-600 text-xs text-center mt-3">No users found for "{peopleQuery}"</p>
+        )}
+      </section>
+
       {requests.length > 0 && (
         <section>
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600 mb-3 flex items-center gap-2">

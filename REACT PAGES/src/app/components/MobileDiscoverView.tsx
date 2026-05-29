@@ -1,11 +1,25 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Search, X } from 'lucide-react';
 import type { Movie } from '../services/api';
+import { getServices, discoverMovies, searchMovies } from '../services/api';
 import { useDiscover } from '../contexts/DiscoverContext';
 import { FeaturedCard } from './FeaturedCard';
 import { SectionRow } from './SectionRow';
 import { PLATFORM_COLORS } from './SmallCard';
 import { PROVIDER_LOGOS } from '../constants/providers';
+
+const SERVICE_CATEGORIES = [
+  { label: 'Trending on Your Services', filters: { sort_by: 'popularity.desc' } },
+  { label: 'New Arrivals',              filters: { sort_by: 'release_date.desc', min_rating: 5 } },
+  { label: 'Action & Adventure',        filters: { genre_id: '28|12', sort_by: 'popularity.desc' } },
+  { label: 'Comedy',                    filters: { genre_id: '35', sort_by: 'popularity.desc' } },
+  { label: 'Horror',                    filters: { genre_id: '27', sort_by: 'popularity.desc' } },
+  { label: 'Sci-Fi & Fantasy',          filters: { genre_id: '878|14', sort_by: 'popularity.desc' } },
+  { label: 'Drama',                     filters: { genre_id: '18', sort_by: 'vote_average.desc', min_rating: 7 } },
+  { label: 'Thriller',                  filters: { genre_id: '53', sort_by: 'popularity.desc' } },
+  { label: 'Romance',                   filters: { genre_id: '10749', sort_by: 'popularity.desc' } },
+  { label: 'Animation',                 filters: { genre_id: '16', sort_by: 'popularity.desc' } },
+] as const;
 
 type MobileTab = 'foryou' | 'all';
 
@@ -36,7 +50,10 @@ export function MobileDiscoverView({ heroMovie, heroReason, watchlistIds, hasUse
   const [query, setQuery] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
   const [allProvider, setAllProvider] = useState('All');
+  const [searchResults, setSearchResults] = useState<Movie[]>([]);
+  const [serviceRows, setServiceRows] = useState<{ label: string; movies: Movie[] }[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Swipeable hero state
   const heroMovies = dedup([
@@ -61,7 +78,34 @@ export function MobileDiscoverView({ heroMovie, heroReason, watchlistIds, hasUse
 
   const activeHero = heroMovies[heroIdx] ?? heroMovie;
 
-  // All movies pool (for search)
+  // Debounced real API search
+  useEffect(() => {
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    if (query.trim().length < 2) { setSearchResults([]); return; }
+    searchTimer.current = setTimeout(() => {
+      searchMovies(query.trim()).then(r => setSearchResults(r.slice(0, 8))).catch(() => setSearchResults([]));
+    }, 350);
+    return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
+  }, [query]);
+
+  // Load genre rows filtered by the user's combined services for "For You" tab
+  useEffect(() => {
+    const services = getServices();
+    const enabled = Object.fromEntries(Object.entries(services).filter(([, v]) => v));
+    if (!Object.keys(enabled).length) return;
+    Promise.all(
+      SERVICE_CATEGORIES.map(async ({ label, filters }) => {
+        const movies = await discoverMovies({
+          ...filters,
+          services_filter: enabled,
+          watch_region: 'US',
+        } as Parameters<typeof discoverMovies>[0]).catch(() => [] as Movie[]);
+        return { label, movies: movies.slice(0, 14) };
+      })
+    ).then(rows => setServiceRows(rows.filter(r => r.movies.length > 0)));
+  }, []);
+
+  // Pool for Browse tab provider filter
   const allMovies = dedup([
     ...(trendingMovies ?? []),
     ...(newReleases ?? []),
@@ -75,14 +119,6 @@ export function MobileDiscoverView({ heroMovie, heroReason, watchlistIds, hasUse
     ...(classics ?? []),
   ]);
 
-  const searchResults = query.trim().length > 1
-    ? allMovies.filter(m =>
-        m.title.toLowerCase().includes(query.toLowerCase()) ||
-        m.genres.some(g => g.toLowerCase().includes(query.toLowerCase())) ||
-        m.streamingService.toLowerCase().includes(query.toLowerCase())
-      ).slice(0, 8)
-    : [];
-
   // All tab: when a provider is selected show filtered grid, otherwise show sections
   const providerFiltered = allProvider === 'All'
     ? []
@@ -90,6 +126,7 @@ export function MobileDiscoverView({ heroMovie, heroReason, watchlistIds, hasUse
 
   const clearSearch = useCallback(() => {
     setQuery('');
+    setSearchResults([]);
     inputRef.current?.focus();
   }, []);
 
@@ -271,6 +308,17 @@ export function MobileDiscoverView({ heroMovie, heroReason, watchlistIds, hasUse
               )}
             </div>
           )}
+
+          {/* Per-service rows — what the user can actually watch */}
+          {serviceRows.map(row => (
+            <SectionRow
+              key={row.label}
+              label={row.label}
+              movies={row.movies}
+              getReasonText={m => `Available on ${m.streamingService || row.label.replace('Popular on ', '')}`}
+              onMovieClick={onOpenModal}
+            />
+          ))}
 
           <SectionRow
             label="Recommended For You"
