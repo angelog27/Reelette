@@ -5,20 +5,93 @@ import { getServices, discoverMovies, searchMovies } from '../services/api';
 import { useDiscover } from '../contexts/DiscoverContext';
 import { FeaturedCard } from './FeaturedCard';
 import { SectionRow } from './SectionRow';
+import { LandscapeCard } from './LandscapeCard';
+import { PortraitCard } from './PortraitCard';
 import { PLATFORM_COLORS } from './SmallCard';
 import { PROVIDER_LOGOS } from '../constants/providers';
 
-const SERVICE_CATEGORIES = [
+// Mobile landscape cards are slightly narrower to peek the next card
+const MOBILE_LANDSCAPE_W = 'min(310px, 82vw)';
+
+const PROVIDER_FOR_YOU: Record<string, {
+  serviceKey: string;
+  popularLabel: string;
+  subRows: Array<{ label: string; fetch: () => Promise<Movie[]> }>;
+}> = {
+  'Netflix': {
+    serviceKey: 'netflix', popularLabel: 'Popular on Netflix',
+    subRows: [
+      { label: 'Action on Netflix',   fetch: () => discoverMovies({ genre_id: '28', services_filter: { netflix: true }, sort_by: 'popularity.desc' }).then(r => r.slice(0, 14)) },
+      { label: 'Comedy on Netflix',   fetch: () => discoverMovies({ genre_id: '35', services_filter: { netflix: true }, sort_by: 'popularity.desc' }).then(r => r.slice(0, 14)) },
+      { label: 'Thriller on Netflix', fetch: () => discoverMovies({ genre_id: '53', services_filter: { netflix: true }, sort_by: 'popularity.desc' }).then(r => r.slice(0, 14)) },
+    ],
+  },
+  'Disney+': {
+    serviceKey: 'disneyPlus', popularLabel: 'Popular on Disney+',
+    subRows: [
+      { label: 'Marvel',          fetch: () => searchMovies('Marvel Avengers').then(r => r.slice(0, 14)) },
+      { label: 'Star Wars',       fetch: () => searchMovies('Star Wars').then(r => r.slice(0, 14)) },
+      { label: 'Pixar',           fetch: () => discoverMovies({ genre_id: '16', min_rating: 6, sort_by: 'vote_average.desc' }).then(r => r.slice(0, 14)) },
+      { label: 'Disney Classics', fetch: () => discoverMovies({ genre_id: '16', year_to: '2000', min_rating: 6 }).then(r => r.slice(0, 14)) },
+    ],
+  },
+  'Hulu': {
+    serviceKey: 'hulu', popularLabel: 'Popular on Hulu',
+    subRows: [
+      { label: 'Horror on Hulu', fetch: () => discoverMovies({ genre_id: '27', services_filter: { hulu: true }, sort_by: 'popularity.desc' }).then(r => r.slice(0, 14)) },
+      { label: 'Comedy on Hulu', fetch: () => discoverMovies({ genre_id: '35', services_filter: { hulu: true }, sort_by: 'popularity.desc' }).then(r => r.slice(0, 14)) },
+      { label: 'Sci-Fi on Hulu', fetch: () => discoverMovies({ genre_id: '878', services_filter: { hulu: true }, sort_by: 'popularity.desc' }).then(r => r.slice(0, 14)) },
+    ],
+  },
+  'Max': {
+    serviceKey: 'hboMax', popularLabel: 'Popular on Max',
+    subRows: [
+      { label: 'DC Universe',      fetch: () => searchMovies('DC Comics').then(r => r.slice(0, 14)) },
+      { label: 'Drama on Max',     fetch: () => discoverMovies({ genre_id: '18', services_filter: { hboMax: true }, sort_by: 'popularity.desc' }).then(r => r.slice(0, 14)) },
+      { label: 'Top Picks on Max', fetch: () => discoverMovies({ min_rating: 8, services_filter: { hboMax: true }, sort_by: 'vote_average.desc' }).then(r => r.slice(0, 14)) },
+    ],
+  },
+  'Prime Video': {
+    serviceKey: 'amazonPrime', popularLabel: 'Popular on Prime Video',
+    subRows: [
+      { label: 'Action on Prime', fetch: () => discoverMovies({ genre_id: '28', services_filter: { amazonPrime: true }, sort_by: 'popularity.desc' }).then(r => r.slice(0, 14)) },
+      { label: 'Drama on Prime',  fetch: () => discoverMovies({ genre_id: '18', services_filter: { amazonPrime: true }, sort_by: 'popularity.desc' }).then(r => r.slice(0, 14)) },
+      { label: 'International',   fetch: () => discoverMovies({ sort_by: 'popularity.desc', services_filter: { amazonPrime: true } }).then(r => r.slice(0, 14)) },
+    ],
+  },
+  'Paramount+': {
+    serviceKey: 'paramount', popularLabel: 'Popular on Paramount+',
+    subRows: [
+      { label: 'Mission: Impossible', fetch: () => searchMovies('Mission Impossible').then(r => r.slice(0, 14)) },
+      { label: 'Action on Paramount', fetch: () => discoverMovies({ genre_id: '28', services_filter: { paramount: true }, sort_by: 'popularity.desc' }).then(r => r.slice(0, 14)) },
+      { label: 'Drama on Paramount',  fetch: () => discoverMovies({ genre_id: '18', services_filter: { paramount: true }, sort_by: 'popularity.desc' }).then(r => r.slice(0, 14)) },
+    ],
+  },
+  'Apple TV+': {
+    serviceKey: 'appleTV', popularLabel: 'Popular on Apple TV+',
+    subRows: [
+      { label: 'Drama on Apple TV+',    fetch: () => discoverMovies({ genre_id: '18', services_filter: { appleTV: true }, sort_by: 'vote_average.desc', min_rating: 7 }).then(r => r.slice(0, 14)) },
+      { label: 'Sci-Fi on Apple TV+',   fetch: () => discoverMovies({ genre_id: '878', services_filter: { appleTV: true }, sort_by: 'popularity.desc' }).then(r => r.slice(0, 14)) },
+      { label: 'Thriller on Apple TV+', fetch: () => discoverMovies({ genre_id: '53', services_filter: { appleTV: true }, sort_by: 'popularity.desc' }).then(r => r.slice(0, 14)) },
+    ],
+  },
+  'Peacock': {
+    serviceKey: 'peacock', popularLabel: 'Popular on Peacock',
+    subRows: [
+      { label: 'Comedy on Peacock', fetch: () => discoverMovies({ genre_id: '35', services_filter: { peacock: true }, sort_by: 'popularity.desc' }).then(r => r.slice(0, 14)) },
+      { label: 'Horror on Peacock', fetch: () => discoverMovies({ genre_id: '27', services_filter: { peacock: true }, sort_by: 'popularity.desc' }).then(r => r.slice(0, 14)) },
+      { label: 'Action on Peacock', fetch: () => discoverMovies({ genre_id: '28', services_filter: { peacock: true }, sort_by: 'popularity.desc' }).then(r => r.slice(0, 14)) },
+    ],
+  },
+};
+
+const MOBILE_GENRE_ROWS = [
   { label: 'Trending on Your Services', filters: { sort_by: 'popularity.desc' } },
   { label: 'New Arrivals',              filters: { sort_by: 'release_date.desc', min_rating: 5 } },
-  { label: 'Action & Adventure',        filters: { genre_id: '28|12', sort_by: 'popularity.desc' } },
-  { label: 'Comedy',                    filters: { genre_id: '35', sort_by: 'popularity.desc' } },
-  { label: 'Horror',                    filters: { genre_id: '27', sort_by: 'popularity.desc' } },
-  { label: 'Sci-Fi & Fantasy',          filters: { genre_id: '878|14', sort_by: 'popularity.desc' } },
   { label: 'Drama',                     filters: { genre_id: '18', sort_by: 'vote_average.desc', min_rating: 7 } },
+  { label: 'Horror',                    filters: { genre_id: '27', sort_by: 'popularity.desc' } },
   { label: 'Thriller',                  filters: { genre_id: '53', sort_by: 'popularity.desc' } },
   { label: 'Romance',                   filters: { genre_id: '10749', sort_by: 'popularity.desc' } },
-  { label: 'Animation',                 filters: { genre_id: '16', sort_by: 'popularity.desc' } },
 ] as const;
 
 type MobileTab = 'foryou' | 'all';
@@ -39,6 +112,168 @@ function dedup(movies: Movie[]): Movie[] {
   return movies.filter(m => { if (seen.has(m.id)) return false; seen.add(m.id); return true; });
 }
 
+// ── Helper: mobile horizontal scroll row ──────────────────────────────────────
+function MHScroll({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex overflow-x-auto gap-3" style={{ scrollbarWidth: 'none', paddingLeft: 16, paddingRight: 16, paddingBottom: 2 }}>
+      {children}
+    </div>
+  );
+}
+
+function MRowHeader({ label }: { label: string }) {
+  return <p className="text-white font-bold text-sm px-4 mb-3 mt-5">{label}</p>;
+}
+
+function MLandscapeSkeleton() {
+  return (
+    <div className="flex-shrink-0 rounded-2xl bg-zinc-900 animate-pulse" style={{ width: MOBILE_LANDSCAPE_W, aspectRatio: '16/9' }} />
+  );
+}
+
+function MPortraitSkeleton({ count = 4 }: { count?: number }) {
+  return (
+    <MHScroll>
+      {[...Array(count)].map((_, i) => (
+        <div key={i} className="flex-shrink-0" style={{ width: 130 }}>
+          <div className="rounded-xl bg-zinc-900 animate-pulse" style={{ height: 195 }} />
+          <div className="mt-2 h-3 bg-zinc-800 animate-pulse rounded-full w-4/5" />
+        </div>
+      ))}
+    </MHScroll>
+  );
+}
+
+// ── Mobile For You content (provider sections + genre rows) ────────────────────
+function MobileForYouContent({ onOpenModal }: { onOpenModal: (id: string, type?: 'movie' | 'show', title?: string) => void }) {
+  const { recommended } = useDiscover();
+  const [enabledProviders, setEnabledProviders] = useState<string[]>([]);
+  const [providerData, setProviderData] = useState<Record<string, { popular: Movie[] | null; subRows: (Movie[] | null)[] }>>({});
+  const [genreRows, setGenreRows] = useState<{ label: string; movies: Movie[] | null }[]>(
+    () => MOBILE_GENRE_ROWS.map(r => ({ label: r.label, movies: null }))
+  );
+
+  useEffect(() => {
+    const services = getServices();
+    const enabled = Object.fromEntries(Object.entries(services).filter(([, v]) => v));
+    const names = Object.keys(PROVIDER_FOR_YOU).filter(name => enabled[PROVIDER_FOR_YOU[name].serviceKey]);
+    setEnabledProviders(names);
+
+    // Init provider data structure
+    const initial: Record<string, { popular: Movie[] | null; subRows: (Movie[] | null)[] }> = {};
+    names.forEach(name => { initial[name] = { popular: null, subRows: PROVIDER_FOR_YOU[name].subRows.map(() => null) }; });
+    setProviderData(initial);
+
+    names.forEach(name => {
+      const config = PROVIDER_FOR_YOU[name];
+      discoverMovies({ services_filter: { [config.serviceKey]: true }, sort_by: 'popularity.desc' })
+        .then(r => setProviderData(prev => ({ ...prev, [name]: { ...prev[name], popular: r.slice(0, 14) } })))
+        .catch(() => setProviderData(prev => ({ ...prev, [name]: { ...prev[name], popular: [] } })));
+
+      config.subRows.forEach((row, i) => {
+        row.fetch()
+          .then(movies => setProviderData(prev => {
+            const pd = prev[name] ?? { popular: null, subRows: [] };
+            const next = [...pd.subRows];
+            next[i] = movies;
+            return { ...prev, [name]: { ...pd, subRows: next } };
+          }))
+          .catch(() => setProviderData(prev => {
+            const pd = prev[name] ?? { popular: null, subRows: [] };
+            const next = [...pd.subRows];
+            next[i] = [];
+            return { ...prev, [name]: { ...pd, subRows: next } };
+          }));
+      });
+    });
+
+    if (!Object.keys(enabled).length) return;
+    MOBILE_GENRE_ROWS.forEach(({ label, filters }, i) => {
+      discoverMovies({ ...filters, services_filter: enabled, watch_region: 'US' } as Parameters<typeof discoverMovies>[0])
+        .then(movies => setGenreRows(prev => { const next = [...prev]; next[i] = { label, movies: movies.slice(0, 14) }; return next; }))
+        .catch(() => setGenreRows(prev => { const next = [...prev]; next[i] = { label, movies: [] }; return next; }));
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <>
+      {/* Recommended across services */}
+      {(recommended?.length ?? 0) > 0 && (
+        <>
+          <MRowHeader label="Recommended For You" />
+          <MHScroll>
+            {(recommended ?? []).map(m => (
+              <LandscapeCard key={m.id} movie={m} width={MOBILE_LANDSCAPE_W} onClick={() => onOpenModal(m.id, m.type ?? 'movie', m.title)} />
+            ))}
+          </MHScroll>
+        </>
+      )}
+
+      {/* Per-provider sections */}
+      {enabledProviders.map(name => {
+        const config = PROVIDER_FOR_YOU[name];
+        const pd = providerData[name];
+        const logo = PROVIDER_LOGOS[name];
+        return (
+          <section key={name} className="mt-2">
+            {/* Provider banner */}
+            <div className="mx-4 rounded-2xl flex items-center gap-3 px-3.5 py-2.5 mb-3 mt-5"
+              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+              {logo && <img src={logo} alt={name} className="w-7 h-7 rounded-lg object-cover flex-shrink-0" />}
+              <div>
+                <p className="text-white font-bold text-sm leading-none">{name}</p>
+                <p className="text-zinc-500 text-xs mt-0.5">What's on right now</p>
+              </div>
+            </div>
+
+            <MRowHeader label={config.popularLabel} />
+            {!pd || pd.popular === null ? (
+              <MHScroll><MLandscapeSkeleton /><MLandscapeSkeleton /></MHScroll>
+            ) : pd.popular.length > 0 ? (
+              <MHScroll>
+                {pd.popular.map(m => (
+                  <LandscapeCard key={m.id} movie={m} width={MOBILE_LANDSCAPE_W} onClick={() => onOpenModal(m.id, m.type ?? 'movie', m.title)} />
+                ))}
+              </MHScroll>
+            ) : null}
+
+            {config.subRows.map((row, i) => (
+              <div key={row.label}>
+                <MRowHeader label={row.label} />
+                {!pd || pd.subRows[i] === null ? (
+                  <MPortraitSkeleton count={4} />
+                ) : (pd.subRows[i]?.length ?? 0) > 0 ? (
+                  <MHScroll>
+                    {(pd.subRows[i] ?? []).map(m => (
+                      <PortraitCard key={m.id} movie={m} width={130} onClick={() => onOpenModal(m.id, m.type ?? 'movie', m.title)} />
+                    ))}
+                  </MHScroll>
+                ) : null}
+              </div>
+            ))}
+          </section>
+        );
+      })}
+
+      {/* Cross-service genre rows */}
+      {genreRows.map(({ label, movies }) => (
+        <div key={label}>
+          <MRowHeader label={label} />
+          {movies === null ? (
+            <MPortraitSkeleton count={4} />
+          ) : movies.length > 0 ? (
+            <MHScroll>
+              {movies.map(m => (
+                <PortraitCard key={m.id} movie={m} width={130} onClick={() => onOpenModal(m.id, m.type ?? 'movie', m.title)} />
+              ))}
+            </MHScroll>
+          ) : null}
+        </div>
+      ))}
+    </>
+  );
+}
+
 export function MobileDiscoverView({ heroMovie, heroReason, watchlistIds, hasUser, onToggleWatchlist, onOpenModal }: Props) {
   const {
     trendingMovies, newReleases, topRated, classics,
@@ -51,7 +286,6 @@ export function MobileDiscoverView({ heroMovie, heroReason, watchlistIds, hasUse
   const [searchFocused, setSearchFocused] = useState(false);
   const [allProvider, setAllProvider] = useState('All');
   const [searchResults, setSearchResults] = useState<Movie[]>([]);
-  const [serviceRows, setServiceRows] = useState<{ label: string; movies: Movie[] }[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -88,22 +322,6 @@ export function MobileDiscoverView({ heroMovie, heroReason, watchlistIds, hasUse
     return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
   }, [query]);
 
-  // Load genre rows filtered by the user's combined services for "For You" tab
-  useEffect(() => {
-    const services = getServices();
-    const enabled = Object.fromEntries(Object.entries(services).filter(([, v]) => v));
-    if (!Object.keys(enabled).length) return;
-    Promise.all(
-      SERVICE_CATEGORIES.map(async ({ label, filters }) => {
-        const movies = await discoverMovies({
-          ...filters,
-          services_filter: enabled,
-          watch_region: 'US',
-        } as Parameters<typeof discoverMovies>[0]).catch(() => [] as Movie[]);
-        return { label, movies: movies.slice(0, 14) };
-      })
-    ).then(rows => setServiceRows(rows.filter(r => r.movies.length > 0)));
-  }, []);
 
   // Pool for Browse tab provider filter
   const allMovies = dedup([
@@ -309,71 +527,7 @@ export function MobileDiscoverView({ heroMovie, heroReason, watchlistIds, hasUse
             </div>
           )}
 
-          {/* Per-service rows — what the user can actually watch */}
-          {serviceRows.map(row => (
-            <SectionRow
-              key={row.label}
-              label={row.label}
-              movies={row.movies}
-              getReasonText={m => `Available on ${m.streamingService || row.label.replace('Popular on ', '')}`}
-              onMovieClick={onOpenModal}
-            />
-          ))}
-
-          <SectionRow
-            label="Recommended For You"
-            movies={recommended ?? []}
-            getReasonText={() => 'Based on your services'}
-            onMovieClick={onOpenModal}
-          />
-          <SectionRow
-            label="Trending Now"
-            movies={trendingMovies}
-            getReasonText={() => 'Trending this week'}
-            onMovieClick={onOpenModal}
-          />
-          <SectionRow
-            label="New Releases"
-            movies={newReleases}
-            getReasonText={m => `New on ${m.streamingService || 'streaming'}`}
-            onMovieClick={onOpenModal}
-          />
-          <SectionRow
-            label="Sci-Fi & Fantasy"
-            movies={scifiMovies}
-            getReasonText={() => 'Top sci-fi picks'}
-            onMovieClick={onOpenModal}
-          />
-          <SectionRow
-            label="Comedy"
-            movies={comedyMovies}
-            getReasonText={() => 'Because you like to laugh'}
-            onMovieClick={onOpenModal}
-          />
-          <SectionRow
-            label="Action"
-            movies={actionMovies}
-            getReasonText={() => 'High-octane picks'}
-            onMovieClick={onOpenModal}
-          />
-          <SectionRow
-            label="Horror"
-            movies={horrorMovies}
-            getReasonText={() => 'If you dare'}
-            onMovieClick={onOpenModal}
-          />
-          <SectionRow
-            label="Critically Acclaimed"
-            movies={acclaimed}
-            getReasonText={() => 'Award-winning films'}
-            onMovieClick={onOpenModal}
-          />
-          <SectionRow
-            label="Timeless Classics"
-            movies={classics}
-            getReasonText={() => 'A timeless pick'}
-            onMovieClick={onOpenModal}
-          />
+          <MobileForYouContent onOpenModal={onOpenModal} />
         </div>
       )}
 
