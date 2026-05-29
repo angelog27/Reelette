@@ -27,12 +27,12 @@ interface Props {
 }
 
 const INPUT_CLASS =
-  'w-full bg-[#0d0d0d] border-white/10 text-white placeholder:text-white/30 rounded-xl h-12 focus:border-[#7C5DBD] focus:ring-1 focus:ring-[#7C5DBD]/40 transition-all duration-200';
+  'w-full bg-[#0d0d0d] border-white/10 text-white placeholder:text-white/30 rounded-xl h-12 focus:border-[#D4A843] focus:ring-1 focus:ring-[#D4A843]/30 transition-all duration-200';
 
 const LABEL_CLASS = 'text-sm font-medium text-white/50';
 
 const SUBMIT_CLASS =
-  'w-full bg-[#7C5DBD] hover:bg-[#8F6FD4] active:scale-[0.98] text-white h-12 rounded-xl font-medium transition-all duration-150 disabled:opacity-40';
+  'w-full active:scale-[0.98] text-[#080808] h-12 rounded-xl font-semibold transition-all duration-150 disabled:opacity-40 hover:brightness-110';
 
 const DIVIDER = (
   <div className="flex items-center gap-3 my-4">
@@ -337,7 +337,7 @@ export function AuthModal({ isOpen, onClose, initialView = 'login' }: Props) {
                         />
                       </div>
                       {loginError && <p className="text-red-400 text-sm text-center">{loginError}</p>}
-                      <Button type="submit" disabled={loginLoading} className={SUBMIT_CLASS}>
+                      <Button type="submit" disabled={loginLoading} className={SUBMIT_CLASS} style={{background: "#D4A843"}}>
                         {loginLoading ? 'Signing in...' : 'Sign In'}
                       </Button>
                     </form>
@@ -347,7 +347,7 @@ export function AuthModal({ isOpen, onClose, initialView = 'login' }: Props) {
                         <button
                           type="button"
                           onClick={() => setView('register')}
-                          className="text-[#9B8FD0] hover:text-white transition-colors"
+                          className="text-[#D4A843] hover:text-white transition-colors"
                         >
                           Sign up free
                         </button>
@@ -404,7 +404,7 @@ export function AuthModal({ isOpen, onClose, initialView = 'login' }: Props) {
                         />
                       </div>
                       {regError && <p className="text-red-400 text-sm text-center">{regError}</p>}
-                      <Button type="submit" disabled={regLoading} className={SUBMIT_CLASS}>
+                      <Button type="submit" disabled={regLoading} className={SUBMIT_CLASS} style={{background: "#D4A843"}}>
                         {regLoading ? 'Creating account...' : 'Create Account'}
                       </Button>
                     </form>
@@ -414,7 +414,7 @@ export function AuthModal({ isOpen, onClose, initialView = 'login' }: Props) {
                         <button
                           type="button"
                           onClick={() => setView('login')}
-                          className="text-[#9B8FD0] hover:text-white transition-colors"
+                          className="text-[#D4A843] hover:text-white transition-colors"
                         >
                           Sign in
                         </button>
@@ -444,7 +444,7 @@ export function AuthModal({ isOpen, onClose, initialView = 'login' }: Props) {
                       </div>
                       {forgotError && <p className="text-red-400 text-sm text-center">{forgotError}</p>}
                       {forgotMessage && <p className="text-green-400 text-sm text-center">{forgotMessage}</p>}
-                      <Button type="submit" disabled={forgotLoading} className={SUBMIT_CLASS}>
+                      <Button type="submit" disabled={forgotLoading} className={SUBMIT_CLASS} style={{background: "#D4A843"}}>
                         {forgotLoading ? 'Sending...' : 'Send Reset Email'}
                       </Button>
                     </form>
@@ -472,13 +472,13 @@ export function AuthModal({ isOpen, onClose, initialView = 'login' }: Props) {
                     <div className="flex gap-3">
                       <button
                         onClick={goQuiz}
-                        className="flex-1 bg-white/5 hover:bg-white/10 active:scale-[0.98] border border-white/10 text-white px-6 py-3 rounded-xl transition-all duration-150 font-medium text-sm"
+                        className="flex-1 bg-white/5 hover:bg-white/10 active:scale-[0.98] border border-white/10 text-[#080808] px-6 py-3 rounded-xl transition-all duration-150 font-semibold text-sm" style={{background: "#D4A843"}}
                       >
                         No, take me in
                       </button>
                       <button
                         onClick={() => setView('setup-streaming')}
-                        className="flex-1 bg-[#7C5DBD] hover:bg-[#8F6FD4] active:scale-[0.98] text-white px-6 py-3 rounded-xl transition-all duration-150 font-medium text-sm"
+                        className="flex-1 hover:brightness-110 active:scale-[0.98] text-[#080808] px-6 py-3 rounded-xl transition-all duration-150 font-semibold text-sm" style={{background: "#D4A843"}}
                       >
                         Yes, update
                       </button>

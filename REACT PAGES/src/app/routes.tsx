@@ -1,8 +1,9 @@
-import React, { lazy, Suspense, useState } from 'react';
+import React, { lazy, Suspense, useState, useCallback } from 'react';
 import { createBrowserRouter, Navigate, Link } from 'react-router-dom';
 import { HomePage } from './components/HomePage';
 import { LandingPage } from './components/LandingPage';
 import { AuthModal } from './components/AuthModal';
+import { GuestServicePicker } from './components/GuestServicePicker';
 import QuizGate from './components/QuizGate';
 import { getUser } from './services/api';
 import logoFull from '../assets/Full_Reelette_upscaled.png';
@@ -30,15 +31,21 @@ function LandingGuard() {
   return <LandingPage />;
 }
 
-// Public roulette - accessible without an account, with a sign-in prompt in the nav
+// Public roulette - accessible without an account
+// Service picker remounts RouletteTab on service change so it reads fresh localStorage
 function PublicRouletteWrapper() {
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modalView, setModalView] = useState<'login' | 'register'>('register');
+  const [modalOpen,      setModalOpen]      = useState(false);
+  const [modalView,      setModalView]      = useState<'login' | 'register'>('register');
+  const [rouletteKey,    setRouletteKey]    = useState(0);
+
+  const handleServicesChange = useCallback(() => {
+    setRouletteKey(k => k + 1);
+  }, []);
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A]">
-      {/* Minimal nav */}
-      <nav className="fixed top-0 left-0 right-0 z-40 bg-[#0A0A0A]/90 backdrop-blur-xl border-b border-white/5">
+    <div className="min-h-screen bg-[#080808]">
+      {/* Nav */}
+      <nav className="fixed top-0 left-0 right-0 z-40 bg-[#080808]/95 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-7xl mx-auto px-5 md:px-8 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
             <img src={logoFull} alt="Reelette" className="h-8 w-auto object-contain" />
@@ -52,7 +59,8 @@ function PublicRouletteWrapper() {
             </button>
             <button
               onClick={() => { setModalView('register'); setModalOpen(true); }}
-              className="text-sm font-medium bg-[#7C5DBD] hover:bg-[#8F6FD4] active:scale-[0.97] text-white px-4 py-2 rounded-xl transition-all duration-150"
+              className="text-sm font-semibold text-[#080808] px-4 py-2 rounded-xl active:scale-[0.97] transition-all duration-150"
+              style={{ background: '#D4A843' }}
             >
               Get Started
             </button>
@@ -60,9 +68,11 @@ function PublicRouletteWrapper() {
         </div>
       </nav>
 
+      {/* Service picker + Roulette */}
       <div className="pt-16">
-        <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-white/30 text-sm">Loading...</div>}>
-          <RouletteTab />
+        <GuestServicePicker onServicesChange={handleServicesChange} />
+        <Suspense fallback={<div className="flex items-center justify-center py-32 text-white/30 text-sm">Loading...</div>}>
+          <RouletteTab key={rouletteKey} />
         </Suspense>
       </div>
 
