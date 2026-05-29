@@ -145,10 +145,11 @@ def discover_movies(genre_id=None, year=None, year_from=None, year_to=None,
                     min_rating=None, min_vote_count=None,
                     with_cast=None, with_crew=None,
                     with_watch_providers=None, watch_region="US",
+                    with_companies=None, with_keywords=None,
                     sort_by="popularity.desc", page=1):
     cache_key = (f"discover:{genre_id}:{year}:{year_from}:{year_to}:{min_rating}:"
                  f"{min_vote_count}:{with_cast}:{with_crew}:{with_watch_providers}:"
-                 f"{watch_region}:{sort_by}:{page}")
+                 f"{watch_region}:{with_companies}:{with_keywords}:{sort_by}:{page}")
     cached = _cache_get(cache_key)
     if cached is not None:
         return cached
@@ -181,6 +182,10 @@ def discover_movies(genre_id=None, year=None, year_from=None, year_to=None,
     if with_watch_providers:
         params["with_watch_providers"] = with_watch_providers
         params["watch_region"] = watch_region
+    if with_companies:
+        params["with_companies"] = with_companies
+    if with_keywords:
+        params["with_keywords"] = with_keywords
 
     try:
         response = requests.get(url, params=params)

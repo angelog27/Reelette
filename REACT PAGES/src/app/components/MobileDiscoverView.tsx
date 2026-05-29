@@ -2,6 +2,10 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { Search, X } from 'lucide-react';
 import type { Movie } from '../services/api';
 import { getServices, discoverMovies, searchMovies } from '../services/api';
+// TMDB company / keyword IDs used for curated rows
+// 420 = Marvel Studios, 3 = Pixar, 2 = Walt Disney Pictures
+// 9993|128064 = DC Films|DC Entertainment, 4981 = Mission Impossible keyword
+// 161176 = "star wars" keyword
 import { useDiscover } from '../contexts/DiscoverContext';
 import { FeaturedCard } from './FeaturedCard';
 import { SectionRow } from './SectionRow';
@@ -29,10 +33,10 @@ const PROVIDER_FOR_YOU: Record<string, {
   'Disney+': {
     serviceKey: 'disneyPlus', popularLabel: 'Popular on Disney+',
     subRows: [
-      { label: 'Marvel',          fetch: () => searchMovies('Marvel Avengers').then(r => r.slice(0, 14)) },
-      { label: 'Star Wars',       fetch: () => searchMovies('Star Wars').then(r => r.slice(0, 14)) },
-      { label: 'Pixar',           fetch: () => discoverMovies({ genre_id: '16', min_rating: 6, sort_by: 'vote_average.desc' }).then(r => r.slice(0, 14)) },
-      { label: 'Disney Classics', fetch: () => discoverMovies({ genre_id: '16', year_to: '2000', min_rating: 6 }).then(r => r.slice(0, 14)) },
+      { label: 'Marvel',          fetch: () => discoverMovies({ with_companies: '420', sort_by: 'popularity.desc' } as Parameters<typeof discoverMovies>[0]).then(r => r.slice(0, 14)) },
+      { label: 'Star Wars',       fetch: () => discoverMovies({ with_keywords: '161176', sort_by: 'popularity.desc' } as Parameters<typeof discoverMovies>[0]).then(r => r.slice(0, 14)) },
+      { label: 'Pixar',           fetch: () => discoverMovies({ with_companies: '3', sort_by: 'popularity.desc' } as Parameters<typeof discoverMovies>[0]).then(r => r.slice(0, 14)) },
+      { label: 'Disney Classics', fetch: () => discoverMovies({ with_companies: '2', year_to: '2000', sort_by: 'vote_average.desc', min_rating: 6 } as Parameters<typeof discoverMovies>[0]).then(r => r.slice(0, 14)) },
     ],
   },
   'Hulu': {
@@ -46,7 +50,7 @@ const PROVIDER_FOR_YOU: Record<string, {
   'Max': {
     serviceKey: 'hboMax', popularLabel: 'Popular on Max',
     subRows: [
-      { label: 'DC Universe',      fetch: () => searchMovies('DC Comics').then(r => r.slice(0, 14)) },
+      { label: 'DC Universe',      fetch: () => discoverMovies({ with_companies: '9993|128064', sort_by: 'popularity.desc' } as Parameters<typeof discoverMovies>[0]).then(r => r.slice(0, 14)) },
       { label: 'Drama on Max',     fetch: () => discoverMovies({ genre_id: '18', services_filter: { hboMax: true }, sort_by: 'popularity.desc' }).then(r => r.slice(0, 14)) },
       { label: 'Top Picks on Max', fetch: () => discoverMovies({ min_rating: 8, services_filter: { hboMax: true }, sort_by: 'vote_average.desc' }).then(r => r.slice(0, 14)) },
     ],
@@ -62,7 +66,7 @@ const PROVIDER_FOR_YOU: Record<string, {
   'Paramount+': {
     serviceKey: 'paramount', popularLabel: 'Popular on Paramount+',
     subRows: [
-      { label: 'Mission: Impossible', fetch: () => searchMovies('Mission Impossible').then(r => r.slice(0, 14)) },
+      { label: 'Mission: Impossible', fetch: () => discoverMovies({ with_keywords: '4981', sort_by: 'popularity.desc' } as Parameters<typeof discoverMovies>[0]).then(r => r.slice(0, 14)) },
       { label: 'Action on Paramount', fetch: () => discoverMovies({ genre_id: '28', services_filter: { paramount: true }, sort_by: 'popularity.desc' }).then(r => r.slice(0, 14)) },
       { label: 'Drama on Paramount',  fetch: () => discoverMovies({ genre_id: '18', services_filter: { paramount: true }, sort_by: 'popularity.desc' }).then(r => r.slice(0, 14)) },
     ],

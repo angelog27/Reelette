@@ -94,6 +94,23 @@ def ensure_cors_on_errors(response):
                 break
     return response
 
+@app.errorhandler(429)
+def rate_limit_handler(e):
+    """Return 429 with CORS headers so browsers don't see a CORS failure."""
+    from flask import jsonify as _jsonify
+    origin = request.headers.get('Origin', '')
+    resp = _jsonify({'error': 'Too many requests', 'message': str(e.description)})
+    resp.status_code = 429
+    if origin:
+        for allowed in _cors_origins:
+            match = (allowed == origin) if isinstance(allowed, str) else allowed.match(origin)
+            if match:
+                resp.headers['Access-Control-Allow-Origin'] = origin
+                resp.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+                resp.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+                break
+    return resp
+
 app.secret_key = SECRET_KEY
 
 # ── Rate limiting ────────────────────────────────────────────────
@@ -576,7 +593,7 @@ SORT_MAP = {
 }
 
 @app.route('/api/movies/discover', methods=['POST'])
-@limiter.limit("30 per minute")
+@limiter.limit("120 per minute")
 def discover():
     data = request.get_json() or {}
 
@@ -586,12 +603,16 @@ def discover():
     if cached is not None:
         return jsonify({'movies': cached})
 
-    genre_id   = data.get('genre_id') or None
-    year_from  = data.get('year_from') or None
-    year_to    = data.get('year_to') or None
-    min_rating = data.get('min_rating') or None
-    sort_by    = SORT_MAP.get(data.get('sort_by', 'popularity'), 'popularity.desc')
-    page       = data.get('page', 1)
+    genre_id       = data.get('genre_id') or None
+    year_from      = data.get('year_from') or None
+    year_to        = data.get('year_to') or None
+    min_rating     = data.get('min_rating') or None
+    with_companies = data.get('with_companies') or None
+    with_keywords  = data.get('with_keywords') or None
+    # Allow both friendly keys ('popularity') and raw TMDB values ('popularity.desc')
+    raw_sort = data.get('sort_by', 'popularity')
+    sort_by  = SORT_MAP.get(raw_sort, raw_sort)
+    page     = data.get('page', 1)
 
     # Build pipe-separated watch provider IDs from the services dict the frontend sends
     # e.g. { "netflix": true, "hulu": false } → "8"
@@ -630,6 +651,8 @@ def discover():
         with_cast=with_cast,
         with_crew=with_crew,
         with_watch_providers=with_watch_providers,
+        with_companies=with_companies,
+        with_keywords=with_keywords,
         sort_by=sort_by,
         page=page,
     )
