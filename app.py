@@ -640,6 +640,45 @@ def discover():
     _cache_set(cache_key, movies, _MOVIE_LIST_TTL)
     return jsonify({'movies': movies})
 
+@app.route('/api/movies/recommended', methods=['GET'])
+@require_auth
+@limiter.limit("30 per minute")
+def recommended_by_services():
+    """Return movies available on the user's saved streaming services.
+    Falls back to weekly trending when no services are saved."""
+    uid = g.verified_uid
+
+    services = get_user_streaming_services(uid)
+    active_ids = [
+        str(STREAMING_PROVIDER_IDS[key])
+        for key, enabled in services.items()
+        if enabled and key in STREAMING_PROVIDER_IDS
+    ]
+
+    cache_key = f'recommended_services:{"|".join(sorted(active_ids))}'
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return jsonify({'movies': cached})
+
+    if active_ids:
+        result = discover_movies(
+            with_watch_providers='|'.join(active_ids),
+            watch_region='US',
+            sort_by='popularity.desc',
+            min_rating=6,
+            min_vote_count=100,
+        )
+    else:
+        result = get_trending_movies('week')
+
+    if not result:
+        return jsonify({'movies': []})
+
+    movies = fetch_movies_with_streaming(result.get('results', []))
+    _cache_set(cache_key, movies, _MOVIE_LIST_TTL)
+    return jsonify({'movies': movies})
+
+
 def _extract_logo_url(data: dict) -> str | None:
     images = data.get('images') or {}
     logos  = images.get('logos') or []

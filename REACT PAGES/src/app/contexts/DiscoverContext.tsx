@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import {
   getTrendingMovies, getTopRatedMovies, getNowPlayingMovies, getUpcomingMovies,
-  discoverMovies, getMovieRecommendations, getWatchedMovies, getRouletteHistory,
+  discoverMovies, getRecommendedMovies, getWatchedMovies, getRouletteHistory,
   getWatchLater, getUser,
   getTrendingShows, getPopularShows, getTopRatedShows, discoverShows,
   getAIRecommendations,
@@ -133,14 +133,12 @@ export function DiscoverProvider({ children }: { children: React.ReactNode }) {
     if (fetchedRef.current) return;
     fetchedRef.current = true;
 
-    // Kick off recommendations immediately using the cached last-watched ID.
-    // This runs in parallel with getWatchedMovies rather than waiting for it.
-    const lastWatchedId = localStorage.getItem(LAST_WATCHED_KEY);
-    if (user && lastWatchedId) {
-      getMovieRecommendations(lastWatchedId)
+    // Fetch recommendations filtered by the user's saved streaming services.
+    if (user) {
+      getRecommendedMovies()
         .then(recs => setRecommended(recs.slice(0, ROW_LIMIT)))
         .catch(() => setRecommended([]));
-    } else if (!user) {
+    } else {
       setRecommended([]);
     }
 
@@ -193,24 +191,10 @@ export function DiscoverProvider({ children }: { children: React.ReactNode }) {
 
       getWatchedMovies(user.user_id, 200)
         .then(watched => {
-          if (!watched.length) {
-            // No watch history — nothing to base recommendations on
-            if (!lastWatchedId) setRecommended([]);
-            return;
-          }
+          if (!watched.length) return;
           setUserWatched(watched);
-          const id = watched[0].movie_id;
-          localStorage.setItem(LAST_WATCHED_KEY, id);
-          // Only start recommendations from watched data if we had no cached ID
-          if (!lastWatchedId) {
-            getMovieRecommendations(id)
-              .then(recs => setRecommended(recs.slice(0, ROW_LIMIT)))
-              .catch(() => setRecommended([]));
-          }
         })
-        .catch(() => {
-          if (!lastWatchedId) setRecommended([]);
-        });
+        .catch(() => {});
 
       getRouletteHistory(user.user_id, ROW_LIMIT)
         .then(spins => setRecentSpins(spins.map(spinToMovie)))

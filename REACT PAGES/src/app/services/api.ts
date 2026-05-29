@@ -416,6 +416,24 @@ export function getMovieRecommendations(movie_id: string): Promise<Movie[]> {
   });
 }
 
+/** Fetch movies filtered by the logged-in user's saved streaming services.
+ *  The backend reads the user's Firebase preferences and passes them as
+ *  TMDB watch_providers — so results actually appear on their services.
+ *  Falls back to trending when no services are saved. */
+export async function getRecommendedMovies(): Promise<Movie[]> {
+  const uid = getUser()?.user_id ?? 'anon';
+  return fromCachePersisted(`recommended_services:${uid}`, TTL.CATALOG, 2 * 60 * 60 * 1000, async () => {
+    const token = await getIdToken();
+    if (!token) return [];
+    const res = await fetch(`${BASE_URL}/movies/recommended`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.movies ?? [];
+  });
+}
+
 
 export function searchMovies(query: string, page = 1): Promise<Movie[]> {
   return fromCachePersisted(`search:${query.toLowerCase().trim()}:${page}`, TTL.CATALOG, 60 * 60 * 1000, async () => {

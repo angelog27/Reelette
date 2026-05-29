@@ -38,18 +38,41 @@ export function MobileDiscoverView({ heroMovie, heroReason, watchlistIds, hasUse
   const [allProvider, setAllProvider] = useState('All');
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // All movies pool (for search + All tab)
+  // Swipeable hero state
+  const heroMovies = dedup([
+    ...(recommended ?? []).slice(0, 3),
+    ...(trendingMovies ?? []).slice(0, 4),
+  ]).filter(Boolean).slice(0, 5);
+  const [heroIdx, setHeroIdx] = useState(0);
+  const touchStartX = useRef<number | null>(null);
+
+  const handleHeroTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+  const handleHeroTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null || heroMovies.length < 2) return;
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    if (Math.abs(dx) > 40) {
+      if (dx < 0) setHeroIdx(i => (i + 1) % heroMovies.length);
+      else setHeroIdx(i => (i - 1 + heroMovies.length) % heroMovies.length);
+    }
+    touchStartX.current = null;
+  };
+
+  const activeHero = heroMovies[heroIdx] ?? heroMovie;
+
+  // All movies pool (for search)
   const allMovies = dedup([
-    ...trendingMovies,
-    ...newReleases,
-    ...topRated,
+    ...(trendingMovies ?? []),
+    ...(newReleases ?? []),
+    ...(topRated ?? []),
     ...(recommended ?? []),
-    ...actionMovies,
-    ...comedyMovies,
-    ...horrorMovies,
-    ...scifiMovies,
-    ...acclaimed,
-    ...classics,
+    ...(actionMovies ?? []),
+    ...(comedyMovies ?? []),
+    ...(horrorMovies ?? []),
+    ...(scifiMovies ?? []),
+    ...(acclaimed ?? []),
+    ...(classics ?? []),
   ]);
 
   const searchResults = query.trim().length > 1
@@ -60,8 +83,9 @@ export function MobileDiscoverView({ heroMovie, heroReason, watchlistIds, hasUse
       ).slice(0, 8)
     : [];
 
-  const allTabMovies = allProvider === 'All'
-    ? allMovies
+  // All tab: when a provider is selected show filtered grid, otherwise show sections
+  const providerFiltered = allProvider === 'All'
+    ? []
     : allMovies.filter(m => m.streamingService === allProvider);
 
   const clearSearch = useCallback(() => {
@@ -180,11 +204,11 @@ export function MobileDiscoverView({ heroMovie, heroReason, watchlistIds, hasUse
                 border: tab === t ? 'none' : '1px solid rgba(255,255,255,0.08)',
               }}
             >
-              {t === 'foryou' ? '✦ For You' : 'All'}
+              {t === 'foryou' ? 'For You' : 'Browse'}
             </button>
           ))}
 
-          {/* Provider filter pills — only on All tab */}
+          {/* Provider filter pills — only on All/Browse tab */}
           {tab === 'all' && (
             <div className="flex gap-2 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
               {['All', ...ALL_PROVIDER_NAMES.filter(p => PROVIDER_LOGOS[p])].map(p => {
@@ -216,69 +240,88 @@ export function MobileDiscoverView({ heroMovie, heroReason, watchlistIds, hasUse
       {/* ── FOR YOU TAB ── */}
       {tab === 'foryou' && (
         <div className="pb-8">
-          {heroMovie && (
+          {/* Swipeable hero carousel */}
+          {activeHero && (
             <div className="mb-2">
-              <FeaturedCard
-                movie={heroMovie}
-                reason={heroReason}
-                isInWatchlist={watchlistIds.includes(heroMovie.id)}
-                hasUser={hasUser}
-                onToggleWatchlist={() => onToggleWatchlist(heroMovie)}
-                onOpenModal={() => onOpenModal(heroMovie.id, heroMovie.type ?? 'movie', heroMovie.title)}
-              />
+              <div onTouchStart={handleHeroTouchStart} onTouchEnd={handleHeroTouchEnd}>
+                <FeaturedCard
+                  movie={activeHero}
+                  reason={heroReason}
+                  isInWatchlist={watchlistIds.includes(activeHero.id)}
+                  hasUser={hasUser}
+                  onToggleWatchlist={() => onToggleWatchlist(activeHero)}
+                  onOpenModal={() => onOpenModal(activeHero.id, activeHero.type ?? 'movie', activeHero.title)}
+                />
+              </div>
+              {/* Dot indicators */}
+              {heroMovies.length > 1 && (
+                <div className="flex justify-center gap-1.5 mt-3">
+                  {heroMovies.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setHeroIdx(i)}
+                      className="h-[3px] rounded-full transition-all duration-300"
+                      style={{
+                        width: i === heroIdx ? 20 : 6,
+                        background: i === heroIdx ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.25)',
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
           <SectionRow
-            label="🔥 Hot Right Now"
+            label="Recommended For You"
+            movies={recommended ?? []}
+            getReasonText={() => 'Based on your services'}
+            onMovieClick={onOpenModal}
+          />
+          <SectionRow
+            label="Trending Now"
             movies={trendingMovies}
             getReasonText={() => 'Trending this week'}
             onMovieClick={onOpenModal}
           />
           <SectionRow
-            label="⭐ Recommended For You"
-            movies={recommended ?? []}
-            getReasonText={() => 'Based on your watch history'}
-            onMovieClick={onOpenModal}
-          />
-          <SectionRow
-            label="🆕 New Releases"
+            label="New Releases"
             movies={newReleases}
             getReasonText={m => `New on ${m.streamingService || 'streaming'}`}
             onMovieClick={onOpenModal}
           />
           <SectionRow
-            label="🚀 Sci-Fi & Fantasy"
+            label="Sci-Fi & Fantasy"
             movies={scifiMovies}
             getReasonText={() => 'Top sci-fi picks'}
             onMovieClick={onOpenModal}
           />
           <SectionRow
-            label="😂 Comedy"
+            label="Comedy"
             movies={comedyMovies}
             getReasonText={() => 'Because you like to laugh'}
             onMovieClick={onOpenModal}
           />
           <SectionRow
-            label="🎬 Action"
+            label="Action"
             movies={actionMovies}
             getReasonText={() => 'High-octane picks'}
             onMovieClick={onOpenModal}
           />
           <SectionRow
-            label="😱 Horror"
+            label="Horror"
             movies={horrorMovies}
             getReasonText={() => 'If you dare'}
             onMovieClick={onOpenModal}
           />
           <SectionRow
-            label="🏆 Critically Acclaimed"
+            label="Critically Acclaimed"
             movies={acclaimed}
             getReasonText={() => 'Award-winning films'}
             onMovieClick={onOpenModal}
           />
           <SectionRow
-            label="📽️ Timeless Classics"
+            label="Timeless Classics"
             movies={classics}
             getReasonText={() => 'A timeless pick'}
             onMovieClick={onOpenModal}
@@ -286,38 +329,98 @@ export function MobileDiscoverView({ heroMovie, heroReason, watchlistIds, hasUse
         </div>
       )}
 
-      {/* ── ALL TAB ── */}
+      {/* ── BROWSE TAB ── */}
       {tab === 'all' && (
-        <div className="px-4 mt-4 grid grid-cols-2 gap-3 pb-8">
-          {allTabMovies.map(m => (
-            <div
-              key={m.id}
-              className="relative rounded-2xl overflow-hidden cursor-pointer active:scale-[0.97] transition-transform duration-150"
-              style={{
-                height: 220,
-                boxShadow: `0 12px 32px -6px ${PLATFORM_COLORS[m.streamingService] ?? '#6b7280'}44`,
-              }}
-              onClick={() => onOpenModal(m.id, m.type ?? 'movie', m.title)}
-            >
-              {m.poster ? (
-                <img src={m.poster} alt={m.title} className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
-              ) : (
-                <div className="absolute inset-0 bg-zinc-800" />
-              )}
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/10 to-transparent" />
-              {PROVIDER_LOGOS[m.streamingService] && (
-                <div className="absolute top-2 left-2 w-5 h-5 rounded-sm overflow-hidden" style={{ background: 'rgba(0,0,0,0.5)' }}>
-                  <img src={PROVIDER_LOGOS[m.streamingService]} alt={m.streamingService} className="w-full h-full object-cover" />
+        <div className="pb-8">
+          {allProvider === 'All' ? (
+            /* No provider selected — show categorized sections */
+            <>
+              <SectionRow
+                label="Trending Now"
+                movies={trendingMovies}
+                getReasonText={() => 'Trending this week'}
+                onMovieClick={onOpenModal}
+              />
+              <SectionRow
+                label="New Releases"
+                movies={newReleases}
+                getReasonText={m => `New on ${m.streamingService || 'streaming'}`}
+                onMovieClick={onOpenModal}
+              />
+              <SectionRow
+                label="Top Rated"
+                movies={topRated}
+                getReasonText={() => 'Highest rated'}
+                onMovieClick={onOpenModal}
+              />
+              <SectionRow
+                label="Action"
+                movies={actionMovies}
+                getReasonText={() => 'High-octane picks'}
+                onMovieClick={onOpenModal}
+              />
+              <SectionRow
+                label="Comedy"
+                movies={comedyMovies}
+                getReasonText={() => 'Because you like to laugh'}
+                onMovieClick={onOpenModal}
+              />
+              <SectionRow
+                label="Sci-Fi & Fantasy"
+                movies={scifiMovies}
+                getReasonText={() => 'Top sci-fi picks'}
+                onMovieClick={onOpenModal}
+              />
+              <SectionRow
+                label="Horror"
+                movies={horrorMovies}
+                getReasonText={() => 'If you dare'}
+                onMovieClick={onOpenModal}
+              />
+              <SectionRow
+                label="Critically Acclaimed"
+                movies={acclaimed}
+                getReasonText={() => 'Award-winning films'}
+                onMovieClick={onOpenModal}
+              />
+              <SectionRow
+                label="Timeless Classics"
+                movies={classics}
+                getReasonText={() => 'A timeless pick'}
+                onMovieClick={onOpenModal}
+              />
+            </>
+          ) : (
+            /* Provider selected — show filtered grid */
+            <div className="px-4 mt-4 grid grid-cols-2 gap-3">
+              {providerFiltered.map(m => (
+                <div
+                  key={m.id}
+                  className="relative rounded-2xl overflow-hidden cursor-pointer active:scale-[0.97] transition-transform duration-150"
+                  style={{ height: 220 }}
+                  onClick={() => onOpenModal(m.id, m.type ?? 'movie', m.title)}
+                >
+                  {m.poster ? (
+                    <img src={m.poster} alt={m.title} className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
+                  ) : (
+                    <div className="absolute inset-0 bg-zinc-800" />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/10 to-transparent" />
+                  {PROVIDER_LOGOS[m.streamingService] && (
+                    <div className="absolute top-2 left-2 w-5 h-5 rounded-sm overflow-hidden" style={{ background: 'rgba(0,0,0,0.5)' }}>
+                      <img src={PROVIDER_LOGOS[m.streamingService]} alt={m.streamingService} className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                  <div className="absolute bottom-0 left-0 right-0 p-2.5">
+                    <p className="text-white font-bold text-xs leading-tight line-clamp-2">{m.title}</p>
+                    <p className="text-white/40 text-[10px] mt-0.5">{m.year} · {m.genres[0] ?? ''}</p>
+                  </div>
                 </div>
+              ))}
+              {providerFiltered.length === 0 && (
+                <div className="col-span-2 py-16 text-center text-zinc-600 text-sm">No titles found.</div>
               )}
-              <div className="absolute bottom-0 left-0 right-0 p-2.5">
-                <p className="text-white font-bold text-xs leading-tight line-clamp-2">{m.title}</p>
-                <p className="text-white/40 text-[10px] mt-0.5">{m.year} · {m.genres[0] ?? ''}</p>
-              </div>
             </div>
-          ))}
-          {allTabMovies.length === 0 && (
-            <div className="col-span-2 py-16 text-center text-zinc-600 text-sm">No titles found.</div>
           )}
         </div>
       )}
