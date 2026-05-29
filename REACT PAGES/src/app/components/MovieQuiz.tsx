@@ -472,10 +472,9 @@ export function MovieQuiz({ onComplete, onSkip }: MovieQuizProps) {
               <Sparkles style={{ width: 32, height: 32, color: "var(--reel-accent-hex)" }} />
             </div>
             <p style={{
-              fontSize: 12, textTransform: "uppercase",
-              letterSpacing: "0.1em", color: "#888", marginBottom: 8,
+              fontSize: 13, fontWeight: 500, color: "#888", marginBottom: 8,
             }}>
-              Your Top Genre
+              Your top genre
             </p>
             <div style={{
               display: "inline-block", padding: "6px 16px", borderRadius: 999,

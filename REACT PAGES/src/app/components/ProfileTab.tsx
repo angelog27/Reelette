@@ -99,7 +99,7 @@ function ProfileHeader({
         {/* Banner colour swatches — visible only in edit mode */}
         {isEditing && (
           <div className="absolute bottom-3 right-4 flex items-center gap-1.5 bg-black/50 backdrop-blur-sm rounded-full px-3 py-1.5">
-            <span className="text-zinc-400 text-[10px] mr-1 uppercase tracking-wider">Banner</span>
+            <span className="text-zinc-500 text-xs mr-1">Banner</span>
             {BANNER_PRESETS.map(p => (
               <button
                 key={p.id}
@@ -205,8 +205,7 @@ function ProfileInfoSection({
     <div className="bg-zinc-900/50 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-zinc-800/50">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <div className="w-1 h-6 bg-red-600 rounded-full"></div>
-          <h2 className="text-white uppercase tracking-wider">Basic Information</h2>
+          <h2 className="text-white font-semibold text-sm">Basic Information</h2>
         </div>
         <User size={20} className="text-zinc-600" />
       </div>
@@ -322,8 +321,7 @@ function MoviePersonalizationSection({
     <div className="bg-zinc-900/50 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-zinc-800/50">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <div className="w-1 h-6 bg-red-600 rounded-full"></div>
-          <h2 className="text-white uppercase tracking-wider">Streaming Services</h2>
+          <h2 className="text-white font-semibold text-sm">Streaming Services</h2>
         </div>
         <Film size={20} className="text-zinc-600" />
       </div>
@@ -396,8 +394,7 @@ function AppearanceSection() {
     <div className="bg-zinc-900/50 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-zinc-800/50">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <div className="w-1 h-6 bg-red-600 rounded-full"></div>
-          <h2 className="text-white uppercase tracking-wider">Appearance</h2>
+          <h2 className="text-white font-semibold text-sm">Appearance</h2>
         </div>
         <Palette size={20} className="text-zinc-600" />
       </div>
@@ -487,8 +484,7 @@ function SocialSection({
     <div className="bg-zinc-900/50 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-zinc-800/50">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <div className="w-1 h-6 bg-red-600 rounded-full"></div>
-          <h2 className="text-white uppercase tracking-wider">Social</h2>
+          <h2 className="text-white font-semibold text-sm">Social</h2>
         </div>
         <Users size={20} className="text-zinc-600" />
       </div>
@@ -625,8 +621,7 @@ function AccountDetailsSection({
     <div className="bg-zinc-900/50 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-zinc-800/50">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <div className="w-1 h-6 bg-red-600 rounded-full"></div>
-          <h2 className="text-white uppercase tracking-wider">Account Details</h2>
+          <h2 className="text-white font-semibold text-sm">Account Details</h2>
         </div>
         <Settings size={20} className="text-zinc-600" />
       </div>

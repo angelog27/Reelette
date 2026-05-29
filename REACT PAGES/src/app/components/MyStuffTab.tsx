@@ -203,7 +203,7 @@ export function MyStuffTab() {
         {(() => {
           const TAB_ORDER: Tab[] = ['watched', 'watchlater', 'stats', 'rankings'];
           const tabIdx = TAB_ORDER.indexOf(activeTab);
-          const indicatorColor = activeTab === 'stats' ? '#f97316' : 'var(--reel-accent-hex)';
+          const indicatorColor = 'var(--reel-accent-hex)';
           return (
             <div className="relative flex rounded-full p-1" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(16px)' }}>
               <div style={{
@@ -276,11 +276,8 @@ export function MyStuffTab() {
             {sortOpen && (
               <div className="absolute right-0 top-full mt-2 w-52 rounded-2xl shadow-2xl z-50 py-1.5 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150" style={{ background: 'rgba(18,18,22,0.92)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(24px)' }}>
                 {/* Tiny "SORT BY" header inside dropdown */}
-                <p
-                  className="text-[9px] font-bold tracking-[0.2em] text-gray-600 uppercase px-4 pt-2 pb-1.5"
-                  style={{ fontFamily: "'Courier New', monospace" }}
-                >
-                  Sort By
+                <p className="text-[10px] font-medium text-gray-600 px-4 pt-2 pb-1.5">
+                  Sort by
                 </p>
                 {visibleSorts.map(opt => (
                   <button

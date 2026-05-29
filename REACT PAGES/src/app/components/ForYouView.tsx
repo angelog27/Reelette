@@ -297,7 +297,7 @@ export function ForYouView({ onOpenModal }: Props) {
       {/* Cross-service genre rows */}
       <div className="mt-6">
         <div className="px-5 mb-1">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600">Across Your Services</p>
+          <p className="text-sm font-semibold text-white/50">Across your services</p>
         </div>
         {genreRows.map(({ label, movies }) => (
           <div key={label}>

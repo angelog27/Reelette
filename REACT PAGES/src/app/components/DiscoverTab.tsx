@@ -941,7 +941,7 @@ function PersonalizedHero({ slots, backdropOverrides = {}, onOpenModal, onToggle
                 <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={{ background: 'rgba(155,123,215,0.2)' }}>
                   <Sparkles className="w-3.5 h-3.5 text-[#9B7BD7]" />
                 </div>
-                <span className="text-[#9B7BD7] text-xs font-semibold uppercase tracking-widest">Just for You</span>
+                <span className="text-[#9B7BD7] text-xs font-semibold">Just for You</span>
               </div>
               <p className="text-gray-300 text-sm leading-relaxed">
                 Picked from your watch history and the films you've rated highest.
@@ -953,7 +953,7 @@ function PersonalizedHero({ slots, backdropOverrides = {}, onOpenModal, onToggle
             <div className="bg-black/55 backdrop-blur-sm rounded-2xl p-5 border border-white/10 w-[240px]">
               <div className="flex items-center gap-2 mb-3">
                 <Star className="w-4 h-4 fill-yellow-400 text-yellow-400 shrink-0" />
-                <span className="text-yellow-400 text-xs font-semibold uppercase tracking-widest">Your Rating</span>
+                <span className="text-yellow-400 text-xs font-semibold">Your Rating</span>
               </div>
               <div className="flex items-baseline gap-1">
                 <span className="text-white font-black" style={{ fontSize: '3rem', lineHeight: 1 }}>{slot.yourRating.toFixed(1)}</span>
@@ -1407,7 +1407,7 @@ export function DiscoverTab() {
 
         {/* Desktop: big logo icons with label */}
         <div className="hidden md:block">
-          <p className="text-xs font-semibold uppercase tracking-widest text-gray-500 text-center mb-5">
+          <p className="text-xs font-medium text-gray-500 text-center mb-5">
             {mediaType === 'show' ? 'Browse Shows' : 'Your Providers'}
           </p>
           <div
@@ -1531,8 +1531,8 @@ export function DiscoverTab() {
                   <div className="h-px flex-1 bg-[#1e1e1e]" />
                   <div className="flex items-center gap-1.5">
                     <GroqIcon size={13} />
-                    <span className="text-[11px] font-bold tracking-[0.18em] uppercase text-gray-500">
-                      Picked for you  ⚡ Groq AI
+                    <span className="text-[11px] font-medium text-gray-500">
+                      Picked for you · Groq AI
                     </span>
                   </div>
                   <div className="h-px flex-1 bg-[#1e1e1e]" />

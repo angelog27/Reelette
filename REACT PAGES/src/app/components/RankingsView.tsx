@@ -122,7 +122,7 @@ function RankingEditor({ initial, watchedMovies, onSave, onClose }: EditorProps)
         <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4 no-scrollbar">
           {/* Title */}
           <div>
-            <label className="text-zinc-500 text-xs uppercase tracking-wider block mb-1.5">Ranking Title</label>
+            <label className="text-zinc-500 text-xs font-medium block mb-1.5">Ranking Title</label>
             <input
               value={title}
               onChange={e => setTitle(e.target.value)}
@@ -136,7 +136,7 @@ function RankingEditor({ initial, watchedMovies, onSave, onClose }: EditorProps)
 
           {/* Description */}
           <div>
-            <label className="text-zinc-500 text-xs uppercase tracking-wider block mb-1.5">Description <span className="normal-case text-zinc-700">(optional)</span></label>
+            <label className="text-zinc-500 text-xs font-medium block mb-1.5">Description <span className="normal-case text-zinc-700">(optional)</span></label>
             <textarea
               value={description}
               onChange={e => setDescription(e.target.value)}
@@ -152,7 +152,7 @@ function RankingEditor({ initial, watchedMovies, onSave, onClose }: EditorProps)
           {/* Current ranking order */}
           {selected.length > 0 && (
             <div>
-              <label className="text-zinc-500 text-xs uppercase tracking-wider block mb-2">Your Ranking ({selected.length})</label>
+              <label className="text-zinc-500 text-xs font-medium block mb-2">Your Ranking ({selected.length})</label>
               <div className="space-y-1.5">
                 {selected.map((m, idx) => (
                   <div key={m.movie_id} className="flex items-center gap-2.5 bg-[#0d0d0f] border border-white/[0.05] rounded-xl px-3 py-2">
@@ -184,7 +184,7 @@ function RankingEditor({ initial, watchedMovies, onSave, onClose }: EditorProps)
 
           {/* Movie picker from watched list */}
           <div>
-            <label className="text-zinc-500 text-xs uppercase tracking-wider block mb-2">
+            <label className="text-zinc-500 text-xs font-medium block mb-2">
               Add from Watched {watchedMovies.length > 0 && <span className="text-zinc-700 normal-case">({watchedMovies.length} available)</span>}
             </label>
             <input

@@ -9,7 +9,7 @@ interface Props {
   onMovieClick?: (movieId: string, type: 'movie' | 'show') => void;
 }
 
-const ACCENT = '#f97316';
+const ACCENT = 'var(--reel-accent-hex)';
 
 const PLATFORM_COLORS: Record<string, string> = {
   'Netflix':            '#E50914',
@@ -177,7 +177,7 @@ export function StatsTab({ movies, recentSpins = [], onMovieClick }: Props) {
             key={f}
             onClick={() => setMediaFilter(f)}
             className="px-4 py-1.5 rounded-full text-sm font-medium transition-colors"
-            style={mediaFilter === f ? { background: '#f97316', color: '#fff' } : { color: '#9ca3af' }}
+            style={mediaFilter === f ? { background: 'var(--reel-accent-hex)', color: '#fff' } : { color: '#9ca3af' }}
           >
             {f === 'all' ? 'All' : f === 'movie' ? 'Movies' : 'Shows'}
           </button>
@@ -214,7 +214,7 @@ export function StatsTab({ movies, recentSpins = [], onMovieClick }: Props) {
       {/* ── Taste profile ──────────────────────────────────────── */}
       {tags.length > 0 && (
         <div className="rounded-xl p-5 border border-[#1f1f1f]" style={{ backgroundColor: '#111' }}>
-          <p className="text-gray-400 text-xs font-semibold uppercase tracking-widest mb-3">Taste Profile</p>
+          <p className="text-sm font-semibold text-white/60 mb-3">Taste Profile</p>
           <div className="flex flex-wrap gap-2">
             {tags.map((tag) => (
               <span key={tag} className="px-3 py-1 rounded-full text-sm font-semibold text-black" style={{ backgroundColor: ACCENT }}>
@@ -228,14 +228,14 @@ export function StatsTab({ movies, recentSpins = [], onMovieClick }: Props) {
       {/* ── Top 10 — horizontal poster scroll ──────────────────── */}
       <div className="rounded-xl p-5 border border-[#1f1f1f]" style={{ backgroundColor: '#111' }}>
         <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-          <p className="text-gray-400 text-xs font-semibold uppercase tracking-widest">Top 10 Highest Rated</p>
+          <p className="text-sm font-semibold text-white/60">Top 10 Highest Rated</p>
           <div className="flex gap-1 bg-[#1a1a1a] border border-[#2a2a2a] rounded-full p-0.5">
             {(['all', 'movie', 'show'] as MediaFilter[]).map(f => (
               <button
                 key={f}
                 onClick={() => setTop10Filter(f)}
                 className="px-3 py-1 rounded-full text-xs font-semibold transition-colors"
-                style={top10Filter === f ? { background: ACCENT, color: '#000' } : { color: '#6b7280' }}
+                style={top10Filter === f ? { background: 'var(--reel-accent-hex)', color: '#fff' } : { color: '#6b7280' }}
               >
                 {f === 'all' ? 'All' : f === 'movie' ? 'Movies' : 'Shows'}
               </button>
@@ -250,7 +250,7 @@ export function StatsTab({ movies, recentSpins = [], onMovieClick }: Props) {
               className="shrink-0 w-48 text-left group focus:outline-none"
               disabled={!onMovieClick}
             >
-              <div className="relative rounded-xl overflow-hidden bg-[#1A1A1A] border border-[#2A2A2A] group-hover:border-[#f97316]/50 transition-colors">
+              <div className="relative rounded-xl overflow-hidden bg-[#1A1A1A] border border-[#2A2A2A] group-hover:border-white/20 transition-colors">
                 {m.poster ? (
                   <img src={m.poster} alt={m.title} className="w-full aspect-[2/3] object-cover" loading="lazy" decoding="async" />
                 ) : (
@@ -282,7 +282,7 @@ export function StatsTab({ movies, recentSpins = [], onMovieClick }: Props) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {topActors.length > 0 && (
           <div className="rounded-xl p-5 border border-[#1f1f1f]" style={{ backgroundColor: '#111' }}>
-            <p className="text-gray-400 text-xs font-semibold uppercase tracking-widest mb-4">Most Watched Actor</p>
+            <p className="text-sm font-semibold text-white/60 mb-4">Most Watched Actor</p>
             <div className="grid grid-cols-2 gap-3">
               {topActors.map(([name, count], idx) => (
                 <PersonCard key={name} name={name} count={count} photo={photoMap[name]} rank={idx + 1} />
@@ -293,7 +293,7 @@ export function StatsTab({ movies, recentSpins = [], onMovieClick }: Props) {
 
         {topDirectors.length > 0 && (
           <div className="rounded-xl p-5 border border-[#1f1f1f]" style={{ backgroundColor: '#111' }}>
-            <p className="text-gray-400 text-xs font-semibold uppercase tracking-widest mb-4">Most Watched Director</p>
+            <p className="text-sm font-semibold text-white/60 mb-4">Most Watched Director</p>
             <div className="grid grid-cols-2 gap-3">
               {topDirectors.map(([name, count], idx) => (
                 <PersonCard key={name} name={name} count={count} photo={photoMap[name]} rank={idx + 1} />
@@ -306,7 +306,7 @@ export function StatsTab({ movies, recentSpins = [], onMovieClick }: Props) {
       {/* ── Genre breakdown ────────────────────────────────────── */}
       {topGenres.length > 0 && (
         <div className="rounded-xl p-5 border border-[#1f1f1f]" style={{ backgroundColor: '#111' }}>
-          <p className="text-gray-400 text-xs font-semibold uppercase tracking-widest mb-4">Genre Breakdown</p>
+          <p className="text-sm font-semibold text-white/60 mb-4">Genre Breakdown</p>
           <div className="space-y-3">
             {topGenres.slice(0, 8).map(([genre, count]) => {
               const pct = Math.round((count / movies.length) * 100);
@@ -329,7 +329,7 @@ export function StatsTab({ movies, recentSpins = [], onMovieClick }: Props) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {decades.length > 0 && (
           <div className="rounded-xl p-5 border border-[#1f1f1f]" style={{ backgroundColor: '#111' }}>
-            <p className="text-gray-400 text-xs font-semibold uppercase tracking-widest mb-4">By Decade</p>
+            <p className="text-sm font-semibold text-white/60 mb-4">By Decade</p>
             <div className="space-y-3">
               {decades.map(([decade, count]) => (
                 <div key={decade}>
@@ -337,7 +337,7 @@ export function StatsTab({ movies, recentSpins = [], onMovieClick }: Props) {
                     <span className="text-gray-200">{decade}</span>
                     <span className="text-gray-500">{count}</span>
                   </div>
-                  <Bar pct={Math.round((count / maxDecade) * 100)} color="#60a5fa" />
+                  <Bar pct={Math.round((count / maxDecade) * 100)} color="var(--reel-accent-hex)" />
                 </div>
               ))}
             </div>
@@ -346,7 +346,7 @@ export function StatsTab({ movies, recentSpins = [], onMovieClick }: Props) {
 
         {topPlatforms.length > 0 && (
           <div className="rounded-xl p-5 border border-[#1f1f1f]" style={{ backgroundColor: '#111' }}>
-            <p className="text-gray-400 text-xs font-semibold uppercase tracking-widest mb-4">Most Watched On</p>
+            <p className="text-sm font-semibold text-white/60 mb-4">Most Watched On</p>
             <div className="space-y-3">
               {topPlatforms.map(([platform, count]) => {
                 const barPct = Math.round((count / maxPlatform) * 100);

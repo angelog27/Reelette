@@ -443,8 +443,8 @@ export function HomePage() {
             {searchVisible && (
               <label style={{
                 position: 'relative', display: 'block', borderRadius: '10px',
-                border: '2px solid #5e5757', padding: '6px 44px 6px 12px',
-                boxShadow: '8px 8px 30px var(--reel-accent-hex), -8px -8px 30px rgba(255,255,255,0.2)',
+                border: '1px solid rgba(255,255,255,0.15)', padding: '6px 44px 6px 12px',
+                background: 'rgba(255,255,255,0.04)',
                 cursor: 'text',
               }}>
                 <span className="hidden md:inline" style={{

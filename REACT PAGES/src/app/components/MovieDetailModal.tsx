@@ -28,7 +28,7 @@ function dicebear(seed: string) {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-[10px] font-bold tracking-[0.2em] uppercase text-zinc-500 mb-3">
+    <p className="text-sm font-semibold text-white/50 mb-3">
       {children}
     </p>
   );
@@ -603,7 +603,7 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
             </p>
             <div className="space-y-3">
               <div>
-                <label className="text-zinc-500 text-xs uppercase tracking-widest block mb-1">Rating (0–10)</label>
+                <label className="text-zinc-500 text-xs font-medium block mb-1">Rating (0–10)</label>
                 <input
                   type="number" min="0" max="10" step="0.5"
                   value={ratingInput}
@@ -616,7 +616,7 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
                 />
               </div>
               <div>
-                <label className="text-zinc-500 text-xs uppercase tracking-widest block mb-1">Comment (optional)</label>
+                <label className="text-zinc-500 text-xs font-medium block mb-1">Comment (optional)</label>
                 <textarea
                   value={commentInput}
                   onChange={(e) => setCommentInput(e.target.value)}

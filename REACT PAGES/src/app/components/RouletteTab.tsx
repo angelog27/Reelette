@@ -318,19 +318,6 @@ export function RouletteTab() {
               >
                 What can you<br />watch tonight?
               </h1>
-              <p
-                style={{
-                  fontFamily: "SanFran, system-ui, sans-serif",
-                  fontSize: "0.7rem",
-                  letterSpacing: "0.16em",
-                  color: "#374151",
-                  marginTop: "0.65rem",
-                  textTransform: "uppercase",
-                  fontWeight: 600,
-                }}
-              >
-                stop scrolling, start watching
-              </p>
             </div>
 
             {/* Movies / Shows toggle — sliding pill */}
@@ -366,12 +353,7 @@ export function RouletteTab() {
             {hasServices && (
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <p
-                    className="text-[10px] font-bold tracking-[0.18em] uppercase"
-                    style={{ color: '#374151' }}
-                  >
-                    Your services - Toggle services on or off for certain results
-                  </p>
+                  <p className="text-xs text-gray-500">Your services</p>
                   {selectedProviders.length > 0 && (
                     <button
                       onClick={() => setSelectedProviders([])}
@@ -458,7 +440,7 @@ export function RouletteTab() {
                   style={{ background: '#0d0d0d', border: '1px solid rgba(255,255,255,0.08)' }}
                 >
                   <div className="space-y-1.5">
-                    <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Genre</p>
+                    <p className="text-xs font-medium text-gray-500">Genre</p>
                     <select
                       value={genre}
                       onChange={e => setGenre(e.target.value)}
@@ -474,7 +456,7 @@ export function RouletteTab() {
 
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
-                      <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Year from</p>
+                      <p className="text-xs font-medium text-gray-500">Year from</p>
                       <Input
                         value={yearFrom}
                         onChange={e => setYearFrom(e.target.value)}
@@ -484,7 +466,7 @@ export function RouletteTab() {
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Year to</p>
+                      <p className="text-xs font-medium text-gray-500">Year to</p>
                       <Input
                         value={yearTo}
                         onChange={e => setYearTo(e.target.value)}
@@ -497,7 +479,7 @@ export function RouletteTab() {
 
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Min Rating</p>
+                      <p className="text-xs font-medium text-gray-500">Min rating</p>
                       <span className="text-white text-xs font-semibold">
                         {minRating[0] > 0 ? `${minRating[0]}+` : "Any"}
                       </span>
@@ -549,7 +531,7 @@ export function RouletteTab() {
                 <div className="flex items-center gap-2">
                   <GroqIcon size={14} />
                   <p className="text-sm font-semibold text-white">Smart Watch</p>
-                  <span className="text-[10px] ml-auto" style={{ color: '#374151' }}>
+                  <span className="text-[10px] ml-auto text-gray-500">
                     {smartSpinAvailable ? "1 use remaining today" : `Resets in ${hoursUntilReset}h`}
                   </span>
                 </div>
@@ -768,12 +750,7 @@ export function RouletteTab() {
 
             {/* Recent Spins */}
             <div>
-              <p
-                className="text-[10px] font-bold tracking-[0.18em] uppercase mb-4"
-                style={{ color: '#374151' }}
-              >
-                Recent Spins
-              </p>
+              <p className="text-sm font-semibold text-white/60 mb-4">Recent Spins</p>
 
               {!spinsLoaded && (
                 <div className="grid grid-cols-3 gap-2">
@@ -788,7 +765,7 @@ export function RouletteTab() {
               )}
 
               {spinsLoaded && recentSpins.length === 0 && (
-                <p className="text-xs leading-relaxed" style={{ color: '#374151' }}>
+                <p className="text-xs text-gray-500 leading-relaxed">
                   {user ? "Your spin history will appear here." : "Log in to track spins."}
                 </p>
               )}
@@ -837,12 +814,7 @@ export function RouletteTab() {
             {/* Friends' Spins — horizontal scroll poster grid */}
             {friendSpins.length > 0 && (
               <div>
-                <p
-                  className="text-[10px] font-bold tracking-[0.18em] uppercase mb-4"
-                  style={{ color: '#374151' }}
-                >
-                  Friends' Spins
-                </p>
+                <p className="text-sm font-semibold text-white/60 mb-4">Friends' Spins</p>
                 <div className="flex gap-2 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
                   {friendSpins.slice(0, 10).map(entry => {
                     const s = entry.spins[0];
@@ -901,12 +873,7 @@ export function RouletteTab() {
 
         {/* Mobile recent spins */}
         <div className="lg:hidden mt-10">
-          <p
-            className="text-[10px] font-bold tracking-[0.18em] uppercase mb-4"
-            style={{ color: '#374151' }}
-          >
-            Recent Spins
-          </p>
+          <p className="text-sm font-semibold text-white/60 mb-4">Recent Spins</p>
           {!spinsLoaded && (
             <div className="grid grid-cols-4 gap-2">
               {[...Array(8)].map((_, i) => (
@@ -915,7 +882,7 @@ export function RouletteTab() {
             </div>
           )}
           {spinsLoaded && recentSpins.length === 0 && (
-            <p className="text-xs" style={{ color: '#374151' }}>
+            <p className="text-xs text-gray-500">
               {user ? "Your spin history will appear here." : "Log in to track spins."}
             </p>
           )}
@@ -952,12 +919,7 @@ export function RouletteTab() {
         {/* Mobile friends' spins */}
         {friendSpins.length > 0 && (
           <div className="lg:hidden mt-8">
-            <p
-              className="text-[10px] font-bold tracking-[0.18em] uppercase mb-4"
-              style={{ color: '#374151' }}
-            >
-              Friends' Spins
-            </p>
+            <p className="text-sm font-semibold text-white/60 mb-4">Friends' Spins</p>
             <div className="flex gap-2 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
               {friendSpins.slice(0, 10).map(entry => {
                 const s = entry.spins[0];
