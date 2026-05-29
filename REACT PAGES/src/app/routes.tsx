@@ -1,10 +1,11 @@
-import React, { lazy, Suspense } from 'react';
-import { createBrowserRouter, Navigate } from 'react-router-dom';
+import React, { lazy, Suspense, useState } from 'react';
+import { createBrowserRouter, Navigate, Link } from 'react-router-dom';
 import { HomePage } from './components/HomePage';
-import { LoginPage } from './components/LoginPage';
+import { LandingPage } from './components/LandingPage';
+import { AuthModal } from './components/AuthModal';
 import QuizGate from './components/QuizGate';
-import Landing from '../pages/Landing';
 import { getUser } from './services/api';
+import logoFull from '../assets/Full_Reelette_upscaled.png';
 
 // Tab components are code-split: their JS is only downloaded when the user
 // navigates to that tab for the first time, keeping the initial bundle small.
@@ -18,22 +19,60 @@ const MyStuffTab           = lazy(() => import('./components/MyStuffTab').then(m
 const SearchTab            = lazy(() => import('./components/SearchTab').then(m => ({ default: m.SearchTab })));
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  if (!getUser()) return <Navigate to="/login" replace />;
+  if (!getUser()) return <Navigate to="/" replace />;
   return <>{children}</>;
-}
-
-function hasSeenLanding() {
-  return document.cookie.split(';').some(c => c.trim().startsWith('reelette_visited='));
 }
 
 function LandingGuard() {
   if (localStorage.getItem('user_id')) {
     return <Navigate to="/home/spin" replace />;
   }
-  if (hasSeenLanding()) {
-    return <Navigate to="/login" replace />;
-  }
-  return <Landing />;
+  return <LandingPage />;
+}
+
+// Public roulette - accessible without an account, with a sign-in prompt in the nav
+function PublicRouletteWrapper() {
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalView, setModalView] = useState<'login' | 'register'>('register');
+
+  return (
+    <div className="min-h-screen bg-[#0A0A0A]">
+      {/* Minimal nav */}
+      <nav className="fixed top-0 left-0 right-0 z-40 bg-[#0A0A0A]/90 backdrop-blur-xl border-b border-white/5">
+        <div className="max-w-7xl mx-auto px-5 md:px-8 h-16 flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-2">
+            <img src={logoFull} alt="Reelette" className="h-8 w-auto object-contain" />
+          </Link>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => { setModalView('login'); setModalOpen(true); }}
+              className="text-sm font-medium text-white/50 hover:text-white transition-colors"
+            >
+              Sign In
+            </button>
+            <button
+              onClick={() => { setModalView('register'); setModalOpen(true); }}
+              className="text-sm font-medium bg-[#7C5DBD] hover:bg-[#8F6FD4] active:scale-[0.97] text-white px-4 py-2 rounded-xl transition-all duration-150"
+            >
+              Get Started
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      <div className="pt-16">
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-white/30 text-sm">Loading...</div>}>
+          <RouletteTab />
+        </Suspense>
+      </div>
+
+      <AuthModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        initialView={modalView}
+      />
+    </div>
+  );
 }
 
 export const router = createBrowserRouter([
@@ -42,8 +81,14 @@ export const router = createBrowserRouter([
     element: <LandingGuard />,
   },
   {
+    // Legacy login route now redirects to the landing page (auth modal lives there)
     path: '/login',
-    Component: LoginPage,
+    element: <Navigate to="/" replace />,
+  },
+  {
+    // Public roulette - accessible without an account
+    path: '/play',
+    element: <PublicRouletteWrapper />,
   },
   {
     path: '/quiz',

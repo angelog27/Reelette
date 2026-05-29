@@ -1,6 +1,12 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
-import { getAuth, signInWithCustomToken, signOut } from 'firebase/auth';
+import {
+  getAuth,
+  signInWithCustomToken,
+  signOut,
+  GoogleAuthProvider,
+  signInWithPopup,
+} from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey:            import.meta.env.VITE_FIREBASE_API_KEY            as string,
@@ -52,3 +58,12 @@ export async function signInFirebase(): Promise<boolean> {
 export async function signOutFirebase(): Promise<void> {
   await signOut(auth).catch(() => {});
 }
+
+/** Sign in via Google popup. Returns the Firebase UserCredential. */
+export async function signInWithGooglePopup() {
+  const provider = new GoogleAuthProvider();
+  provider.addScope('email');
+  provider.addScope('profile');
+  return signInWithPopup(auth, provider);
+}
+

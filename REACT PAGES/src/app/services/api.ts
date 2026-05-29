@@ -320,6 +320,31 @@ export async function forgotPassword(email: string) {
   return res.json();
 }
 
+/**
+ * OAuth login / registration via Google or Apple.
+ * The user is already signed into Firebase at this point.
+ * The backend creates or retrieves the user record and returns the same
+ * shape as the regular login endpoint (without a customToken, since
+ * Firebase auth is already established).
+ */
+export async function loginWithOAuth(
+  provider: 'google' | 'apple',
+  firebaseUser: { uid: string; email: string | null; displayName: string | null },
+) {
+  const res = await fetch(`${BASE_URL}/auth/oauth`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      provider,
+      uid: firebaseUser.uid,
+      email: firebaseUser.email,
+      name: firebaseUser.displayName,
+    }),
+  });
+  return res.json();
+}
+
+
 // ── User streaming services ──────────────────────────────────────
 
 
