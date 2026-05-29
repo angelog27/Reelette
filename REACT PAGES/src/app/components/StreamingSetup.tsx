@@ -88,9 +88,10 @@ export function StreamingSetup({ userId, initialServices, onDone, onSkip }: Prop
         <button
           onClick={handleSave}
           disabled={saving}
-          className="flex-1 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-6 py-3 rounded-lg transition-all font-medium disabled:opacity-50"
+          className="flex-1 px-6 py-3 rounded-xl font-semibold transition-all disabled:opacity-50 hover:brightness-110 active:scale-[0.98]"
+          style={{ background: 'var(--reel-accent-hex)', color: 'var(--reel-accent-text, #080808)' }}
         >
-          {saving ? 'Saving...' : 'Save'}
+          {saving ? 'Saving...' : 'Save preferences'}
         </button>
       </div>
     </div>

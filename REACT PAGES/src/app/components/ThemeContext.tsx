@@ -18,9 +18,9 @@ export const THEMES: ThemeDef[] = [
   {
     id: 'default',
     name: 'Reelette',
-    tagline: 'Classic purple',
-    accent: '#7C5DBD',
-    cardGradient: 'linear-gradient(135deg, #12083a 0%, #0a0a12 100%)',
+    tagline: 'Cinema gold',
+    accent: '#D4A843',
+    cardGradient: 'linear-gradient(135deg, #1a1200 0%, #0d0d08 100%)',
     fontFamily: 'system-ui, sans-serif',
   },
   {

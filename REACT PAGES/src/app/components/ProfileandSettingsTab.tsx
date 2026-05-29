@@ -20,10 +20,6 @@ import {
   type AppNotification, type Friend, type NotifPrefs, type Movie,
 } from '../services/api';
 
-// ── Film grain texture ────────────────────────────────────────────
-
-const FILM_GRAIN = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZmlsdGVyIGlkPSJuIj48ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iMC45IiBudW1PY3RhdmVzPSI0Ii8+PC9maWx0ZXI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsdGVyPSJ1cmwoI24pIiBvcGFjaXR5PSIxIi8+PC9zdmc+";
-
 // ── Streaming services ────────────────────────────────────────────
 
 const SERVICES: { key: string; label: string; color: string }[] = [
@@ -71,7 +67,7 @@ function NotifIcon({ type }: { type: AppNotification['type'] }) {
     case 'friend_accept':  return <UserPlus className={`${cls} text-blue-400`} />;
     case 'post_like':      return <Heart className={`${cls} text-red-400`} />;
     case 'post_reply':     return <MessageCircle className={`${cls} text-green-400`} />;
-    case 'friend_watched': return <Film className={`${cls} text-purple-400`} />;
+    case 'friend_watched': return <Film className={cls} style={{ color: 'var(--reel-accent-hex)' }} />;
     case 'group_invite':   return <Users className={`${cls} text-yellow-400`} />;
     case 'group_message':  return <MessageCircle className={`${cls} text-yellow-400`} />;
     default:               return <Bell className={`${cls} text-zinc-400`} />;
@@ -93,7 +89,7 @@ function timeAgoShort(iso: string): string {
 
 function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`bg-[#111111] border border-[#222222] rounded-2xl p-4 sm:p-6 ${className}`}>
+    <div className={`bg-[#0e0e0e] border border-white/[0.07] rounded-2xl p-4 sm:p-6 ${className}`}>
       {children}
     </div>
   );
@@ -526,13 +522,7 @@ export function ProfileandSettingsTab() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#090909] relative">
-      {/* Film grain */}
-      <div className="pointer-events-none fixed inset-0 opacity-[0.025] z-0"
-        style={{ backgroundImage: `url(${FILM_GRAIN})` }} />
-      {/* Ambient glow */}
-      <div className="pointer-events-none fixed inset-0 z-0"
-        style={{ background: 'radial-gradient(ellipse at top right, color-mix(in srgb, var(--reel-accent-hex) 4%, transparent) 0%, transparent 60%)' }} />
+    <div className="min-h-screen bg-[#080808] relative">
 
       {viewProfileId && <UserProfileModal userId={viewProfileId} onClose={() => setViewProfileId(null)} />}
       {showDeleteModal && <DeleteModal onConfirm={handleDeleteAccount} onCancel={() => setShowDeleteModal(false)} loading={deleteLoading} />}
@@ -577,10 +567,10 @@ export function ProfileandSettingsTab() {
               <button
                 onClick={() => fileInputRef.current?.click()}
                 className="absolute bottom-1 right-1 w-7 h-7 rounded-full flex items-center justify-center shadow-lg transition-all opacity-100 md:opacity-0 md:group-hover:opacity-100 active:scale-95"
-                style={{ background: 'var(--reel-accent-hex)' }}
+                style={{ background: 'var(--reel-accent-hex)', color: 'var(--reel-accent-text, #080808)' }}
                 title="Change photo"
               >
-                <Camera size={13} className="text-white" />
+                <Camera size={13} />
               </button>
               <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
             </div>
@@ -613,8 +603,8 @@ export function ProfileandSettingsTab() {
                 </button>
                 <button
                   onClick={handleSave} disabled={saving}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-white rounded-xl text-xs font-semibold transition-all disabled:opacity-60"
-                  style={{ background: 'var(--reel-accent-hex)' }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all disabled:opacity-60"
+                  style={{ background: 'var(--reel-accent-hex)', color: 'var(--reel-accent-text, #080808)' }}
                 >
                   {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
                   Save
@@ -905,7 +895,7 @@ export function ProfileandSettingsTab() {
                         <div className="absolute inset-0 rounded-2xl ring-2 ring-white/20" />
                       )}
                     </div>
-                    <span className="text-xs font-semibold tracking-wide" style={{ color: active ? '#fff' : '#6b7280' }}>
+                    <span className="text-xs font-semibold" style={{ color: active ? '#fff' : '#6b7280' }}>
                       {svc.label}
                     </span>
                     <div style={{
@@ -1075,7 +1065,7 @@ export function ProfileandSettingsTab() {
                         )}
                         {/* Effect label */}
                         {t.effect && (
-                          <div className="absolute bottom-2 right-2 text-[9px] font-bold tracking-widest uppercase opacity-50"
+                          <div className="absolute bottom-2 right-2 text-[9px] font-medium opacity-50"
                             style={{ color: t.accent }}>
                             {t.effect}
                           </div>
@@ -1148,9 +1138,9 @@ export function ProfileandSettingsTab() {
                 <button
                   onClick={handleEmailUpdate}
                   disabled={emailSaving || !newEmail.trim()}
-                  className="px-5 py-2.5 text-white rounded-xl text-sm font-semibold transition-all
+                  className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all
                     disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
-                  style={{ background: 'var(--reel-accent-hex)' }}
+                  style={{ background: 'var(--reel-accent-hex)', color: 'var(--reel-accent-text, #080808)' }}
                 >
                   {emailSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
                   Update

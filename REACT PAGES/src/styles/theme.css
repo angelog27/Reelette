@@ -191,20 +191,21 @@
    light → clean, neutral light theme
 ──────────────────────────────────────────────────────────────*/
 html.dark {
-  --reel-bg:          #0A0A0A;
-  --reel-surface:     #141414;
-  --reel-card:        #1C1C1C;
-  --reel-raised:      #2A2A2A;
-  --reel-hover:       #333333;
-  --reel-border:      #2A2A2A;
-  --reel-t1:          #FFFFFF;
+  --reel-bg:          #080808;
+  --reel-surface:     #111111;
+  --reel-card:        #161616;
+  --reel-raised:      #1e1e1e;
+  --reel-hover:       #252525;
+  --reel-border:      rgba(255,255,255,0.07);
+  --reel-t1:          #F0EDE8;
   --reel-t2:          #9CA3AF;
   --reel-t3:          #6B7280;
   --reel-t4:          #4B5563;
-  --reel-input-bg:    #050505;
-  --reel-accent:      oklch(0.60 0.13 289);
-  --reel-accent-lo:   oklch(0.24 0.06 289);
-  --reel-accent-hex:  #7C5DBD;
+  --reel-input-bg:    #0d0d0d;
+  --reel-accent:      oklch(0.74 0.13 76);
+  --reel-accent-lo:   oklch(0.27 0.05 76);
+  --reel-accent-hex:  #D4A843;
+  --reel-accent-text: #080808;
 }
 
 html.light {
@@ -311,9 +312,18 @@ html.light ::-webkit-scrollbar-thumb:hover { background: var(--reel-hover); }
 ──────────────────────────────────────────────────────────────*/
 
 html[data-theme="default"] {
-  --reel-accent-hex: #7C5DBD;
-  --reel-accent:     oklch(0.60 0.13 289);
-  --reel-accent-lo:  oklch(0.24 0.06 289);
+  --reel-accent-hex:  #D4A843;
+  --reel-accent:      oklch(0.74 0.13 76);
+  --reel-accent-lo:   oklch(0.27 0.05 76);
+  --reel-accent-text: #080808;
+}
+html[data-theme="default"] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(ellipse at 30% 0%, rgba(212,168,67,0.04) 0%, transparent 55%);
 }
 
 /* ── Star Wars — gold ────────────────────────────────────────*/
@@ -466,8 +476,11 @@ html[data-theme="forest"] body::before {
 /* Text */
 .text-\[\#7C5DBD\]                       { color: var(--reel-accent-hex) !important; }
 .text-\[\#9B7BD7\]                       { color: var(--reel-accent-hex) !important; }
+.text-\[\#9B8FD0\]                       { color: var(--reel-accent-hex) !important; }
+.text-\[\#D4A843\]                       { color: var(--reel-accent-hex) !important; }
 .hover\:text-\[\#7C5DBD\]:hover          { color: var(--reel-accent-hex) !important; }
 .hover\:text-\[\#9B7BD7\]:hover          { color: var(--reel-accent-hex) !important; }
+.hover\:text-\[\#D4A843\]:hover          { color: var(--reel-accent-hex) !important; }
 .group:hover .group-hover\:text-\[\#9B7BD7\] { color: var(--reel-accent-hex) !important; }
 
 /* Background — solid */
@@ -510,6 +523,23 @@ html[data-theme="forest"] body::before {
 
 /* Ring */
 .ring-\[\#7C5DBD\]\/60                   { --tw-ring-color: color-mix(in srgb, var(--reel-accent-hex) 60%, transparent) !important; }
+
+/* D4A843 class aliases (landing page + new components) */
+.bg-\[\#D4A843\]                         { background-color: var(--reel-accent-hex) !important; }
+.hover\:bg-\[\#D4A843\]:hover            { background-color: var(--reel-accent-hex) !important; }
+.border-\[\#D4A843\]                     { border-color: var(--reel-accent-hex) !important; }
+
+/* Ensure dark text on solid accent backgrounds (gold requires dark text for contrast) */
+.bg-\[\#7C5DBD\],
+.bg-\[\#D4A843\] {
+  color: var(--reel-accent-text, #080808) !important;
+}
+
+/* Notification badge and tiny pill exceptions — inherits from parent, restore white for badges */
+.bg-\[\#7C5DBD\].text-white,
+.bg-\[\#D4A843\].text-white {
+  color: var(--reel-accent-text, #080808) !important;
+}
 
 /* ─────────────────────────────────────────────────────────────
    Emil Kowalski easing system

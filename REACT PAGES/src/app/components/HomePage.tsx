@@ -48,7 +48,7 @@ function notifIcon(type: AppNotification['type']) {
     case 'friend_accept':  return <UserPlus className="w-4 h-4 text-blue-400" />;
     case 'post_like':      return <Heart className="w-4 h-4 text-red-400" />;
     case 'post_reply':     return <MessageCircle className="w-4 h-4 text-green-400" />;
-    case 'friend_watched': return <Film className="w-4 h-4 text-purple-400" />;
+    case 'friend_watched': return <Film className="w-4 h-4" style={{ color: 'var(--reel-accent-hex)' }} />;
     case 'group_invite':   return <Users className="w-4 h-4 text-yellow-400" />;
     case 'group_message':  return <MessageCircle className="w-4 h-4 text-yellow-400" />;
     default: return <Bell className="w-4 h-4 text-gray-400" />;

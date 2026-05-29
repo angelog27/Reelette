@@ -14,8 +14,7 @@ export function SpinModePicker() {
         <h1
           className="text-white mb-3"
           style={{
-            fontFamily: 'Syne, system-ui, sans-serif',
-            fontWeight: 800,
+            fontWeight: 700,
             fontSize: 'clamp(1.4rem, 4vw, 2.6rem)',
             letterSpacing: '-0.02em',
           }}
@@ -24,11 +23,7 @@ export function SpinModePicker() {
         </h1>
         <p
           className="text-gray-500"
-          style={{
-            fontFamily: 'DM Sans, system-ui, sans-serif',
-            fontWeight: 300,
-            fontSize: '1.1rem',
-          }}
+          style={{ fontWeight: 400, fontSize: '1.05rem' }}
         >
           No more scrolling. Let us decide.
         </p>
@@ -57,18 +52,13 @@ export function SpinModePicker() {
           <div className="text-center">
             <h2
               className="text-white mb-1 md:mb-2"
-              style={{ fontFamily: 'Syne, system-ui, sans-serif', fontWeight: 700, fontSize: 'clamp(1.1rem, 2.5vw, 1.5rem)' }}
+              style={{ fontWeight: 700, fontSize: 'clamp(1.1rem, 2.5vw, 1.5rem)' }}
             >
               Roulette
             </h2>
             <p
               className="text-gray-500 leading-relaxed mb-3 md:mb-4"
-              style={{
-                fontFamily: 'DM Sans, system-ui, sans-serif',
-                fontWeight: 300,
-                fontSize: 'clamp(0.75rem, 2vw, 0.875rem)',
-                maxWidth: 180,
-              }}
+              style={{ fontWeight: 400, fontSize: 'clamp(0.75rem, 2vw, 0.875rem)', maxWidth: 180 }}
             >
               Set your filters, toggle your providers on/off and spin for something precise.
             </p>
@@ -97,25 +87,20 @@ export function SpinModePicker() {
             <div className="flex items-center justify-center gap-2 mb-1 md:mb-2">
               <h2
                 className="text-white"
-                style={{ fontFamily: 'Syne, system-ui, sans-serif', fontWeight: 700, fontSize: 'clamp(1.1rem, 2.5vw, 1.5rem)' }}
+                style={{ fontWeight: 700, fontSize: 'clamp(1.1rem, 2.5vw, 1.5rem)' }}
               >
                 Speed Swipe
               </h2>
               <span
-                className="text-[10px] font-bold px-1.5 py-0.5 rounded-md tracking-wider"
+                className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md"
                 style={{ background: 'rgba(74,222,128,0.12)', color: '#4ade80', border: '1px solid rgba(74,222,128,0.25)' }}
               >
-                BETA
+                Beta
               </span>
             </div>
             <p
               className="text-gray-500 leading-relaxed mb-3 md:mb-4"
-              style={{
-                fontFamily: 'DM Sans, system-ui, sans-serif',
-                fontWeight: 300,
-                fontSize: 'clamp(0.75rem, 2vw, 0.875rem)',
-                maxWidth: 180,
-              }}
+              style={{ fontWeight: 400, fontSize: 'clamp(0.75rem, 2vw, 0.875rem)', maxWidth: 180 }}
             >
               Swipe fast and rediscover movies, no thinking required. Swipe left to pass, swipe right to rewatch.
             </p>
