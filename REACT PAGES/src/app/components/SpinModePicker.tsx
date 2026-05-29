@@ -62,11 +62,11 @@ export function SpinModePicker() {
               Roulette
             </h2>
             <p
-              className="text-gray-500 leading-relaxed mb-3 md:mb-4 hidden sm:block"
+              className="text-gray-500 leading-relaxed mb-3 md:mb-4"
               style={{
                 fontFamily: 'DM Sans, system-ui, sans-serif',
                 fontWeight: 300,
-                fontSize: '0.875rem',
+                fontSize: 'clamp(0.75rem, 2vw, 0.875rem)',
                 maxWidth: 180,
               }}
             >
@@ -109,11 +109,11 @@ export function SpinModePicker() {
               </span>
             </div>
             <p
-              className="text-gray-500 leading-relaxed mb-3 md:mb-4 hidden sm:block"
+              className="text-gray-500 leading-relaxed mb-3 md:mb-4"
               style={{
                 fontFamily: 'DM Sans, system-ui, sans-serif',
                 fontWeight: 300,
-                fontSize: '0.875rem',
+                fontSize: 'clamp(0.75rem, 2vw, 0.875rem)',
                 maxWidth: 180,
               }}
             >

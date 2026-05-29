@@ -641,7 +641,7 @@ function ComposeBox({ currentUser, onPostCreated }: {
           {ratingOpen && (
             <div className="ml-[50px]">
               <div className="bg-[#141416] border border-[#2a2a2e] rounded-xl p-3">
-                <p className="text-zinc-500 text-xs font-semibold uppercase tracking-wider mb-2.5">Rating</p>
+                <p className="text-zinc-400 text-xs font-medium mb-2.5">Rating</p>
                 <div className="flex gap-1.5 flex-wrap">
                   {[1,2,3,4,5,6,7,8,9,10].map(n => (
                     <button key={n} onClick={() => { setRating(rating === n ? null : n); }}
@@ -1788,7 +1788,7 @@ function LeftSidebar({ view, onViewChange, groups, groupsLoading, activeGroupId,
     <aside className="hidden md:flex w-[220px] shrink-0 flex-col overflow-y-auto overflow-x-hidden no-scrollbar">
       {/* Nav section */}
       <div className="px-3 pt-5 pb-3">
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600 px-2 mb-2">Navigation</p>
+        <p className="text-xs font-semibold text-zinc-500 px-2 mb-2">Navigation</p>
         <nav className="space-y-0.5">
           {navItems.map(item => (
             <button key={item.id} onClick={() => onViewChange(item.id)}
@@ -1810,7 +1810,7 @@ function LeftSidebar({ view, onViewChange, groups, groupsLoading, activeGroupId,
       {/* Movie Groups */}
       <div className="px-3 pt-4 pb-5 flex-1">
         <div className="flex items-center justify-between px-2 mb-2.5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600">Movie Groups</p>
+          <p className="text-xs font-semibold text-zinc-500">Movie Groups</p>
           <button onClick={() => setShowCreateForm(v => !v)}
             className="w-5 h-5 rounded-md bg-[#2a2a2e] hover:bg-[#7C5DBD]/30 text-zinc-500 hover:text-[#9B7BD7] flex items-center justify-center transition-colors"
             title="New group">
@@ -2049,7 +2049,7 @@ function RightSidebar({ currentUserId, currentUsername, onOpenProfile }: {
       {/* Friend Requests */}
       {requests.length > 0 && (
         <section className="px-4 pt-5 pb-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600 mb-3 flex items-center gap-2">
+          <p className="text-xs font-semibold text-zinc-500 mb-3 flex items-center gap-2">
             Requests
             <span className="bg-[#7C5DBD] text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">{requests.length}</span>
           </p>
@@ -2078,7 +2078,7 @@ function RightSidebar({ currentUserId, currentUsername, onOpenProfile }: {
       {/* Friends */}
       <section className="px-4 pt-5 pb-4">
         <div className="flex items-center justify-between mb-3">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600">
+          <p className="text-xs font-semibold text-zinc-500">
             Friends {friends.length > 0 && <span className="text-zinc-700 normal-case tracking-normal font-normal">({friends.length})</span>}
           </p>
           {friends.length > 6 && (
@@ -2112,7 +2112,7 @@ function RightSidebar({ currentUserId, currentUsername, onOpenProfile }: {
 
       {/* Friend Rankings */}
       <section className="px-4 pt-4 pb-4">
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600 mb-3 flex items-center gap-1.5">
+        <p className="text-xs font-semibold text-zinc-500 mb-3 flex items-center gap-1.5">
           <span>🏆</span> Friend Rankings
         </p>
         <FriendRankingsPanel userId={currentUserId} />
@@ -2123,7 +2123,7 @@ function RightSidebar({ currentUserId, currentUsername, onOpenProfile }: {
       {/* Suggested Adds */}
       {suggested.length > 0 && (
         <section className="px-4 pt-4 pb-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600 mb-3">Suggested</p>
+          <p className="text-xs font-semibold text-zinc-500 mb-3">Suggested</p>
           <div className="space-y-2.5">
             {suggested.map(u => (
               <div key={u.user_id} className="flex items-center gap-2.5">
@@ -2151,7 +2151,7 @@ function RightSidebar({ currentUserId, currentUsername, onOpenProfile }: {
 
       {/* Trending Films */}
       <section className="px-4 pt-4 pb-6">
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600 mb-3 flex items-center gap-1.5">
+        <p className="text-xs font-semibold text-zinc-500 mb-3 flex items-center gap-1.5">
           <TrendingUp className="w-3 h-3" />Trending This Week
         </p>
         {trending.length === 0 ? (
@@ -2367,7 +2367,7 @@ function MobileFriendsPanel({ currentUserId, currentUsername, onOpenProfile }: {
 
       {requests.length > 0 && (
         <section>
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600 mb-3 flex items-center gap-2">
+          <p className="text-xs font-semibold text-zinc-500 mb-3 flex items-center gap-2">
             Requests <span className="bg-[#7C5DBD] text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">{requests.length}</span>
           </p>
           <div className="space-y-2.5">
@@ -2391,7 +2391,7 @@ function MobileFriendsPanel({ currentUserId, currentUsername, onOpenProfile }: {
         </section>
       )}
       <section>
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600 mb-3">Friends · {friends.length}</p>
+        <p className="text-xs font-semibold text-zinc-500 mb-3">Friends · {friends.length}</p>
         {friends.length === 0 ? (
           <p className="text-zinc-600 text-sm text-center py-6">No friends yet.</p>
         ) : (
@@ -2410,7 +2410,7 @@ function MobileFriendsPanel({ currentUserId, currentUsername, onOpenProfile }: {
       </section>
       {suggested.length > 0 && (
         <section>
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600 mb-3">Suggested</p>
+          <p className="text-xs font-semibold text-zinc-500 mb-3">Suggested</p>
           <div className="space-y-2.5">
             {suggested.map(u => (
               <div key={u.user_id} className="flex items-center gap-2.5 p-2.5 bg-white/[0.03] rounded-xl">
@@ -2614,10 +2614,7 @@ export function SocialTab() {
   ];
 
   return (
-    <div
-      className="text-white -mx-6 -mt-8 pt-6 flex overflow-hidden"
-      style={{ height: 'calc(100dvh - 62px)' }}
-    >
+    <div className="text-white -mx-6 -mt-8 pt-6 flex overflow-hidden h-dvh md:h-[calc(100dvh-62px)]">
       <style>{`
         @keyframes feedCardIn {
           from { opacity: 0; transform: translateY(8px); }

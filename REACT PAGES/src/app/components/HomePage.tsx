@@ -549,7 +549,7 @@ export function HomePage() {
             {searchOpen && navSearch.trim() && (
               <div className="absolute right-0 top-[42px] w-[340px] max-w-[calc(100vw-1rem)] max-h-[480px] flex flex-col bg-[#141414] border border-[#2A2A2A] rounded-2xl shadow-2xl z-[100] overflow-hidden panel-enter">
                 <div className="px-4 py-2.5 border-b border-[#2A2A2A] shrink-0">
-                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                  <span className="text-xs text-gray-400">
                     Results for "{navSearch}"
                   </span>
                 </div>
@@ -618,16 +618,16 @@ export function HomePage() {
           {tabs.map(tab => (
             <NavLink key={tab.id} to={tab.path} className="flex-1">
               {({ isActive }) => (
-                <div className="flex flex-col items-center justify-center py-3 min-h-[52px]">
+                <div className="flex flex-col items-center justify-center py-2 gap-1 min-h-[56px]">
                   {tab.id === 'profile' ? (
                     navAvatarUrl ? (
                       <img
                         src={navAvatarUrl}
                         alt="Profile"
-                        className={`w-7 h-7 rounded-full overflow-hidden border object-cover ${isActive ? 'border-white/50' : 'border-white/20'}`}
+                        className={`w-[22px] h-[22px] rounded-full overflow-hidden border object-cover transition-colors duration-150 ${isActive ? 'border-white/50' : 'border-white/20'}`}
                       />
                     ) : (
-                      <div className={`w-7 h-7 rounded-full overflow-hidden border border-white/20 bg-[#2A2A2A] flex items-center justify-center text-[10px] font-semibold ${isActive ? '' : 'text-zinc-400'}`}
+                      <div className={`w-[22px] h-[22px] rounded-full overflow-hidden border border-white/20 bg-[#2A2A2A] flex items-center justify-center text-[9px] font-semibold transition-colors duration-150 ${isActive ? '' : 'text-zinc-400'}`}
                         style={isActive ? { color: 'var(--reel-accent-hex)' } : {}}>
                         {currentUser?.username?.slice(0, 2).toUpperCase() ?? '?'}
                       </div>
@@ -635,14 +635,17 @@ export function HomePage() {
                   ) : (
                     tab.icon && (
                       <tab.icon
-                        className={`w-6 h-6 transition-colors duration-150 ${isActive ? '' : 'text-zinc-500'}`}
+                        className={`w-[22px] h-[22px] transition-colors duration-150 ${isActive ? '' : 'text-zinc-500'}`}
                         style={isActive ? { color: 'var(--reel-accent-hex)' } : {}}
                       />
                     )
                   )}
-                  {isActive && (
-                    <span className="w-1 h-1 rounded-full mt-1" style={{ background: 'var(--reel-accent-hex)' }} />
-                  )}
+                  <span
+                    className="text-[10px] font-medium leading-none transition-colors duration-150"
+                    style={isActive ? { color: 'var(--reel-accent-hex)' } : { color: 'rgba(255,255,255,0.35)' }}
+                  >
+                    {tab.label}
+                  </span>
                 </div>
               )}
             </NavLink>

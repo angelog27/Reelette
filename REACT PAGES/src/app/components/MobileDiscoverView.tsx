@@ -391,10 +391,10 @@ export function MobileDiscoverView({ heroMovie, heroReason, watchlistIds, hasUse
             {query.length > 0 && (
               <button
                 onClick={clearSearch}
-                className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
-                style={{ background: 'rgba(255,255,255,0.15)' }}
+                className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 active:scale-90 transition-transform duration-100"
+                style={{ background: 'rgba(255,255,255,0.12)' }}
               >
-                <X className="w-3 h-3 text-white" />
+                <X className="w-3.5 h-3.5 text-white" />
               </button>
             )}
           </div>
@@ -406,7 +406,7 @@ export function MobileDiscoverView({ heroMovie, heroReason, watchlistIds, hasUse
               style={{ background: '#141414', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 24px 60px rgba(0,0,0,0.8)' }}
             >
               <div className="px-4 pt-3 pb-2">
-                <span className="text-[10px] font-semibold tracking-widest uppercase text-white/25">
+                <span className="text-xs text-white/30">
                   {searchResults.length} result{searchResults.length !== 1 ? 's' : ''}
                 </span>
               </div>
@@ -514,17 +514,23 @@ export function MobileDiscoverView({ heroMovie, heroReason, watchlistIds, hasUse
               </div>
               {/* Dot indicators */}
               {heroMovies.length > 1 && (
-                <div className="flex justify-center gap-1.5 mt-3">
+                <div className="flex justify-center items-center gap-1.5 mt-3">
                   {heroMovies.map((_, i) => (
                     <button
                       key={i}
                       onClick={() => setHeroIdx(i)}
-                      className="h-[3px] rounded-full transition-all duration-300"
-                      style={{
-                        width: i === heroIdx ? 20 : 6,
-                        background: i === heroIdx ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.25)',
-                      }}
-                    />
+                      className="flex items-center justify-center py-3 -my-3 px-1 -mx-1"
+                      aria-label={`Go to slide ${i + 1}`}
+                    >
+                      <span
+                        className="block rounded-full transition-all duration-300"
+                        style={{
+                          width: i === heroIdx ? 20 : 6,
+                          height: 3,
+                          background: i === heroIdx ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.25)',
+                        }}
+                      />
+                    </button>
                   ))}
                 </div>
               )}

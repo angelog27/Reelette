@@ -103,10 +103,9 @@ function Card({ children, className = '' }: { children: React.ReactNode; classNa
 
 function SectionTitle({ label, icon }: { label: string; icon: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-2.5 mb-5">
-      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: 'var(--reel-accent-hex)' }} />
-      <span className="text-zinc-300 text-xs font-semibold uppercase tracking-wider">{label}</span>
-      <span className="text-zinc-600 ml-auto">{icon}</span>
+    <div className="flex items-center gap-2 mb-5">
+      <span className="text-zinc-600">{icon}</span>
+      <span className="text-zinc-200 text-sm font-semibold">{label}</span>
     </div>
   );
 }
@@ -121,7 +120,7 @@ function Field({
 }) {
   return (
     <div>
-      <label className="block text-zinc-500 text-xs uppercase tracking-wider mb-1.5">{label}</label>
+      <label className="block text-zinc-400 text-xs font-medium mb-1.5">{label}</label>
       <input
         type={type} name={name} value={value} disabled={disabled} onChange={onChange}
         className="w-full bg-[#0a0a0a] border border-[#222] rounded-xl px-4 py-2.5 text-white text-sm
@@ -577,7 +576,7 @@ export function ProfileandSettingsTab() {
               </div>
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="absolute bottom-1 right-1 w-7 h-7 rounded-full flex items-center justify-center shadow-lg transition-all opacity-0 group-hover:opacity-100 active:scale-95"
+                className="absolute bottom-1 right-1 w-7 h-7 rounded-full flex items-center justify-center shadow-lg transition-all opacity-100 md:opacity-0 md:group-hover:opacity-100 active:scale-95"
                 style={{ background: 'var(--reel-accent-hex)' }}
                 title="Change photo"
               >
@@ -673,7 +672,7 @@ export function ProfileandSettingsTab() {
                   disabled={!editing} onChange={handleChange} />
               </div>
               <div className="mt-4">
-                <label className="block text-zinc-500 text-xs uppercase tracking-wider mb-1.5">Bio</label>
+                <label className="block text-zinc-400 text-xs font-medium mb-1.5">Bio</label>
                 <textarea
                   name="bio" value={editing ? draft.bio : profile.bio} disabled={!editing}
                   onChange={e => setDraft(p => ({ ...p, bio: e.target.value }))}
@@ -685,7 +684,7 @@ export function ProfileandSettingsTab() {
                 />
               </div>
               <div className="mt-4">
-                <label className="block text-zinc-500 text-xs uppercase tracking-wider mb-1.5">Email</label>
+                <label className="block text-zinc-400 text-xs font-medium mb-1.5">Email</label>
                 <div className="flex items-center gap-3 px-4 py-2.5 bg-[#0a0a0a] border border-[#222] rounded-xl">
                   <Mail size={15} className="text-zinc-600 shrink-0" />
                   <span className="text-zinc-400 text-sm flex-1">{profile.email || '—'}</span>
@@ -825,7 +824,7 @@ export function ProfileandSettingsTab() {
 
               {/* Friends */}
               <div className="border-t border-[#1e1e1e] pt-5">
-                <p className="text-zinc-500 text-xs uppercase tracking-wider mb-3">
+                <p className="text-zinc-400 text-sm font-medium mb-3">
                   Friends {friendsLoaded && `(${friends.length})`}
                 </p>
                 {!friendsLoaded ? (
@@ -942,7 +941,7 @@ export function ProfileandSettingsTab() {
             <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-6">
               {/* In-App column */}
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500 mb-3">In-App</p>
+                <p className="text-xs font-semibold text-zinc-400 mb-3">In-App</p>
                 <div className="space-y-3">
                   {[
                     { key: 'friendActivity', label: 'Friend Activity' },
@@ -962,7 +961,7 @@ export function ProfileandSettingsTab() {
               </div>
               {/* Email column */}
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500 mb-3">Email</p>
+                <p className="text-xs font-semibold text-zinc-400 mb-3">Email</p>
                 <div className="space-y-3">
                   {[
                     { key: 'friendActivity', label: 'Friend Activity' },

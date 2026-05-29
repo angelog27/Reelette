@@ -21,7 +21,7 @@ export function FeaturedCard({ movie, reason, isInWatchlist, hasUser, onToggleWa
     <div
       className="relative mx-4 rounded-3xl overflow-hidden cursor-pointer active:scale-[0.98] transition-transform duration-150"
       style={{
-        height: 420,
+        height: 'clamp(320px, 52vh, 440px)',
         boxShadow: `0 32px 80px -12px ${accent}55, 0 0 0 1px rgba(255,255,255,0.06)`,
       }}
       onClick={onOpenModal}
