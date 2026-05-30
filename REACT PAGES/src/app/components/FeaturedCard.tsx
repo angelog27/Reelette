@@ -27,7 +27,7 @@ export function FeaturedCard({ movie, reason, isInWatchlist, hasUser, onToggleWa
       onClick={onOpenModal}
     >
       {movie.poster ? (
-        <img src={movie.poster} alt={movie.title} className="absolute inset-0 w-full h-full object-cover" />
+        <img src={movie.poster} alt={movie.title} className="absolute inset-0 w-full h-full object-cover" fetchPriority="high" />
       ) : (
         <div className="absolute inset-0 bg-zinc-900" />
       )}
@@ -46,6 +46,7 @@ export function FeaturedCard({ movie, reason, isInWatchlist, hasUser, onToggleWa
             onClick={e => { e.stopPropagation(); onToggleWatchlist(); }}
             className="w-8 h-8 rounded-full flex items-center justify-center active:scale-[0.97]"
             style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', border: '1px solid rgba(255,255,255,0.1)' }}
+            aria-label={isInWatchlist ? 'Remove from watchlist' : 'Add to watchlist'}
           >
             {isInWatchlist
               ? <BookmarkCheck className="w-4 h-4" style={{ color: 'var(--reel-accent-hex)' }} />

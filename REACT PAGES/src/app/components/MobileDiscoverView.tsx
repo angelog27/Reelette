@@ -227,7 +227,7 @@ function MobileForYouContent({ onOpenModal }: { onOpenModal: (id: string, type?:
               {logo && <img src={logo} alt={name} className="w-7 h-7 rounded-lg object-cover flex-shrink-0" />}
               <div>
                 <p className="text-white font-bold text-sm leading-none">{name}</p>
-                <p className="text-zinc-500 text-xs mt-0.5">What's on right now</p>
+                <p className="text-zinc-400 text-xs mt-0.5">What's on right now</p>
               </div>
             </div>
 
@@ -541,7 +541,8 @@ export function MobileDiscoverView({ heroMovie, heroReason, watchlistIds, hasUse
                     <button
                       key={i}
                       onClick={() => setHeroIdx(i)}
-                      className="flex items-center justify-center py-3 -my-3 px-1 -mx-1"
+                      className="flex items-center justify-center"
+                      style={{ minWidth: 44, minHeight: 44 }}
                       aria-label={`Go to slide ${i + 1}`}
                     >
                       <span

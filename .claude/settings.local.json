@@ -16,7 +16,13 @@
       "Bash(firebase deploy *)",
       "Bash(npx firebase *)",
       "PowerShell(firebase login --no-localhost 2>&1)",
-      "Bash(node -e \"console.log\\(require\\('path'\\).resolve\\(__dirname, '../../config.py'\\)\\)\")"
+      "Bash(node -e \"console.log\\(require\\('path'\\).resolve\\(__dirname, '../../config.py'\\)\\)\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\({k:d[k] for k in ['dependencies','devDependencies'] if k in d}, indent=2\\)\\)\")",
+      "Bash(python3 *)",
+      "Bash(sips --help)",
+      "Bash(sips --formats)",
+      "Bash(sips -s format webp \"/Users/angelogonzales/Desktop/4330DEV/Reelette/REACT PAGES/public/Reelette_LOGO_upscaled.png\" --out \"/Users/angelogonzales/Desktop/4330DEV/Reelette/REACT PAGES/public/favicon.webp\")",
+      "Bash(sips -z 32 32 \"/Users/angelogonzales/Desktop/4330DEV/Reelette/REACT PAGES/public/Reelette_LOGO_upscaled.png\" --out \"/Users/angelogonzales/Desktop/4330DEV/Reelette/REACT PAGES/public/favicon-32.png\")"
     ]
   }
 }

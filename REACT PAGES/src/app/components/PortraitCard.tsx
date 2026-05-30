@@ -59,7 +59,7 @@ export function PortraitCard({ movie, width = 148, onClick }: Props) {
       <div className="mt-2.5 px-0.5">
         <p className="text-white text-xs font-bold truncate leading-snug">{movie.title}</p>
         {movie.year > 0 && (
-          <p className="text-zinc-500 text-[11px] mt-0.5 leading-none">{movie.year}</p>
+          <p className="text-zinc-400 text-[11px] mt-0.5 leading-none">{movie.year}</p>
         )}
       </div>
     </button>
