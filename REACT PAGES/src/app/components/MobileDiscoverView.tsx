@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Search, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Search, X, ArrowRight } from 'lucide-react';
 import type { Movie } from '../services/api';
 import { getServices, discoverMovies, searchMovies } from '../services/api';
 // TMDB company / keyword IDs used for curated rows
@@ -285,6 +286,7 @@ export function MobileDiscoverView({ heroMovie, heroReason, watchlistIds, hasUse
     recommended,
   } = useDiscover();
 
+  const navigate = useNavigate();
   const [tab, setTab] = useState<MobileTab>('foryou');
   const [query, setQuery] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
@@ -292,6 +294,12 @@ export function MobileDiscoverView({ heroMovie, heroReason, watchlistIds, hasUse
   const [searchResults, setSearchResults] = useState<Movie[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const goToFullSearch = useCallback(() => {
+    if (!query.trim()) return;
+    setSearchFocused(false);
+    navigate(`/home/search?q=${encodeURIComponent(query.trim())}`);
+  }, [query, navigate]);
 
   // Swipeable hero state
   const heroMovies = dedup([
@@ -370,21 +378,22 @@ export function MobileDiscoverView({ heroMovie, heroReason, watchlistIds, hasUse
             className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl transition-all"
             style={{
               background: searchFocused ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.07)',
-              border: searchFocused ? '1px solid rgba(167,139,250,0.5)' : '1px solid rgba(255,255,255,0.08)',
-              boxShadow: searchFocused ? '0 0 0 3px rgba(167,139,250,0.12)' : 'none',
+              border: searchFocused ? '1px solid color-mix(in srgb, var(--reel-accent-hex) 60%, transparent)' : '1px solid rgba(255,255,255,0.08)',
+              boxShadow: searchFocused ? '0 0 0 3px color-mix(in srgb, var(--reel-accent-hex) 14%, transparent)' : 'none',
             }}
           >
             <Search
               className="w-4 h-4 flex-shrink-0 transition-colors"
-              style={{ color: searchFocused ? '#a78bfa' : 'rgba(255,255,255,0.3)' }}
+              style={{ color: searchFocused ? 'var(--reel-accent-hex)' : 'rgba(255,255,255,0.3)' }}
             />
             <input
               ref={inputRef}
-              type="text"
+              type="search"
               value={query}
               onChange={e => setQuery(e.target.value)}
               onFocus={() => setSearchFocused(true)}
               onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
+              onKeyDown={e => { if (e.key === 'Enter') goToFullSearch(); }}
               placeholder="Search movies, shows, genres…"
               className="flex-1 bg-transparent text-white text-sm outline-none placeholder-white/30"
             />
@@ -445,7 +454,20 @@ export function MobileDiscoverView({ heroMovie, heroReason, watchlistIds, hasUse
                   <p className="text-white/30 text-sm">No results for "{query}"</p>
                 </div>
               )}
-              <div className="h-2" />
+              {/* See all results row */}
+              {query.trim().length > 1 && (
+                <button
+                  onMouseDown={goToFullSearch}
+                  className="w-full flex items-center justify-between px-4 py-3 border-t active:bg-white/[0.04] transition-colors"
+                  style={{ borderTopColor: 'rgba(255,255,255,0.06)' }}
+                >
+                  <span className="text-sm font-medium" style={{ color: 'var(--reel-accent-hex)' }}>
+                    See all results for "{query.trim()}"
+                  </span>
+                  <ArrowRight className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--reel-accent-hex)' }} />
+                </button>
+              )}
+              <div className="h-1" />
             </div>
           )}
         </div>
