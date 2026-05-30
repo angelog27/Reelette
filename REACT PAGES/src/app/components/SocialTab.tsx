@@ -721,8 +721,12 @@ function saveReactions(postId: string, data: Record<string, string[]>) {
 }
 
 // ── Activity Card ─────────────────────────────────────────────
-function ActivityCard({ post, currentUserId, currentUsername, isAdmin, onLike, onDelete, onRepost, onOpenProfile }: {
-  post: FeedPost; currentUserId: string; currentUsername: string; isAdmin: boolean;
+function tmdbPoster(url: string, size: string): string {
+  return url.replace(/\/t\/p\/\w+\//, `/t/p/${size}/`);
+}
+
+function ActivityCard({ post, currentUserId, currentUsername, isAdmin, isFirst, onLike, onDelete, onRepost, onOpenProfile }: {
+  post: FeedPost; currentUserId: string; currentUsername: string; isAdmin: boolean; isFirst?: boolean;
   onLike: (id: string) => void;
   onDelete: (id: string) => void;
   onRepost: () => void;
@@ -911,8 +915,15 @@ function ActivityCard({ post, currentUserId, currentUsername, isAdmin, onLike, o
             {/* Poster */}
             <div className="shrink-0 cursor-pointer" onClick={() => setOpenMovieId(post.movie_id)}>
               {post.movie_poster
-                ? <img src={post.movie_poster} alt={post.movie_title}
-                    className="w-[76px] h-[114px] sm:w-[160px] sm:h-[240px] object-cover rounded-lg sm:rounded-xl shadow-xl ring-1 ring-white/[0.07] hover:opacity-90 transition-opacity" />
+                ? <img
+                    src={tmdbPoster(post.movie_poster, 'w185')}
+                    srcSet={`${tmdbPoster(post.movie_poster, 'w185')} 185w, ${tmdbPoster(post.movie_poster, 'w342')} 342w`}
+                    sizes="(min-width: 640px) 160px, 76px"
+                    alt={post.movie_title}
+                    className="w-[76px] h-[114px] sm:w-[160px] sm:h-[240px] object-cover rounded-lg sm:rounded-xl shadow-xl ring-1 ring-white/[0.07] hover:opacity-90 transition-opacity"
+                    fetchPriority={isFirst ? 'high' : 'auto'}
+                    loading={isFirst ? 'eager' : 'lazy'}
+                  />
                 : <div className="w-[76px] h-[114px] sm:w-[160px] sm:h-[240px] bg-white/[0.04] rounded-lg sm:rounded-xl flex items-center justify-center">
                     <Film className="w-5 h-5 sm:w-8 sm:h-8 text-zinc-700" />
                   </div>
@@ -934,7 +945,7 @@ function ActivityCard({ post, currentUserId, currentUsername, isAdmin, onLike, o
                       </button>
                       {post.user_id === ADMIN_UID && <AdminBadge />}
                     </div>
-                    <span className="text-zinc-600 text-[11px]">@{post.username} · {timeAgo(post.created_at)}</span>
+                    <span className="text-zinc-400 text-[11px]">@{post.username} · {timeAgo(post.created_at)}</span>
                   </div>
                 </div>
                 {(post.user_id === currentUserId || isAdmin) && (
@@ -953,7 +964,7 @@ function ActivityCard({ post, currentUserId, currentUsername, isAdmin, onLike, o
                   {post.movie_title}
                 </button>
                 {(movieMeta?.year || (movieMeta?.runtime ?? 0) > 0) && (
-                  <p className="text-zinc-500 text-xs mt-0.5">
+                  <p className="text-zinc-400 text-xs mt-0.5">
                     {movieMeta?.year}{(movieMeta?.runtime ?? 0) > 0 ? ` · ${movieMeta!.runtime}m` : ''}
                   </p>
                 )}
@@ -1015,6 +1026,7 @@ function ActivityCard({ post, currentUserId, currentUsername, isAdmin, onLike, o
               {/* 6. Like + emoji reactions */}
               <div className="flex items-center gap-0.5 -ml-1.5">
                 <button onClick={handleLikeClick}
+                  aria-label={isLiked ? 'Unlike' : 'Like'}
                   style={{ transition: 'transform 0.25s cubic-bezier(0.34,1.56,0.64,1)', transform: likeAnim ? 'scale(1.4)' : 'scale(1)', ...(isLiked ? { color: 'var(--reel-accent-hex)' } : {}) }}
                   className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${isLiked ? '' : 'text-zinc-600'}`}
                   onMouseEnter={e => { if (!isLiked) { (e.currentTarget as HTMLButtonElement).style.background = 'color-mix(in srgb, var(--reel-accent-hex) 8%, transparent)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--reel-accent-hex)'; } }}
@@ -1024,6 +1036,7 @@ function ActivityCard({ post, currentUserId, currentUsername, isAdmin, onLike, o
                 </button>
                 <div className="relative" ref={emojiRef}>
                   <button onClick={() => setShowEmojiPicker(s => !s)}
+                    aria-label="Add reaction"
                     className="flex items-center px-2 py-1.5 rounded-lg text-xs text-zinc-600 hover:text-zinc-300 hover:bg-white/[0.04] transition-colors">
                     <span className="text-sm leading-none">😊</span>
                   </button>
@@ -1047,12 +1060,14 @@ function ActivityCard({ post, currentUserId, currentUsername, isAdmin, onLike, o
                 ))}
                 {/* Comment button — mobile only (desktop shows replies in right panel) */}
                 <button onClick={toggleReplies}
+                  aria-label={showReplies ? 'Hide comments' : 'Show comments'}
                   className={`sm:hidden flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs transition-colors ${showReplies ? '' : 'text-zinc-600 hover:text-zinc-300'}`}
                   style={showReplies ? { color: 'var(--reel-accent-hex)' } : {}}>
                   <MessageCircle className="w-[13px] h-[13px]" />
                   {localReplyCount > 0 && <span className="tabular-nums">{localReplyCount}</span>}
                 </button>
                 <button onClick={() => setShowRepostInput(s => !s)}
+                  aria-label={showRepostInput ? 'Cancel repost' : 'Repost'}
                   className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs transition-colors ml-auto ${showRepostInput ? 'text-emerald-400' : 'text-zinc-600 hover:text-emerald-400 hover:bg-emerald-400/5'}`}>
                   <Repeat2 className="w-[13px] h-[13px]" />
                 </button>
@@ -2684,12 +2699,12 @@ export function SocialTab() {
               <div className="relative flex items-center">
                 <button onClick={() => setFeedMode('all')}
                   className="flex-1 py-3.5 text-sm font-semibold relative"
-                  style={{ color: feedMode === 'all' ? '#fff' : '#71717a', transition: 'color 180ms cubic-bezier(0.23, 1, 0.32, 1)' }}>
+                  style={{ color: feedMode === 'all' ? '#fff' : '#a1a1aa', transition: 'color 180ms cubic-bezier(0.23, 1, 0.32, 1)' }}>
                   For You
                 </button>
                 <button onClick={() => setFeedMode('friends')}
                   className="flex-1 py-3.5 text-sm font-semibold relative"
-                  style={{ color: feedMode === 'friends' ? '#fff' : '#71717a', transition: 'color 180ms cubic-bezier(0.23, 1, 0.32, 1)' }}>
+                  style={{ color: feedMode === 'friends' ? '#fff' : '#a1a1aa', transition: 'color 180ms cubic-bezier(0.23, 1, 0.32, 1)' }}>
                   Friends
                 </button>
                 <button onClick={handleRefresh} disabled={refreshing} title="Refresh"
@@ -2749,6 +2764,7 @@ export function SocialTab() {
                       }}>
                       <ActivityCard post={post} currentUserId={currentUserId}
                         currentUsername={currentUsername} isAdmin={isAdmin}
+                        isFirst={idx < 2}
                         onLike={handleLike} onDelete={handleDelete}
                         onRepost={handlePostCreated}
                         onOpenProfile={setProfileUserId} />
@@ -2768,11 +2784,15 @@ export function SocialTab() {
       />
 
       {/* Mobile bottom tab bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0A0A0A]/95 backdrop-blur-md border-t border-white/[0.06] flex items-stretch">
+      <nav
+        className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0A0A0A]/95 backdrop-blur-md border-t border-white/[0.06] flex items-stretch"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      >
         {mobileNavItems.map(item => (
           <button
             key={item.id}
             onClick={() => { setSidebarView(item.id); setActiveGroup(null); }}
+            aria-label={item.label}
             className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 transition-colors ${
               sidebarView === item.id && !activeGroup
                 ? ''
