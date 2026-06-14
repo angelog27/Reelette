@@ -382,6 +382,34 @@ export function getPopularMovies(page = 1): Promise<Movie[]> {
 }
 
 
+/** All generic home-page catalogue rows in a single request.
+ *  Collapses ~10 round trips into one server-side fan-out. Returns null on
+ *  failure so callers can fall back to the individual per-row endpoints. */
+export interface HomeRows {
+  trending:   Movie[];
+  nowPlaying: Movie[];
+  topRated:   Movie[];
+  upcoming:   Movie[];
+  classics:   Movie[];
+  action:     Movie[];
+  comedy:     Movie[];
+  horror:     Movie[];
+  scifi:      Movie[];
+  acclaimed:  Movie[];
+}
+
+export function getHomeFeed(): Promise<HomeRows | null> {
+  return fromCachePersisted('home_feed:v1', TTL.CATALOG, 2 * 60 * 60 * 1000, async () => {
+    try {
+      const res = await apiFetch(`${BASE_URL}/home`);
+      if (!res.ok) return null;
+      const data = await res.json();
+      return (data.rows as HomeRows) ?? null;
+    } catch { return null; }
+  });
+}
+
+
 export function getTrendingMovies(window = 'week'): Promise<Movie[]> {
   return fromCachePersisted(`trending:${window}`, TTL.CATALOG, 2 * 60 * 60 * 1000, async () => {
     try {

@@ -22,7 +22,19 @@
       "Bash(sips --help)",
       "Bash(sips --formats)",
       "Bash(sips -s format webp \"/Users/angelogonzales/Desktop/4330DEV/Reelette/REACT PAGES/public/Reelette_LOGO_upscaled.png\" --out \"/Users/angelogonzales/Desktop/4330DEV/Reelette/REACT PAGES/public/favicon.webp\")",
-      "Bash(sips -z 32 32 \"/Users/angelogonzales/Desktop/4330DEV/Reelette/REACT PAGES/public/Reelette_LOGO_upscaled.png\" --out \"/Users/angelogonzales/Desktop/4330DEV/Reelette/REACT PAGES/public/favicon-32.png\")"
+      "Bash(sips -z 32 32 \"/Users/angelogonzales/Desktop/4330DEV/Reelette/REACT PAGES/public/Reelette_LOGO_upscaled.png\" --out \"/Users/angelogonzales/Desktop/4330DEV/Reelette/REACT PAGES/public/favicon-32.png\")",
+      "Bash(curl -s \"https://reelette-api.onrender.com/api/movies/discover?sort_by=popularity.desc\")",
+      "Bash(curl -s -X POST \"https://reelette-api.onrender.com/api/movies/discover\" -H \"Content-Type: application/json\" -d '{\"sort_by\":\"popularity.desc\"}')",
+      "Bash(curl -s \"https://reelette-api.onrender.com/api/movies/trending?window=week\")",
+      "Bash(curl -s -X POST \"https://reelette-api.onrender.com/api/shows/discover\" -H \"Content-Type: application/json\" -d '{\"sort_by\":\"popularity.desc\"}')",
+      "Bash(curl -s -X POST \"https://reelette-api.onrender.com/api/movies/discover\" -H \"Content-Type: application/json\" -d '{\"genre_id\":\"28\",\"sort_by\":\"popularity.desc\"}')",
+      "Bash(curl -s -X POST https://reelette-api.onrender.com/api/movies/discover -H 'Content-Type: application/json' -d '{\"services_filter\":{\"netflix\":true},\"sort_by\":\"popularity.desc\"}')",
+      "Bash(curl -s -X POST https://reelette-api.onrender.com/api/shows/discover -H 'Content-Type: application/json' -d '{\"genre_id\":\"18\",\"sort_by\":\"popularity.desc\"}')",
+      "Bash(curl -s -H \"Content-Type: application/json\" \"https://reelette-api.onrender.com/api/watchlist/test123\")",
+      "Bash(curl -s -X POST https://reelette-api.onrender.com/api/movies/discover -H 'Content-Type: application/json' -d '{\"with_keywords\":\"161176\",\"sort_by\":\"popularity.desc\"}')",
+      "Bash(curl -s -X POST https://reelette-api.onrender.com/api/movies/discover -H 'Content-Type: application/json' -d '{\"with_companies\":\"420\",\"sort_by\":\"popularity.desc\"}')",
+      "Bash(curl -s \"https://reelette-api.onrender.com/api/movies/1304313\")",
+      "Bash(curl -s \"https://reelette-api.onrender.com/api/movies/1582770\")"
     ]
   }
 }

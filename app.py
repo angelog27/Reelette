@@ -1,4 +1,4 @@
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FuturesTimeoutError
 from flask import Flask, request, jsonify, g
 from flask_cors import CORS
 from flask_limiter import Limiter
@@ -317,6 +317,13 @@ def format_show(show_data, streaming_service=''):
 # One persistent pool instead of spinning up a new one per request
 _executor = ThreadPoolExecutor(max_workers=20)
 
+# Max time a list endpoint will wait on the per-movie streaming-provider
+# fan-out before returning. Already-cached providers resolve instantly; this
+# only caps the cold case. Lookups that don't finish in time keep running in
+# the background and populate the provider cache for the next request, so the
+# response is never blocked on a slow/cold TMDB provider call.
+_ENRICH_BUDGET_SECS = 2.5
+
 # ── Generic TTL cache ────────────────────────────────────────────
 # Stores any key → (value, expiry_timestamp)
 _cache: dict = {}
@@ -383,16 +390,28 @@ def _fetch_streaming_for_movie(movie_data):
     _provider_cache[movie_id] = ('', time.time() + _PROVIDER_TTL)
     return ''
 
-# Fetches streaming info for a list of movies in parallel and formats them for the frontend.
-def fetch_movies_with_streaming(movies_data):
+# Resolves movie_id → streaming-service name for a set of movies in parallel,
+# cache-first and bounded by _ENRICH_BUDGET_SECS. Shared by the per-row
+# endpoints and the batched /api/home endpoint.
+def _enrich_service_map(movies_data):
     futures = {_executor.submit(_fetch_streaming_for_movie, m): m for m in movies_data}
     service_map = {}
-    for future in as_completed(futures):
-        movie = futures[future]
-        try:
-            service_map[movie['id']] = future.result()
-        except Exception:
-            service_map[movie['id']] = ''
+    try:
+        for future in as_completed(futures, timeout=_ENRICH_BUDGET_SECS):
+            movie = futures[future]
+            try:
+                service_map[movie['id']] = future.result()
+            except Exception:
+                service_map[movie['id']] = ''
+    except FuturesTimeoutError:
+        # Budget exhausted. Return what resolved; unfinished lookups keep
+        # running and warm _provider_cache for the next request.
+        pass
+    return service_map
+
+# Fetches streaming info for a list of movies in parallel and formats them for the frontend.
+def fetch_movies_with_streaming(movies_data):
+    service_map = _enrich_service_map(movies_data)
     return [format_movie(m, service_map.get(m['id'], '')) for m in movies_data]
 
 _tv_provider_cache: dict = {}
@@ -420,12 +439,17 @@ def _fetch_streaming_for_show(show_data):
 def fetch_shows_with_streaming(shows_data):
     futures = {_executor.submit(_fetch_streaming_for_show, s): s for s in shows_data}
     service_map = {}
-    for future in as_completed(futures):
-        show = futures[future]
-        try:
-            service_map[show['id']] = future.result()
-        except Exception:
-            service_map[show['id']] = ''
+    try:
+        for future in as_completed(futures, timeout=_ENRICH_BUDGET_SECS):
+            show = futures[future]
+            try:
+                service_map[show['id']] = future.result()
+            except Exception:
+                service_map[show['id']] = ''
+    except FuturesTimeoutError:
+        # Budget exhausted. Return what resolved; unfinished lookups keep
+        # running and warm _tv_provider_cache for the next request.
+        pass
     return [format_show(s, service_map.get(s['id'], '')) for s in shows_data]
 
 # Recursively converts any Firestore DatetimeWithNanoseconds objects in the data to ISO strings for JSON serialization.
@@ -700,6 +724,66 @@ def recommended_by_services():
     movies = fetch_movies_with_streaming(result.get('results', []))
     _cache_set(cache_key, movies, _MOVIE_LIST_TTL)
     return jsonify({'movies': movies})
+
+
+# ── Batched home feed ────────────────────────────────────────────
+# The web home page needs ~10 generic catalogue rows on first load. Serving
+# them as one response collapses ~10 round trips into 1, fetches every row's
+# TMDB list in parallel, and — crucially — dedups the streaming-provider
+# lookups across all rows (the same blockbusters appear in many rows), so the
+# provider fan-out runs once over the unique set instead of per row.
+#
+# Each row's underlying TMDB call is still individually cached, so a warm
+# backend serves this almost entirely from cache.
+_HOME_ROWS = [
+    ('trending',   lambda: get_trending_movies('week')),
+    ('nowPlaying', lambda: get_now_playing_movies()),
+    ('topRated',   lambda: get_top_rated_movies()),
+    ('upcoming',   lambda: get_upcoming_movies()),
+    ('classics',   lambda: discover_movies(year_to='1994', sort_by='vote_average.desc',
+                                           min_rating=7, min_vote_count=100)),
+    ('action',     lambda: discover_movies(genre_id='28|12', sort_by='popularity.desc')),
+    ('comedy',     lambda: discover_movies(genre_id='35', sort_by='popularity.desc')),
+    ('horror',     lambda: discover_movies(genre_id='27', sort_by='popularity.desc')),
+    ('scifi',      lambda: discover_movies(genre_id='878', sort_by='popularity.desc')),
+    ('acclaimed',  lambda: discover_movies(sort_by='vote_average.desc',
+                                           min_rating=8, min_vote_count=100)),
+]
+
+@app.route('/api/home', methods=['GET'])
+def home_feed():
+    cache_key = 'home_feed:v1'
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return jsonify(cached)
+
+    # 1. Fetch every row's raw TMDB list in parallel (leaf calls — no nested
+    #    enrichment here, so the pool can't deadlock on itself).
+    list_futures = {_executor.submit(fn): key for key, fn in _HOME_ROWS}
+    raw_rows: dict = {}
+    for fut in as_completed(list_futures):
+        key = list_futures[fut]
+        try:
+            data = fut.result()
+            raw_rows[key] = (data or {}).get('results', []) if data else []
+        except Exception:
+            raw_rows[key] = []
+
+    # 2. Dedup movies across all rows, then enrich providers once for the set.
+    unique: dict = {}
+    for results in raw_rows.values():
+        for m in results:
+            unique[m['id']] = m
+    service_map = _enrich_service_map(list(unique.values()))
+
+    # 3. Assemble each row, sharing the single service map.
+    rows = {
+        key: [format_movie(m, service_map.get(m['id'], '')) for m in raw_rows.get(key, [])]
+        for key, _ in _HOME_ROWS
+    }
+    payload = {'rows': rows}
+    _cache_set(cache_key, payload, _MOVIE_LIST_TTL)
+    return jsonify(payload)
 
 
 def _extract_logo_url(data: dict) -> str | None:

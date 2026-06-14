@@ -1,12 +1,13 @@
 import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import {
+  getHomeFeed,
   getTrendingMovies, getTopRatedMovies, getNowPlayingMovies, getUpcomingMovies,
   discoverMovies, getRecommendedMovies, getWatchedMovies, getRouletteHistory,
   getWatchLater, getUser,
   getTrendingShows, getPopularShows, getTopRatedShows, discoverShows,
   getAIRecommendations,
 } from '../services/api';
-import type { Movie, WatchedMovie, RouletteSpin, AIRecommendationRow } from '../services/api';
+import type { Movie, WatchedMovie, RouletteSpin, AIRecommendationRow, HomeRows } from '../services/api';
 
 const ROW_LIMIT = 14;
 // Cache the most-recently-watched movie ID so recommendations can be kicked off
@@ -142,46 +143,50 @@ export function DiscoverProvider({ children }: { children: React.ReactNode }) {
       setRecommended([]);
     }
 
-    // ── All 10 catalogue rows fire simultaneously ──────────────────
-    getTrendingMovies('week')
-      .then(d => { setHeroMovies(d.slice(0, 5)); setTrendingMovies(d.slice(0, ROW_LIMIT)); })
-      .catch(() => { setHeroMovies([]); setTrendingMovies([]); });
+    // ── Generic catalogue rows ─────────────────────────────────────
+    // Prefer the single batched /api/home request (1 round trip, server-side
+    // fan-out, deduped provider lookups). Fall back to the per-row endpoints
+    // if it fails, so behaviour is never worse than before.
+    const sliceTo = (d: Movie[] | undefined) => (d ?? []).slice(0, ROW_LIMIT);
 
-    getNowPlayingMovies()
-      .then(d => setNewReleases(d.slice(0, ROW_LIMIT)))
-      .catch(() => setNewReleases([]));
+    const fetchRowsIndividually = () => {
+      getTrendingMovies('week')
+        .then(d => { setHeroMovies(d.slice(0, 5)); setTrendingMovies(d.slice(0, ROW_LIMIT)); })
+        .catch(() => { setHeroMovies([]); setTrendingMovies([]); });
+      getNowPlayingMovies().then(d => setNewReleases(sliceTo(d))).catch(() => setNewReleases([]));
+      getTopRatedMovies().then(d => setTopRated(sliceTo(d))).catch(() => setTopRated([]));
+      discoverMovies({ year_to: '1994', sort_by: 'rating', min_rating: 7 })
+        .then(d => setClassics(sliceTo(d))).catch(() => setClassics([]));
+      discoverMovies({ genre_id: '28|12', sort_by: 'popularity' })
+        .then(d => setActionMovies(sliceTo(d))).catch(() => setActionMovies([]));
+      discoverMovies({ genre_id: '35', sort_by: 'popularity' })
+        .then(d => setComedyMovies(sliceTo(d))).catch(() => setComedyMovies([]));
+      discoverMovies({ genre_id: '27', sort_by: 'popularity' })
+        .then(d => setHorrorMovies(sliceTo(d))).catch(() => setHorrorMovies([]));
+      discoverMovies({ genre_id: '878', sort_by: 'popularity' })
+        .then(d => setScifiMovies(sliceTo(d))).catch(() => setScifiMovies([]));
+      discoverMovies({ sort_by: 'rating', min_rating: 8 })
+        .then(d => setAcclaimed(sliceTo(d))).catch(() => setAcclaimed([]));
+      getUpcomingMovies().then(d => setComingSoon(sliceTo(d))).catch(() => setComingSoon([]));
+    };
 
-    getTopRatedMovies()
-      .then(d => setTopRated(d.slice(0, ROW_LIMIT)))
-      .catch(() => setTopRated([]));
+    const applyRows = (rows: HomeRows) => {
+      setHeroMovies(rows.trending.slice(0, 5));
+      setTrendingMovies(sliceTo(rows.trending));
+      setNewReleases(sliceTo(rows.nowPlaying));
+      setTopRated(sliceTo(rows.topRated));
+      setComingSoon(sliceTo(rows.upcoming));
+      setClassics(sliceTo(rows.classics));
+      setActionMovies(sliceTo(rows.action));
+      setComedyMovies(sliceTo(rows.comedy));
+      setHorrorMovies(sliceTo(rows.horror));
+      setScifiMovies(sliceTo(rows.scifi));
+      setAcclaimed(sliceTo(rows.acclaimed));
+    };
 
-    discoverMovies({ year_to: '1994', sort_by: 'rating', min_rating: 7 })
-      .then(d => setClassics(d.slice(0, ROW_LIMIT)))
-      .catch(() => setClassics([]));
-
-    discoverMovies({ genre_id: '28|12', sort_by: 'popularity' })
-      .then(d => setActionMovies(d.slice(0, ROW_LIMIT)))
-      .catch(() => setActionMovies([]));
-
-    discoverMovies({ genre_id: '35', sort_by: 'popularity' })
-      .then(d => setComedyMovies(d.slice(0, ROW_LIMIT)))
-      .catch(() => setComedyMovies([]));
-
-    discoverMovies({ genre_id: '27', sort_by: 'popularity' })
-      .then(d => setHorrorMovies(d.slice(0, ROW_LIMIT)))
-      .catch(() => setHorrorMovies([]));
-
-    discoverMovies({ genre_id: '878', sort_by: 'popularity' })
-      .then(d => setScifiMovies(d.slice(0, ROW_LIMIT)))
-      .catch(() => setScifiMovies([]));
-
-    discoverMovies({ sort_by: 'rating', min_rating: 8 })
-      .then(d => setAcclaimed(d.slice(0, ROW_LIMIT)))
-      .catch(() => setAcclaimed([]));
-
-    getUpcomingMovies()
-      .then(d => setComingSoon(d.slice(0, ROW_LIMIT)))
-      .catch(() => setComingSoon([]));
+    getHomeFeed()
+      .then(rows => { if (rows) applyRows(rows); else fetchRowsIndividually(); })
+      .catch(() => fetchRowsIndividually());
 
     // ── User-specific rows ─────────────────────────────────────────
     if (user) {

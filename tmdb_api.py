@@ -1,7 +1,31 @@
 # tmdb_api.py
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 import os
 import time
+
+# ── Shared HTTP session ───────────────────────────────────────────
+# A single pooled Session reuses TCP+TLS connections across every TMDB
+# call instead of doing a fresh DNS+handshake each time. Combined with a
+# connection pool large enough for the streaming-provider fan-out, this
+# is the single biggest per-request latency win.
+#
+# (connect, read) timeout — applied to every request so a hung TMDB call
+# can never block a worker indefinitely.
+_TMDB_TIMEOUT = (3.05, 8)
+
+_session = requests.Session()
+_retry = Retry(
+    total=2,
+    backoff_factor=0.3,
+    status_forcelist=(429, 500, 502, 503, 504),
+    allowed_methods=frozenset(["GET"]),
+    raise_on_status=False,
+)
+_adapter = HTTPAdapter(pool_connections=20, pool_maxsize=50, max_retries=_retry)
+_session.mount("https://", _adapter)
+_session.mount("http://", _adapter)
 
 # ── In-memory TTL cache ───────────────────────────────────────────
 _tmdb_cache: dict = {}
@@ -41,7 +65,7 @@ def search_movies(query, page=1):
     }
 
     try:
-        response = requests.get(url, params=params)
+        response = _session.get(url, params=params, timeout=_TMDB_TIMEOUT)
         response.raise_for_status()
         result = response.json()
         _cache_set(cache_key, result, 300)  # 5 min
@@ -62,7 +86,7 @@ def get_movie_details(movie_id):
     }
     
     try:
-        response = requests.get(url, params=params)
+        response = _session.get(url, params=params, timeout=_TMDB_TIMEOUT)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
@@ -83,7 +107,7 @@ def get_top_rated_movies(page=1):
         "page": page
     }
     try:
-        response = requests.get(url, params=params)
+        response = _session.get(url, params=params, timeout=_TMDB_TIMEOUT)
         response.raise_for_status()
         result = response.json()
         _cache_set(cache_key, result, 1200)  # 20 min
@@ -106,7 +130,7 @@ def get_popular_movies(page=1):
         "page": page
     }
     try:
-        response = requests.get(url, params=params)
+        response = _session.get(url, params=params, timeout=_TMDB_TIMEOUT)
         response.raise_for_status()
         result = response.json()
         _cache_set(cache_key, result, 1200)  # 20 min
@@ -130,7 +154,7 @@ def search_person(name):
         "language": "en-US"
     }
     try:
-        response = requests.get(url, params=params)
+        response = _session.get(url, params=params, timeout=_TMDB_TIMEOUT)
         response.raise_for_status()
         result = response.json()
         _cache_set(cache_key, result, 3600)  # 1 hour
@@ -188,7 +212,7 @@ def discover_movies(genre_id=None, year=None, year_from=None, year_to=None,
         params["with_keywords"] = with_keywords
 
     try:
-        response = requests.get(url, params=params)
+        response = _session.get(url, params=params, timeout=_TMDB_TIMEOUT)
         response.raise_for_status()
         result = response.json()
         _cache_set(cache_key, result, 300)  # 5 min
@@ -222,7 +246,7 @@ def get_streaming_providers(movie_id):
         "api_key": TMDB_API_KEY
     }
     try:
-        response = requests.get(url, params=params)
+        response = _session.get(url, params=params, timeout=_TMDB_TIMEOUT)
         response.raise_for_status()
         data = response.json()
         result = data.get('results', {}).get('US', {})
@@ -241,7 +265,7 @@ def get_genres():
     }
     
     try:
-        response = requests.get(url, params=params)
+        response = _session.get(url, params=params, timeout=_TMDB_TIMEOUT)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
@@ -259,7 +283,7 @@ def get_trending_movies(time_window="week"):
         "api_key": TMDB_API_KEY
     }
     try:
-        response = requests.get(url, params=params)
+        response = _session.get(url, params=params, timeout=_TMDB_TIMEOUT)
         response.raise_for_status()
         result = response.json()
         _cache_set(cache_key, result, 1200)  # 20 min
@@ -300,7 +324,7 @@ def get_movie_images(movie_id):
     # omitting `language` entirely avoids TMDB's default en-US filter.
     params = {"api_key": TMDB_API_KEY, "include_image_language": "en,null,xx"}
     try:
-        r = requests.get(url, params=params, timeout=10)
+        r = _session.get(url, params=params, timeout=_TMDB_TIMEOUT)
         r.raise_for_status()
         data = r.json()
         backdrops = sorted(data.get('backdrops', []), key=lambda x: x.get('vote_average', 0), reverse=True)
@@ -321,7 +345,7 @@ def get_show_images(show_id):
     url = f"{TMDB_BASE_URL}/tv/{show_id}/images"
     params = {"api_key": TMDB_API_KEY, "include_image_language": "en,null,xx"}
     try:
-        r = requests.get(url, params=params, timeout=10)
+        r = _session.get(url, params=params, timeout=_TMDB_TIMEOUT)
         r.raise_for_status()
         data = r.json()
         backdrops = sorted(data.get('backdrops', []), key=lambda x: x.get('vote_average', 0), reverse=True)
@@ -342,7 +366,7 @@ def get_movie_logo(movie_id):
     url = f"{TMDB_BASE_URL}/movie/{movie_id}/images"
     params = {"api_key": TMDB_API_KEY, "include_image_language": "en,null"}
     try:
-        r = requests.get(url, params=params, timeout=10)
+        r = _session.get(url, params=params, timeout=_TMDB_TIMEOUT)
         r.raise_for_status()
         data = r.json()
         logos = data.get('logos', [])
@@ -365,7 +389,7 @@ def get_show_logo(show_id):
     url = f"{TMDB_BASE_URL}/tv/{show_id}/images"
     params = {"api_key": TMDB_API_KEY, "include_image_language": "en,null"}
     try:
-        r = requests.get(url, params=params, timeout=10)
+        r = _session.get(url, params=params, timeout=_TMDB_TIMEOUT)
         r.raise_for_status()
         data = r.json()
         logos = data.get('logos', [])
@@ -391,7 +415,7 @@ def get_upcoming_movies(page=1):
         "page": page
     }
     try:
-        response = requests.get(url, params=params)
+        response = _session.get(url, params=params, timeout=_TMDB_TIMEOUT)
         response.raise_for_status()
         result = response.json()
         _cache_set(cache_key, result, 1200)
@@ -413,7 +437,7 @@ def get_now_playing_movies(page=1):
         "page": page
     }
     try:
-        response = requests.get(url, params=params)
+        response = _session.get(url, params=params, timeout=_TMDB_TIMEOUT)
         response.raise_for_status()
         result = response.json()
         _cache_set(cache_key, result, 1200)  # 20 min
@@ -435,7 +459,7 @@ def get_movie_recommendations(movie_id, page=1):
         "page": page
     }
     try:
-        response = requests.get(url, params=params)
+        response = _session.get(url, params=params, timeout=_TMDB_TIMEOUT)
         response.raise_for_status()
         result = response.json()
         _cache_set(cache_key, result, 1200)  # 20 min
@@ -466,7 +490,7 @@ def search_tv_shows(query, page=1):
     url = f"{TMDB_BASE_URL}/search/tv"
     params = {"api_key": TMDB_API_KEY, "query": query, "language": "en-US", "page": page, "include_adult": False}
     try:
-        response = requests.get(url, params=params)
+        response = _session.get(url, params=params, timeout=_TMDB_TIMEOUT)
         response.raise_for_status()
         result = response.json()
         _cache_set(cache_key, result, 300)
@@ -484,7 +508,7 @@ def get_popular_tv_shows(page=1):
     url = f"{TMDB_BASE_URL}/tv/popular"
     params = {"api_key": TMDB_API_KEY, "language": "en-US", "page": page}
     try:
-        response = requests.get(url, params=params)
+        response = _session.get(url, params=params, timeout=_TMDB_TIMEOUT)
         response.raise_for_status()
         result = response.json()
         _cache_set(cache_key, result, 1200)
@@ -502,7 +526,7 @@ def get_top_rated_tv_shows(page=1):
     url = f"{TMDB_BASE_URL}/tv/top_rated"
     params = {"api_key": TMDB_API_KEY, "language": "en-US", "page": page}
     try:
-        response = requests.get(url, params=params)
+        response = _session.get(url, params=params, timeout=_TMDB_TIMEOUT)
         response.raise_for_status()
         result = response.json()
         _cache_set(cache_key, result, 1200)
@@ -520,7 +544,7 @@ def get_trending_tv_shows(time_window="week"):
     url = f"{TMDB_BASE_URL}/trending/tv/{time_window}"
     params = {"api_key": TMDB_API_KEY}
     try:
-        response = requests.get(url, params=params)
+        response = _session.get(url, params=params, timeout=_TMDB_TIMEOUT)
         response.raise_for_status()
         result = response.json()
         _cache_set(cache_key, result, 1200)
@@ -543,7 +567,7 @@ def get_tv_show_details(show_id):
         "include_image_language": "en,null",
     }
     try:
-        response = requests.get(url, params=params)
+        response = _session.get(url, params=params, timeout=_TMDB_TIMEOUT)
         response.raise_for_status()
         result = response.json()
         _cache_set(cache_key, result, 43200)  # 12 h
@@ -584,7 +608,7 @@ def discover_tv_shows(genre_id=None, year_from=None, year_to=None,
         params["with_watch_providers"] = with_watch_providers
         params["watch_region"] = watch_region
     try:
-        response = requests.get(url, params=params)
+        response = _session.get(url, params=params, timeout=_TMDB_TIMEOUT)
         response.raise_for_status()
         result = response.json()
         _cache_set(cache_key, result, 300)
@@ -602,7 +626,7 @@ def get_tv_genres():
     url = f"{TMDB_BASE_URL}/genre/tv/list"
     params = {"api_key": TMDB_API_KEY, "language": "en-US"}
     try:
-        response = requests.get(url, params=params)
+        response = _session.get(url, params=params, timeout=_TMDB_TIMEOUT)
         response.raise_for_status()
         result = response.json()
         _cache_set(cache_key, result, 86400)  # 24 h — genres rarely change
@@ -620,7 +644,7 @@ def get_tv_streaming_providers(show_id):
     url = f"{TMDB_BASE_URL}/tv/{show_id}/watch/providers"
     params = {"api_key": TMDB_API_KEY}
     try:
-        response = requests.get(url, params=params)
+        response = _session.get(url, params=params, timeout=_TMDB_TIMEOUT)
         response.raise_for_status()
         data = response.json()
         result = data.get('results', {}).get('US', {})
