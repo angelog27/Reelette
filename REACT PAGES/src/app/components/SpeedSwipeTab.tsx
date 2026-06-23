@@ -720,7 +720,7 @@ export function SpeedSwipeTab() {
       {/* Top bar */}
       <div className="flex items-center justify-between px-4 pt-4 pb-3 shrink-0">
         <button
-          onClick={() => navigate('/home/spin')}
+          onClick={() => navigate('/home/roulette')}
           className="flex items-center gap-1.5 text-gray-500 hover:text-white transition-colors text-sm"
         >
           <ArrowLeft className="w-4 h-4" />

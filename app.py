@@ -1747,13 +1747,12 @@ Rules:
 - If no preference, recommend based purely on their taste profile
 - Never recommend anything in their watched list: {watched_ids[:100]}
 - Prefer movies likely on their streaming services
-- IMPORTANT: Only use real, verified TMDB movie IDs. When in doubt, use a very well-known film.
+- Only recommend well-known, widely released films with correct English titles
 
 Return ONLY valid JSON, no markdown, no explanation:
 {{
-  "title": "string",
+  "title": "exact English movie title",
   "year": number,
-  "tmdb_id": number,
   "reason": "1-2 sentences using SPECIFIC stats, e.g. 'You give Denis Villeneuve a 9.4 average and haven't seen this one' or 'Your top decade is the 90s and you love psychological thrillers'"
 }}"""
 
@@ -1766,32 +1765,24 @@ Return ONLY valid JSON, no markdown, no explanation:
             return jsonify({'error': 'AI service is busy — please try again in a few minutes'}), 503
         return jsonify({'error': 'AI generation failed'}), 500
 
-    # 7. Validate TMDB ID. If invalid, fall back to searching by title — no second Groq call.
-    tmdb_id   = result.get('tmdb_id')
+    # 7. Look up the recommended movie on TMDB by title+year.
+    #    LLMs hallucinate database IDs, so we never trust a raw TMDB ID from the model —
+    #    title search is far more reliable.
     title_hint = result.get('title', '')
     year_hint  = result.get('year')
     reason     = result.get('reason', '')
     tmdb_data  = None
 
-    if tmdb_id:
+    if title_hint:
         try:
-            tmdb_data = get_movie_details(int(tmdb_id))
-            # TMDB returns a dict with 'success': False for invalid IDs
-            if tmdb_data and not tmdb_data.get('title'):
-                tmdb_data = None
-        except Exception:
-            tmdb_data = None
-
-    # Fallback: search TMDB by title (zero extra Groq calls)
-    if not tmdb_data and title_hint:
-        try:
-            search_results = search_movies(title_hint)
-            if search_results:
-                # Prefer exact year match, otherwise take first result
+            search_resp = search_movies(title_hint)
+            results = (search_resp or {}).get('results', [])
+            if results:
+                # Prefer exact year match, otherwise take the first (most popular) result
                 match = next(
-                    (m for m in search_results
+                    (m for m in results
                      if year_hint and str(m.get('release_date', ''))[:4] == str(year_hint)),
-                    search_results[0],
+                    results[0],
                 )
                 tmdb_data = get_movie_details(match['id'])
                 if tmdb_data and not tmdb_data.get('title'):

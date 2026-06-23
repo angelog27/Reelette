@@ -60,7 +60,7 @@ export function HomePage() {
   const navigate = useNavigate();
 
   const tabs: TabLink[] = [
-    { id: 'roulette', label: 'Home',     path: '/home/spin',     icon: Home     },
+    { id: 'roulette', label: 'Home',     path: '/home/roulette', icon: Home     },
     { id: 'discover', label: 'Discover', path: '/home/discover', icon: Film     },
     { id: 'social',   label: 'Social',   path: '/home/social',   icon: Users    },
     { id: 'mystuff',  label: 'My Stuff', path: '/home/mystuff',  icon: Star     },
@@ -289,6 +289,21 @@ export function HomePage() {
       if (intervalId !== null) clearInterval(intervalId);
     };
   }, [currentUserId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Re-read the localStorage cache whenever the Settings notifications tab
+  // writes new data (e.g. on load or mark-read), keeping the bell in sync.
+  useEffect(() => {
+    if (!currentUserId) return;
+    const onExternalUpdate = () => {
+      try {
+        const fresh: AppNotification[] = JSON.parse(localStorage.getItem(notifCacheKey) || '[]');
+        setNotifications(fresh);
+        prevUnreadRef.current = fresh.filter(n => !n.read).length;
+      } catch {}
+    };
+    window.addEventListener('reelette-notifs-updated', onExternalUpdate);
+    return () => window.removeEventListener('reelette-notifs-updated', onExternalUpdate);
+  }, [currentUserId, notifCacheKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Debounced search ────────────────────────────────────────────
   const runSearch = useCallback(async (query: string) => {

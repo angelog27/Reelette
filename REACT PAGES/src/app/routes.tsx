@@ -26,7 +26,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 function LandingGuard() {
   if (localStorage.getItem('user_id')) {
-    return <Navigate to="/home/spin" replace />;
+    return <Navigate to="/home/roulette" replace />;
   }
   return <LandingPage />;
 }
@@ -110,7 +110,7 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <Navigate to="/home/spin" replace />,
+        element: <Navigate to="/home/roulette" replace />,
       },
       {
         path: 'spin',

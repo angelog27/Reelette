@@ -184,6 +184,8 @@ def discover_movies(genre_id=None, year=None, year_from=None, year_to=None,
         "language": "en-US",
         "sort_by": sort_by,
         "include_adult": False,
+        "with_original_language": "en",
+        "vote_count.gte": 100,
         "page": page
     }
 

@@ -371,7 +371,7 @@ export function ProfileandSettingsTab() {
     if (activeTab !== 'notifications' || !userId) return;
     setNotifsLoading(true);
     setNotifPrefsLoading(true);
-    getNotifications(userId).then(n => { setNotifs(n); setNotifsLoading(false); });
+    getNotifications(userId).then(n => { setNotifs(n); setNotifsLoading(false); syncToNavBell(n); });
     getNotifPrefs(userId).then(p => { setNotifPrefs(p); setNotifPrefsLoading(false); });
   }, [activeTab, userId]);
 
@@ -427,15 +427,36 @@ export function ProfileandSettingsTab() {
   }
 
   // ── Notification handlers ─────────────────────────────────────────
+
+  // Writes updated notifications back to the same localStorage cache the nav bell reads
+  // from, then fires a custom event so the bell re-renders immediately.
+  function syncToNavBell(updated: AppNotification[]) {
+    const key = `rl_notifs:${userId}`;
+    try {
+      const existing: AppNotification[] = JSON.parse(localStorage.getItem(key) || '[]');
+      const map = new Map(existing.map(n => [n.notification_id, n]));
+      for (const n of updated) map.set(n.notification_id, n);
+      const merged = [...map.values()].sort((a, b) =>
+        String(b.created_at).localeCompare(String(a.created_at))
+      );
+      localStorage.setItem(key, JSON.stringify(merged.slice(0, 50)));
+      window.dispatchEvent(new CustomEvent('reelette-notifs-updated'));
+    } catch {}
+  }
+
   async function handleMarkRead(notif: AppNotification) {
     if (notif.read) return;
     await markNotificationRead(userId, notif.notification_id);
-    setNotifs(prev => prev.map(n => n.notification_id === notif.notification_id ? { ...n, read: true } : n));
+    const updated = notifs.map(n => n.notification_id === notif.notification_id ? { ...n, read: true } : n);
+    setNotifs(updated);
+    syncToNavBell(updated);
   }
 
   async function handleMarkAllRead() {
     await markAllNotificationsRead(userId);
-    setNotifs(prev => prev.map(n => ({ ...n, read: true })));
+    const updated = notifs.map(n => ({ ...n, read: true }));
+    setNotifs(updated);
+    syncToNavBell(updated);
     toast.success('All notifications marked as read');
   }
 
@@ -528,13 +549,14 @@ export function ProfileandSettingsTab() {
       {showDeleteModal && <DeleteModal onConfirm={handleDeleteAccount} onCancel={() => setShowDeleteModal(false)} loading={deleteLoading} />}
 
       {/* ── Full-width banner ─────────────────────────────────────────── */}
-      <div className="relative z-10 h-56 sm:h-72 lg:h-80 w-full overflow-hidden">
+      <div className="full-bleed relative z-10 h-56 sm:h-72 lg:h-80 overflow-hidden">
         {bannerUrl ? (
           <>
             <img
               src={bannerUrl}
               alt="Profile banner"
               className="absolute inset-0 w-full h-full object-cover"
+              style={{ objectPosition: 'top' }}
             />
             <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-[#090909]/90" />
           </>
