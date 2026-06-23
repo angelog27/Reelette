@@ -238,13 +238,13 @@ export function MyStuffTab() {
           const FILTERS: MediaFilter[] = ['all', 'movie', 'show'];
           const filterIdx = FILTERS.indexOf(mediaFilter);
           return (
-            <div className="relative flex rounded-full p-1" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(16px)' }}>
+            <div className="relative flex rounded-full p-1 overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(16px)' }}>
               <div style={{
                 position: 'absolute', top: 4, bottom: 4, left: 4,
                 width: 'calc((100% - 8px) / 3)',
                 background: 'var(--reel-accent-hex)',
                 borderRadius: 9999,
-                transform: `translateX(${filterIdx * 100}%)`,
+                transform: `translateX(calc(${filterIdx} * 100%))`,
                 transition: 'transform 220ms cubic-bezier(0.23, 1, 0.32, 1)',
                 pointerEvents: 'none',
               }} />

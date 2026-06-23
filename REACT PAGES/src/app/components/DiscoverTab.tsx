@@ -501,7 +501,7 @@ function LandscapeCard({ movie, onClick }: { movie: Movie; onClick: () => void }
       const fetchFn = movie.type === 'show' ? getShowDetails : getMovieDetails;
       fetchFn(movie.id).then((d) => {
         const bd = (d.backdrop as string) ||
-          (d.backdrop_path ? `https://image.tmdb.org/t/p/w780${d.backdrop_path as string}` : null);
+          (d.backdrop_path ? `https://image.tmdb.org/t/p/w1280${d.backdrop_path as string}` : null);
         if (bd) setBackdrop(bd);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const videos: Array<{ site: string; type: string; key: string }> = (d.videos as any)?.results ?? [];
@@ -1055,7 +1055,7 @@ export function DiscoverTab() {
         try {
           const d = await getMovieDetails(post.movie_id);
           backdrop = (d.backdrop as string) ||
-            (d.backdrop_path ? `https://image.tmdb.org/t/p/w780${d.backdrop_path}` : '');
+            (d.backdrop_path ? `https://image.tmdb.org/t/p/w1280${d.backdrop_path}` : '');
         } catch {}
         let friendAvatar: string | undefined;
         try { const pr = await getUserPublicProfile(post.user_id); friendAvatar = pr?.avatarUrl; } catch {}
@@ -1085,7 +1085,7 @@ export function DiscoverTab() {
           let backdrop = '';
           try {
             const d = await getMovieDetails(w.movie_id);
-            backdrop = (d.backdrop as string) || (d.backdrop_path ? `https://image.tmdb.org/t/p/w780${d.backdrop_path}` : '');
+            backdrop = (d.backdrop as string) || (d.backdrop_path ? `https://image.tmdb.org/t/p/w1280${d.backdrop_path}` : '');
           } catch {}
           const friendProfile = await getUserPublicProfile(friend.friend_id).catch(() => null);
           if (!cancelled) {
@@ -1250,7 +1250,7 @@ export function DiscoverTab() {
       fetchedBackdropsRef.current.add(id);
 
       const extractBackdrop = (d: Record<string, unknown>) =>
-        (d.backdrop as string) || (d.backdrop_path ? `https://image.tmdb.org/t/p/w780${d.backdrop_path}` : '');
+        (d.backdrop as string) || (d.backdrop_path ? `https://image.tmdb.org/t/p/w1280${d.backdrop_path}` : '');
 
       const applyIfFound = (bd: string) => {
         if (bd) setBackdropOverrides(prev => ({ ...prev, [id]: bd }));
@@ -1413,7 +1413,7 @@ export function DiscoverTab() {
             {mediaType === 'show' ? 'Browse Shows' : 'Your Providers'}
           </p>
           <div
-            className="hide-scrollbar flex gap-4 sm:gap-3 overflow-x-auto sm:justify-evenly px-2"
+            className="hide-scrollbar flex gap-4 sm:gap-3 overflow-x-auto sm:justify-evenly px-2 pt-2"
             style={{ scrollbarWidth: 'none' } as React.CSSProperties}
           >
             {visibleProviderTabs.map(p => {
