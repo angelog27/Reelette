@@ -241,16 +241,20 @@ def get_tv_genre_map():
     return _tv_genre_cache
 
 # ── Streaming provider constants ─────────────────────────────────
-# Maps Firebase service keys → TMDB provider IDs
+# Maps Firebase service keys → TMDB provider IDs. A service can map to
+# several TMDB IDs: TMDB splits some catalogs across multiple providers,
+# so we filter/match on all of them. Paramount in the US is split between
+# the base Paramount+ catalog (531) and the "Paramount+ with Showtime"
+# tier (1770) — filtering on 531 alone misses most of the catalog.
 STREAMING_PROVIDER_IDS = {
-    'netflix':     8,
-    'hulu':        15,
-    'disneyPlus':  337,
-    'hboMax':      1899,
-    'amazonPrime': 9,
-    'appleTV':     350,
-    'paramount':   531,
-    'peacock':     386,
+    'netflix':     [8],
+    'hulu':        [15],
+    'disneyPlus':  [337],
+    'hboMax':      [1899],
+    'amazonPrime': [9],
+    'appleTV':     [350],
+    'paramount':   [531, 1770],
+    'peacock':     [386],
 }
 # TMDB provider ID → friendly display name shown on the badge
 PROVIDER_DISPLAY = {
@@ -261,8 +265,18 @@ PROVIDER_DISPLAY = {
     9:    'Prime Video',
     350:  'Apple TV+',
     531:  'Paramount+',
+    1770: 'Paramount+',
     386:  'Peacock',
 }
+
+# Builds the pipe-separated `with_watch_providers` value TMDB expects from a
+# { serviceKey: bool } dict, expanding each enabled service to all its TMDB IDs.
+def build_watch_providers(services_filter):
+    ids = []
+    for key, enabled in (services_filter or {}).items():
+        if enabled and key in STREAMING_PROVIDER_IDS:
+            ids.extend(STREAMING_PROVIDER_IDS[key])
+    return [str(i) for i in ids]
 
 # Formats our movies to the shape our frontend expects, and attaches streaming service info in parallel
 def format_movie(movie_data, streaming_service=''):
@@ -641,11 +655,7 @@ def discover():
     # Build pipe-separated watch provider IDs from the services dict the frontend sends
     # e.g. { "netflix": true, "hulu": false } → "8"
     services_filter = data.get('services_filter') or {}
-    active_provider_ids = [
-        str(STREAMING_PROVIDER_IDS[key])
-        for key, enabled in services_filter.items()
-        if enabled and key in STREAMING_PROVIDER_IDS
-    ]
+    active_provider_ids = build_watch_providers(services_filter)
     with_watch_providers = '|'.join(active_provider_ids) if active_provider_ids else None
 
     # Resolve actor name → TMDB person ID
@@ -696,11 +706,7 @@ def recommended_by_services():
     uid = g.verified_uid
 
     services = get_user_streaming_services(uid)
-    active_ids = [
-        str(STREAMING_PROVIDER_IDS[key])
-        for key, enabled in services.items()
-        if enabled and key in STREAMING_PROVIDER_IDS
-    ]
+    active_ids = build_watch_providers(services)
 
     cache_key = f'recommended_services:{"|".join(sorted(active_ids))}'
     cached = _cache_get(cache_key)
@@ -923,11 +929,7 @@ def discover_shows():
     page       = data.get('page', 1)
 
     services_filter = data.get('services_filter') or {}
-    active_provider_ids = [
-        str(STREAMING_PROVIDER_IDS[key])
-        for key, enabled in services_filter.items()
-        if enabled and key in STREAMING_PROVIDER_IDS
-    ]
+    active_provider_ids = build_watch_providers(services_filter)
     with_watch_providers = '|'.join(active_provider_ids) if active_provider_ids else None
     min_vote_count = 50 if min_rating else None
 
