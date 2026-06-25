@@ -548,98 +548,105 @@ export function ProfileandSettingsTab() {
       {viewProfileId && <UserProfileModal userId={viewProfileId} onClose={() => setViewProfileId(null)} />}
       {showDeleteModal && <DeleteModal onConfirm={handleDeleteAccount} onCancel={() => setShowDeleteModal(false)} loading={deleteLoading} />}
 
-      {/* ── Full-width banner ─────────────────────────────────────────── */}
-      <div className="full-bleed relative z-10 h-56 sm:h-72 lg:h-80 overflow-hidden">
-        {bannerUrl ? (
-          <>
-            <img
-              src={bannerUrl}
-              alt="Profile banner"
-              className="absolute inset-0 w-full h-full object-cover"
-              style={{ objectPosition: 'top' }}
-            />
-            <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-[#090909]/90" />
-          </>
-        ) : (
-          <>
-            <div className="pointer-events-none absolute inset-0"
-              style={{ background: `linear-gradient(145deg, ${theme.accent}22 0%, transparent 55%), linear-gradient(to bottom, transparent 50%, #090909 100%)` }} />
-            <div className="pointer-events-none absolute -top-32 -left-20 w-[600px] h-[600px] rounded-full opacity-[0.12] blur-3xl"
-              style={{ background: theme.accent }} />
-          </>
-        )}
-      </div>
-
       {/* ── Content (constrained) ──────────────────────────────────── */}
-      <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 pb-16">
+      <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 pt-6 sm:pt-8 pb-16">
 
-        {/* ── Avatar + profile info — overlaps banner ──────────────── */}
-        <div className="-mt-14 sm:-mt-16 mb-5 flex items-end justify-between gap-3">
-          <div className="flex items-end gap-4 min-w-0 flex-1">
-            {/* Avatar */}
-            <div className="relative group shrink-0">
-              <div
-                className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-[#1a1a1a] overflow-hidden"
-                style={{ boxShadow: `0 0 0 4px #090909, 0 8px 40px ${theme.accent}40` }}>
-                {profile.avatarUrl
-                  ? <img src={profile.avatarUrl} alt="avatar" className="w-full h-full object-cover" />
-                  : <div className="w-full h-full flex items-center justify-center text-zinc-700"><User size={40} /></div>
-                }
-              </div>
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="absolute bottom-1 right-1 w-7 h-7 rounded-full flex items-center justify-center shadow-lg transition-all opacity-100 md:opacity-0 md:group-hover:opacity-100 active:scale-95"
-                style={{ background: 'var(--reel-accent-hex)', color: 'var(--reel-accent-text, #080808)' }}
-                title="Change photo"
-              >
-                <Camera size={13} />
-              </button>
-              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
-            </div>
+        {/* ── Profile hero card — banner + identity, unified ───────── */}
+        <div className="relative rounded-3xl overflow-hidden border border-white/[0.07] mb-6"
+          style={{ boxShadow: '0 26px 70px -30px rgba(0,0,0,0.9)' }}>
 
-            {/* Name + username + bio */}
-            <div className="flex-1 min-w-0 pb-1" style={{ textShadow: bannerUrl ? '0 1px 6px rgba(0,0,0,0.9)' : undefined }}>
-              {editing ? (
-                <input
-                  name="displayName" value={draft.displayName} onChange={handleChange}
-                  className="bg-transparent text-white text-2xl font-bold w-full focus:outline-none border-b pb-0.5 transition-colors"
-                  style={{ borderBottomColor: 'var(--reel-accent-hex)' }}
-                />
-              ) : (
-                <h1 className="text-white text-2xl font-bold truncate">{profile.displayName || profile.username}</h1>
-              )}
-              <p className="text-zinc-400 text-sm mt-0.5">@{profile.username}</p>
-              {!editing && profile.bio && <p className="text-zinc-400 text-sm mt-1 line-clamp-2">{profile.bio}</p>}
-            </div>
+          {/* Backdrop layer */}
+          <div className="absolute inset-0">
+            {bannerUrl ? (
+              <img
+                src={bannerUrl}
+                alt="Profile banner"
+                className="w-full h-full object-cover"
+                style={{ objectPosition: 'center 28%' }}
+              />
+            ) : (
+              <div className="w-full h-full"
+                style={{ background: `linear-gradient(135deg, ${theme.accent}42 0%, ${theme.accent}12 34%, #0c0c0c 70%)` }} />
+            )}
+            {/* Soft accent bloom, top-right */}
+            <div className="pointer-events-none absolute -top-28 -right-20 w-[460px] h-[460px] rounded-full blur-3xl opacity-25"
+              style={{ background: theme.accent }} />
+            {/* Legibility scrim — keeps text crisp over any banner */}
+            <div className="absolute inset-0"
+              style={{ background: 'linear-gradient(to top, rgba(9,9,9,0.97) 0%, rgba(9,9,9,0.74) 44%, rgba(9,9,9,0.30) 74%, rgba(9,9,9,0.42) 100%)' }} />
           </div>
 
-          {/* Edit / Save buttons */}
-          <div className="flex items-center gap-2 shrink-0 pb-1">
-            {editing ? (
-              <>
+          {/* Identity row — pushed to the bottom of the card, fills the height */}
+          <div className="relative px-5 sm:px-8 pt-24 sm:pt-32 pb-6 flex items-end justify-between gap-4 flex-wrap">
+            <div className="flex items-end gap-4 sm:gap-5 min-w-0 flex-1">
+              {/* Avatar */}
+              <div className="relative group shrink-0">
+                <div
+                  className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-[#141414] overflow-hidden ring-1 ring-white/10"
+                  style={{ boxShadow: `0 0 0 4px #0b0b0b, 0 14px 44px ${theme.accent}45` }}>
+                  {profile.avatarUrl
+                    ? <img src={profile.avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+                    : <div className="w-full h-full flex items-center justify-center text-zinc-700"><User size={40} /></div>
+                  }
+                </div>
                 <button
-                  onClick={() => { setDraft(profile); setEditing(false); }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-xs transition-all"
-                >
-                  <X size={13} /> Cancel
-                </button>
-                <button
-                  onClick={handleSave} disabled={saving}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all disabled:opacity-60"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="absolute -bottom-1.5 -right-1.5 w-8 h-8 rounded-xl flex items-center justify-center shadow-lg transition-all opacity-100 md:opacity-0 md:group-hover:opacity-100 active:scale-95"
                   style={{ background: 'var(--reel-accent-hex)', color: 'var(--reel-accent-text, #080808)' }}
+                  title="Change photo"
                 >
-                  {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
-                  Save
+                  <Camera size={14} />
                 </button>
-              </>
-            ) : (
-              <button
-                onClick={() => setEditing(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 rounded-xl text-xs transition-all border border-zinc-700/60 backdrop-blur-sm"
-              >
-                <Edit2 size={13} /> Edit
-              </button>
-            )}
+                <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+              </div>
+
+              {/* Name + username + bio */}
+              <div className="flex-1 min-w-0 pb-1">
+                {editing ? (
+                  <input
+                    name="displayName" value={draft.displayName} onChange={handleChange}
+                    className="bg-transparent text-white text-2xl sm:text-3xl font-bold w-full focus:outline-none border-b pb-0.5 transition-colors"
+                    style={{ borderBottomColor: 'var(--reel-accent-hex)' }}
+                  />
+                ) : (
+                  <h1 className="text-white text-2xl sm:text-3xl font-bold truncate tracking-tight"
+                    style={{ textShadow: '0 2px 12px rgba(0,0,0,0.55)' }}>
+                    {profile.displayName || profile.username}
+                  </h1>
+                )}
+                <p className="text-sm mt-1 font-semibold" style={{ color: theme.accent }}>@{profile.username}</p>
+                {!editing && profile.bio && <p className="text-zinc-300/90 text-sm mt-1.5 line-clamp-2 max-w-md">{profile.bio}</p>}
+              </div>
+            </div>
+
+            {/* Edit / Save buttons */}
+            <div className="flex items-center gap-2 shrink-0 pb-1">
+              {editing ? (
+                <>
+                  <button
+                    onClick={() => { setDraft(profile); setEditing(false); }}
+                    className="flex items-center gap-1.5 px-3.5 py-2 bg-white/10 hover:bg-white/[0.16] text-zinc-200 rounded-xl text-xs font-medium transition-all backdrop-blur-md"
+                  >
+                    <X size={13} /> Cancel
+                  </button>
+                  <button
+                    onClick={handleSave} disabled={saving}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all disabled:opacity-60"
+                    style={{ background: 'var(--reel-accent-hex)', color: 'var(--reel-accent-text, #080808)' }}
+                  >
+                    {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+                    Save
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => setEditing(true)}
+                  className="flex items-center gap-1.5 px-3.5 py-2 bg-white/10 hover:bg-white/[0.16] text-white rounded-xl text-xs font-medium transition-all border border-white/10 backdrop-blur-md"
+                >
+                  <Edit2 size={13} /> Edit profile
+                </button>
+              )}
+            </div>
           </div>
         </div>
 

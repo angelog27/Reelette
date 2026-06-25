@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Bookmark, BookmarkCheck, Star, Play, ChevronDown, ChevronUp, User, Heart, MessageCircle } from 'lucide-react';
+import { X, Bookmark, BookmarkCheck, Star, Play, ChevronDown, ChevronUp, ChevronLeft, User, Heart, MessageCircle } from 'lucide-react';
 import {
   getMovieDetails, getShowDetails, getWatchedMovie, addWatchedMovie, updateWatchedMovie,
   getUser, getWatchLater, watchMovieLater, removeFromWatchLater,
   getFriends, getMovieLogo, getFeed, timeAgo, searchMovies, getUserPublicProfile,
+  getPersonMovies,
 } from '../services/api';
-import type { WatchedMovie, FeedPost } from '../services/api';
+import type { WatchedMovie, FeedPost, Movie } from '../services/api';
 
 interface FriendReview {
   username: string;
@@ -60,7 +61,20 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
   const [collectionMovies, setCollectionMovies] = useState<any[]>([]);
   const [avatarMap, setAvatarMap]               = useState<Record<string, string>>({});
   const [activeInfoTab, setActiveInfoTab]       = useState<InfoTab>('watch');
+  const [castMember, setCastMember]             = useState<{ id: number; name: string; profile_path?: string } | null>(null);
+  const [castMovies, setCastMovies]             = useState<Movie[] | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Fetch the selected cast member's filmography
+  useEffect(() => {
+    if (!castMember) { setCastMovies(null); return; }
+    let cancelled = false;
+    setCastMovies(null);
+    getPersonMovies(castMember.id)
+      .then(movies => { if (!cancelled) setCastMovies(movies); })
+      .catch(() => { if (!cancelled) setCastMovies([]); });
+    return () => { cancelled = true; };
+  }, [castMember]);
 
   const user = getUser();
 
@@ -285,6 +299,76 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
         type={relatedItemType}
         onClose={() => setRelatedMovieId(null)}
       />
+    );
+  }
+
+  // ── Cast member filmography panel ─────────────────────────────────
+  if (castMember) {
+    return (
+      <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-start justify-center overflow-y-auto" onClick={() => setCastMember(null)}>
+        <div
+          className="w-full max-w-3xl bg-[#0d0d0d] min-h-screen sm:min-h-0 sm:my-10 sm:rounded-2xl border border-white/10 overflow-hidden"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="sticky top-0 z-10 flex items-center gap-3 px-4 sm:px-6 py-4 bg-[#0d0d0d]/95 backdrop-blur-md border-b border-white/10">
+            <button
+              onClick={() => setCastMember(null)}
+              className="w-9 h-9 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 transition-colors shrink-0"
+              title="Back"
+            >
+              <ChevronLeft className="w-5 h-5 text-white" />
+            </button>
+            <div className="w-11 h-11 rounded-full overflow-hidden ring-1 ring-white/10 bg-zinc-800 shrink-0">
+              {castMember.profile_path
+                ? <img src={`https://image.tmdb.org/t/p/w185${castMember.profile_path}`} alt={castMember.name} className="w-full h-full object-cover" />
+                : <div className="w-full h-full flex items-center justify-center"><User className="w-5 h-5 text-zinc-600" /></div>}
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-white text-lg font-bold truncate leading-tight">{castMember.name}</h2>
+              <p className="text-zinc-500 text-xs">Filmography</p>
+            </div>
+          </div>
+
+          {/* Movie grid */}
+          <div className="p-4 sm:p-6">
+            {castMovies === null ? (
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 sm:gap-4">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="rounded-lg bg-zinc-900 animate-pulse" style={{ aspectRatio: '2/3' }} />
+                ))}
+              </div>
+            ) : castMovies.length === 0 ? (
+              <p className="text-zinc-600 text-sm text-center py-10">No other films found for {castMember.name}.</p>
+            ) : (
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 sm:gap-4">
+                {castMovies.map(m => (
+                  <button
+                    key={m.id}
+                    onClick={() => { setRelatedItemType('movie'); setRelatedMovieId(String(m.id)); setCastMember(null); }}
+                    className="group/film text-left focus:outline-none"
+                    title={m.title}
+                  >
+                    <div className="relative rounded-lg overflow-hidden bg-zinc-900 ring-1 ring-white/5 transition-all duration-200 group-hover/film:ring-white/30 group-hover/film:-translate-y-0.5" style={{ aspectRatio: '2/3' }}>
+                      {m.poster
+                        ? <img src={m.poster} alt={m.title} className="w-full h-full object-cover" loading="lazy" />
+                        : <div className="w-full h-full flex items-center justify-center text-zinc-700 text-[10px] text-center px-2">{m.title}</div>}
+                      {m.rating > 0 && (
+                        <div className="absolute top-1.5 right-1.5 flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-black/70 backdrop-blur-sm">
+                          <Star className="w-2.5 h-2.5 fill-yellow-400 text-yellow-400" />
+                          <span className="text-white text-[10px] font-semibold">{m.rating.toFixed(1)}</span>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-white text-xs font-medium mt-1.5 line-clamp-1">{m.title}</p>
+                    {m.year > 0 && <p className="text-zinc-500 text-[11px]">{m.year}</p>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     );
   }
 
@@ -841,8 +925,13 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
               {cast.length > 0 ? (
                 <div className="flex gap-4 md:gap-6 overflow-x-auto pb-2 no-scrollbar -mx-1 px-1">
                   {cast.slice(0, 16).map((c: any) => (
-                    <div key={c.id} className="flex flex-col items-center gap-1.5 shrink-0 w-[72px] md:w-[96px]">
-                      <div className="w-14 h-14 md:w-20 md:h-20 rounded-full overflow-hidden ring-1 ring-white/10 bg-zinc-800">
+                    <button
+                      key={c.id}
+                      onClick={() => setCastMember({ id: c.id, name: c.name, profile_path: c.profile_path })}
+                      className="flex flex-col items-center gap-1.5 shrink-0 w-[72px] md:w-[96px] group/cast cursor-pointer focus:outline-none"
+                      title={`See more of ${c.name}`}
+                    >
+                      <div className="w-14 h-14 md:w-20 md:h-20 rounded-full overflow-hidden ring-1 ring-white/10 bg-zinc-800 transition-all duration-200 group-hover/cast:ring-2 group-hover/cast:ring-white/40 group-hover/cast:scale-105">
                         {c.profile_path ? (
                           <img
                             src={`https://image.tmdb.org/t/p/w185${c.profile_path}`}
@@ -856,11 +945,11 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
                           </div>
                         )}
                       </div>
-                      <span className="text-white text-[10px] md:text-xs font-medium text-center leading-tight line-clamp-2">{c.name}</span>
+                      <span className="text-white text-[10px] md:text-xs font-medium text-center leading-tight line-clamp-2 transition-colors group-hover/cast:text-white">{c.name}</span>
                       {c.character && (
                         <span className="text-zinc-600 text-[9px] md:text-[10px] text-center leading-tight line-clamp-1">{c.character}</span>
                       )}
-                    </div>
+                    </button>
                   ))}
                 </div>
               ) : (

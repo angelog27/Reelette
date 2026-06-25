@@ -34,7 +34,8 @@
       "Bash(curl -s -X POST https://reelette-api.onrender.com/api/movies/discover -H 'Content-Type: application/json' -d '{\"with_keywords\":\"161176\",\"sort_by\":\"popularity.desc\"}')",
       "Bash(curl -s -X POST https://reelette-api.onrender.com/api/movies/discover -H 'Content-Type: application/json' -d '{\"with_companies\":\"420\",\"sort_by\":\"popularity.desc\"}')",
       "Bash(curl -s \"https://reelette-api.onrender.com/api/movies/1304313\")",
-      "Bash(curl -s \"https://reelette-api.onrender.com/api/movies/1582770\")"
+      "Bash(curl -s \"https://reelette-api.onrender.com/api/movies/1582770\")",
+      "Bash(lsof -nP -iTCP -sTCP:LISTEN)"
     ]
   }
 }

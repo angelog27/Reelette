@@ -528,19 +528,23 @@ export function discoverMovies(filters: {
   watch_region?: string;
   vote_count_gte?: number;
 }): Promise<Movie[]> {
-  const key = `discover:${JSON.stringify(Object.fromEntries(Object.entries(filters).sort()))}`;
+  // v2 namespace — invalidates pre-Paramount-fix caches that stored empty results.
+  const key = `discover2:${JSON.stringify(Object.fromEntries(Object.entries(filters).sort()))}`;
+  // Throw (rather than return []) on failure/empty so fromCachePersisted does NOT
+  // persist a blank result — otherwise a transient miss sticks for hours. The outer
+  // .catch keeps the public contract of resolving to [] for callers.
   return fromCachePersisted(key, TTL.CATALOG, 2 * 60 * 60 * 1000, async () => {
-    try {
-      const res = await apiFetch(`${BASE_URL}/movies/discover`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(filters),
-      });
-      if (!res.ok) return [];
-      const data = await res.json();
-      return data.movies ?? [];
-    } catch { return []; }
-  });
+    const res = await apiFetch(`${BASE_URL}/movies/discover`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(filters),
+    });
+    if (!res.ok) throw new Error(`discover ${res.status}`);
+    const data = await res.json();
+    const movies: Movie[] = data.movies ?? [];
+    if (!movies.length) throw new Error('discover empty');
+    return movies;
+  }).catch(() => []);
 }
 
 export async function fetchProviderCategory(
@@ -567,6 +571,18 @@ export async function fetchProviderCategory(
   return movies;
 }
 
+
+// An actor's filmography — used by the cast tab to browse a person's other movies.
+export function getPersonMovies(person_id: string | number): Promise<Movie[]> {
+  return fromCachePersisted(`person_movies:${person_id}`, 60 * 60 * 1000, 6 * 60 * 60 * 1000, async () => {
+    try {
+      const res = await apiFetch(`${BASE_URL}/person/${person_id}/movies`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return (data.movies ?? []) as Movie[];
+    } catch { return []; }
+  });
+}
 
 export function getMovieLogo(movie_id: string, type: 'movie' | 'show' = 'movie'): Promise<string | null> {
   return fromCachePersisted(`logo:${type}:${movie_id}`, 24 * 60 * 60 * 1000, 48 * 60 * 60 * 1000, async () => {
@@ -652,19 +668,20 @@ export function discoverShows(filters: {
   services_filter?: Record<string, boolean>;
   page?: number;
 }): Promise<Movie[]> {
-  const key = `tv_discover:${JSON.stringify(Object.fromEntries(Object.entries(filters).sort()))}`;
+  const key = `tv_discover2:${JSON.stringify(Object.fromEntries(Object.entries(filters).sort()))}`;
+  // Throw on failure/empty so a blank result isn't persisted for hours (see discoverMovies).
   return fromCachePersisted(key, TTL.CATALOG, 2 * 60 * 60 * 1000, async () => {
-    try {
-      const res = await apiFetch(`${BASE_URL}/shows/discover`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(filters),
-      });
-      if (!res.ok) return [];
-      const data = await res.json();
-      return data.movies ?? [];
-    } catch { return []; }
-  });
+    const res = await apiFetch(`${BASE_URL}/shows/discover`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(filters),
+    });
+    if (!res.ok) throw new Error(`tv discover ${res.status}`);
+    const data = await res.json();
+    const movies: Movie[] = data.movies ?? [];
+    if (!movies.length) throw new Error('tv discover empty');
+    return movies;
+  }).catch(() => []);
 }
 
 // Returns the first flatrate streaming service name for a movie, or '' if none.

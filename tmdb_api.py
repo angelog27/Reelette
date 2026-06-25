@@ -164,6 +164,30 @@ def search_person(name):
         return None
 
 
+#Returns a person's movie credits (everything they've acted in). Used to let
+#users tap a cast member and browse the actor's other films.
+def get_person_movie_credits(person_id):
+    cache_key = f"person_credits:{person_id}"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
+
+    url = f"{TMDB_BASE_URL}/person/{person_id}/movie_credits"
+    params = {
+        "api_key": TMDB_API_KEY,
+        "language": "en-US"
+    }
+    try:
+        response = _session.get(url, params=params, timeout=_TMDB_TIMEOUT)
+        response.raise_for_status()
+        result = response.json()
+        _cache_set(cache_key, result, 86400)  # 24 h — a filmography rarely changes
+        return result
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching person credits: {e}")
+        return None
+
+
 #Discover movies from the API using various filters of the users choice, like genre, actor, and more...
 def discover_movies(genre_id=None, year=None, year_from=None, year_to=None,
                     min_rating=None, min_vote_count=None,

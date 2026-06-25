@@ -65,7 +65,7 @@ const PROVIDER_KEY: Record<string, string> = {
 };
 
 const ROW_LIMIT = 14;
-const CARD_W    = 312; // 2× the previous 156 — large, cinematic default posters
+const CARD_W    = 224; // cinematic default poster width — all desktop rows derive from this
 const SKELETON_COUNT = 8;
 
 interface ServiceCategoryEntry { firestoreId: string; title: string; }

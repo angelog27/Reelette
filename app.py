@@ -58,7 +58,7 @@ from firebase_helper import (
 from tmdb_api import (
     search_movies, discover_movies, get_popular_movies, get_movie_details,
     get_streaming_providers, get_genres, get_trending_movies, get_top_rated_movies,
-    get_poster_url, get_backdrop_url, search_person,
+    get_poster_url, get_backdrop_url, search_person, get_person_movie_credits,
     get_now_playing_movies, get_movie_recommendations, get_upcoming_movies,
     search_tv_shows, get_popular_tv_shows, get_top_rated_tv_shows, get_trending_tv_shows,
     get_tv_show_details, discover_tv_shows, get_tv_genres, get_tv_streaming_providers,
@@ -813,6 +813,33 @@ def movie_details(movie_id):
     data['logo_url'] = _extract_logo_url(data)
     _cache_set(cache_key, data, _MOVIE_DETAIL_TTL)
     return jsonify(data)
+
+@app.route('/api/person/<int:person_id>/movies', methods=['GET'])
+@limiter.limit("60 per minute")
+def person_movies(person_id):
+    """An actor's filmography — their movies, de-duped, poster-only, popularity-ranked.
+    Powers the tap-a-cast-member flow in the movie detail modal."""
+    cache_key = f'person_movies:{person_id}'
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return jsonify({'movies': cached})
+
+    data = get_person_movie_credits(person_id)
+    if not data:
+        return jsonify({'movies': []})
+
+    seen = set()
+    unique = []
+    for m in sorted(data.get('cast', []), key=lambda x: x.get('popularity', 0), reverse=True):
+        mid = m.get('id')
+        if mid in seen or not m.get('poster_path'):
+            continue
+        seen.add(mid)
+        unique.append(m)
+
+    movies = [format_movie(m) for m in unique[:30]]
+    _cache_set(cache_key, movies, 3600)  # 1 h
+    return jsonify({'movies': movies})
 
 @app.route('/api/movies/<int:movie_id>/providers', methods=['GET'])
 def movie_providers(movie_id):
