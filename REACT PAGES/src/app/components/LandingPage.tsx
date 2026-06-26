@@ -31,6 +31,10 @@ const POSTERS = [
   'https://image.tmdb.org/t/p/original/dMc96Rn0XutMaIYJNwkJ5yO9oTh.jpg',     //Iron Man
   'https://image.tmdb.org/t/p/original/8Vt6mWEReuy4Of61Lnj5Xj704m8.jpg',     //Across the spiderverse
   'https://image.tmdb.org/t/p/original/5lc6nQc0VhWFYFbNv016xze8Jvy.jpg',     //Finding nemo
+  'https://image.tmdb.org/t/p/original/aS7D2qkMtLWWXnKVVOz9KSWhRJV.jpg',     //Transformers 1
+  'https://image.tmdb.org/t/p/original/ym7Kst6a4uodryxqbGOxmewF235.jpg',     //Tangled
+  'https://image.tmdb.org/t/p/original/keGfSvCmYj7CvdRx36OdVrAEibE.jpg',     //Pirates of the Caribbean On stranger tides
+  'https://image.tmdb.org/t/p/original/d9kxMEY01Rgh9ABHdIiONpEM2s9.jpg',     //Fury
 ];
 
 const SERVICE_LOGOS = [
