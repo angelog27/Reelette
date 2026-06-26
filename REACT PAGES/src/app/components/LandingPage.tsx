@@ -53,8 +53,8 @@ const SERVICE_LOGOS = [
 // Full-width scrolling poster rows used as hero background
 function HeroPosterBg() {
   const sets = [
-    [...POSTERS.slice(0, 6), ...POSTERS.slice(0, 6)],
-    [...POSTERS.slice(6, 12), ...POSTERS.slice(6, 12)],
+    [...POSTERS.slice(0, 12), ...POSTERS.slice(0, 12)],
+    [...POSTERS.slice(8, 16), ...POSTERS.slice(8, 16)],
     [...POSTERS.slice(3, 9), ...POSTERS.slice(3, 9)],
   ];
   const dirs  = ['left', 'right', 'left'] as const;
