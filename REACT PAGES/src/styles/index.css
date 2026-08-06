@@ -104,3 +104,58 @@ body {
   pointer-events: none;
   z-index: 1;
 }
+
+/* ── Smart Watch — animated rainbow glow border (Gemini-style) ───────────── */
+@property --rainbow-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes rainbow-spin {
+  to { --rainbow-angle: 360deg; }
+}
+
+.rainbow-glow {
+  position: relative;
+  border-radius: 1rem;              /* matches rounded-2xl */
+  padding: 2px;                     /* ring thickness */
+  background: conic-gradient(
+    from var(--rainbow-angle),
+    #ff2d55, #ff9500, #ffcc00, #34c759,
+    #00c7be, #007aff, #5856d6, #af52de, #ff2d55
+  );
+  animation: rainbow-spin 5s linear infinite;
+}
+
+/* Round the inner card to sit inside the ring */
+.rainbow-glow > * {
+  border-radius: calc(1rem - 2px);
+}
+
+/* The glow — a blurred copy of the same gradient bleeding out behind the card */
+.rainbow-glow::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: conic-gradient(
+    from var(--rainbow-angle),
+    #ff2d55, #ff9500, #ffcc00, #34c759,
+    #00c7be, #007aff, #5856d6, #af52de, #ff2d55
+  );
+  filter: blur(16px);
+  opacity: 0.6;
+  z-index: -1;
+  animation: rainbow-spin 5s linear infinite;
+  pointer-events: none;
+}
+
+/* Dimmed state (Smart Watch used up / resting) — keep it subtle */
+.rainbow-glow--dim { opacity: 0.7; }
+.rainbow-glow--dim::before { opacity: 0.25; }
+
+@media (prefers-reduced-motion: reduce) {
+  .rainbow-glow,
+  .rainbow-glow::before { animation: none; }
+}

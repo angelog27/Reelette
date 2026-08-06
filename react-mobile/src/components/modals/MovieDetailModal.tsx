@@ -11,10 +11,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   getMovieDetails, getShowDetails, getWatchedMovie, addWatchedMovie,
   updateWatchedMovie, watchMovieLater, removeFromWatchLater,
-  getWatchLater, getUser,
+  getWatchLater, getUser, getFriends,
 } from '../../services/api';
 import { Colors, PROVIDER_COLORS } from '../../constants/colors';
 import type { Movie } from '../../types';
+
+type FriendActivity = { id: string; username: string; avatarUrl?: string; rating: number; comment: string };
 
 const { width: W, height: H } = Dimensions.get('window');
 const TMDB = 'https://image.tmdb.org/t/p';
@@ -36,12 +38,14 @@ export function MovieDetailModal({ movieId, mediaType = 'movie', onClose }: Prop
   const [rating, setRating]           = useState(0);
   const [comment, setComment]         = useState('');
   const [saving, setSaving]           = useState(false);
+  const [friendsActivity, setFriendsActivity] = useState<FriendActivity[]>([]);
 
   const load = useCallback(async () => {
     if (!movieId) return;
     setLoading(true);
     setExpanded(false);
     setShowRateForm(false);
+    setFriendsActivity([]);
     try {
       const [d, user] = await Promise.all([
         mediaType === 'show' ? getShowDetails(movieId) : getMovieDetails(movieId),
@@ -63,6 +67,18 @@ export function MovieDetailModal({ movieId, mediaType = 'movie', onClose }: Prop
           setRating(0);
           setComment('');
         }
+
+        // Friends' ratings + takes for this title (loads in background)
+        getFriends(user.user_id).then(async friends => {
+          const entries = await Promise.all(
+            friends.map(async f => {
+              const w = await getWatchedMovie(f.friend_id, movieId).catch(() => null);
+              if (!w || (!(w.user_rating > 0) && !w.comment)) return null;
+              return { id: f.friend_id, username: f.friend_username, avatarUrl: f.avatarUrl, rating: w.user_rating, comment: w.comment } as FriendActivity;
+            })
+          );
+          setFriendsActivity(entries.filter((e): e is FriendActivity => e !== null));
+        }).catch(() => {});
       }
     } catch {}
     setLoading(false);
@@ -241,6 +257,36 @@ export function MovieDetailModal({ movieId, mediaType = 'movie', onClose }: Prop
                     )}
                   </View>
                 ) : null}
+
+                {/* ── From your friends ── */}
+                {friendsActivity.length > 0 && (
+                  <View style={s.section}>
+                    <Text style={s.sectionTitle}>From Your Friends</Text>
+                    {friendsActivity.map(f => (
+                      <View key={f.id} style={s.friendActivity}>
+                        {f.avatarUrl ? (
+                          <Image source={{ uri: f.avatarUrl }} style={s.friendAvatar} contentFit="cover" />
+                        ) : (
+                          <View style={[s.friendAvatar, s.friendAvatarFallback]}>
+                            <Text style={s.friendInitials}>{f.username.slice(0, 2).toUpperCase()}</Text>
+                          </View>
+                        )}
+                        <View style={{ flex: 1 }}>
+                          <View style={s.friendActivityHead}>
+                            <Text style={s.friendName} numberOfLines={1}>{f.username}</Text>
+                            {f.rating > 0 && (
+                              <View style={s.friendRatingPill}>
+                                <Ionicons name="star" size={11} color="#fbbf24" />
+                                <Text style={s.friendRatingText}>{f.rating}/10</Text>
+                              </View>
+                            )}
+                          </View>
+                          {!!f.comment && <Text style={s.friendComment}>{f.comment}</Text>}
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                )}
 
                 {/* ── Watched badge ── */}
                 {watched && !showRateForm && (
@@ -434,6 +480,17 @@ const s = StyleSheet.create({
   genrePillText: { color: Colors.textMuted, fontSize: 11, fontWeight: '600' },
 
   tagline: { color: Colors.textFaint, fontSize: 14, fontStyle: 'italic', textAlign: 'center', marginHorizontal: 20, marginTop: 16, lineHeight: 20 },
+
+  // Friends' activity
+  friendActivity:     { flexDirection: 'row', gap: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
+  friendAvatar:       { width: 38, height: 38, borderRadius: 19, flexShrink: 0 },
+  friendAvatarFallback: { backgroundColor: Colors.bgElevated, alignItems: 'center', justifyContent: 'center' },
+  friendInitials:     { color: Colors.accent, fontSize: 14, fontWeight: '700' },
+  friendActivityHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  friendName:         { color: '#fff', fontSize: 14, fontWeight: '700', flexShrink: 1 },
+  friendRatingPill:   { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: 'rgba(251,191,36,0.12)', borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2 },
+  friendRatingText:   { color: '#fbbf24', fontSize: 12, fontWeight: '700' },
+  friendComment:      { color: 'rgba(255,255,255,0.72)', fontSize: 13, lineHeight: 19, marginTop: 4 },
 
   section:      { marginTop: 24, paddingHorizontal: 16 },
   sectionTitle: { fontSize: 14, fontWeight: '700', color: Colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.7, marginBottom: 12 },

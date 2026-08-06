@@ -1,19 +1,22 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, ScrollView, StyleSheet,
-  ActivityIndicator, Dimensions, Alert, Animated,
+  ActivityIndicator, Dimensions, Alert, Animated, TextInput,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import {
   discoverMovies, discoverShows, logRouletteSpin,
-  getServices, saveServices, updateUserStreaming, getUser,
+  getServices, saveServices, updateUserStreaming, getUser, getUserStreaming,
+  getSmartSpinStatus, doSmartSpin,
 } from '../../services/api';
 import { MovieDetailModal } from '../../components/modals/MovieDetailModal';
 import { ColdStartBanner } from '../../components/common/ColdStartBanner';
+import { RainbowBorder } from '../../components/common/RainbowBorder';
 import { Colors, PROVIDER_COLORS } from '../../constants/colors';
 import { GENRES, PROVIDERS } from '../../constants/providers';
 import type { Movie } from '../../types';
@@ -46,10 +49,64 @@ export function RouletteScreen({ onBack }: { onBack: () => void }) {
   const [modalId, setModalId]         = useState<string | null>(null);
   const [history, setHistory]         = useState<Set<string>>(new Set());
 
+  // ── Smart Watch (Groq-powered) ──
+  const [smartAvailable, setSmartAvailable] = useState(true);
+  const [hoursUntilReset, setHoursUntilReset] = useState(0);
+  const [smartLoading, setSmartLoading]     = useState(false);
+  const [smartResting, setSmartResting]     = useState(false);
+  const [smartPrefs, setSmartPrefs]         = useState('');
+  const [smartResult, setSmartResult]       = useState<{ movie: Movie; reason: string } | null>(null);
+  const [smartError, setSmartError]         = useState('');
+
   const filterAnim = useRef(new Animated.Value(0)).current;
   const spinScale  = useRef(new Animated.Value(1)).current;
 
-  useEffect(() => { getServices().then(s => setServices(s)); }, []);
+  // Load enabled services on focus — prefer the server (shared with Settings),
+  // fall back to local cache. Keeps Home, Discover and Settings in sync.
+  useFocusEffect(
+    useCallback(() => {
+      let alive = true;
+      (async () => {
+        const u = await getUser();
+        let svc: Record<string, boolean> | null = null;
+        if (u) svc = await getUserStreaming(u.user_id).catch(() => null);
+        if (!svc || Object.keys(svc).length === 0) svc = await getServices().catch(() => ({}));
+        if (alive) setServices(svc ?? {});
+      })();
+      return () => { alive = false; };
+    }, [])
+  );
+
+  useEffect(() => {
+    getSmartSpinStatus()
+      .then(st => { setSmartAvailable(st.available); setHoursUntilReset(st.hoursUntilReset); })
+      .catch(() => {});
+  }, []);
+
+  const handleSmartSpin = useCallback(async () => {
+    if (smartLoading || smartResting) return;
+    setSmartLoading(true);
+    setSmartError('');
+    setSmartResult(null);
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      const prefs = smartPrefs.trim() ? [smartPrefs.trim()] : [];
+      const res = await doSmartSpin(prefs, '', selectedGenre);
+      if (!res?.movie) throw new Error('empty');
+      setSmartResult({ movie: res.movie, reason: res.reason });
+      setSmartAvailable(false);
+      setHoursUntilReset(24);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      const user = await getUser();
+      if (user) logRouletteSpin(user.user_id, res.movie.id, res.movie.title, res.movie.poster).catch(() => {});
+    } catch {
+      setSmartError('Smart Watch is resting — try again in a bit.');
+      setSmartResting(true);
+      setTimeout(() => { setSmartResting(false); setSmartError(''); }, 30000);
+    } finally {
+      setSmartLoading(false);
+    }
+  }, [smartLoading, smartResting, smartPrefs, selectedGenre]);
 
   useEffect(() => {
     Animated.timing(filterAnim, {
@@ -296,6 +353,80 @@ export function RouletteScreen({ onBack }: { onBack: () => void }) {
           </Animated.View>
         </View>
 
+        {/* ── Smart Watch (Groq-powered) ── */}
+        <View style={s.section}>
+          <RainbowBorder radius={20} borderWidth={2} bg="#0b0b0d" duration={smartLoading ? 2 : 6}>
+            <View style={s.smartInner}>
+              <View style={s.smartHead}>
+                <View style={s.smartMark}>
+                  <Ionicons name="sparkles" size={12} color="#fff" />
+                </View>
+                <Text style={s.smartTitle}>Smart Watch</Text>
+                <Text style={s.smartStatus}>
+                  {smartAvailable ? '1 use left today' : `Resets in ${hoursUntilReset}h`}
+                </Text>
+              </View>
+              <Text style={s.smartSub}>Tell me your mood — I'll pick something and tell you why.</Text>
+
+              <TextInput
+                style={s.smartInput}
+                value={smartPrefs}
+                onChangeText={setSmartPrefs}
+                maxLength={300}
+                editable={!smartLoading}
+                multiline
+                placeholder="e.g. something funny but smart, under 2 hours…"
+                placeholderTextColor={Colors.textFaint}
+              />
+
+              <TouchableOpacity
+                style={[s.smartBtn, (smartLoading || smartResting || !smartAvailable) && s.smartBtnMuted]}
+                onPress={handleSmartSpin}
+                disabled={smartLoading || smartResting || !smartAvailable}
+                activeOpacity={0.9}
+              >
+                {smartLoading
+                  ? <ActivityIndicator size="small" color="#fff" />
+                  : <Ionicons name="sparkles" size={15} color={smartAvailable ? '#fff' : Colors.textFaint} />}
+                <Text style={[s.smartBtnText, !smartAvailable && !smartLoading && { color: Colors.textFaint }]}>
+                  {smartLoading ? 'Finding your perfect pick…'
+                    : smartResting ? 'Resting…'
+                    : smartAvailable ? 'Ask Smart Watch'
+                    : 'Come back tomorrow'}
+                </Text>
+              </TouchableOpacity>
+
+              {!!smartError && <Text style={s.smartErr}>{smartError}</Text>}
+
+              {smartResult && (
+                <TouchableOpacity style={s.smartResult} activeOpacity={0.9} onPress={() => setModalId(smartResult.movie.id)}>
+                  <View style={s.smartResRow}>
+                    {smartResult.movie.poster ? (
+                      <Image source={{ uri: smartResult.movie.poster }} style={s.smartPoster} contentFit="cover" />
+                    ) : (
+                      <View style={[s.smartPoster, s.smartPosterEmpty]}>
+                        <Ionicons name="film-outline" size={18} color={Colors.textFaint} />
+                      </View>
+                    )}
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.smartResTitle} numberOfLines={2}>{smartResult.movie.title}</Text>
+                      <View style={s.smartResMeta}>
+                        {smartResult.movie.year > 0 && <Text style={s.smartResMetaText}>{smartResult.movie.year}</Text>}
+                        {smartResult.movie.rating > 0 && <Text style={s.smartResStar}>★ {smartResult.movie.rating.toFixed(1)}</Text>}
+                      </View>
+                      <Text style={s.smartReason} numberOfLines={5}>“{smartResult.reason}”</Text>
+                    </View>
+                  </View>
+                  <View style={s.groqRow}>
+                    <Ionicons name="sparkles" size={10} color={Colors.textFaint} />
+                    <Text style={s.groqText}>Powered by Groq</Text>
+                  </View>
+                </TouchableOpacity>
+              )}
+            </View>
+          </RainbowBorder>
+        </View>
+
         {/* ── Result card ── */}
         {result && (
           <View style={s.resultWrap}>
@@ -449,6 +580,40 @@ const s = StyleSheet.create({
   },
   spinBtnDisabled: { opacity: 0.6 },
   spinBtnText: { color: '#0A0A0A', fontSize: 17, fontWeight: '800', letterSpacing: -0.2 },
+
+  // ── Smart Watch ──
+  smartInner:      { padding: 16 },
+  smartHead:       { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  smartMark:       { width: 22, height: 22, borderRadius: 11, backgroundColor: '#5856d6', alignItems: 'center', justifyContent: 'center' },
+  smartTitle:      { color: '#fff', fontSize: 15, fontWeight: '800', letterSpacing: -0.2 },
+  smartStatus:     { color: Colors.textFaint, fontSize: 11, fontWeight: '600', marginLeft: 'auto' as any },
+  smartSub:        { color: Colors.textMuted, fontSize: 12.5, lineHeight: 17, marginTop: 8 },
+  smartInput:      {
+    marginTop: 12, minHeight: 64, maxHeight: 120, textAlignVertical: 'top',
+    backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 12,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+    paddingHorizontal: 12, paddingVertical: 10, color: '#fff', fontSize: 13.5, lineHeight: 19,
+  },
+  smartBtn:        {
+    marginTop: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    paddingVertical: 12, borderRadius: 12,
+    backgroundColor: 'rgba(88,86,214,0.18)', borderWidth: 1, borderColor: 'rgba(120,110,255,0.4)',
+  },
+  smartBtnMuted:   { backgroundColor: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)' },
+  smartBtnText:    { color: '#fff', fontSize: 14, fontWeight: '700' },
+  smartErr:        { color: Colors.warning, fontSize: 12.5, textAlign: 'center', marginTop: 10 },
+
+  smartResult:     { marginTop: 12, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)', overflow: 'hidden' },
+  smartResRow:     { flexDirection: 'row', gap: 12, padding: 12 },
+  smartPoster:     { width: 60, height: 90, borderRadius: 8, flexShrink: 0 },
+  smartPosterEmpty:{ backgroundColor: '#1a1a1a', alignItems: 'center', justifyContent: 'center' },
+  smartResTitle:   { color: '#fff', fontSize: 14.5, fontWeight: '800', lineHeight: 19 },
+  smartResMeta:    { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 3 },
+  smartResMetaText:{ color: Colors.textFaint, fontSize: 12 },
+  smartResStar:    { color: '#fbbf24', fontSize: 12, fontWeight: '600' },
+  smartReason:     { color: Colors.textMuted, fontSize: 12, fontStyle: 'italic', lineHeight: 17, marginTop: 6 },
+  groqRow:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4, paddingHorizontal: 12, paddingBottom: 8 },
+  groqText:        { color: Colors.textFaint, fontSize: 10, fontWeight: '600' },
 
   resultWrap: { paddingHorizontal: 16, marginTop: 28 },
   resultCard: {

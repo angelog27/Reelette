@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   TextInput, KeyboardAvoidingView, Platform, ActivityIndicator,
-  RefreshControl, Alert, FlatList, Modal, Pressable,
+  RefreshControl, Alert, FlatList, Modal, Pressable, Dimensions,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,7 +15,7 @@ import {
 } from '../../services/api';
 import { Colors } from '../../constants/colors';
 import { ADMIN_UID } from '../../constants/providers';
-import type { FeedPost, PostReply, CurrentUser, UserPublicProfile, WatchedMovie, Movie } from '../../types';
+import type { FeedPost, PostReply, CurrentUser, UserPublicProfile, WatchedMovie, Movie, Friend } from '../../types';
 
 // ── User Profile Sheet ─────────────────────────────────────────────────────────
 function UserProfileSheet({
@@ -221,6 +221,12 @@ const ps = StyleSheet.create({
 
 type Tab = 'feed' | 'friends';
 type FeedMode = 'all' | 'friends';
+type FriendCard = Friend & { bio?: string; displayName?: string };
+
+const { width: SCREEN_W } = Dimensions.get('window');
+// Large, Twitter-style media poster inside a post (content column width minus avatar rail)
+const POSTER_W = Math.min(210, Math.round((SCREEN_W - 84) * 0.66));
+const POSTER_H = Math.round(POSTER_W * 1.5);
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function tmdbPoster(url: string, size = 'w185') {
@@ -328,33 +334,35 @@ function PostCard({
             )}
           </View>
 
-          {/* Movie attachment */}
+          {/* Movie attachment — large, Twitter-style media */}
           {post.movie_title ? (
-            <View style={styles.movieAttachment}>
+            <View style={styles.movieMedia}>
               {post.movie_poster ? (
                 <Image
-                  source={{ uri: tmdbPoster(post.movie_poster, 'w185') }}
-                  style={styles.moviePoster}
+                  source={{ uri: tmdbPoster(post.movie_poster, 'w500') }}
+                  style={styles.moviePosterLarge}
                   contentFit="cover"
                   priority={isFirst ? 'high' : 'normal'}
                 />
-              ) : null}
-              <View style={styles.movieInfo}>
-                <Text style={styles.movieTitle} numberOfLines={2}>{post.movie_title}</Text>
-                {post.rating > 0 && (
-                  <View style={styles.ratingRow}>
-                    {[1,2,3,4,5].map(n => (
-                      <Ionicons
-                        key={n}
-                        name={post.rating / 2 >= n ? 'star' : 'star-outline'}
-                        size={11}
-                        color={post.rating / 2 >= n ? '#fbbf24' : Colors.bgElevated}
-                      />
-                    ))}
-                    <Text style={styles.ratingNum}>{post.rating}/10</Text>
-                  </View>
-                )}
-              </View>
+              ) : (
+                <View style={[styles.moviePosterLarge, styles.moviePosterEmpty]}>
+                  <Ionicons name="film-outline" size={30} color={Colors.textFaint} />
+                </View>
+              )}
+              <Text style={styles.movieTitleLarge} numberOfLines={2}>{post.movie_title}</Text>
+              {post.rating > 0 && (
+                <View style={styles.ratingRow}>
+                  {[1,2,3,4,5].map(n => (
+                    <Ionicons
+                      key={n}
+                      name={post.rating / 2 >= n ? 'star' : 'star-outline'}
+                      size={13}
+                      color={post.rating / 2 >= n ? '#fbbf24' : Colors.bgElevated}
+                    />
+                  ))}
+                  <Text style={styles.ratingNum}>{post.rating}/10</Text>
+                </View>
+              )}
             </View>
           ) : null}
 
@@ -648,8 +656,9 @@ export function SocialScreen() {
       <View style={styles.topBar}>
         <Text style={styles.screenTitle}>Social</Text>
         {user && (
-          <TouchableOpacity style={styles.composeIconBtn} onPress={() => setComposing(true)} accessibilityLabel="Compose">
-            <Ionicons name="create-outline" size={22} color={Colors.textPrimary} />
+          <TouchableOpacity style={styles.composeBtn} onPress={() => setComposing(true)} accessibilityLabel="Compose">
+            <Ionicons name="add" size={18} color="#0A0A0A" />
+            <Text style={styles.composeBtnText}>Post</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -811,48 +820,199 @@ function FeedTab({ user, onCompose }: { user: CurrentUser | null; onCompose: () 
 // ── Friends tab ───────────────────────────────────────────────────────────────
 function FriendsTab({ user }: { user: CurrentUser | null }) {
   const [requests, setRequests] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [friends, setFriends]   = useState<FriendCard[]>([]);
+  const [loading, setLoading]   = useState(true);
+  const [profileSheetId, setProfileSheetId] = useState<string | null>(null);
 
-  useEffect(() => {
+  // Find-people search
+  const [query, setQuery]       = useState('');
+  const [results, setResults]   = useState<UserPublicProfile[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [sentTo, setSentTo]     = useState<Set<string>>(new Set());
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const load = useCallback(() => {
     if (!user) { setLoading(false); return; }
-    getFriendRequests(user.user_id).then(r => { setRequests(r); setLoading(false); });
+    Promise.all([
+      getFriendRequests(user.user_id).catch(() => []),
+      getFriends(user.user_id).catch(() => []),
+    ]).then(async ([r, f]) => {
+      setRequests(r);
+      setFriends(f);          // show names immediately
+      setLoading(false);
+      // Enrich with real avatars + bios from public profiles
+      const enriched = await Promise.all(
+        f.map(async fr => {
+          const p = await getUserPublicProfile(fr.friend_id).catch(() => null);
+          return p
+            ? { ...fr, avatarUrl: p.avatarUrl ?? fr.avatarUrl, bio: p.bio, displayName: p.displayName }
+            : fr;
+        })
+      );
+      setFriends(enriched);
+    });
   }, [user?.user_id]);
+
+  useEffect(() => { load(); }, [load]);
+
+  // Debounced user search
+  useEffect(() => {
+    if (timer.current) clearTimeout(timer.current);
+    if (!user || !query.trim()) { setResults([]); setSearching(false); return; }
+    setSearching(true);
+    timer.current = setTimeout(async () => {
+      const r = await searchUsers(query.trim(), user.user_id).catch(() => []);
+      setResults(r);
+      setSearching(false);
+    }, 300);
+  }, [query, user?.user_id]);
+
+  const friendIds = useMemo(() => new Set(friends.map(f => f.friend_id)), [friends]);
+
+  const handleAdd = async (target: UserPublicProfile) => {
+    if (!user) return;
+    setSentTo(prev => new Set(prev).add(target.user_id));
+    await sendFriendRequest(target.user_id, user.user_id, user.username).catch(() => {
+      setSentTo(prev => { const n = new Set(prev); n.delete(target.user_id); return n; });
+    });
+  };
+
+  const handleAccept = async (req: any) => {
+    if (!user) return;
+    await acceptFriendRequest(user.user_id, user.username, req.from_user_id, req.from_username).catch(() => {});
+    setRequests(p => p.filter(r => r.from_user_id !== req.from_user_id));
+    setFriends(p => [{ friend_id: req.from_user_id, friend_username: req.from_username, avatarUrl: req.avatarUrl, since: new Date().toISOString() }, ...p]);
+  };
+
+  const handleDecline = async (req: any) => {
+    if (!user) return;
+    await rejectFriendRequest(user.user_id, req.from_user_id).catch(() => {});
+    setRequests(p => p.filter(r => r.from_user_id !== req.from_user_id));
+  };
 
   if (loading) return <ActivityIndicator color={Colors.accent} style={{ marginTop: 48 }} />;
 
   return (
-    <ScrollView contentContainerStyle={styles.friendsContent}>
-      <Text style={styles.sectionLabel}>
-        {requests.length > 0 ? `${requests.length} Pending Request${requests.length > 1 ? 's' : ''}` : 'Friend Requests'}
-      </Text>
-      {requests.length === 0 ? (
-        <Text style={styles.emptyDesc}>No pending requests.</Text>
-      ) : requests.map(req => (
-        <View key={req.from_user_id} style={styles.requestCard}>
-          <Avatar name={req.from_username} size={44} />
-          <View style={styles.requestInfo}>
-            <Text style={styles.requestName}>{req.from_username}</Text>
-            <Text style={styles.requestHandle}>@{req.from_username}</Text>
-          </View>
-          <View style={styles.requestActions}>
-            <TouchableOpacity style={styles.rejectBtn} onPress={async () => {
-              if (!user) return;
-              await rejectFriendRequest(user.user_id, req.from_user_id);
-              setRequests(p => p.filter(r => r.from_user_id !== req.from_user_id));
-            }}>
-              <Text style={styles.rejectText}>Decline</Text>
+    <View style={{ flex: 1 }}>
+      {/* Find people */}
+      <View style={styles.friendSearchWrap}>
+        <View style={[styles.friendSearchBar, query.length > 0 && styles.friendSearchBarActive]}>
+          <Ionicons name="search-outline" size={17} color={query.length > 0 ? Colors.textMuted : Colors.textFaint} />
+          <TextInput
+            style={styles.friendSearchInput}
+            placeholder="Find people by username"
+            placeholderTextColor={Colors.textFaint}
+            value={query}
+            onChangeText={setQuery}
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="search"
+          />
+          {query.length > 0 && (
+            <TouchableOpacity onPress={() => setQuery('')} hitSlop={8}>
+              <Ionicons name="close-circle" size={18} color={Colors.textFaint} />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.acceptBtn} onPress={async () => {
-              if (!user) return;
-              await acceptFriendRequest(user.user_id, user.username, req.from_user_id, req.from_username);
-              setRequests(p => p.filter(r => r.from_user_id !== req.from_user_id));
-            }}>
-              <Text style={styles.acceptText}>Accept</Text>
-            </TouchableOpacity>
-          </View>
+          )}
         </View>
-      ))}
-    </ScrollView>
+      </View>
+
+      {query.trim().length > 0 ? (
+        /* ── User search results ── */
+        <ScrollView contentContainerStyle={{ paddingBottom: 100 }} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
+          {searching ? (
+            <ActivityIndicator color={Colors.textFaint} style={{ marginTop: 32 }} />
+          ) : results.length === 0 ? (
+            <Text style={styles.emptyDesc}>No users match "{query.trim()}".</Text>
+          ) : results.map(u => {
+            const isFriend = friendIds.has(u.user_id);
+            const isSent   = sentTo.has(u.user_id);
+            return (
+              <View key={u.user_id} style={styles.userRow}>
+                <TouchableOpacity style={styles.userRowMain} onPress={() => setProfileSheetId(u.user_id)} activeOpacity={0.7}>
+                  <Avatar uri={u.avatarUrl} name={u.username} size={44} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.userName} numberOfLines={1}>{u.displayName || u.username}</Text>
+                    <Text style={styles.userHandle}>@{u.username}</Text>
+                  </View>
+                </TouchableOpacity>
+                {isFriend ? (
+                  <View style={styles.statusPill}>
+                    <Ionicons name="checkmark" size={13} color={Colors.textMuted} />
+                    <Text style={styles.statusPillText}>Friends</Text>
+                  </View>
+                ) : isSent ? (
+                  <View style={styles.statusPill}>
+                    <Text style={styles.statusPillText}>Requested</Text>
+                  </View>
+                ) : (
+                  <TouchableOpacity style={styles.addPill} onPress={() => handleAdd(u)}>
+                    <Ionicons name="person-add" size={13} color="#0A0A0A" />
+                    <Text style={styles.addPillText}>Add</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            );
+          })}
+        </ScrollView>
+      ) : (
+        /* ── Requests + friends list ── */
+        <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
+          {requests.length > 0 && (
+            <View style={styles.friendsSection}>
+              <Text style={styles.sectionLabel}>Requests · {requests.length}</Text>
+              {requests.map(req => (
+                <View key={req.from_user_id} style={styles.requestCard}>
+                  <TouchableOpacity onPress={() => setProfileSheetId(req.from_user_id)}>
+                    <Avatar uri={req.avatarUrl} name={req.from_username} size={44} />
+                  </TouchableOpacity>
+                  <View style={styles.requestInfo}>
+                    <Text style={styles.requestName}>{req.from_username}</Text>
+                    <Text style={styles.requestHandle}>wants to be friends</Text>
+                  </View>
+                  <View style={styles.requestActions}>
+                    <TouchableOpacity style={styles.rejectBtn} onPress={() => handleDecline(req)}>
+                      <Ionicons name="close" size={18} color={Colors.textMuted} />
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.acceptBtn} onPress={() => handleAccept(req)}>
+                      <Text style={styles.acceptText}>Accept</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+
+          <View style={styles.friendsSection}>
+            <Text style={styles.sectionLabel}>Friends{friends.length ? ` · ${friends.length}` : ''}</Text>
+            {friends.length === 0 ? (
+              <View style={styles.friendsEmpty}>
+                <Ionicons name="people-outline" size={38} color={Colors.textFaint} />
+                <Text style={styles.friendsEmptyText}>No friends yet</Text>
+                <Text style={styles.emptyDesc}>Search above to find people and send requests.</Text>
+              </View>
+            ) : friends.map(f => (
+              <TouchableOpacity key={f.friend_id} style={styles.friendRow} onPress={() => setProfileSheetId(f.friend_id)} activeOpacity={0.7}>
+                <Avatar uri={f.avatarUrl} name={f.friend_username} size={48} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.userName} numberOfLines={1}>{f.displayName || f.friend_username}</Text>
+                  <Text style={styles.userHandle}>@{f.friend_username}</Text>
+                  {!!f.bio && <Text style={styles.friendBio} numberOfLines={2}>{f.bio}</Text>}
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={Colors.textFaint} style={{ marginTop: 2 }} />
+              </TouchableOpacity>
+            ))}
+          </View>
+        </ScrollView>
+      )}
+
+      {profileSheetId && user && (
+        <UserProfileSheet
+          userId={profileSheetId}
+          currentUserId={user.user_id}
+          onClose={() => setProfileSheetId(null)}
+        />
+      )}
+    </View>
   );
 }
 
@@ -860,15 +1020,16 @@ function FriendsTab({ user }: { user: CurrentUser | null }) {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.bg },
 
-  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12 },
-  screenTitle: { fontSize: 20, fontWeight: '800', color: Colors.textPrimary },
-  composeIconBtn: { padding: 4 },
+  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 4, paddingBottom: 12 },
+  screenTitle: { fontSize: 26, fontWeight: '800', color: Colors.textPrimary, letterSpacing: -0.5 },
+  composeBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: Colors.accent, borderRadius: 20, paddingLeft: 10, paddingRight: 14, paddingVertical: 7 },
+  composeBtnText: { color: '#0A0A0A', fontSize: 14, fontWeight: '700' },
 
-  tabRow: { flexDirection: 'row', paddingHorizontal: 16, gap: 8, marginBottom: 4 },
-  tabPill: { paddingHorizontal: 16, paddingVertical: 7, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.05)' },
-  tabPillActive: { backgroundColor: Colors.bgElevated },
+  tabRow: { flexDirection: 'row', paddingHorizontal: 16, gap: 8, marginBottom: 8 },
+  tabPill: { paddingHorizontal: 18, paddingVertical: 8, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.06)' },
+  tabPillActive: { backgroundColor: '#fff' },
   tabPillText: { color: Colors.textMuted, fontSize: 14, fontWeight: '600' },
-  tabPillTextActive: { color: Colors.textPrimary },
+  tabPillTextActive: { color: '#0A0A0A', fontWeight: '700' },
 
   feedToggle: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: Colors.border },
   feedToggleBtn: { flex: 1, alignItems: 'center', paddingVertical: 13, position: 'relative' },
@@ -892,12 +1053,12 @@ const styles = StyleSheet.create({
   postTime: { color: Colors.textFaint, fontSize: 13, flex: 1 },
   deleteBtn: { padding: 4 },
 
-  movieAttachment: { flexDirection: 'row', gap: 10, marginBottom: 8, backgroundColor: Colors.bgCard, borderRadius: 12, padding: 10, borderWidth: 1, borderColor: Colors.border },
-  moviePoster: { width: 48, height: 72, borderRadius: 8, flexShrink: 0 },
-  movieInfo: { flex: 1, justifyContent: 'center' },
-  movieTitle: { color: Colors.textPrimary, fontSize: 13, fontWeight: '700', marginBottom: 6, lineHeight: 18 },
-  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  ratingNum: { color: Colors.textFaint, fontSize: 11, marginLeft: 4 },
+  movieMedia: { marginBottom: 10 },
+  moviePosterLarge: { width: POSTER_W, height: POSTER_H, borderRadius: 14, backgroundColor: Colors.bgCard },
+  moviePosterEmpty: { alignItems: 'center', justifyContent: 'center' },
+  movieTitleLarge: { color: Colors.textPrimary, fontSize: 15, fontWeight: '700', marginTop: 10, lineHeight: 20 },
+  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 6 },
+  ratingNum: { color: Colors.textFaint, fontSize: 12, marginLeft: 5, fontWeight: '600' },
 
   postMessage: { color: 'rgba(255,255,255,0.85)', fontSize: 15, lineHeight: 22, marginBottom: 10 },
 
@@ -971,16 +1132,37 @@ const styles = StyleSheet.create({
   emptyBtn: { backgroundColor: Colors.accent, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 28 },
   emptyBtnText: { color: '#0A0A0A', fontWeight: '700', fontSize: 14 },
 
-  // Friends
-  friendsContent: { padding: 16 },
-  sectionLabel: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary, marginBottom: 16 },
-  requestCard: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.border },
-  requestInfo: { flex: 1 },
-  requestName: { color: Colors.textPrimary, fontSize: 15, fontWeight: '600' },
-  requestHandle: { color: Colors.textFaint, fontSize: 13, marginTop: 1 },
-  requestActions: { flexDirection: 'row', gap: 8 },
-  rejectBtn: { borderWidth: 1, borderColor: Colors.border, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6 },
-  rejectText: { color: Colors.textMuted, fontSize: 13, fontWeight: '600' },
-  acceptBtn: { backgroundColor: Colors.accent, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6 },
-  acceptText: { color: '#0A0A0A', fontSize: 13, fontWeight: '700' },
+  // Friends — find people
+  friendSearchWrap:   { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 10 },
+  friendSearchBar:    { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', paddingHorizontal: 12, paddingVertical: 10 },
+  friendSearchBarActive: { borderColor: 'rgba(255,255,255,0.2)', backgroundColor: 'rgba(255,255,255,0.09)' },
+  friendSearchInput:  { flex: 1, color: Colors.textPrimary, fontSize: 15, padding: 0 },
+
+  friendsSection:     { paddingHorizontal: 16, marginTop: 8 },
+  sectionLabel:       { fontSize: 13, fontWeight: '700', color: Colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 10, marginTop: 8 },
+
+  // User row (search results & friends list)
+  userRow:            { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
+  userRowMain:        { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
+  friendRow:          { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: 12 },
+  friendBio:          { color: Colors.textMuted, fontSize: 12.5, marginTop: 4, lineHeight: 17 },
+  userName:           { color: Colors.textPrimary, fontSize: 15, fontWeight: '700' },
+  userHandle:         { color: Colors.textFaint, fontSize: 13, marginTop: 1 },
+  addPill:            { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: Colors.accent, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8 },
+  addPillText:        { color: '#0A0A0A', fontSize: 13, fontWeight: '700' },
+  statusPill:         { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7 },
+  statusPillText:     { color: Colors.textMuted, fontSize: 12, fontWeight: '600' },
+
+  // Requests
+  requestCard:        { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: Colors.border, borderRadius: 14, padding: 12, marginBottom: 8 },
+  requestInfo:        { flex: 1 },
+  requestName:        { color: Colors.textPrimary, fontSize: 15, fontWeight: '700' },
+  requestHandle:      { color: Colors.textFaint, fontSize: 13, marginTop: 1 },
+  requestActions:     { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  rejectBtn:          { width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: Colors.border, alignItems: 'center', justifyContent: 'center' },
+  acceptBtn:          { backgroundColor: Colors.accent, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8 },
+  acceptText:         { color: '#0A0A0A', fontSize: 13, fontWeight: '700' },
+
+  friendsEmpty:       { alignItems: 'center', paddingTop: 40, paddingHorizontal: 30, gap: 8 },
+  friendsEmptyText:   { color: Colors.textPrimary, fontSize: 16, fontWeight: '700', marginTop: 4 },
 });

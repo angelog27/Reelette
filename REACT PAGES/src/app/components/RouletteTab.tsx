@@ -524,9 +524,10 @@ export function RouletteTab() {
 
             {/* Smart Watch */}
             {user && (
+              <div className={`rainbow-glow${smartSpinAvailable && !smartSpinResting ? '' : ' rainbow-glow--dim'}`}>
               <div
-                className="rounded-2xl p-5 space-y-3"
-                style={{ background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.07)' }}
+                className="rounded-2xl p-5 space-y-3 relative"
+                style={{ background: '#0a0a0a' }}
               >
                 <div className="flex items-center gap-2">
                   <GroqIcon size={14} />
@@ -630,6 +631,7 @@ export function RouletteTab() {
                     </div>
                   </div>
                 )}
+              </div>
               </div>
             )}
 

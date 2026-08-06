@@ -253,12 +253,15 @@ export async function getWatchedMovies(user_id: string, limit = 50, cursor?: str
   })) as WatchedMovie[];
 }
 
-export async function getWatchedMovie(user_id: string, movie_id: string): Promise<WatchedMovie | null> {
-  try {
-    const res = await authedFetch(`${BASE_URL}/watched/${user_id}/${movie_id}`);
-    if (!res.ok) return null;
-    return res.json();
-  } catch { return null; }
+export function getWatchedMovie(user_id: string, movie_id: string): Promise<WatchedMovie | null> {
+  // Short-lived cache: keeps repeated movie-detail opens + friends'-activity lookups fast.
+  return fromCache(`watched_one_${user_id}_${movie_id}`, TTL.SHORT, async () => {
+    try {
+      const res = await authedFetch(`${BASE_URL}/watched/${user_id}/${movie_id}`);
+      if (!res.ok) return null;
+      return res.json();
+    } catch { return null; }
+  });
 }
 
 export async function addWatchedMovie(
@@ -278,6 +281,7 @@ export async function addWatchedMovie(
       media_type: movie.type ?? (movie as any).media_type ?? 'movie',
     }),
   });
+  await bustCache(`watched_one_${user_id}_${movie.id}`);
 }
 
 export async function updateWatchedMovie(
@@ -290,6 +294,7 @@ export async function updateWatchedMovie(
     method: 'PUT',
     body: JSON.stringify({ user_rating: rating, comment }),
   });
+  await bustCache(`watched_one_${user_id}_${movie_id}`);
 }
 
 export async function getWatchLater(user_id: string): Promise<string[]> {
