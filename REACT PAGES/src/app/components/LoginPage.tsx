@@ -90,6 +90,7 @@ export function LoginPage() {
   const [regUsername, setRegUsername] = useState('');
   const [regError, setRegError] = useState('');
   const [regLoading, setRegLoading] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const interBubbleRef = useRef<HTMLDivElement>(null);
 
@@ -168,6 +169,10 @@ export function LoginPage() {
   const handleRegister = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     setRegError('');
+    if (!agreedToTerms) {
+      setRegError('Please agree to the Terms of Service and Privacy Policy to continue.');
+      return;
+    }
     setRegLoading(true);
     try {
       const result = await register(regEmail, regPassword, regUsername);
@@ -226,7 +231,6 @@ export function LoginPage() {
   };
 
   const goHome = () => navigate('/home/roulette');
-  const goQuiz = () => navigate('/quiz');
 
   const scrollingSection = (
     <div className="poster-grid hidden lg:flex lg:w-1/2 flex-col justify-center p-8 relative overflow-hidden">
@@ -540,10 +544,38 @@ export function LoginPage() {
                       required
                     />
                   </div>
+                  <label className="flex items-start gap-2.5 text-sm text-gray-400 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={agreedToTerms}
+                      onChange={(e) => setAgreedToTerms(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 rounded border-gray-600 bg-[#0f0f0f] text-[#ff5722] accent-[#ff5722] focus:ring-[#ff5722] focus:ring-offset-0"
+                    />
+                    <span>
+                      I agree to the{' '}
+                      <a
+                        href="/terms"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[#fbbf24] hover:text-[#ff5722] transition-colors"
+                      >
+                        Terms of Service
+                      </a>{' '}
+                      and{' '}
+                      <a
+                        href="/privacy"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[#fbbf24] hover:text-[#ff5722] transition-colors"
+                      >
+                        Privacy Policy
+                      </a>
+                    </span>
+                  </label>
                   {regError && <p className="text-red-400 text-sm text-center">{regError}</p>}
                   <Button
                     type="submit"
-                    disabled={regLoading}
+                    disabled={regLoading || !agreedToTerms}
                     className="w-full bg-gradient-to-r from-[#ff5722] to-[#dc2626] hover:from-[#ff6d3a] hover:to-[#ef4444] text-white h-12 rounded-lg transition-all duration-200 disabled:opacity-50"
                   >
                     {regLoading ? 'Creating account...' : 'Sign Up'}
@@ -626,7 +658,7 @@ export function LoginPage() {
                 </p>
                 <div className="flex gap-3">
                   <button
-                    onClick={goQuiz}
+                    onClick={goHome}
                     className="flex-1 bg-[#2A2A2A] hover:bg-[#333333] text-white px-6 py-3 rounded-lg transition-colors font-medium"
                   >
                     No, go to app
@@ -646,8 +678,8 @@ export function LoginPage() {
               <StreamingSetup
                 userId={pendingUserId}
                 initialServices={existingServices}
-                onDone={goQuiz}
-                onSkip={goQuiz}
+                onDone={goHome}
+                onSkip={goHome}
               />
             )}
           </div>

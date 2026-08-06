@@ -1625,18 +1625,6 @@ def mark_conversation_read(conversation_id, user_id):
         return {'success': False, 'message': str(e)}
 
 
-# ── Quiz ──────────────────────────────────────────────────────────
-def save_quiz_result(uid, top_genre, answers):
-    """Save quiz completion status and top genre to the user's Firestore document"""
-    try:
-        db.collection('users').document(uid).set({
-            'quizCompleted': True,
-            'topGenre': top_genre,
-        }, merge=True)
-        return {'success': True}
-    except Exception as e:
-        return {'success': False, 'message': str(e)}
-
 # ── Account Management ────────────────────────────────────────────
 
 def update_user_email(user_id, new_email):

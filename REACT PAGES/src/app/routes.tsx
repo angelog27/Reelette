@@ -2,8 +2,9 @@ import { lazy, Suspense } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { HomePage } from './components/HomePage';
 import { LoginPage } from './components/LoginPage';
-import QuizGate from './components/QuizGate';
 import Landing from '../pages/Landing';
+import Terms from '../pages/legal/Terms';
+import Privacy from '../pages/legal/Privacy';
 
 // Tab components are code-split: their JS is only downloaded when the user
 // navigates to that tab for the first time, keeping the initial bundle small.
@@ -38,8 +39,12 @@ export const router = createBrowserRouter([
     Component: LoginPage,
   },
   {
-    path: '/quiz',
-    element: <QuizGate />,
+    path: '/terms',
+    Component: Terms,
+  },
+  {
+    path: '/privacy',
+    Component: Privacy,
   },
   {
     path: '/home',

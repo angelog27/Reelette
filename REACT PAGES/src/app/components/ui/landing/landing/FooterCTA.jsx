@@ -1,6 +1,6 @@
 import AnimatedSection from "./AnimatedSection";
 import { ArrowRight } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import reeletteLogo from "../../../../../assets/Reelette_LOGO_upscaled.png";
 
 export default function FooterCTA() {
@@ -56,6 +56,14 @@ export default function FooterCTA() {
           <p className="text-xs text-muted-foreground/50">
             © {new Date().getFullYear()} Reelette. All rights reserved.
           </p>
+          <div className="mt-2 flex items-center justify-center gap-4 text-xs text-muted-foreground/50">
+            <Link to="/terms" className="hover:text-foreground/70 transition-colors">
+              Terms of Service
+            </Link>
+            <Link to="/privacy" className="hover:text-foreground/70 transition-colors">
+              Privacy Policy
+            </Link>
+          </div>
         </div>
       </div>
     </section>

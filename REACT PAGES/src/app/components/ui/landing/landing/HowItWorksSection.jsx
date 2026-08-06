@@ -11,7 +11,7 @@ const steps = [
   {
     num: "02",
     icon: SlidersHorizontal,
-    title: "Take the genre quiz, and apply your filters",
+    title: "Set your filters",
     desc: "Genre, decade, runtime, or rating dial in exactly what you're feeling tonight. Or don't. We'll surprise you.",
   },
   {

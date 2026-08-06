@@ -29,7 +29,7 @@ from firebase_helper import (
     add_to_group_watchlist, remove_from_group_watchlist, spin_group_reelette,
     update_user_avatar, update_user_last_seen,
     get_user_public_profile, get_group_member_profiles, get_members_streaming_services,
-    log_roulette_spin, get_roulette_history, get_friends_roulette_history, save_quiz_result,
+    log_roulette_spin, get_roulette_history, get_friends_roulette_history,
     get_notifications, mark_notification_read, mark_all_notifications_read,
     get_notification_prefs, set_notification_prefs,
     get_or_create_conversation, get_conversations, get_messages, send_message, mark_conversation_read,
@@ -863,36 +863,6 @@ def update_profile(user_id):
     data = request.get_json() or {}
     result = update_user_profile(user_id, data)
     return jsonify(result)
-
-# ── Quiz Routes ──────────────────────────────────────────────────
-
-@app.route('/api/user/<uid>/profile', methods=['GET'])
-def get_user_profile(uid):
-    # Check the shared 60 s user cache before going to Firestore
-    cached = _cache_get(f'user:{uid}')
-    if cached:
-        return jsonify({'quizCompleted': cached.get('quizCompleted', True)})
-    try:
-        data = get_user_data(uid)
-    except Exception:
-        return jsonify({'quizCompleted': False})
-    if not data:
-        return jsonify({'quizCompleted': False})
-    result = serialize_timestamps(data)
-    _cache_set(f'user:{uid}', result, _USER_PROFILE_TTL)
-    return jsonify({'quizCompleted': result.get('quizCompleted', True)})
-
-@app.route('/api/quiz/complete', methods=['POST'])
-def complete_quiz():
-    data = request.get_json() or {}
-    uid = data.get('uid', '').strip()
-    top_genre = data.get('topGenre')
-    answers = data.get('answers', {})
-    if not uid:
-        return jsonify({'success': False, 'message': 'uid required'}), 400
-    from firebase_helper import save_quiz_result
-    save_quiz_result(uid, top_genre, answers)
-    return jsonify({'success': True})
 
 @app.route('/api/user/<user_id>/avatar', methods=['PUT'])
 def update_avatar_route(user_id):
