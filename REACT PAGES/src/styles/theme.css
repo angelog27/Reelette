@@ -191,20 +191,21 @@
    light → clean, neutral light theme
 ──────────────────────────────────────────────────────────────*/
 html.dark {
-  --reel-bg:          #0A0A0A;
-  --reel-surface:     #141414;
-  --reel-card:        #1C1C1C;
-  --reel-raised:      #2A2A2A;
-  --reel-hover:       #333333;
-  --reel-border:      #2A2A2A;
-  --reel-t1:          #FFFFFF;
+  --reel-bg:          #080808;
+  --reel-surface:     #111111;
+  --reel-card:        #161616;
+  --reel-raised:      #1e1e1e;
+  --reel-hover:       #252525;
+  --reel-border:      rgba(255,255,255,0.07);
+  --reel-t1:          #F0EDE8;
   --reel-t2:          #9CA3AF;
   --reel-t3:          #6B7280;
   --reel-t4:          #4B5563;
-  --reel-input-bg:    #050505;
-  --reel-accent:      oklch(0.60 0.13 289);
-  --reel-accent-lo:   oklch(0.24 0.06 289);
-  --reel-accent-hex:  #7C5DBD;
+  --reel-input-bg:    #0d0d0d;
+  --reel-accent:      oklch(0.74 0.13 76);
+  --reel-accent-lo:   oklch(0.27 0.05 76);
+  --reel-accent-hex:  #D4A843;
+  --reel-accent-text: #080808;
 }
 
 html.light {
@@ -303,6 +304,242 @@ html.light textarea::placeholder {
 html.light ::-webkit-scrollbar-track  { background: var(--reel-surface); }
 html.light ::-webkit-scrollbar-thumb  { background: var(--reel-raised); border-radius: 4px; }
 html.light ::-webkit-scrollbar-thumb:hover { background: var(--reel-hover); }
+
+/* ─────────────────────────────────────────────────────────────
+   Visual themes — all dark-mode. Applied via html[data-theme="X"].
+   Each theme overrides the accent tokens. Background effects use
+   body::before so they sit beneath all app content.
+──────────────────────────────────────────────────────────────*/
+
+html[data-theme="default"] {
+  --reel-accent-hex:  #D4A843;
+  --reel-accent:      oklch(0.74 0.13 76);
+  --reel-accent-lo:   oklch(0.27 0.05 76);
+  --reel-accent-text: #080808;
+}
+html[data-theme="default"] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(ellipse at 30% 0%, rgba(212,168,67,0.04) 0%, transparent 55%);
+}
+
+/* ── Star Wars — gold ────────────────────────────────────────*/
+html[data-theme="starwars"] {
+  --reel-accent-hex: #FFE81A;
+  --reel-accent:     oklch(0.92 0.19 96);
+  --reel-accent-lo:  oklch(0.30 0.08 96);
+}
+html[data-theme="starwars"] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    radial-gradient(1px 1px at 10%  8%,  rgba(255,255,255,0.55) 0%, transparent 100%),
+    radial-gradient(1px 1px at 22%  3%,  rgba(255,255,255,0.40) 0%, transparent 100%),
+    radial-gradient(1px 1px at 38% 14%,  rgba(255,255,255,0.50) 0%, transparent 100%),
+    radial-gradient(2px 2px at 54%  6%,  rgba(255,255,255,0.30) 0%, transparent 100%),
+    radial-gradient(1px 1px at 71% 20%,  rgba(255,255,255,0.45) 0%, transparent 100%),
+    radial-gradient(1px 1px at 85%  9%,  rgba(255,255,255,0.55) 0%, transparent 100%),
+    radial-gradient(1px 1px at 96% 26%,  rgba(255,255,255,0.35) 0%, transparent 100%),
+    radial-gradient(1px 1px at  4% 38%,  rgba(255,255,255,0.40) 0%, transparent 100%),
+    radial-gradient(1px 1px at 17% 51%,  rgba(255,255,255,0.50) 0%, transparent 100%),
+    radial-gradient(2px 2px at 32% 44%,  rgba(255,255,255,0.25) 0%, transparent 100%),
+    radial-gradient(1px 1px at 49% 59%,  rgba(255,255,255,0.45) 0%, transparent 100%),
+    radial-gradient(1px 1px at 63% 36%,  rgba(255,255,255,0.35) 0%, transparent 100%),
+    radial-gradient(1px 1px at 77% 52%,  rgba(255,255,255,0.50) 0%, transparent 100%),
+    radial-gradient(1px 1px at 91% 42%,  rgba(255,255,255,0.40) 0%, transparent 100%),
+    radial-gradient(1px 1px at  8% 68%,  rgba(255,255,255,0.55) 0%, transparent 100%),
+    radial-gradient(1px 1px at 24% 76%,  rgba(255,255,255,0.35) 0%, transparent 100%),
+    radial-gradient(2px 2px at 41% 83%,  rgba(255,255,255,0.25) 0%, transparent 100%),
+    radial-gradient(1px 1px at 58% 71%,  rgba(255,255,255,0.45) 0%, transparent 100%),
+    radial-gradient(1px 1px at 73% 88%,  rgba(255,255,255,0.40) 0%, transparent 100%),
+    radial-gradient(1px 1px at 87% 64%,  rgba(255,255,255,0.55) 0%, transparent 100%),
+    radial-gradient(1px 1px at 95% 79%,  rgba(255,255,255,0.35) 0%, transparent 100%),
+    radial-gradient(1px 1px at 14% 92%,  rgba(255,255,255,0.45) 0%, transparent 100%),
+    radial-gradient(1px 1px at 47% 97%,  rgba(255,255,255,0.30) 0%, transparent 100%),
+    radial-gradient(1px 1px at 69% 95%,  rgba(255,255,255,0.50) 0%, transparent 100%);
+}
+
+/* ── Tron — electric cyan ────────────────────────────────────*/
+html[data-theme="tron"] {
+  --reel-accent-hex: #00F5FF;
+  --reel-accent:     oklch(0.88 0.14 195);
+  --reel-accent-lo:  oklch(0.25 0.06 195);
+}
+html[data-theme="tron"] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    linear-gradient(rgba(0,245,255,0.028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,245,255,0.028) 1px, transparent 1px);
+  background-size: 56px 56px;
+}
+
+/* ── Matrix — neon green ─────────────────────────────────────*/
+html[data-theme="matrix"] {
+  --reel-accent-hex: #00FF41;
+  --reel-accent:     oklch(0.87 0.24 142);
+  --reel-accent-lo:  oklch(0.25 0.09 142);
+}
+html[data-theme="matrix"] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    rgba(0, 255, 65, 0.014) 3px,
+    rgba(0, 255, 65, 0.014) 4px
+  );
+}
+
+/* ── Synthwave — hot pink ────────────────────────────────────*/
+html[data-theme="synthwave"] {
+  --reel-accent-hex: #FF2D87;
+  --reel-accent:     oklch(0.65 0.26 347);
+  --reel-accent-lo:  oklch(0.24 0.10 347);
+}
+html[data-theme="synthwave"] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse at 50% 105%, rgba(255,45,135,0.12) 0%, transparent 55%),
+    radial-gradient(ellipse at 80% 15%,  rgba(138,0,255,0.07)  0%, transparent 45%);
+}
+
+/* ── Midnight — deep blue ────────────────────────────────────*/
+html[data-theme="midnight"] {
+  --reel-accent-hex: #4A9EFF;
+  --reel-accent:     oklch(0.70 0.15 233);
+  --reel-accent-lo:  oklch(0.24 0.07 233);
+}
+html[data-theme="midnight"] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(ellipse at 60% 0%, rgba(74,158,255,0.07) 0%, transparent 55%);
+}
+
+/* ── Crimson — bold red ──────────────────────────────────────*/
+html[data-theme="crimson"] {
+  --reel-accent-hex: #FF3B30;
+  --reel-accent:     oklch(0.65 0.22 29);
+  --reel-accent-lo:  oklch(0.25 0.09 29);
+}
+html[data-theme="crimson"] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(ellipse at 30% 0%, rgba(255,59,48,0.08) 0%, transparent 55%);
+}
+
+/* ── Forest — emerald ────────────────────────────────────────*/
+html[data-theme="forest"] {
+  --reel-accent-hex: #34D399;
+  --reel-accent:     oklch(0.79 0.14 162);
+  --reel-accent-lo:  oklch(0.25 0.06 162);
+}
+html[data-theme="forest"] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(ellipse at 70% 100%, rgba(52,211,153,0.07) 0%, transparent 55%);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Accent override — replaces every hardcoded #7C5DBD / #9B7BD7
+   Tailwind class with the active theme's accent token.
+   The default theme keeps --reel-accent-hex: #7C5DBD so it's
+   visually identical; non-default themes pick up their color.
+──────────────────────────────────────────────────────────────*/
+
+/* Text */
+.text-\[\#7C5DBD\]                       { color: var(--reel-accent-hex) !important; }
+.text-\[\#9B7BD7\]                       { color: var(--reel-accent-hex) !important; }
+.text-\[\#9B8FD0\]                       { color: var(--reel-accent-hex) !important; }
+.text-\[\#D4A843\]                       { color: var(--reel-accent-hex) !important; }
+.hover\:text-\[\#7C5DBD\]:hover          { color: var(--reel-accent-hex) !important; }
+.hover\:text-\[\#9B7BD7\]:hover          { color: var(--reel-accent-hex) !important; }
+.hover\:text-\[\#D4A843\]:hover          { color: var(--reel-accent-hex) !important; }
+.group:hover .group-hover\:text-\[\#9B7BD7\] { color: var(--reel-accent-hex) !important; }
+
+/* Background — solid */
+.bg-\[\#7C5DBD\]                         { background-color: var(--reel-accent-hex) !important; }
+.hover\:bg-\[\#7C5DBD\]:hover            { background-color: var(--reel-accent-hex) !important; }
+.hover\:bg-\[\#9B7BD7\]:hover            { background-color: var(--reel-accent-hex) !important; }
+.hover\:bg-\[\#6B4DAD\]:hover            { background-color: color-mix(in srgb, var(--reel-accent-hex) 85%, #000) !important; }
+.bg-\[\#6B4DAD\]                         { background-color: color-mix(in srgb, var(--reel-accent-hex) 85%, #000) !important; }
+
+/* Background — opacity variants */
+.bg-\[\#7C5DBD\]\/10                     { background-color: color-mix(in srgb, var(--reel-accent-hex) 10%, transparent) !important; }
+.bg-\[\#7C5DBD\]\/15                     { background-color: color-mix(in srgb, var(--reel-accent-hex) 15%, transparent) !important; }
+.bg-\[\#7C5DBD\]\/20                     { background-color: color-mix(in srgb, var(--reel-accent-hex) 20%, transparent) !important; }
+.bg-\[\#7C5DBD\]\/25                     { background-color: color-mix(in srgb, var(--reel-accent-hex) 25%, transparent) !important; }
+.bg-\[\#7C5DBD\]\/30                     { background-color: color-mix(in srgb, var(--reel-accent-hex) 30%, transparent) !important; }
+.hover\:bg-\[\#7C5DBD\]\/20:hover        { background-color: color-mix(in srgb, var(--reel-accent-hex) 20%, transparent) !important; }
+.hover\:bg-\[\#7C5DBD\]\/25:hover        { background-color: color-mix(in srgb, var(--reel-accent-hex) 25%, transparent) !important; }
+.hover\:bg-\[\#7C5DBD\]\/30:hover        { background-color: color-mix(in srgb, var(--reel-accent-hex) 30%, transparent) !important; }
+
+/* Border — solid */
+.border-\[\#7C5DBD\]                     { border-color: var(--reel-accent-hex) !important; }
+.hover\:border-\[\#7C5DBD\]:hover        { border-color: var(--reel-accent-hex) !important; }
+.focus\:border-\[\#7C5DBD\]:focus        { border-color: var(--reel-accent-hex) !important; }
+
+/* Border — opacity variants */
+.border-\[\#7C5DBD\]\/20                 { border-color: color-mix(in srgb, var(--reel-accent-hex) 20%, transparent) !important; }
+.border-\[\#7C5DBD\]\/30                 { border-color: color-mix(in srgb, var(--reel-accent-hex) 30%, transparent) !important; }
+.border-\[\#7C5DBD\]\/40                 { border-color: color-mix(in srgb, var(--reel-accent-hex) 40%, transparent) !important; }
+.border-\[\#7C5DBD\]\/50                 { border-color: color-mix(in srgb, var(--reel-accent-hex) 50%, transparent) !important; }
+.hover\:border-\[\#7C5DBD\]\/50:hover   { border-color: color-mix(in srgb, var(--reel-accent-hex) 50%, transparent) !important; }
+.focus\:border-\[\#7C5DBD\]\/40:focus   { border-color: color-mix(in srgb, var(--reel-accent-hex) 40%, transparent) !important; }
+.focus\:border-\[\#7C5DBD\]\/50:focus   { border-color: color-mix(in srgb, var(--reel-accent-hex) 50%, transparent) !important; }
+
+/* Fill (SVG) */
+.fill-\[\#7C5DBD\]                       { fill: var(--reel-accent-hex) !important; }
+
+/* Shadow */
+.shadow-\[\#7C5DBD\]\/20                 { --tw-shadow-color: color-mix(in srgb, var(--reel-accent-hex) 20%, transparent) !important; }
+.shadow-\[\#7C5DBD\]\/30                 { --tw-shadow-color: color-mix(in srgb, var(--reel-accent-hex) 30%, transparent) !important; }
+
+/* Ring */
+.ring-\[\#7C5DBD\]\/60                   { --tw-ring-color: color-mix(in srgb, var(--reel-accent-hex) 60%, transparent) !important; }
+
+/* D4A843 class aliases (landing page + new components) */
+.bg-\[\#D4A843\]                         { background-color: var(--reel-accent-hex) !important; }
+.hover\:bg-\[\#D4A843\]:hover            { background-color: var(--reel-accent-hex) !important; }
+.border-\[\#D4A843\]                     { border-color: var(--reel-accent-hex) !important; }
+
+/* Ensure dark text on solid accent backgrounds (gold requires dark text for contrast) */
+.bg-\[\#7C5DBD\],
+.bg-\[\#D4A843\] {
+  color: var(--reel-accent-text, #080808) !important;
+}
+
+/* Notification badge and tiny pill exceptions — inherits from parent, restore white for badges */
+.bg-\[\#7C5DBD\].text-white,
+.bg-\[\#D4A843\].text-white {
+  color: var(--reel-accent-text, #080808) !important;
+}
 
 /* ─────────────────────────────────────────────────────────────
    Emil Kowalski easing system

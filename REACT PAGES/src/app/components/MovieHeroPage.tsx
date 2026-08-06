@@ -234,8 +234,8 @@ export function MovieHeroPage({ movieId, onClose }: Props) {
             {/* Streaming providers — always visible */}
             {providers.length > 0 && (
               <div className="mb-6">
-                <p className="text-gray-500 text-xs uppercase tracking-widest mb-3 flex items-center gap-2">
-                  <Tv className="w-3.5 h-3.5" /> Available On
+                <p className="text-gray-500 text-xs font-medium mb-3 flex items-center gap-2">
+                  <Tv className="w-3.5 h-3.5" /> Available on
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {providers.map((p: any) => (
@@ -261,13 +261,13 @@ export function MovieHeroPage({ movieId, onClose }: Props) {
             <div className="flex flex-col gap-1.5 mb-6 text-sm">
               {director && (
                 <p>
-                  <span className="text-gray-600 uppercase tracking-widest text-xs mr-2">Director</span>
+                  <span className="text-gray-500 text-xs font-medium mr-2">Director</span>
                   <span className="text-gray-200">{director.name}</span>
                 </p>
               )}
               {actors.length > 0 && (
                 <p>
-                  <span className="text-gray-600 uppercase tracking-widest text-xs mr-2">Cast</span>
+                  <span className="text-gray-500 text-xs font-medium mr-2">Cast</span>
                   <span className="text-gray-200">{actors.join(', ')}</span>
                 </p>
               )}
@@ -286,7 +286,7 @@ export function MovieHeroPage({ movieId, onClose }: Props) {
                 {watchEntry && !showWatchForm ? (
                   <div className="flex items-center justify-between gap-4">
                     <div>
-                      <p className="text-gray-500 text-xs uppercase tracking-widest mb-1">Your Rating</p>
+                      <p className="text-gray-500 text-xs font-medium mb-1">Your rating</p>
                       <div className="flex items-center gap-1.5">
                         <Star className="w-4 h-4 fill-[#7C5DBD] text-[#7C5DBD]" />
                         <span className="text-white font-semibold">{watchEntry.user_rating}/10</span>
@@ -315,7 +315,7 @@ export function MovieHeroPage({ movieId, onClose }: Props) {
                       {watchEntry ? 'Update your rating' : 'Rate this movie'}
                     </p>
                     <div>
-                      <label className="text-gray-500 text-xs uppercase tracking-widest block mb-1">Rating (0–10)</label>
+                      <label className="text-gray-500 text-xs font-medium block mb-1">Rating (0–10)</label>
                       <input
                         type="number"
                         min="0"
@@ -328,7 +328,7 @@ export function MovieHeroPage({ movieId, onClose }: Props) {
                       />
                     </div>
                     <div>
-                      <label className="text-gray-500 text-xs uppercase tracking-widest block mb-1">Comment (optional)</label>
+                      <label className="text-gray-500 text-xs font-medium block mb-1">Comment (optional)</label>
                       <textarea
                         value={commentInput}
                         onChange={(e) => setCommentInput(e.target.value)}

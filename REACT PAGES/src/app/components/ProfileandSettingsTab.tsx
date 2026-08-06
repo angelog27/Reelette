@@ -3,38 +3,22 @@ import { useNavigate } from 'react-router-dom';
 import {
   Camera, Edit2, Save, X, User, Mail, Film, Users, Eye, Lock,
   Bell, LogOut, Trash2, CheckCheck, Loader2, UserPlus, Heart,
-  MessageCircle, Shield, ChevronRight,
+  MessageCircle, Shield, ChevronRight, ChevronLeft, Palette, Check,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { UserProfileModal } from './UserProfileModal';
 import { PROVIDER_LOGOS } from '../constants/providers';
+import { useTheme, THEMES } from './ThemeContext';
 import {
   BASE_URL, getUser, clearUser, clearServices, saveServices,
   getFriends, getUserPublicProfile, saveSocialSettings,
   getNotifications, markNotificationRead, markAllNotificationsRead,
   getNotifPrefs, saveNotifPrefs,
   updateUserAvatar, updateUserEmail, deleteUserAccount,
-  updateUserStreaming,
-  type AppNotification, type Friend, type NotifPrefs,
+  updateUserStreaming, updateProfileBanner, searchMovies, getMovieBackdrops,
+  updateUserProfile, bustPublicProfileCache,
+  type AppNotification, type Friend, type NotifPrefs, type Movie,
 } from '../services/api';
-
-// ── Film grain texture ────────────────────────────────────────────
-
-const FILM_GRAIN = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZmlsdGVyIGlkPSJuIj48ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iMC45IiBudW1PY3RhdmVzPSI0Ii8+PC9maWx0ZXI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsdGVyPSJ1cmwoI24pIiBvcGFjaXR5PSIxIi8+PC9zdmc+";
-
-// ── Banner presets ────────────────────────────────────────────────
-
-const BANNERS = [
-  { id: 'default',  label: 'Cinematic', swatch: '#27272a', gradient: 'linear-gradient(135deg,#18181b 0%,#09090b 60%,#000 100%)' },
-  { id: 'crimson',  label: 'Crimson',   swatch: '#7f1d1d', gradient: 'linear-gradient(135deg,#450a0a 0%,#0d0d0d 60%,#000 100%)' },
-  { id: 'midnight', label: 'Midnight',  swatch: '#1e3a8a', gradient: 'linear-gradient(135deg,#0c1a3d 0%,#0d0d0d 60%,#000 100%)' },
-  { id: 'dusk',     label: 'Dusk',      swatch: '#4c1d95', gradient: 'linear-gradient(135deg,#2e1065 0%,#0d0d0d 60%,#000 100%)' },
-  { id: 'forest',   label: 'Forest',    swatch: '#14532d', gradient: 'linear-gradient(135deg,#052e16 0%,#0d0d0d 60%,#000 100%)' },
-  { id: 'ember',    label: 'Ember',     swatch: '#92400e', gradient: 'linear-gradient(135deg,#451a03 0%,#0d0d0d 60%,#000 100%)' },
-  { id: 'ocean',    label: 'Ocean',     swatch: '#134e4a', gradient: 'linear-gradient(135deg,#042f2e 0%,#0d0d0d 60%,#000 100%)' },
-  { id: 'rose',     label: 'Rose',      swatch: '#9f1239', gradient: 'linear-gradient(135deg,#500724 0%,#0d0d0d 60%,#000 100%)' },
-];
-const getBannerGradient = (id: string) => (BANNERS.find(b => b.id === id) ?? BANNERS[0]).gradient;
 
 // ── Streaming services ────────────────────────────────────────────
 
@@ -83,7 +67,7 @@ function NotifIcon({ type }: { type: AppNotification['type'] }) {
     case 'friend_accept':  return <UserPlus className={`${cls} text-blue-400`} />;
     case 'post_like':      return <Heart className={`${cls} text-red-400`} />;
     case 'post_reply':     return <MessageCircle className={`${cls} text-green-400`} />;
-    case 'friend_watched': return <Film className={`${cls} text-purple-400`} />;
+    case 'friend_watched': return <Film className={cls} style={{ color: 'var(--reel-accent-hex)' }} />;
     case 'group_invite':   return <Users className={`${cls} text-yellow-400`} />;
     case 'group_message':  return <MessageCircle className={`${cls} text-yellow-400`} />;
     default:               return <Bell className={`${cls} text-zinc-400`} />;
@@ -105,7 +89,7 @@ function timeAgoShort(iso: string): string {
 
 function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`bg-[#111111] border border-[#222222] rounded-2xl p-6 ${className}`}>
+    <div className={`bg-[#0e0e0e] border border-white/[0.07] rounded-2xl p-4 sm:p-6 ${className}`}>
       {children}
     </div>
   );
@@ -115,10 +99,9 @@ function Card({ children, className = '' }: { children: React.ReactNode; classNa
 
 function SectionTitle({ label, icon }: { label: string; icon: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-2.5 mb-5">
-      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: 'var(--reel-accent-hex)' }} />
-      <span className="text-zinc-300 text-xs font-semibold uppercase tracking-wider">{label}</span>
-      <span className="text-zinc-600 ml-auto">{icon}</span>
+    <div className="flex items-center gap-2 mb-5">
+      <span className="text-zinc-600">{icon}</span>
+      <span className="text-zinc-200 text-sm font-semibold">{label}</span>
     </div>
   );
 }
@@ -133,7 +116,7 @@ function Field({
 }) {
   return (
     <div>
-      <label className="block text-zinc-500 text-xs uppercase tracking-wider mb-1.5">{label}</label>
+      <label className="block text-zinc-400 text-xs font-medium mb-1.5">{label}</label>
       <input
         type={type} name={name} value={value} disabled={disabled} onChange={onChange}
         className="w-full bg-[#0a0a0a] border border-[#222] rounded-xl px-4 py-2.5 text-white text-sm
@@ -210,7 +193,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
 
 // ── Main component ────────────────────────────────────────────────
 
-type Tab = 'profile' | 'streaming' | 'notifications' | 'security';
+type Tab = 'profile' | 'streaming' | 'notifications' | 'appearance' | 'security';
 
 export function ProfileandSettingsTab() {
   const navigate = useNavigate();
@@ -227,11 +210,81 @@ export function ProfileandSettingsTab() {
   const [activeTab, setActiveTab] = useState<Tab>('profile');
 
   // ── Profile data ─────────────────────────────────────────────────
-  const [profile, setProfile] = useState({ displayName: '', username: '', bio: '', email: '', avatarUrl: '', bannerBg: 'default' });
-  const [draft, setDraft]     = useState({ displayName: '', username: '', bio: '', email: '', avatarUrl: '', bannerBg: 'default' });
+  const [profile, setProfile] = useState({ displayName: '', username: '', bio: '', email: '', avatarUrl: '' });
+  const [draft, setDraft]     = useState({ displayName: '', username: '', bio: '', email: '', avatarUrl: '' });
   const [editing, setEditing] = useState(false);
   const [saving, setSaving]   = useState(false);
   const [emailSaving, setEmailSaving] = useState(false);
+
+  // ── Profile banner ────────────────────────────────────────────────
+  const BANNER_LS_KEY = `reel-banner-${userId}`;
+  const [bannerUrl, setBannerUrl]               = useState<string | null>(() => localStorage.getItem(`reel-banner-${userId}`));
+  const [bannerQuery, setBannerQuery]           = useState('');
+  const [bannerResults, setBannerResults]       = useState<Movie[]>([]);
+  const [bannerSearching, setBannerSearching]   = useState(false);
+  const [bannerSaving, setBannerSaving]         = useState(false);
+  const [selectedBannerMovie, setSelectedBannerMovie] = useState<Movie | null>(null);
+  const [movieBackdrops, setMovieBackdrops]     = useState<string[]>([]);
+  const [backdropsLoading, setBackdropsLoading] = useState(false);
+  const bannerDebounceRef                       = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  async function runBannerSearch(q: string) {
+    if (!q.trim()) { setBannerResults([]); setBannerSearching(false); return; }
+    setBannerSearching(true);
+    const results = await searchMovies(q);
+    setBannerResults(results.filter(m => m.backdrop));
+    setBannerSearching(false);
+  }
+
+  function handleBannerQueryChange(q: string) {
+    setBannerQuery(q);
+    setSelectedBannerMovie(null);
+    setMovieBackdrops([]);
+    if (bannerDebounceRef.current) clearTimeout(bannerDebounceRef.current);
+    if (!q.trim()) { setBannerResults([]); return; }
+    bannerDebounceRef.current = setTimeout(() => runBannerSearch(q), 2000);
+  }
+
+  function handleBannerKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter') {
+      if (bannerDebounceRef.current) clearTimeout(bannerDebounceRef.current);
+      runBannerSearch(bannerQuery);
+    }
+  }
+
+  async function handleSelectBannerMovie(movie: Movie) {
+    setSelectedBannerMovie(movie);
+    setBannerResults([]);
+    setBannerQuery('');
+    setBackdropsLoading(true);
+    const backdrops = await getMovieBackdrops(movie.id, movie.type ?? 'movie');
+    setMovieBackdrops(backdrops.length ? backdrops : (movie.backdrop ? [movie.backdrop] : []));
+    setBackdropsLoading(false);
+  }
+
+  async function handleSetBanner(url: string) {
+    setBannerSaving(true);
+    const r = await updateProfileBanner(userId, url);
+    if (r.success) {
+      setBannerUrl(url);
+      localStorage.setItem(BANNER_LS_KEY, url);
+      setSelectedBannerMovie(null);
+      setMovieBackdrops([]);
+      toast.success('Banner updated');
+    } else toast.error('Failed to save banner');
+    setBannerSaving(false);
+  }
+
+  async function handleRemoveBanner() {
+    setBannerSaving(true);
+    const r = await updateProfileBanner(userId, null);
+    if (r.success) {
+      setBannerUrl(null);
+      localStorage.removeItem(BANNER_LS_KEY);
+      toast.success('Banner removed');
+    } else toast.error('Failed to remove banner');
+    setBannerSaving(false);
+  }
 
   // ── Social ────────────────────────────────────────────────────────
   const [socialSettings, setSocialSettings] = useState({ showOnlineStatus: true, showMyStuffPublicly: false });
@@ -287,10 +340,14 @@ export function ProfileandSettingsTab() {
         const p = {
           displayName: d.displayName || '', username: d.username || '',
           bio: d.bio || '', email: d.email || '',
-          avatarUrl: d.avatarUrl || '', bannerBg: d.profileBannerBg || 'default',
+          avatarUrl: d.avatarUrl || '',
         };
         setProfile(p); setDraft(p);
         setSocialSettings({ showOnlineStatus: d.socialSettings?.showOnlineStatus ?? true, showMyStuffPublicly: d.socialSettings?.showMyStuffPublicly ?? false });
+        const loadedBanner = d.profileBannerUrl ?? null;
+        setBannerUrl(loadedBanner);
+        if (loadedBanner) localStorage.setItem(`reel-banner-${userId}`, loadedBanner);
+        else localStorage.removeItem(`reel-banner-${userId}`);
         const s = d.streamingServices || {};
         const resolved = Object.fromEntries(SERVICES.map(sv => [sv.key, !!s[sv.key]]));
         setServices(resolved);
@@ -314,7 +371,7 @@ export function ProfileandSettingsTab() {
     if (activeTab !== 'notifications' || !userId) return;
     setNotifsLoading(true);
     setNotifPrefsLoading(true);
-    getNotifications(userId).then(n => { setNotifs(n); setNotifsLoading(false); });
+    getNotifications(userId).then(n => { setNotifs(n); setNotifsLoading(false); syncToNavBell(n); });
     getNotifPrefs(userId).then(p => { setNotifPrefs(p); setNotifPrefsLoading(false); });
   }, [activeTab, userId]);
 
@@ -326,12 +383,7 @@ export function ProfileandSettingsTab() {
   async function handleSave() {
     setSaving(true);
     try {
-      const res = await fetch(`${BASE_URL}/user/${userId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ displayName: draft.displayName, username: draft.username, bio: draft.bio, profileBannerBg: draft.bannerBg }),
-      });
-      const r = await res.json();
+      const r = await updateUserProfile(userId, { displayName: draft.displayName, username: draft.username, bio: draft.bio });
       if (!r.success) throw new Error(r.message);
       setProfile(p => ({ ...p, ...draft }));
       setEditing(false);
@@ -375,15 +427,36 @@ export function ProfileandSettingsTab() {
   }
 
   // ── Notification handlers ─────────────────────────────────────────
+
+  // Writes updated notifications back to the same localStorage cache the nav bell reads
+  // from, then fires a custom event so the bell re-renders immediately.
+  function syncToNavBell(updated: AppNotification[]) {
+    const key = `rl_notifs:${userId}`;
+    try {
+      const existing: AppNotification[] = JSON.parse(localStorage.getItem(key) || '[]');
+      const map = new Map(existing.map(n => [n.notification_id, n]));
+      for (const n of updated) map.set(n.notification_id, n);
+      const merged = [...map.values()].sort((a, b) =>
+        String(b.created_at).localeCompare(String(a.created_at))
+      );
+      localStorage.setItem(key, JSON.stringify(merged.slice(0, 50)));
+      window.dispatchEvent(new CustomEvent('reelette-notifs-updated'));
+    } catch {}
+  }
+
   async function handleMarkRead(notif: AppNotification) {
     if (notif.read) return;
     await markNotificationRead(userId, notif.notification_id);
-    setNotifs(prev => prev.map(n => n.notification_id === notif.notification_id ? { ...n, read: true } : n));
+    const updated = notifs.map(n => n.notification_id === notif.notification_id ? { ...n, read: true } : n);
+    setNotifs(updated);
+    syncToNavBell(updated);
   }
 
   async function handleMarkAllRead() {
     await markAllNotificationsRead(userId);
-    setNotifs(prev => prev.map(n => ({ ...n, read: true })));
+    const updated = notifs.map(n => ({ ...n, read: true }));
+    setNotifs(updated);
+    syncToNavBell(updated);
     toast.success('All notifications marked as read');
   }
 
@@ -458,57 +531,59 @@ export function ProfileandSettingsTab() {
     );
   }
 
-  const bannerGradient = getBannerGradient(editing ? draft.bannerBg : profile.bannerBg);
+  const { themeId, setThemeId, theme } = useTheme();
   const unreadCount = notifs.filter(n => !n.read).length;
 
-  const TABS: { id: Tab; label: string; badge?: number }[] = [
-    { id: 'profile',       label: 'Profile' },
-    { id: 'streaming',     label: 'Streaming' },
-    { id: 'notifications', label: 'Notifications', badge: unreadCount },
-    { id: 'security',      label: 'Security' },
+  const TABS: { id: Tab; label: string; short: string; badge?: number }[] = [
+    { id: 'profile',       label: 'Profile',       short: 'Profile' },
+    { id: 'streaming',     label: 'Streaming',     short: 'Streams' },
+    { id: 'notifications', label: 'Notifications', short: 'Notifs', badge: unreadCount },
+    { id: 'appearance',    label: 'Appearance',    short: 'Theme' },
+    { id: 'security',      label: 'Security',      short: 'Security' },
   ];
 
   return (
-    <div className="min-h-screen bg-[#090909] relative">
-      {/* Film grain */}
-      <div className="pointer-events-none fixed inset-0 opacity-[0.025] z-0"
-        style={{ backgroundImage: `url(${FILM_GRAIN})` }} />
-      {/* Ambient glow */}
-      <div className="pointer-events-none fixed inset-0 z-0"
-        style={{ background: 'radial-gradient(ellipse at top right, rgba(124,93,189,0.04) 0%, transparent 60%)' }} />
+    <div className="min-h-screen bg-[#080808] relative">
 
       {viewProfileId && <UserProfileModal userId={viewProfileId} onClose={() => setViewProfileId(null)} />}
       {showDeleteModal && <DeleteModal onConfirm={handleDeleteAccount} onCancel={() => setShowDeleteModal(false)} loading={deleteLoading} />}
 
-      <div className="relative z-10 max-w-4xl mx-auto px-4 pb-16">
+      {/* ── Content (constrained) ──────────────────────────────────── */}
+      <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 pt-6 sm:pt-8 pb-16">
 
-        {/* ── Banner + Avatar ────────────────────────────────────────── */}
-        <div className="relative mb-0">
-          {/* Banner */}
-          <div className="h-44 relative overflow-hidden" style={{ background: bannerGradient }}>
-            <div className="absolute inset-0 bg-gradient-to-r from-black/25 to-transparent pointer-events-none" />
-            {/* Scanline texture */}
-            <div className="absolute inset-0 pointer-events-none opacity-[0.05]"
-              style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.3) 2px, rgba(0,0,0,0.3) 4px)' }} />
-            {/* Banner picker — edit mode */}
-            {editing && (
-              <div className="absolute bottom-3 right-4 flex items-center gap-1.5 bg-black/60 backdrop-blur-sm rounded-full px-3 py-1.5">
-                <span className="text-zinc-500 text-[9px] uppercase tracking-widest mr-1">Banner</span>
-                {BANNERS.map(b => (
-                  <button key={b.id} title={b.label} onClick={() => setDraft(p => ({ ...p, bannerBg: b.id }))}
-                    className="w-4 h-4 rounded-full border-2 transition-transform hover:scale-125"
-                    style={{ backgroundColor: b.swatch, borderColor: draft.bannerBg === b.id ? '#fff' : 'transparent' }} />
-                ))}
-              </div>
+        {/* ── Profile hero card — banner + identity, unified ───────── */}
+        <div className="relative rounded-3xl overflow-hidden border border-white/[0.07] mb-6"
+          style={{ boxShadow: '0 26px 70px -30px rgba(0,0,0,0.9)' }}>
+
+          {/* Backdrop layer */}
+          <div className="absolute inset-0">
+            {bannerUrl ? (
+              <img
+                src={bannerUrl}
+                alt="Profile banner"
+                className="w-full h-full object-cover"
+                style={{ objectPosition: 'center 28%' }}
+              />
+            ) : (
+              <div className="w-full h-full"
+                style={{ background: `linear-gradient(135deg, ${theme.accent}42 0%, ${theme.accent}12 34%, #0c0c0c 70%)` }} />
             )}
+            {/* Soft accent bloom, top-right */}
+            <div className="pointer-events-none absolute -top-28 -right-20 w-[460px] h-[460px] rounded-full blur-3xl opacity-25"
+              style={{ background: theme.accent }} />
+            {/* Legibility scrim — keeps text crisp over any banner */}
+            <div className="absolute inset-0"
+              style={{ background: 'linear-gradient(to top, rgba(9,9,9,0.97) 0%, rgba(9,9,9,0.74) 44%, rgba(9,9,9,0.30) 74%, rgba(9,9,9,0.42) 100%)' }} />
           </div>
 
-          {/* Avatar + name row */}
-          <div className="px-6 pb-5 bg-[#090909]">
-            <div className="flex items-end justify-between" style={{ marginTop: -44 }}>
+          {/* Identity row — pushed to the bottom of the card, fills the height */}
+          <div className="relative px-5 sm:px-8 pt-24 sm:pt-32 pb-6 flex items-end justify-between gap-4 flex-wrap">
+            <div className="flex items-end gap-4 sm:gap-5 min-w-0 flex-1">
               {/* Avatar */}
-              <div className="relative group z-10">
-                <div className="w-28 h-28 rounded-full bg-[#1a1a1a] border-4 border-[#090909] overflow-hidden shadow-2xl">
+              <div className="relative group shrink-0">
+                <div
+                  className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-[#141414] overflow-hidden ring-1 ring-white/10"
+                  style={{ boxShadow: `0 0 0 4px #0b0b0b, 0 14px 44px ${theme.accent}45` }}>
                   {profile.avatarUrl
                     ? <img src={profile.avatarUrl} alt="avatar" className="w-full h-full object-cover" />
                     : <div className="w-full h-full flex items-center justify-center text-zinc-700"><User size={40} /></div>
@@ -516,75 +591,79 @@ export function ProfileandSettingsTab() {
                 </div>
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="absolute bottom-0.5 right-0.5 w-8 h-8 rounded-full flex items-center justify-center shadow-lg transition-all opacity-0 group-hover:opacity-100 active:scale-95"
-                  style={{ background: 'var(--reel-accent-hex)' }}
+                  className="absolute -bottom-1.5 -right-1.5 w-8 h-8 rounded-xl flex items-center justify-center shadow-lg transition-all opacity-100 md:opacity-0 md:group-hover:opacity-100 active:scale-95"
+                  style={{ background: 'var(--reel-accent-hex)', color: 'var(--reel-accent-text, #080808)' }}
                   title="Change photo"
                 >
-                  <Camera size={14} className="text-white" />
+                  <Camera size={14} />
                 </button>
                 <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
               </div>
 
-              {/* Edit / Save buttons */}
-              <div className="flex items-center gap-2 pb-1">
+              {/* Name + username + bio */}
+              <div className="flex-1 min-w-0 pb-1">
                 {editing ? (
-                  <>
-                    <button
-                      onClick={() => { setDraft(profile); setEditing(false); }}
-                      className="flex items-center gap-1.5 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-sm transition-all"
-                    >
-                      <X size={14} /> Cancel
-                    </button>
-                    <button
-                      onClick={handleSave} disabled={saving}
-                      className="flex items-center gap-1.5 px-4 py-2 text-white rounded-xl text-sm font-semibold transition-all disabled:opacity-60"
-                      style={{ background: 'var(--reel-accent-hex)' }}
-                    >
-                      {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                      Save
-                    </button>
-                  </>
+                  <input
+                    name="displayName" value={draft.displayName} onChange={handleChange}
+                    className="bg-transparent text-white text-2xl sm:text-3xl font-bold w-full focus:outline-none border-b pb-0.5 transition-colors"
+                    style={{ borderBottomColor: 'var(--reel-accent-hex)' }}
+                  />
                 ) : (
-                  <button
-                    onClick={() => setEditing(true)}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-sm transition-all border border-zinc-700"
-                  >
-                    <Edit2 size={14} /> Edit profile
-                  </button>
+                  <h1 className="text-white text-2xl sm:text-3xl font-bold truncate tracking-tight"
+                    style={{ textShadow: '0 2px 12px rgba(0,0,0,0.55)' }}>
+                    {profile.displayName || profile.username}
+                  </h1>
                 )}
+                <p className="text-sm mt-1 font-semibold" style={{ color: theme.accent }}>@{profile.username}</p>
+                {!editing && profile.bio && <p className="text-zinc-300/90 text-sm mt-1.5 line-clamp-2 max-w-md">{profile.bio}</p>}
               </div>
             </div>
 
-            {/* Name / username / bio */}
-            <div className="mt-3 space-y-0.5">
+            {/* Edit / Save buttons */}
+            <div className="flex items-center gap-2 shrink-0 pb-1">
               {editing ? (
-                <input
-                  name="displayName" value={draft.displayName} onChange={handleChange}
-                  className="bg-transparent text-white text-xl font-semibold w-full focus:outline-none border-b border-zinc-700 pb-0.5 transition-colors"
-                  style={{ borderBottomColor: 'var(--reel-accent-hex)' }}
-                />
+                <>
+                  <button
+                    onClick={() => { setDraft(profile); setEditing(false); }}
+                    className="flex items-center gap-1.5 px-3.5 py-2 bg-white/10 hover:bg-white/[0.16] text-zinc-200 rounded-xl text-xs font-medium transition-all backdrop-blur-md"
+                  >
+                    <X size={13} /> Cancel
+                  </button>
+                  <button
+                    onClick={handleSave} disabled={saving}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all disabled:opacity-60"
+                    style={{ background: 'var(--reel-accent-hex)', color: 'var(--reel-accent-text, #080808)' }}
+                  >
+                    {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+                    Save
+                  </button>
+                </>
               ) : (
-                <h1 className="text-white text-xl font-semibold">{profile.displayName || profile.username}</h1>
+                <button
+                  onClick={() => setEditing(true)}
+                  className="flex items-center gap-1.5 px-3.5 py-2 bg-white/10 hover:bg-white/[0.16] text-white rounded-xl text-xs font-medium transition-all border border-white/10 backdrop-blur-md"
+                >
+                  <Edit2 size={13} /> Edit profile
+                </button>
               )}
-              <p className="text-zinc-500 text-sm">@{profile.username}</p>
-              {!editing && profile.bio && <p className="text-zinc-400 text-sm mt-1 max-w-lg">{profile.bio}</p>}
             </div>
           </div>
         </div>
 
-        {/* ── Tab bar ───────────────────────────────────────────────── */}
-        <div className="flex gap-1 bg-[#0a0a0a] rounded-xl p-1 mb-6 mt-3 border border-[#1e1e1e]">
+        {/* ── Tab bar ─────────────────────────────────────────────── */}
+        <div className="flex gap-1 bg-[#0a0a0a] rounded-xl p-1 mb-6 border border-[#1e1e1e]">
           {TABS.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`relative flex-1 flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150
+              className={`relative flex-1 flex items-center justify-center gap-1.5 px-1 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-150
                 ${activeTab === tab.id
                   ? 'bg-[#1e1e1e] text-white shadow-sm'
                   : 'text-zinc-500 hover:text-zinc-300'
                 }`}
             >
-              {tab.label}
+              <span className="sm:hidden">{tab.short}</span>
+              <span className="hidden sm:inline">{tab.label}</span>
               {(tab.badge ?? 0) > 0 && (
                 <span
                   className="w-4 h-4 flex items-center justify-center rounded-full text-[9px] font-bold text-white"
@@ -612,7 +691,7 @@ export function ProfileandSettingsTab() {
                   disabled={!editing} onChange={handleChange} />
               </div>
               <div className="mt-4">
-                <label className="block text-zinc-500 text-xs uppercase tracking-wider mb-1.5">Bio</label>
+                <label className="block text-zinc-400 text-xs font-medium mb-1.5">Bio</label>
                 <textarea
                   name="bio" value={editing ? draft.bio : profile.bio} disabled={!editing}
                   onChange={e => setDraft(p => ({ ...p, bio: e.target.value }))}
@@ -624,13 +703,127 @@ export function ProfileandSettingsTab() {
                 />
               </div>
               <div className="mt-4">
-                <label className="block text-zinc-500 text-xs uppercase tracking-wider mb-1.5">Email</label>
+                <label className="block text-zinc-400 text-xs font-medium mb-1.5">Email</label>
                 <div className="flex items-center gap-3 px-4 py-2.5 bg-[#0a0a0a] border border-[#222] rounded-xl">
                   <Mail size={15} className="text-zinc-600 shrink-0" />
                   <span className="text-zinc-400 text-sm flex-1">{profile.email || '—'}</span>
                   <span className="text-[10px] px-2 py-0.5 rounded-full border text-zinc-500 border-zinc-700">verified</span>
                 </div>
               </div>
+            </Card>
+
+            {/* Profile banner */}
+            <Card>
+              <SectionTitle label="Profile Banner" icon={<Film size={16} />} />
+
+              {/* Current banner preview */}
+              <div className="relative w-full h-28 rounded-xl overflow-hidden mb-4 bg-[#0a0a0a] border border-[#222]">
+                {bannerUrl ? (
+                  <>
+                    <img src={bannerUrl} alt="Profile banner" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                    <button
+                      onClick={handleRemoveBanner}
+                      disabled={bannerSaving}
+                      className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/70 hover:bg-black flex items-center justify-center text-zinc-400 hover:text-white transition-colors"
+                    >
+                      <X size={14} />
+                    </button>
+                  </>
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center gap-2">
+                    <Film size={22} className="text-zinc-700" />
+                    <span className="text-zinc-600 text-xs">No banner set — search a movie below</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Search input — always visible unless viewing backdrop gallery */}
+              {!selectedBannerMovie && (
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={bannerQuery}
+                    onChange={e => handleBannerQueryChange(e.target.value)}
+                    onKeyDown={handleBannerKeyDown}
+                    placeholder="Search a movie or show…"
+                    className="w-full bg-[#0a0a0a] border border-[#222] rounded-xl px-4 py-2.5 text-white text-sm
+                      focus:outline-none transition-all placeholder-zinc-700"
+                    onFocus={e => { e.currentTarget.style.borderColor = 'var(--reel-accent-hex)'; }}
+                    onBlur={e => { e.currentTarget.style.borderColor = '#222'; }}
+                  />
+                  {bannerSearching && (
+                    <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-zinc-500" />
+                  )}
+                </div>
+              )}
+
+              {/* Movie list — clean rows, click to load all backdrops */}
+              {!selectedBannerMovie && bannerResults.length > 0 && (
+                <div className="mt-2 rounded-xl border border-[#222] overflow-hidden">
+                  {bannerResults.slice(0, 8).map((m, i) => (
+                    <button
+                      key={m.id}
+                      onClick={() => handleSelectBannerMovie(m)}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 hover:bg-white/[0.05] transition-colors text-left ${i > 0 ? 'border-t border-[#1a1a1a]' : ''}`}
+                    >
+                      {m.poster
+                        ? <img src={m.poster} alt={m.title} className="w-9 h-[54px] object-cover rounded-md shrink-0" />
+                        : <div className="w-9 h-[54px] bg-[#1a1a1a] rounded-md shrink-0 flex items-center justify-center"><Film size={14} className="text-zinc-600" /></div>
+                      }
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white text-sm font-medium truncate">{m.title}</p>
+                        <p className="text-zinc-500 text-xs">{m.year}{m.type === 'show' ? ' · Series' : ''}</p>
+                      </div>
+                      <ChevronRight size={16} className="text-zinc-600 shrink-0" />
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {!selectedBannerMovie && bannerResults.length === 0 && bannerQuery.trim() && !bannerSearching && (
+                <p className="text-zinc-600 text-xs mt-3">No results found.</p>
+              )}
+
+              {/* Backdrop gallery for the selected movie */}
+              {selectedBannerMovie && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <button
+                      onClick={() => { setSelectedBannerMovie(null); setMovieBackdrops([]); }}
+                      className="flex items-center gap-1 text-xs text-zinc-500 hover:text-white transition-colors shrink-0"
+                    >
+                      <ChevronLeft size={14} /> Back
+                    </button>
+                    <span className="text-zinc-300 text-sm font-medium truncate">{selectedBannerMovie.title}</span>
+                    <span className="text-zinc-600 text-xs ml-auto shrink-0">
+                      {backdropsLoading ? '…' : `${movieBackdrops.length} backdrop${movieBackdrops.length !== 1 ? 's' : ''}`}
+                    </span>
+                  </div>
+
+                  {backdropsLoading ? (
+                    <div className="flex items-center justify-center py-10 gap-2 text-zinc-600 text-sm">
+                      <Loader2 size={16} className="animate-spin" /> Loading…
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-80 overflow-y-auto pr-1">
+                      {movieBackdrops.map((url, i) => (
+                        <button
+                          key={i}
+                          onClick={() => handleSetBanner(url)}
+                          disabled={bannerSaving}
+                          className="relative rounded-lg overflow-hidden border-2 border-transparent hover:border-[var(--reel-accent-hex)] transition-all group disabled:opacity-50"
+                        >
+                          <img src={url} alt={`Backdrop ${i + 1}`} className="w-full aspect-video object-cover" loading="lazy" />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            {bannerSaving ? <Loader2 size={16} className="animate-spin text-white" /> : <Check size={18} className="text-white" />}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </Card>
 
             {/* Social settings */}
@@ -650,7 +843,7 @@ export function ProfileandSettingsTab() {
 
               {/* Friends */}
               <div className="border-t border-[#1e1e1e] pt-5">
-                <p className="text-zinc-500 text-xs uppercase tracking-wider mb-3">
+                <p className="text-zinc-400 text-sm font-medium mb-3">
                   Friends {friendsLoaded && `(${friends.length})`}
                 </p>
                 {!friendsLoaded ? (
@@ -705,7 +898,7 @@ export function ProfileandSettingsTab() {
             <p className="text-zinc-500 text-sm mb-6">
               Select the services you subscribe to. Your Discover page will filter content to these providers.
             </p>
-            <div className="grid grid-cols-4 gap-5">
+            <div className="grid grid-cols-4 gap-2 sm:gap-5">
               {SERVICES.map(svc => {
                 const active  = !!services[svc.key];
                 const logoKey = KEY_TO_DISPLAY[svc.key];
@@ -731,7 +924,7 @@ export function ProfileandSettingsTab() {
                         <div className="absolute inset-0 rounded-2xl ring-2 ring-white/20" />
                       )}
                     </div>
-                    <span className="text-xs font-semibold tracking-wide" style={{ color: active ? '#fff' : '#6b7280' }}>
+                    <span className="text-xs font-semibold" style={{ color: active ? '#fff' : '#6b7280' }}>
                       {svc.label}
                     </span>
                     <div style={{
@@ -767,7 +960,7 @@ export function ProfileandSettingsTab() {
             <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-6">
               {/* In-App column */}
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500 mb-3">In-App</p>
+                <p className="text-xs font-semibold text-zinc-400 mb-3">In-App</p>
                 <div className="space-y-3">
                   {[
                     { key: 'friendActivity', label: 'Friend Activity' },
@@ -787,7 +980,7 @@ export function ProfileandSettingsTab() {
               </div>
               {/* Email column */}
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500 mb-3">Email</p>
+                <p className="text-xs font-semibold text-zinc-400 mb-3">Email</p>
                 <div className="space-y-3">
                   {[
                     { key: 'friendActivity', label: 'Friend Activity' },
@@ -862,6 +1055,94 @@ export function ProfileandSettingsTab() {
         )}
 
         {/* ═══════════════════════════════════════════════════════════ */}
+        {/* APPEARANCE TAB                                              */}
+        {/* ═══════════════════════════════════════════════════════════ */}
+        {activeTab === 'appearance' && (
+          <div className="space-y-5">
+            <Card>
+              <SectionTitle label="App theme" icon={<Palette size={16} />} />
+              <p className="text-zinc-500 text-sm mb-6">
+                Choose a visual theme. The accent color, background tint, and ambient effects change site‑wide instantly.
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {THEMES.map(t => {
+                  const active = themeId === t.id;
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => {
+                        setThemeId(t.id);
+                        bustPublicProfileCache(userId);
+                        updateUserProfile(userId, { themeId: t.id });
+                      }}
+                      className={`relative rounded-2xl overflow-hidden text-left transition-all duration-200 focus:outline-none ${
+                        active ? 'ring-2 scale-[1.02]' : 'ring-1 ring-white/[0.08] hover:ring-white/20 hover:scale-[1.01]'
+                      }`}
+                      style={{ ringColor: active ? t.accent : undefined } as React.CSSProperties}
+                    >
+                      {/* Preview gradient */}
+                      <div className="h-20 w-full relative" style={{ background: t.cardGradient }}>
+                        {/* Accent dot */}
+                        <div className="absolute top-3 left-3 w-5 h-5 rounded-full shadow-lg"
+                          style={{ background: t.accent, boxShadow: `0 0 10px ${t.accent}80` }} />
+                        {/* Active checkmark */}
+                        {active && (
+                          <div className="absolute top-3 right-3 w-5 h-5 rounded-full flex items-center justify-center"
+                            style={{ background: t.accent }}>
+                            <Check size={11} className="text-black font-bold" />
+                          </div>
+                        )}
+                        {/* Effect label */}
+                        {t.effect && (
+                          <div className="absolute bottom-2 right-2 text-[9px] font-medium opacity-50"
+                            style={{ color: t.accent }}>
+                            {t.effect}
+                          </div>
+                        )}
+                      </div>
+                      {/* Name + font sample */}
+                      <div className="px-3 py-2.5 bg-[#0d0d0d]">
+                        <p className="text-white text-xs font-semibold leading-none"
+                          style={{ fontFamily: t.fontFamily }}>{t.name}</p>
+                        <p className="text-zinc-600 text-[10px] mt-0.5 truncate"
+                          style={{ fontFamily: t.fontFamily }}>{t.tagline}</p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </Card>
+
+            {/* Live preview strip */}
+            <Card>
+              <SectionTitle label="Current accent" icon={<Palette size={16} />} />
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl shadow-lg shrink-0"
+                  style={{ background: theme.accent, boxShadow: `0 0 24px ${theme.accent}60` }} />
+                <div>
+                  <p className="text-white text-sm font-semibold" style={{ fontFamily: theme.fontFamily }}>{theme.name}</p>
+                  <p className="text-zinc-500 text-xs mt-0.5" style={{ fontFamily: theme.fontFamily }}>{theme.tagline}</p>
+                  <p className="text-zinc-600 text-[11px] mt-1 font-mono">{theme.accent}</p>
+                </div>
+              </div>
+              <div className="mt-4 flex gap-2 flex-wrap">
+                {(['bg', 'button', 'ring'] as const).map(role => (
+                  <div key={role} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#0a0a0a] border border-[#1e1e1e]">
+                    <div className="w-4 h-4 rounded-md shrink-0"
+                      style={{
+                        background:  role === 'bg'     ? `${theme.accent}22` : 'transparent',
+                        border:      role === 'ring'   ? `2px solid ${theme.accent}` : role === 'button' ? 'none' : `1px solid ${theme.accent}44`,
+                        boxShadow:   role === 'button' ? `inset 0 0 0 100px ${theme.accent}` : undefined,
+                      }} />
+                    <span className="text-zinc-500 text-[11px] capitalize">{role}</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════════ */}
         {/* SECURITY TAB                                                */}
         {/* ═══════════════════════════════════════════════════════════ */}
         {activeTab === 'security' && (
@@ -886,9 +1167,9 @@ export function ProfileandSettingsTab() {
                 <button
                   onClick={handleEmailUpdate}
                   disabled={emailSaving || !newEmail.trim()}
-                  className="px-5 py-2.5 text-white rounded-xl text-sm font-semibold transition-all
+                  className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all
                     disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
-                  style={{ background: 'var(--reel-accent-hex)' }}
+                  style={{ background: 'var(--reel-accent-hex)', color: 'var(--reel-accent-text, #080808)' }}
                 >
                   {emailSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
                   Update

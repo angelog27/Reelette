@@ -1,10 +1,11 @@
 # firebase_helper.py
 import firebase_admin
+import html as _html
 import requests
 import os
 import tempfile
 import json
-import resend 
+import resend
 from firebase_admin import credentials, firestore, auth
 from datetime import datetime
 
@@ -55,6 +56,7 @@ def create_user(email, password, username):
         user_ref = db.collection('users').document(user.uid)
         user_ref.set({
             'username': username,
+            'username_lower': username.lower(),
             'email': email,
             'displayName': username,
             'bio': '',
@@ -145,32 +147,16 @@ def verify_user(email, password):
         }
 
 def send_password_reset_email(email):
+    # Always return a generic response to avoid leaking whether an email is registered.
     try:
         url = f"https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key={FIREBASE_WEB_API_KEY}"
-
-        response = requests.post(url, json={
-            "requestType": "PASSWORD_RESET",
-            "email": email
-        })
-
-        data = response.json()
-
-        if response.status_code != 200 or "error" in data:
-            return {
-                "success": False,
-                "message": data.get("error", {}).get("message", "Failed to send reset email")
-            }
-
-        return {
-            "success": True,
-            "message": "Password reset email sent"
-        }
-
-    except Exception as e:
-        return {
-            "success": False,
-            "message": str(e)
-        }
+        requests.post(url, json={"requestType": "PASSWORD_RESET", "email": email})
+    except Exception:
+        pass
+    return {
+        "success": True,
+        "message": "If that email is registered, a reset link has been sent."
+    }
 
 def update_streaming_services(user_id, services):
     #updating our users streaming service prefrences in firestore.
@@ -411,7 +397,8 @@ def add_watched_movie(user_id, movie, user_rating, comment=''):
             'services': movie.get('services', []),
             'user_rating': user_rating,
             'comment': comment,
-            'watched_at': datetime.now()
+            'watched_at': datetime.now(),
+            'media_type': movie.get('media_type', 'movie'),
         }
         (db.collection('users').document(user_id)
            .collection('watched_movies').document(str(movie['movie_id']))
@@ -500,6 +487,48 @@ def create_post(user_id, username, message, movie_title, movie_id, movie_poster,
     except Exception as e:
         return {'success': False, 'message': str(e)}
 
+def create_repost(reposter_id, reposter_username, original_post_id, repost_comment=''):
+    try:
+        original_ref = db.collection('posts').document(original_post_id)
+        original_doc = original_ref.get()
+        if not original_doc.exists:
+            return {'success': False, 'message': 'Original post not found'}
+        original = original_doc.to_dict()
+        # prevent reposting a repost (only allow reposting original posts)
+        if original.get('is_repost'):
+            original_post_id = original.get('repost_of', original_post_id)
+            original_root_ref = db.collection('posts').document(original_post_id)
+            original_root_doc = original_root_ref.get()
+            if original_root_doc.exists:
+                original = original_root_doc.to_dict()
+        orig_ts = original.get('created_at')
+        orig_ts_str = orig_ts.isoformat() if hasattr(orig_ts, 'isoformat') else str(orig_ts) if orig_ts else ''
+        post_ref = db.collection('posts').document()
+        post_ref.set({
+            'post_id': post_ref.id,
+            'user_id': reposter_id,
+            'username': reposter_username,
+            'message': repost_comment,
+            'movie_title': original.get('movie_title', ''),
+            'movie_id': str(original.get('movie_id', '')),
+            'movie_poster': original.get('movie_poster', ''),
+            'rating': 0,
+            'likes': 0,
+            'liked_by': [],
+            'created_at': datetime.now(),
+            'is_repost': True,
+            'repost_of': original_post_id,
+            'original_user_id': original.get('user_id', ''),
+            'original_username': original.get('username', ''),
+            'original_message': original.get('message', ''),
+            'original_rating': original.get('rating', 0),
+            'original_created_at': orig_ts_str,
+        })
+        return {'success': True, 'post_id': post_ref.id}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+
 # pulls the most recent posts from the feed, newest first.
 # when `since` is an ISO timestamp, only returns posts newer than that timestamp.
 def get_feed(limit=20, since=None):
@@ -554,12 +583,60 @@ def add_reply(post_id, user_id, username, message):
             'user_id': user_id,
             'username': username,
             'message': message,
-            'created_at': datetime.now()
+            'created_at': datetime.now(),
+            'likes': 0,
+            'liked_by': [],
+            'dislikes': 0,
+            'disliked_by': [],
         })
         post_ref.update({'reply_count': firestore.Increment(1)})
         return {'success': True, 'reply_id': reply_ref.id}
     except Exception as e:
         return {'success': False, 'message': str(e)}
+
+def toggle_reply_like(post_id, reply_id, user_id):
+    try:
+        ref = db.collection('posts').document(post_id).collection('replies').document(reply_id)
+        doc = ref.get()
+        if not doc.exists:
+            return {'success': False, 'message': 'Reply not found'}
+        data = doc.to_dict()
+        liked_by = data.get('liked_by', [])
+        disliked_by = data.get('disliked_by', [])
+        if user_id in liked_by:
+            ref.update({'liked_by': firestore.ArrayRemove([user_id]), 'likes': firestore.Increment(-1)})
+        else:
+            updates = {'liked_by': firestore.ArrayUnion([user_id]), 'likes': firestore.Increment(1)}
+            if user_id in disliked_by:
+                updates['disliked_by'] = firestore.ArrayRemove([user_id])
+                updates['dislikes'] = firestore.Increment(-1)
+            ref.update(updates)
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+
+def toggle_reply_dislike(post_id, reply_id, user_id):
+    try:
+        ref = db.collection('posts').document(post_id).collection('replies').document(reply_id)
+        doc = ref.get()
+        if not doc.exists:
+            return {'success': False, 'message': 'Reply not found'}
+        data = doc.to_dict()
+        liked_by = data.get('liked_by', [])
+        disliked_by = data.get('disliked_by', [])
+        if user_id in disliked_by:
+            ref.update({'disliked_by': firestore.ArrayRemove([user_id]), 'dislikes': firestore.Increment(-1)})
+        else:
+            updates = {'disliked_by': firestore.ArrayUnion([user_id]), 'dislikes': firestore.Increment(1)}
+            if user_id in liked_by:
+                updates['liked_by'] = firestore.ArrayRemove([user_id])
+                updates['likes'] = firestore.Increment(-1)
+            ref.update(updates)
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
 
 # fetches all replies for a given post, oldest first
 def get_replies(post_id):
@@ -591,6 +668,32 @@ def delete_post(post_id, user_id):
         return {'success': False, 'message': str(e)}
 
 
+def admin_delete_post(post_id):
+    """Delete any post regardless of owner. Called only by the admin endpoint."""
+    try:
+        ref = db.collection('posts').document(post_id)
+        if not ref.get().exists:
+            return {'success': False, 'message': 'Post not found'}
+        ref.delete()
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+
+def admin_delete_reply(post_id, reply_id):
+    """Delete any reply regardless of owner. Called only by the admin endpoint."""
+    try:
+        post_ref  = db.collection('posts').document(post_id)
+        reply_ref = post_ref.collection('replies').document(reply_id)
+        if not reply_ref.get().exists:
+            return {'success': False, 'message': 'Reply not found'}
+        reply_ref.delete()
+        post_ref.update({'reply_count': firestore.Increment(-1)})
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+
 def get_post(post_id):
     try:
         doc = db.collection('posts').document(post_id).get()
@@ -604,10 +707,12 @@ def get_post(post_id):
 def update_user_profile(user_id, data):
     """Update editable profile fields: displayName, bio, username, phone, socialSettings"""
     try:
-        allowed = {'displayName', 'bio', 'username', 'phone', 'profileBannerBg', 'socialSettings'}
+        allowed = {'displayName', 'bio', 'username', 'phone', 'profileBannerBg', 'profileBannerUrl', 'themeId', 'socialSettings'}
         update_data = {k: v for k, v in data.items() if k in allowed}
         if not update_data:
             return {'success': False, 'message': 'No valid fields to update'}
+        if 'username' in update_data:
+            update_data['username_lower'] = update_data['username'].lower()
         db.collection('users').document(user_id).update(update_data)
         if 'displayName' in update_data:
             auth.update_user(user_id, display_name=update_data['displayName'])
@@ -617,26 +722,67 @@ def update_user_profile(user_id, data):
 
 
 def search_users(query, exclude_user_id=None, limit=10):
-    """Prefix search on username field — Firestore range query"""
+    """Case-insensitive prefix search on username.
+    Searches username_lower (new users) AND raw username with multiple case
+    variants to cover existing users without the normalized field.
+    """
     try:
-        query_lower = query.lower()
-        docs = (db.collection('users')
-                  .where('username', '>=', query_lower)
-                  .where('username', '<=', query_lower + '\uf8ff')
-                  .select(['username', 'displayName', 'avatarUrl'])
-                  .limit(limit)
-                  .stream())
+        seen_ids = set()
         users = []
-        for doc in docs:
-            if doc.id == exclude_user_id:
-                continue
-            d = doc.to_dict()
-            users.append({
-                'user_id': doc.id,
-                'username': d.get('username', ''),
-                'displayName': d.get('displayName', d.get('username', ''))
-            })
-        return users
+        sentinel = '\uf8ff'
+
+        def _collect(stream):
+            for doc in stream:
+                if doc.id == exclude_user_id or doc.id in seen_ids:
+                    continue
+                seen_ids.add(doc.id)
+                d = doc.to_dict()
+                users.append({
+                    'user_id': doc.id,
+                    'username': d.get('username', ''),
+                    'displayName': d.get('displayName', d.get('username', ''))
+                })
+
+        q_lower = query.strip().lower()
+        q_upper = query.strip().upper()
+        q_orig  = query.strip()
+
+        # Primary: username_lower covers new users regardless of registration casing
+        _collect(db.collection('users')
+                   .where('username_lower', '>=', q_lower)
+                   .where('username_lower', '<=', q_lower + sentinel)
+                   .select(['username', 'displayName', 'avatarUrl', 'username_lower'])
+                   .limit(limit)
+                   .stream())
+
+        # Fallback for existing users without username_lower: lowercase variant
+        if len(users) < limit:
+            _collect(db.collection('users')
+                       .where('username', '>=', q_lower)
+                       .where('username', '<=', q_lower + sentinel)
+                       .select(['username', 'displayName', 'avatarUrl'])
+                       .limit(limit)
+                       .stream())
+
+        # Uppercase variant — catches ALL-CAPS usernames like TJACK
+        if len(users) < limit and q_upper != q_lower:
+            _collect(db.collection('users')
+                       .where('username', '>=', q_upper)
+                       .where('username', '<=', q_upper + sentinel)
+                       .select(['username', 'displayName', 'avatarUrl'])
+                       .limit(limit)
+                       .stream())
+
+        # As-typed variant — catches mixed-case like TJack
+        if len(users) < limit and q_orig != q_lower and q_orig != q_upper:
+            _collect(db.collection('users')
+                       .where('username', '>=', q_orig)
+                       .where('username', '<=', q_orig + sentinel)
+                       .select(['username', 'displayName', 'avatarUrl'])
+                       .limit(limit)
+                       .stream())
+
+        return users[:limit]
     except Exception as e:
         print(f"Error searching users: {e}")
         return []
@@ -901,7 +1047,7 @@ def get_user_public_profile(user_id):
     """Return a user's public profile including computed stats"""
     try:
         doc = db.collection('users').document(user_id).get(
-            field_paths=['username', 'displayName', 'bio', 'avatarUrl', 'createdAt', 'lastSeen', 'socialSettings']
+            field_paths=['username', 'displayName', 'bio', 'avatarUrl', 'createdAt', 'lastSeen', 'socialSettings', 'profileBannerUrl', 'themeId']
         )
         if not doc.exists:
             return None
@@ -924,6 +1070,8 @@ def get_user_public_profile(user_id):
             'friendsCount':        friends_count,
             'showMyStuffPublicly': social.get('showMyStuffPublicly', False),
             'showOnlineStatus':    social.get('showOnlineStatus', True),
+            'profileBannerUrl':    d.get('profileBannerUrl'),
+            'themeId':             d.get('themeId', 'default'),
         }
     except Exception as e:
         print(f"Error getting public profile: {e}")
@@ -1051,25 +1199,40 @@ def get_friends_roulette_history(user_id, limit=1):
     """Return the most recent `limit` spins for each of the user's friends."""
     try:
         friends = get_friends(user_id)
-        result = []
+        if not friends:
+            return []
+
+        # Fetch all roulette histories in parallel
+        friends_with_spins = []
         for friend in friends:
             friend_id = friend.get('friend_id')
             if not friend_id:
                 continue
             spins = get_roulette_history(friend_id, limit=limit)
             if spins:
-                # Look up the friend's avatar from their user document directly
-                try:
-                    user_doc = db.collection('users').document(friend_id).get()
-                    avatar_url = user_doc.to_dict().get('avatarUrl') if user_doc.exists else None
-                except Exception:
-                    avatar_url = None
-                result.append({
-                    'friend_id': friend_id,
-                    'friend_username': friend.get('friend_username', ''),
-                    'avatarUrl': avatar_url,
-                    'spins': spins,
-                })
+                friends_with_spins.append((friend, spins))
+
+        if not friends_with_spins:
+            return []
+
+        # Batch-fetch all avatar docs in a single Firestore round-trip
+        friend_ids = [f.get('friend_id') for f, _ in friends_with_spins]
+        refs = [db.collection('users').document(fid) for fid in friend_ids]
+        docs = db.get_all(refs)
+        avatar_map = {}
+        for doc in docs:
+            if doc.exists:
+                avatar_map[doc.id] = doc.to_dict().get('avatarUrl')
+
+        result = []
+        for friend, spins in friends_with_spins:
+            friend_id = friend.get('friend_id')
+            result.append({
+                'friend_id': friend_id,
+                'friend_username': friend.get('friend_username', ''),
+                'avatarUrl': avatar_map.get(friend_id),
+                'spins': spins,
+            })
         return result
     except Exception as e:
         print(f"Error getting friends roulette history: {e}")
@@ -1265,7 +1428,7 @@ def send_welcome_email(user_id):
             "to": email,
             "subject": "Welcome to Reelette!🎬",
             "html": f"""
-                <h1>Welcome to Reelette, {email.split('@')[0]}! 🎉</h1>
+                <h1>Welcome to Reelette, {_html.escape(email.split('@')[0])}! 🎉</h1>
                 <p>Thanks for signing up. We're excited to have you join our movie loving community!</p>
                 <p>Here are some tips to get started:</p>
                 <ul>
@@ -1284,7 +1447,7 @@ def send_welcome_email(user_id):
 def get_user_id_by_username(username: str):
     try:
         docs = (db.collection('users')
-                  .where('username', '==', username.lower())
+                  .where('username_lower', '==', username.lower())
                   .limit(1)
                   .stream())
         for doc in docs:
@@ -1303,6 +1466,8 @@ def send_tagged_in_post_email(to_user_id: str, tagger_username: str,
         if not email:
             return {'success': False, 'message': 'User email not found'}
 
+        safe_tagger = _html.escape(tagger_username)
+        safe_title  = _html.escape(movie_title)
         resend.Emails.send({
             "from": FROM_EMAIL,
             "to": email,
@@ -1310,8 +1475,8 @@ def send_tagged_in_post_email(to_user_id: str, tagger_username: str,
             "html": f"""
                 <div style="font-family:sans-serif;max-width:480px;margin:auto;">
                     <h2>You were mentioned in a post!</h2>
-                    <p><strong>{tagger_username}</strong> tagged you in a post about
-                        <strong>{movie_title}</strong> on Reelette.</p>
+                    <p><strong>{safe_tagger}</strong> tagged you in a post about
+                        <strong>{safe_title}</strong> on Reelette.</p>
                     <a href="{BASE_URL}/feed?post={post_id}" style="display:inline-block;
                         padding:10px 20px;background:#e50914;color:#fff;border-radius:6px;text-decoration:none;">
                         View Post
@@ -1333,6 +1498,9 @@ def send_post_reply_email(to_user_id: str, replier_username: str, post_id: str,
         if not email:
             return {'success': False, 'message': 'User email not found'}
 
+        safe_replier  = _html.escape(replier_username)
+        safe_title    = _html.escape(movie_title)
+        safe_preview  = _html.escape(reply_preview[:120]) + ('...' if len(reply_preview) > 120 else '')
         resend.Emails.send({
             "from": FROM_EMAIL,
             "to": email,
@@ -1340,10 +1508,10 @@ def send_post_reply_email(to_user_id: str, replier_username: str, post_id: str,
             "html": f"""
                 <div style="font-family:sans-serif;max-width:480px;margin:auto;">
                     <h2>New Reply on Your Post</h2>
-                    <p><strong>{replier_username}</strong> replied to your post about
-                        <strong>{movie_title}</strong>:</p>
+                    <p><strong>{safe_replier}</strong> replied to your post about
+                        <strong>{safe_title}</strong>:</p>
                     <blockquote style="border-left:3px solid #e50914;padding-left:12px;color:#555;margin:16px 0;">
-                        {reply_preview[:120]}{'...' if len(reply_preview) > 120 else ''}
+                        {safe_preview}
                     </blockquote>
                     <a href="{BASE_URL}/feed?post={post_id}" style="display:inline-block;
                         padding:10px 20px;background:#e50914;color:#fff;border-radius:6px;text-decoration:none;">
@@ -1369,6 +1537,7 @@ def send_like_milestone_email(to_user_id: str, like_count: int, post_id: str,
         if not email:
             return {'success': False, 'message': 'User email not found'}
 
+        safe_title = _html.escape(movie_title)
         resend.Emails.send({
             "from": FROM_EMAIL,
             "to": email,
@@ -1376,7 +1545,7 @@ def send_like_milestone_email(to_user_id: str, like_count: int, post_id: str,
             "html": f"""
                 <div style="font-family:sans-serif;max-width:480px;margin:auto;">
                     <h2>People are loving your post!</h2>
-                    <p>Your post about <strong>{movie_title}</strong> has reached
+                    <p>Your post about <strong>{safe_title}</strong> has reached
                         <strong>{like_count} likes</strong> on Reelette.</p>
                     <a href="{BASE_URL}/feed?post={post_id}" style="display:inline-block;
                         padding:10px 20px;background:#e50914;color:#fff;border-radius:6px;text-decoration:none;">
@@ -1398,6 +1567,7 @@ def send_friend_request_email(to_user_id: str, from_username: str) -> dict:
         if not email:
             return {'success': False, 'message': 'User email not found'}
 
+        safe_from = _html.escape(from_username)
         resend.Emails.send({
             "from": FROM_EMAIL,
             "to": email,
@@ -1405,7 +1575,7 @@ def send_friend_request_email(to_user_id: str, from_username: str) -> dict:
             "html": f"""
                 <div style="font-family:sans-serif;max-width:480px;margin:auto;">
                     <h2>New Friend Request</h2>
-                    <p><strong>{from_username}</strong> wants to connect with you on Reelette.</p>
+                    <p><strong>{safe_from}</strong> wants to connect with you on Reelette.</p>
                     <a href="{BASE_URL}/friends" style="display:inline-block;
                         padding:10px 20px;background:#e50914;color:#fff;border-radius:6px;text-decoration:none;">
                         View Request
@@ -1427,6 +1597,8 @@ def send_group_added_email(to_user_id: str, added_by_username: str, group_name: 
         if not email:
             return {'success': False, 'message': 'User email not found'}
 
+        safe_adder = _html.escape(added_by_username)
+        safe_group = _html.escape(group_name)
         resend.Emails.send({
             "from": FROM_EMAIL,
             "to": email,
@@ -1434,8 +1606,8 @@ def send_group_added_email(to_user_id: str, added_by_username: str, group_name: 
             "html": f"""
                 <div style="font-family:sans-serif;max-width:480px;margin:auto;">
                     <h2>You're in a new group!</h2>
-                    <p><strong>{added_by_username}</strong> added you to
-                        <strong>{group_name}</strong> on Reelette.</p>
+                    <p><strong>{safe_adder}</strong> added you to
+                        <strong>{safe_group}</strong> on Reelette.</p>
                     <p style="color:#555;">Check out the group's watchlist and spin the roulette
                         together.</p>
                     <a href="{BASE_URL}/groups/{group_id}" style="display:inline-block;
@@ -1485,6 +1657,18 @@ def _send_notification(user_id, notif_type, actor_id, actor_username, data: dict
         'read':            False,
         'created_at':      datetime.now(),
     })
+
+# Public alias — imported by app.py for route-level notification dispatch.
+send_notification = _send_notification
+
+
+def get_username(user_id: str) -> str:
+    """Fetch the username for a given user_id. Returns '' on any error."""
+    try:
+        doc = db.collection('users').document(user_id).get()
+        return doc.to_dict().get('username', '') if doc.exists else ''
+    except Exception:
+        return ''
 
 
 def send_group_message(group_id, sender_id, sender_username, text):
@@ -1660,3 +1844,132 @@ def delete_user_account(user_id):
         return {'success': True}
     except Exception as e:
         return {'success': False, 'message': str(e)}
+
+
+# ── Rankings ──────────────────────────────────────────────────────
+
+def create_ranking(user_id, username, title, description, movies, is_public=True):
+    """Create a new ranking. movies is an ordered list of {movie_id, movie_title, movie_poster}."""
+    try:
+        ref = db.collection('users').document(user_id).collection('rankings').document()
+        now = datetime.utcnow()
+        ranked = [
+            {
+                'movie_id':    m.get('movie_id', ''),
+                'movie_title': m.get('movie_title', ''),
+                'movie_poster': m.get('movie_poster', ''),
+                'rank': i + 1,
+            }
+            for i, m in enumerate(movies)
+        ]
+        doc = {
+            'ranking_id':  ref.id,
+            'user_id':     user_id,
+            'username':    username,
+            'title':       title[:120],
+            'description': description[:500] if description else '',
+            'movies':      ranked,
+            'is_public':   is_public,
+            'created_at':  now,
+            'updated_at':  now,
+        }
+        ref.set(doc)
+        return {'success': True, 'ranking_id': ref.id}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+
+def get_user_rankings(user_id):
+    """Return all rankings for a user, newest first."""
+    try:
+        docs = (
+            db.collection('users').document(user_id).collection('rankings')
+            .order_by('updated_at', direction=firestore.Query.DESCENDING)
+            .stream()
+        )
+        return [d.to_dict() for d in docs]
+    except Exception as e:
+        print(f'get_user_rankings error: {e}')
+        return []
+
+
+def get_ranking(ranking_id, user_id):
+    """Fetch a single ranking by ID from the owning user's subcollection."""
+    try:
+        doc = db.collection('users').document(user_id).collection('rankings').document(ranking_id).get()
+        return doc.to_dict() if doc.exists else None
+    except Exception as e:
+        print(f'get_ranking error: {e}')
+        return None
+
+
+def update_ranking(ranking_id, user_id, title, description, movies, is_public=True):
+    """Replace an existing ranking's title / movies / visibility."""
+    try:
+        ref = db.collection('users').document(user_id).collection('rankings').document(ranking_id)
+        if not ref.get().exists:
+            return {'success': False, 'message': 'Ranking not found'}
+        ranked = [
+            {
+                'movie_id':    m.get('movie_id', ''),
+                'movie_title': m.get('movie_title', ''),
+                'movie_poster': m.get('movie_poster', ''),
+                'rank': i + 1,
+            }
+            for i, m in enumerate(movies)
+        ]
+        ref.update({
+            'title':       title[:120],
+            'description': description[:500] if description else '',
+            'movies':      ranked,
+            'is_public':   is_public,
+            'updated_at':  datetime.utcnow(),
+        })
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+
+def delete_ranking(ranking_id, user_id):
+    """Delete a ranking owned by user_id."""
+    try:
+        ref = db.collection('users').document(user_id).collection('rankings').document(ranking_id)
+        if not ref.get().exists:
+            return {'success': False, 'message': 'Ranking not found'}
+        ref.delete()
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+
+def get_friends_rankings(user_id, limit_per_friend=3):
+    """Return recent public rankings from all friends, newest first overall."""
+    def _ts(r):
+        ts = r.get('updated_at')
+        try:
+            return ts.timestamp() if ts else 0.0
+        except Exception:
+            return 0.0
+
+    try:
+        friend_docs = db.collection('users').document(user_id).collection('friends').stream()
+        friend_ids = [d.to_dict().get('friend_id') for d in friend_docs if d.to_dict().get('friend_id')]
+        all_rankings = []
+        for fid in friend_ids:
+            try:
+                # Fetch without where+order_by combo — avoids composite index requirement.
+                # Filter and sort locally; rankings subcollections are small.
+                docs = db.collection('users').document(fid).collection('rankings').stream()
+                friend_rankings = [
+                    d.to_dict() for d in docs
+                    if d.to_dict().get('is_public', True)
+                ]
+                friend_rankings.sort(key=_ts, reverse=True)
+                all_rankings.extend(friend_rankings[:limit_per_friend])
+            except Exception as inner_e:
+                print(f'get_friends_rankings: skipping friend {fid}: {inner_e}')
+        all_rankings.sort(key=_ts, reverse=True)
+        return all_rankings[:30]
+    except Exception as e:
+        print(f'get_friends_rankings error: {e}')
+        return []

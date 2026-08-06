@@ -3,17 +3,18 @@ import {
   Heart, MessageCircle, Plus, Star, Trash2, Users, UserPlus, UserMinus,
   Search, Check, X, Film, Shuffle, Popcorn, Crown, LogOut,
   Tv, Wifi, WifiOff, Loader2, Clapperboard, Send, RefreshCw,
-  Clock, TrendingUp, ArrowLeft,
+  Clock, TrendingUp, ArrowLeft, ThumbsUp, ThumbsDown, Repeat2,
 } from 'lucide-react';
 import {
   getFeed, getFeedSince, bustFeedCache, createPost, likePost, deletePost, getUser, timeAgo,
+  ADMIN_UID, adminDeletePost, adminDeleteReply, repostPost,
   getFriends, getFriendRequests, sendFriendRequest, acceptFriendRequest,
   rejectFriendRequest, searchUsers,
   getUserGroups, createGroup, getGroup, addGroupMember, removeGroupMember,
   addToGroupWatchlist, removeFromGroupWatchlist, deleteGroup,
   getGroupMemberProfiles, getGroupMemberServices,
-  updateLastSeen, searchMovies, discoverMovies, getMovieDetails,
-  getReplies, addReply,
+  updateLastSeen, searchMovies, searchShows, discoverMovies, getMovieDetails,
+  getReplies, addReply, likeReply, dislikeReply,
   getGroupChat, sendGroupMessage,
   getTrendingMovies, getWatchedMovies,
   type FeedPost, type Friend, type FriendRequest, type MovieGroup,
@@ -25,6 +26,7 @@ import { db, signInFirebase } from '../lib/firebase';
 import { collection, query as fbQuery, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { UserProfileModal } from './UserProfileModal';
 import { MovieDetailModal } from './MovieDetailModal';
+import { FriendRankingsPanel } from './RankingsView';
 
 // ── Module-level feed cache — survives tab navigation ──────────
 const _feedCache = new Map<string, FeedPost>();
@@ -45,7 +47,7 @@ function sortedFeedPosts(): FeedPost[] {
 const SERVICE_KEYS = ['netflix', 'hulu', 'disneyPlus', 'hboMax', 'amazonPrime', 'appleTV', 'paramount', 'peacock'] as const;
 
 const WHEEL_COLORS = [
-  '#7C5DBD', '#8E44AD', '#2471A3', '#1E8449', '#D68910',
+  'var(--reel-accent-hex)', '#8E44AD', '#2471A3', '#1E8449', '#D68910',
   '#784212', '#717D7E', '#6C3483', '#1A5276', '#1D6A39',
   '#B7950B', '#6E2F1A', '#2C3E50', '#512E5F',
 ];
@@ -66,6 +68,15 @@ function OnlineDot({ online }: { online: boolean }) {
       className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-[#0A0A0A] ${online ? 'bg-emerald-500' : 'bg-zinc-700'}`}
       title={online ? 'Online' : 'Offline'}
     />
+  );
+}
+
+function AdminBadge() {
+  return (
+    <span title="Site Admin" className="inline-flex shrink-0 items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-400/10 ml-0.5">
+      <Crown className="w-2.5 h-2.5 text-amber-400 fill-amber-400" />
+      <span className="text-[9px] font-bold tracking-widest text-amber-400 uppercase">Admin</span>
+    </span>
   );
 }
 
@@ -132,9 +143,9 @@ function SpinWheel({ items, onSpinEnd }: { items: GroupMovie[]; onSpinEnd: (m: G
     <div className="flex flex-col items-center gap-6">
       <div className="relative">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 z-10"
-          style={{ width: 0, height: 0, borderLeft: '12px solid transparent', borderRight: '12px solid transparent', borderTop: '22px solid #7C5DBD' }} />
+          style={{ width: 0, height: 0, borderLeft: '12px solid transparent', borderRight: '12px solid transparent', borderTop: '22px solid var(--reel-accent-hex)' }} />
         <svg width="400" height="400" viewBox="0 0 400 400"
-          style={{ filter: 'drop-shadow(0 0 24px rgba(124,93,189,0.4))' }}>
+          style={{ filter: 'drop-shadow(0 0 24px color-mix(in srgb, var(--reel-accent-hex) 40%, transparent))' }}>
           <circle cx={cx} cy={cy} r={r + 8} fill="none" stroke="#2a2a2e" strokeWidth="8" />
           <g style={{ transformOrigin: `${cx}px ${cy}px`, transform: `rotate(${rotation}deg)`, transition: spinning ? 'transform 4s cubic-bezier(0.17,0.67,0.12,0.99)' : 'none' }}
             onTransitionEnd={() => { setSpinning(false); if (pendingWinner) onSpinEnd(pendingWinner); }}>
@@ -159,12 +170,13 @@ function SpinWheel({ items, onSpinEnd }: { items: GroupMovie[]; onSpinEnd: (m: G
               );
             })}
             <circle cx={cx} cy={cy} r={28} fill="#141416" stroke="#2a2a2e" strokeWidth="3" />
-            <circle cx={cx} cy={cy} r={10} fill="#7C5DBD" />
+            <circle cx={cx} cy={cy} r={10} fill="var(--reel-accent-hex)" />
           </g>
         </svg>
       </div>
       <button onClick={handleSpin} disabled={spinning}
-        className="flex items-center gap-3 px-10 py-4 bg-[#7C5DBD] hover:bg-[#6B4DAD] disabled:opacity-50 text-white font-bold text-lg rounded-full shadow-xl shadow-[#7C5DBD]/30 transition-all hover:scale-105 disabled:scale-100">
+        className="flex items-center gap-3 px-10 py-4 disabled:opacity-50 text-white font-bold text-lg rounded-full shadow-xl transition-all hover:scale-105 disabled:scale-100 hover:brightness-110"
+        style={{ background: 'var(--reel-accent-hex)', boxShadow: '0 20px 25px -5px color-mix(in srgb, var(--reel-accent-hex) 30%, transparent)' }}>
         <Shuffle className="w-6 h-6" />{spinning ? 'Spinning…' : 'Spin!'}
       </button>
     </div>
@@ -316,8 +328,8 @@ function renderMessage(message: string, onOpenProfile: (userId: string) => void)
             const match = results.find((r: { username: string; user_id: string }) => r.username.toLowerCase() === uname.toLowerCase());
             if (match) onOpenProfile(match.user_id);
           }}
-          className="text-[#7C5DBD] font-semibold hover:underline cursor-pointer"
-          style={{ background: 'none', border: 'none', padding: 0 }}>
+          className="font-semibold hover:underline cursor-pointer"
+          style={{ color: 'var(--reel-accent-hex)', background: 'none', border: 'none', padding: 0 }}>
           {part}
         </button>
       );
@@ -329,8 +341,8 @@ function renderMessage(message: string, onOpenProfile: (userId: string) => void)
 // ── Activity Skeleton ─────────────────────────────────────────
 function ActivitySkeleton() {
   return (
-    <div className="mb-3 rounded-2xl bg-[#0d0d0f] overflow-hidden">
-      <div className="px-4 py-3 flex gap-3">
+    <div className="border-b border-white/[0.05] sm:mb-3 sm:rounded-2xl sm:bg-[#0d0d0f] overflow-hidden">
+      <div className="px-4 py-4 flex gap-3">
         <div className="w-10 h-10 bg-[#1a1a1e] rounded-full animate-pulse shrink-0" />
         <div className="flex-1 space-y-2 pt-1">
           <div className="h-3 w-32 bg-[#1a1a1e] rounded-full animate-pulse" />
@@ -344,7 +356,7 @@ function ActivitySkeleton() {
 }
 
 // ── Post Movie Search ──────────────────────────────────────────
-type MovieOption = { id: string; title: string; year: number; poster: string };
+type MovieOption = { id: string; title: string; year: number; poster: string; media_type?: 'movie' | 'show' };
 
 function PostMovieSearch({ onSelect, selected }: { onSelect: (m: MovieOption | null) => void; selected: MovieOption | null }) {
   const [query, setQuery] = useState('');
@@ -357,8 +369,15 @@ function PostMovieSearch({ onSelect, selected }: { onSelect: (m: MovieOption | n
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
       setSearching(true);
-      const movies = await searchMovies(query.trim());
-      setResults(movies.slice(0, 6).map(m => ({ id: m.id, title: m.title, year: m.year, poster: m.poster })));
+      const [movies, shows] = await Promise.all([
+        searchMovies(query.trim()).catch(() => []),
+        searchShows(query.trim()).catch(() => []),
+      ]);
+      const combined = [
+        ...movies.slice(0, 4).map(m => ({ id: m.id, title: m.title, year: m.year, poster: m.poster, media_type: 'movie' as const })),
+        ...shows.slice(0, 4).map(m => ({ id: m.id, title: m.title, year: m.year, poster: m.poster, media_type: 'show' as const })),
+      ].slice(0, 8);
+      setResults(combined);
       setSearching(false);
     }, 400);
   }, [query]);
@@ -384,14 +403,14 @@ function PostMovieSearch({ onSelect, selected }: { onSelect: (m: MovieOption | n
     <div className="relative">
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 pointer-events-none" />
-        <input type="text" placeholder="Search for a movie…" value={query} onChange={e => setQuery(e.target.value)}
+        <input type="text" placeholder="Search movies & shows…" value={query} onChange={e => setQuery(e.target.value)}
           className="w-full bg-[#141416] border border-[#2a2a2e] rounded-xl pl-10 pr-10 py-2.5 text-white text-sm placeholder:text-zinc-600 focus:border-[#7C5DBD]/50 focus:outline-none transition-colors" />
         {searching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 animate-spin" />}
       </div>
       {results.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-[#141416] border border-[#2a2a2e] rounded-xl shadow-2xl z-20 overflow-hidden max-h-60 overflow-y-auto no-scrollbar">
+        <div className="absolute top-full left-0 right-0 mt-1 bg-[#141416] border border-[#2a2a2e] rounded-xl shadow-2xl z-20 overflow-hidden max-h-64 overflow-y-auto no-scrollbar">
           {results.map(m => (
-            <button key={m.id} onClick={() => { onSelect(m); setQuery(''); setResults([]); }}
+            <button key={`${m.media_type}-${m.id}`} onClick={() => { onSelect(m); setQuery(''); setResults([]); }}
               className="w-full flex items-center gap-3 p-3 hover:bg-[#1a1a1e] transition-colors text-left border-b border-[#2a2a2e] last:border-0">
               {m.poster
                 ? <img src={m.poster} alt={m.title} className="w-8 h-12 object-cover rounded-lg shrink-0" />
@@ -400,6 +419,10 @@ function PostMovieSearch({ onSelect, selected }: { onSelect: (m: MovieOption | n
                 <p className="text-white text-sm font-medium truncate">{m.title}</p>
                 <p className="text-zinc-500 text-xs">{m.year}</p>
               </div>
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0"
+                style={{ background: m.media_type === 'show' ? 'color-mix(in srgb, var(--reel-accent-hex) 25%, transparent)' : 'rgba(255,255,255,0.07)', color: m.media_type === 'show' ? 'var(--reel-accent-hex)' : '#6b7280' }}>
+                {m.media_type === 'show' ? 'TV' : 'FILM'}
+              </span>
             </button>
           ))}
         </div>
@@ -484,7 +507,7 @@ function ComposeBox({ currentUser, onPostCreated }: {
 
   const handleSubmit = async () => {
     if (!currentUser) return;
-    if (!selectedMovie) { setPostError('Tag a movie first.'); return; }
+    if (!selectedMovie) { setPostError('Tag a movie or show first.'); return; }
     setPosting(true);
     setPostError('');
     const result = await createPost({
@@ -534,14 +557,21 @@ function ComposeBox({ currentUser, onPostCreated }: {
           onClick={() => setExpanded(true)}
           className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-[#0f0f11] transition-colors text-left"
         >
-          <UserAvatar 
-          username={currentUser.username} 
+          <UserAvatar
+          username={currentUser.username}
           avatarUrl={currentUser.avatarUrl}
           size={38} />
-          <span className="flex-1 text-zinc-600 text-[15px]">What movie did you watch?</span>
-          <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-[#7C5DBD]/20 text-[#9B7BD7] border border-[#7C5DBD]/30">
-            Post
-          </span>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <span className="text-zinc-400 text-xs font-medium">@{currentUser.username}</span>
+              {currentUser.user_id === ADMIN_UID && <Crown className="w-3 h-3 text-amber-400 fill-amber-400" />}
+            </div>
+            <span className="text-zinc-600 text-[14px]">What did you watch?</span>
+          </div>
+          <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+            style={{ background: 'var(--reel-accent-hex)' }}>
+            <Plus className="w-5 h-5 text-white" />
+          </div>
         </button>
       ) : (
         <div className="px-4 pt-4 pb-3 space-y-3">
@@ -555,7 +585,7 @@ function ComposeBox({ currentUser, onPostCreated }: {
               <textarea
                 ref={textareaRef}
                 autoFocus
-                placeholder="What movie did you watch?"
+                placeholder="What did you watch?"
                 rows={3}
                 value={message}
                 onChange={handleMessageChange}
@@ -611,7 +641,7 @@ function ComposeBox({ currentUser, onPostCreated }: {
           {ratingOpen && (
             <div className="ml-[50px]">
               <div className="bg-[#141416] border border-[#2a2a2e] rounded-xl p-3">
-                <p className="text-zinc-500 text-xs font-semibold uppercase tracking-wider mb-2.5">Rating</p>
+                <p className="text-zinc-400 text-xs font-medium mb-2.5">Rating</p>
                 <div className="flex gap-1.5 flex-wrap">
                   {[1,2,3,4,5,6,7,8,9,10].map(n => (
                     <button key={n} onClick={() => { setRating(rating === n ? null : n); }}
@@ -640,17 +670,22 @@ function ComposeBox({ currentUser, onPostCreated }: {
             <div className="flex items-center gap-1">
               <button
                 onClick={() => { setMovieSearchOpen(v => !v); setRatingOpen(false); }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                  movieSearchOpen || selectedMovie ? 'text-[#9B7BD7] bg-[#7C5DBD]/15' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.05]'
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors ${
+                  movieSearchOpen || selectedMovie
+                    ? 'font-bold'
+                    : 'font-medium text-zinc-500 hover:text-zinc-300'
                 }`}
+                style={movieSearchOpen || selectedMovie ? { color: 'var(--reel-accent-hex)' } : {}}
               >
                 <Film className="w-3.5 h-3.5" />
-                {selectedMovie ? selectedMovie.title.length > 14 ? selectedMovie.title.slice(0, 13) + '…' : selectedMovie.title : 'Tag a Movie'}
+                {selectedMovie ? selectedMovie.title.length > 14 ? selectedMovie.title.slice(0, 13) + '…' : selectedMovie.title : 'Tag Media'}
               </button>
               <button
                 onClick={() => { setRatingOpen(v => !v); setMovieSearchOpen(false); }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                  ratingOpen || rating !== null ? 'text-yellow-400 bg-yellow-400/10' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.05]'
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors ${
+                  ratingOpen || rating !== null
+                    ? 'font-bold text-yellow-400'
+                    : 'font-medium text-zinc-500 hover:text-zinc-300'
                 }`}
               >
                 <Star className={`w-3.5 h-3.5 ${rating !== null ? 'fill-yellow-400' : ''}`} />
@@ -660,7 +695,8 @@ function ComposeBox({ currentUser, onPostCreated }: {
             <div className="flex items-center gap-2">
               <button onClick={handleReset} className="text-zinc-600 hover:text-zinc-400 text-sm transition-colors">Cancel</button>
               <button onClick={handleSubmit} disabled={posting || !selectedMovie}
-                className="px-4 py-1.5 bg-[#7C5DBD] hover:bg-[#6B4DAD] disabled:opacity-40 text-white text-sm font-semibold rounded-full transition-colors">
+                className="px-4 py-1.5 disabled:opacity-40 text-white text-sm font-semibold rounded-full transition-all hover:brightness-110"
+                style={{ background: 'var(--reel-accent-hex)' }}>
                 {posting ? 'Posting…' : 'Post'}
               </button>
             </div>
@@ -685,10 +721,15 @@ function saveReactions(postId: string, data: Record<string, string[]>) {
 }
 
 // ── Activity Card ─────────────────────────────────────────────
-function ActivityCard({ post, currentUserId, currentUsername, onLike, onDelete, onOpenProfile }: {
-  post: FeedPost; currentUserId: string; currentUsername: string;
+function tmdbPoster(url: string, size: string): string {
+  return url.replace(/\/t\/p\/\w+\//, `/t/p/${size}/`);
+}
+
+function ActivityCard({ post, currentUserId, currentUsername, isAdmin, isFirst, onLike, onDelete, onRepost, onOpenProfile }: {
+  post: FeedPost; currentUserId: string; currentUsername: string; isAdmin: boolean; isFirst?: boolean;
   onLike: (id: string) => void;
   onDelete: (id: string) => void;
+  onRepost: () => void;
   onOpenProfile: (userId: string) => void;
 }) {
   const isLiked = post.liked_by.includes(currentUserId);
@@ -704,6 +745,13 @@ function ActivityCard({ post, currentUserId, currentUsername, onLike, onDelete, 
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [openMovieId, setOpenMovieId] = useState<string | null>(null);
   const emojiRef = useRef<HTMLDivElement>(null);
+  const replyInputRef = useRef<HTMLInputElement>(null);
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionResults, setMentionResults] = useState<{ user_id: string; username: string }[]>([]);
+  const [replyReactions, setReplyReactions] = useState<Record<string, { likes: number; liked_by: string[]; dislikes: number; disliked_by: string[] }>>({});
+  const [showRepostInput, setShowRepostInput] = useState(false);
+  const [repostComment, setRepostComment] = useState('');
+  const [submittingRepost, setSubmittingRepost] = useState(false);
 
   useEffect(() => {
     if (!post.movie_id) return;
@@ -760,6 +808,63 @@ function ActivityCard({ post, currentUserId, currentUsername, onLike, onDelete, 
     setTimeout(() => setLikeAnim(false), 320);
   };
 
+  const handleReplyChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setReplyText(val);
+    const cursor = e.target.selectionStart ?? val.length;
+    const before = val.slice(0, cursor);
+    const match = before.match(/@(\w*)$/);
+    if (match) {
+      const q = match[1];
+      setMentionQuery(q);
+      if (q.length >= 1) {
+        searchUsers(q, currentUserId).then(results => setMentionResults(results.slice(0, 5))).catch(() => {});
+      } else {
+        setMentionResults([]);
+      }
+    } else {
+      setMentionQuery(null);
+      setMentionResults([]);
+    }
+  };
+
+  const selectMention = (username: string) => {
+    const cursor = replyInputRef.current?.selectionStart ?? replyText.length;
+    const before = replyText.slice(0, cursor);
+    const after = replyText.slice(cursor);
+    setReplyText(before.replace(/@\w*$/, `@${username} `) + after);
+    setMentionQuery(null);
+    setMentionResults([]);
+    setTimeout(() => replyInputRef.current?.focus(), 0);
+  };
+
+  const getReplyState = (r: PostReply) =>
+    replyReactions[r.reply_id] ?? { likes: r.likes ?? 0, liked_by: r.liked_by ?? [], dislikes: r.dislikes ?? 0, disliked_by: r.disliked_by ?? [] };
+
+  const handleReplyLike = async (r: PostReply) => {
+    const cur = getReplyState(r);
+    const isLiked = cur.liked_by.includes(currentUserId);
+    setReplyReactions(prev => ({ ...prev, [r.reply_id]: {
+      likes: isLiked ? cur.likes - 1 : cur.likes + 1,
+      liked_by: isLiked ? cur.liked_by.filter(id => id !== currentUserId) : [...cur.liked_by, currentUserId],
+      dislikes: !isLiked && cur.disliked_by.includes(currentUserId) ? cur.dislikes - 1 : cur.dislikes,
+      disliked_by: !isLiked ? cur.disliked_by.filter(id => id !== currentUserId) : cur.disliked_by,
+    }}));
+    await likeReply(post.post_id, r.reply_id, currentUserId);
+  };
+
+  const handleReplyDislike = async (r: PostReply) => {
+    const cur = getReplyState(r);
+    const isDisliked = cur.disliked_by.includes(currentUserId);
+    setReplyReactions(prev => ({ ...prev, [r.reply_id]: {
+      dislikes: isDisliked ? cur.dislikes - 1 : cur.dislikes + 1,
+      disliked_by: isDisliked ? cur.disliked_by.filter(id => id !== currentUserId) : [...cur.disliked_by, currentUserId],
+      likes: !isDisliked && cur.liked_by.includes(currentUserId) ? cur.likes - 1 : cur.likes,
+      liked_by: !isDisliked ? cur.liked_by.filter(id => id !== currentUserId) : cur.liked_by,
+    }}));
+    await dislikeReply(post.post_id, r.reply_id, currentUserId);
+  };
+
   const handleSubmitReply = async () => {
     if (!replyText.trim() || !currentUserId) return;
     setSubmittingReply(true);
@@ -772,173 +877,477 @@ function ActivityCard({ post, currentUserId, currentUsername, onLike, onDelete, 
     setSubmittingReply(false);
   };
 
+  const handleSubmitRepost = async () => {
+    if (!currentUserId) return;
+    setSubmittingRepost(true);
+    const targetPostId = post.is_repost && post.repost_of ? post.repost_of : post.post_id;
+    const result = await repostPost(targetPostId, currentUsername, repostComment.trim());
+    if (result.success) {
+      setShowRepostInput(false);
+      setRepostComment('');
+      onRepost();
+    }
+    setSubmittingRepost(false);
+  };
+
+  // Auto-load replies so the right panel is always populated
+  useEffect(() => {
+    loadReplies();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
-    <article className="mb-0 transition-colors duration-150 hover:bg-[#0f0f11]">
-      {/* Rating strip */}
-      {post.rating > 0 && (
-        <div className="px-4 pt-3 pb-0 flex items-center gap-2">
-          <div className="flex items-center gap-1">
-            {[...Array(5)].map((_, i) => {
-              const filled = (post.rating / 2) >= (i + 1);
-              const half = !filled && (post.rating / 2) > i;
-              return (
-                <Star key={i} className={`w-3 h-3 ${filled || half ? 'fill-yellow-400 text-yellow-400' : 'text-zinc-700'}`} />
-              );
-            })}
-          </div>
-          <span className="text-yellow-400 font-bold text-xs tabular-nums">{post.rating}/10</span>
+    <article className="border-b border-white/[0.05] px-4 py-4 sm:rounded-2xl sm:bg-white/[0.035] sm:border sm:border-white/[0.06] sm:p-4 sm:shadow-lg sm:shadow-black/30 sm:mb-3">
+      {/* Repost banner */}
+      {post.is_repost && (
+        <div className="flex items-center gap-1.5 mb-3 text-[11px] text-zinc-500">
+          <Repeat2 className="w-3.5 h-3.5 text-emerald-500/70" />
+          <button onClick={() => onOpenProfile(post.user_id)} className="font-semibold text-zinc-400 hover:text-white transition-colors">
+            {(post as { displayName?: string }).displayName || post.username}
+          </button>
+          <span>reposted</span>
         </div>
       )}
+      <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,60%)_minmax(300px,40%)] gap-5 items-start">
 
-      <div className="px-4 pt-3 pb-2 flex gap-3">
-        {/* Avatar */}
-        <UserAvatar username={post.username} avatarUrl={post.avatarUrl} size={38} onClick={() => onOpenProfile(post.user_id)} />
-
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2 mb-1">
-            <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
-              <button onClick={() => onOpenProfile(post.user_id)}
-                className="text-white text-sm font-semibold hover:text-[#9B7BD7] transition-colors leading-none shrink-0">
-                {(post as { displayName?: string }).displayName || post.username}
-              </button>
-              <span className="text-zinc-600 text-xs shrink-0">@{post.username}</span>
-              <span className="text-zinc-700 text-xs shrink-0">· {timeAgo(post.created_at)}</span>
-            </div>
-            {post.user_id === currentUserId && (
-              <button onClick={() => onDelete(post.post_id)} className="shrink-0 text-zinc-700 hover:text-red-500 transition-colors p-0.5">
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
-
-          {post.message && (
-            <p className="text-zinc-300 text-[14px] leading-relaxed mb-2">
-              {renderMessage(post.message, onOpenProfile)}
-            </p>
-          )}
-
-          {/* Movie card */}
-          {post.movie_title && (
-            <div className="flex gap-3 mb-3">
+        {/* ── LEFT: Review block ──────────────────────────────── */}
+        {post.movie_title ? (
+          <div className="flex gap-4 items-start">
+            {/* Poster */}
+            <div className="shrink-0 cursor-pointer" onClick={() => setOpenMovieId(post.movie_id)}>
               {post.movie_poster
-                ? <img src={post.movie_poster} alt={post.movie_title}
-                    className="w-[76px] h-[114px] object-cover rounded-xl shrink-0 cursor-pointer hover:opacity-90 transition-opacity"
-                    onClick={() => setOpenMovieId(post.movie_id)} />
-                : <div className="w-[76px] h-[114px] bg-[#1a1a1e] rounded-xl shrink-0 flex items-center justify-center cursor-pointer" onClick={() => setOpenMovieId(post.movie_id)}>
-                    <Film className="w-6 h-6 text-zinc-600" />
-                  </div>}
-              <div className="flex-1 min-w-0 flex flex-col justify-start gap-1.5 pt-0.5">
-                <p className="text-white text-sm font-medium leading-snug line-clamp-2">{post.movie_title}</p>
-                <div className="flex items-center gap-2 text-xs flex-wrap">
-                  {movieMeta?.year && <span className="text-zinc-500">{movieMeta.year}</span>}
-                  {movieMeta?.runtime > 0 && <span className="text-zinc-600">{movieMeta.runtime}m</span>}
-                </div>
-                {movieMeta && movieMeta.voteAverage > 0 && (
-                  <div className="flex items-center gap-1">
-                    <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                    <span className="text-amber-400 text-xs font-semibold">{movieMeta.voteAverage.toFixed(1)}</span>
-                    <span className="text-zinc-600 text-[11px]">Fan Rating</span>
+                ? <img
+                    src={tmdbPoster(post.movie_poster, 'w185')}
+                    srcSet={`${tmdbPoster(post.movie_poster, 'w185')} 185w, ${tmdbPoster(post.movie_poster, 'w342')} 342w`}
+                    sizes="(min-width: 640px) 160px, 76px"
+                    alt={post.movie_title}
+                    className="w-[76px] h-[114px] sm:w-[160px] sm:h-[240px] object-cover rounded-lg sm:rounded-xl shadow-xl ring-1 ring-white/[0.07] hover:opacity-90 transition-opacity"
+                    fetchPriority={isFirst ? 'high' : 'auto'}
+                    loading={isFirst ? 'eager' : 'lazy'}
+                  />
+                : <div className="w-[76px] h-[114px] sm:w-[160px] sm:h-[240px] bg-white/[0.04] rounded-lg sm:rounded-xl flex items-center justify-center">
+                    <Film className="w-5 h-5 sm:w-8 sm:h-8 text-zinc-700" />
                   </div>
+              }
+            </div>
+
+            {/* Right of poster: tightly packed top-to-bottom */}
+            <div className="flex-1 min-w-0 flex flex-col gap-2.5">
+
+              {/* 1. User avatar + name + time + delete */}
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <UserAvatar username={post.username} avatarUrl={post.avatarUrl} size={26} onClick={() => onOpenProfile(post.user_id)} />
+                  <div className="flex flex-col gap-0.5 min-w-0">
+                    <div className="flex items-center gap-1.5 min-w-0 overflow-hidden">
+                      <button onClick={() => onOpenProfile(post.user_id)}
+                        className="text-white text-sm font-semibold hover:text-[#9B7BD7] transition-colors leading-none truncate">
+                        {(post as { displayName?: string }).displayName || post.username}
+                      </button>
+                      {post.user_id === ADMIN_UID && <AdminBadge />}
+                    </div>
+                    <span className="text-zinc-400 text-[11px]">@{post.username} · {timeAgo(post.created_at)}</span>
+                  </div>
+                </div>
+                {(post.user_id === currentUserId || isAdmin) && (
+                  <button onClick={() => onDelete(post.post_id)}
+                    className="shrink-0 text-zinc-700 hover:text-red-500 transition-colors p-1"
+                    title={isAdmin && post.user_id !== currentUserId ? 'Delete (admin)' : 'Delete'}>
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 )}
-                {movieMeta?.genres && movieMeta.genres.length > 0 && (
-                  <div className="flex gap-1 flex-wrap">
-                    {movieMeta.genres.map(g => (
-                      <span key={g} className="text-[10px] px-2 py-0.5 rounded-full bg-[#7C5DBD]/10 text-[#9B7BD7] border border-[#7C5DBD]/20">{g}</span>
+              </div>
+
+              {/* 2. Movie title + year · runtime */}
+              <div>
+                <button onClick={() => setOpenMovieId(post.movie_id)}
+                  className="text-left text-white text-[15px] font-bold leading-snug hover:text-[#9B7BD7] transition-colors line-clamp-2 w-full">
+                  {post.movie_title}
+                </button>
+                {(movieMeta?.year || (movieMeta?.runtime ?? 0) > 0) && (
+                  <p className="text-zinc-400 text-xs mt-0.5">
+                    {movieMeta?.year}{(movieMeta?.runtime ?? 0) > 0 ? ` · ${movieMeta!.runtime}m` : ''}
+                  </p>
+                )}
+              </div>
+
+              {/* 3. User's star rating */}
+              {post.rating > 0 && (
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-0.5">
+                    {[...Array(5)].map((_, i) => {
+                      const filled = (post.rating / 2) >= (i + 1);
+                      const half   = !filled && (post.rating / 2) > i;
+                      return <Star key={i} className={`w-3 h-3 ${filled || half ? 'fill-yellow-400 text-yellow-400' : 'text-zinc-800'}`} />;
+                    })}
+                  </div>
+                  <span className="text-[11px] text-zinc-500">
+                    <span className="text-zinc-300 font-medium">{post.username}</span>'s rating:
+                    <span className="text-yellow-400 font-bold tabular-nums ml-1">{post.rating}/10</span>
+                  </span>
+                </div>
+              )}
+
+              {/* 4. Review text — dominant */}
+              {post.message && (
+                <p className="text-zinc-200 text-sm leading-relaxed line-clamp-5">
+                  {renderMessage(post.message, onOpenProfile)}
+                </p>
+              )}
+
+              {/* Original post quoted block for reposts */}
+              {post.is_repost && post.original_message && (
+                <div className="border-l-2 border-emerald-500/30 pl-3 py-1 bg-white/[0.02] rounded-r-lg">
+                  <p className="text-[11px] text-zinc-500 mb-0.5">
+                    <button onClick={() => onOpenProfile(post.original_user_id!)} className="font-semibold text-zinc-400 hover:text-white transition-colors">
+                      @{post.original_username}
+                    </button>
+                    {' '}originally wrote:
+                  </p>
+                  <p className="text-zinc-400 text-xs leading-relaxed line-clamp-3">{post.original_message}</p>
+                </div>
+              )}
+
+              {/* 5. Genres + TMDB fan rating — desktop only */}
+              {((movieMeta?.genres && movieMeta.genres.length > 0) || (movieMeta?.voteAverage ?? 0) > 0) && (
+                <div className="hidden sm:flex items-center gap-2 flex-wrap">
+                  {movieMeta?.genres?.map(g => (
+                    <span key={g} className="text-[10px] px-2 py-0.5 rounded-full bg-[#7C5DBD]/10 text-[#9B7BD7]">{g}</span>
+                  ))}
+                  {(movieMeta?.voteAverage ?? 0) > 0 && (
+                    <span className="flex items-center gap-1 text-[10px] text-zinc-500">
+                      <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
+                      <span className="text-amber-400 font-semibold">{movieMeta!.voteAverage.toFixed(1)}</span>
+                      <span>TMDB</span>
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* 6. Like + emoji reactions */}
+              <div className="flex items-center gap-0.5 -ml-1.5">
+                <button onClick={handleLikeClick}
+                  aria-label={isLiked ? 'Unlike' : 'Like'}
+                  style={{ transition: 'transform 0.25s cubic-bezier(0.34,1.56,0.64,1)', transform: likeAnim ? 'scale(1.4)' : 'scale(1)', ...(isLiked ? { color: 'var(--reel-accent-hex)' } : {}) }}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${isLiked ? '' : 'text-zinc-600'}`}
+                  onMouseEnter={e => { if (!isLiked) { (e.currentTarget as HTMLButtonElement).style.background = 'color-mix(in srgb, var(--reel-accent-hex) 8%, transparent)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--reel-accent-hex)'; } }}
+                  onMouseLeave={e => { if (!isLiked) { (e.currentTarget as HTMLButtonElement).style.background = ''; (e.currentTarget as HTMLButtonElement).style.color = ''; } }}>
+                  <Heart className="w-[13px] h-[13px]" style={isLiked ? { fill: 'var(--reel-accent-hex)' } : {}} />
+                  {post.likes > 0 && <span className="tabular-nums">{post.likes}</span>}
+                </button>
+                <div className="relative" ref={emojiRef}>
+                  <button onClick={() => setShowEmojiPicker(s => !s)}
+                    aria-label="Add reaction"
+                    className="flex items-center px-2 py-1.5 rounded-lg text-xs text-zinc-600 hover:text-zinc-300 hover:bg-white/[0.04] transition-colors">
+                    <span className="text-sm leading-none">😊</span>
+                  </button>
+                  {showEmojiPicker && (
+                    <div className="absolute bottom-full left-0 mb-1 flex items-center gap-1 bg-[#1a1a1e] border border-white/[0.08] rounded-xl px-2 py-1.5 shadow-xl z-20">
+                      {REACTION_EMOJIS.map(e => (
+                        <button key={e} onClick={() => handleReact(e)}
+                          className={`text-base hover:scale-125 transition-transform px-0.5 rounded ${reactions[e]?.includes(currentUserId) ? 'opacity-100' : 'opacity-70 hover:opacity-100'}`}>
+                          {e}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {Object.entries(reactions).filter(([, users]) => users.length > 0).map(([emoji, users]) => (
+                  <button key={emoji} onClick={() => handleReact(emoji)}
+                    className={`flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs transition-all ${users.includes(currentUserId) ? 'bg-[#7C5DBD]/15 text-[#9B7BD7]' : 'bg-white/[0.04] text-zinc-400 hover:bg-white/[0.07]'}`}>
+                    <span className="text-sm leading-none">{emoji}</span>
+                    <span className="tabular-nums">{users.length}</span>
+                  </button>
+                ))}
+                {/* Comment button — mobile only (desktop shows replies in right panel) */}
+                <button onClick={toggleReplies}
+                  aria-label={showReplies ? 'Hide comments' : 'Show comments'}
+                  className={`sm:hidden flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs transition-colors ${showReplies ? '' : 'text-zinc-600 hover:text-zinc-300'}`}
+                  style={showReplies ? { color: 'var(--reel-accent-hex)' } : {}}>
+                  <MessageCircle className="w-[13px] h-[13px]" />
+                  {localReplyCount > 0 && <span className="tabular-nums">{localReplyCount}</span>}
+                </button>
+                <button onClick={() => setShowRepostInput(s => !s)}
+                  aria-label={showRepostInput ? 'Cancel repost' : 'Repost'}
+                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs transition-colors ml-auto ${showRepostInput ? 'text-emerald-400' : 'text-zinc-600 hover:text-emerald-400 hover:bg-emerald-400/5'}`}>
+                  <Repeat2 className="w-[13px] h-[13px]" />
+                </button>
+              </div>
+              {showRepostInput && (
+                <div className="flex gap-2 mt-1">
+                  <input
+                    type="text" placeholder="Add a comment… (optional)"
+                    value={repostComment}
+                    onChange={e => setRepostComment(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') handleSubmitRepost(); if (e.key === 'Escape') { setShowRepostInput(false); setRepostComment(''); } }}
+                    maxLength={500}
+                    className="flex-1 bg-white/[0.05] rounded-full px-3.5 py-1.5 text-white text-xs placeholder:text-zinc-600 focus:outline-none focus:bg-white/[0.08] transition-colors"
+                    autoFocus
+                  />
+                  <button onClick={handleSubmitRepost} disabled={submittingRepost}
+                    className="p-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white rounded-full transition-colors shrink-0">
+                    {submittingRepost ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Repeat2 className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          /* Text-only post (no movie) */
+          <div className="flex flex-col gap-3">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <UserAvatar username={post.username} avatarUrl={post.avatarUrl} size={28} onClick={() => onOpenProfile(post.user_id)} />
+                <div className="flex flex-col gap-0.5 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <button onClick={() => onOpenProfile(post.user_id)}
+                      className="text-white text-sm font-semibold hover:text-[#9B7BD7] transition-colors leading-none">
+                      {(post as { displayName?: string }).displayName || post.username}
+                    </button>
+                    {post.user_id === ADMIN_UID && <AdminBadge />}
+                  </div>
+                  <span className="text-zinc-600 text-[11px]">@{post.username} · {timeAgo(post.created_at)}</span>
+                </div>
+              </div>
+              {(post.user_id === currentUserId || isAdmin) && (
+                <button onClick={() => onDelete(post.post_id)}
+                  className="shrink-0 text-zinc-700 hover:text-red-500 transition-colors p-1"
+                  title={isAdmin && post.user_id !== currentUserId ? 'Delete (admin)' : 'Delete'}>
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+            {post.rating > 0 && (
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-0.5">
+                  {[...Array(5)].map((_, i) => {
+                    const filled = (post.rating / 2) >= (i + 1);
+                    const half   = !filled && (post.rating / 2) > i;
+                    return <Star key={i} className={`w-3 h-3 ${filled || half ? 'fill-yellow-400 text-yellow-400' : 'text-zinc-800'}`} />;
+                  })}
+                </div>
+                <span className="text-[11px] text-zinc-500">
+                  <span className="text-zinc-300 font-medium">{post.username}</span>'s rating:
+                  <span className="text-yellow-400 font-bold tabular-nums ml-1">{post.rating}/10</span>
+                </span>
+              </div>
+            )}
+            {post.message && (
+              <p className="text-zinc-200 text-sm leading-relaxed">
+                {renderMessage(post.message, onOpenProfile)}
+              </p>
+            )}
+            {post.is_repost && post.original_message && (
+              <div className="border-l-2 border-emerald-500/30 pl-3 py-1 bg-white/[0.02] rounded-r-lg">
+                <p className="text-[11px] text-zinc-500 mb-0.5">
+                  <button onClick={() => onOpenProfile(post.original_user_id!)} className="font-semibold text-zinc-400 hover:text-white transition-colors">
+                    @{post.original_username}
+                  </button>
+                  {' '}originally wrote:
+                </p>
+                <p className="text-zinc-400 text-xs leading-relaxed line-clamp-3">{post.original_message}</p>
+              </div>
+            )}
+            <div className="flex items-center gap-0.5 -ml-1.5">
+              <button onClick={handleLikeClick}
+                style={{ transition: 'transform 0.25s cubic-bezier(0.34,1.56,0.64,1)', transform: likeAnim ? 'scale(1.4)' : 'scale(1)', ...(isLiked ? { color: 'var(--reel-accent-hex)' } : {}) }}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${isLiked ? '' : 'text-zinc-600'}`}
+                onMouseEnter={e => { if (!isLiked) { (e.currentTarget as HTMLButtonElement).style.background = 'color-mix(in srgb, var(--reel-accent-hex) 8%, transparent)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--reel-accent-hex)'; } }}
+                onMouseLeave={e => { if (!isLiked) { (e.currentTarget as HTMLButtonElement).style.background = ''; (e.currentTarget as HTMLButtonElement).style.color = ''; } }}>
+                <Heart className="w-[13px] h-[13px]" style={isLiked ? { fill: 'var(--reel-accent-hex)' } : {}} />
+                {post.likes > 0 && <span className="tabular-nums">{post.likes}</span>}
+              </button>
+              <div className="relative" ref={emojiRef}>
+                <button onClick={() => setShowEmojiPicker(s => !s)}
+                  className="flex items-center px-2 py-1.5 rounded-lg text-xs text-zinc-600 hover:text-zinc-300 hover:bg-white/[0.04] transition-colors">
+                  <span className="text-sm leading-none">😊</span>
+                </button>
+                {showEmojiPicker && (
+                  <div className="absolute bottom-full left-0 mb-1 flex items-center gap-1 bg-[#1a1a1e] border border-white/[0.08] rounded-xl px-2 py-1.5 shadow-xl z-20">
+                    {REACTION_EMOJIS.map(e => (
+                      <button key={e} onClick={() => handleReact(e)}
+                        className={`text-base hover:scale-125 transition-transform px-0.5 rounded ${reactions[e]?.includes(currentUserId) ? 'opacity-100' : 'opacity-70 hover:opacity-100'}`}>
+                        {e}
+                      </button>
                     ))}
                   </div>
                 )}
-                {movieMeta?.overview && (
-                  <p className="text-zinc-500 text-[11px] leading-relaxed line-clamp-3">{movieMeta.overview}</p>
-                )}
               </div>
-            </div>
-          )}
-          {openMovieId && <MovieDetailModal movieId={openMovieId} onClose={() => setOpenMovieId(null)} />}
-
-          {/* Action row */}
-          <div className="flex items-center gap-0.5 -ml-2 flex-wrap">
-            <button onClick={toggleReplies}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-blue-500/[0.08] hover:text-blue-400 ${showReplies ? 'text-blue-400' : 'text-zinc-600'}`}>
-              <MessageCircle className="w-[14px] h-[14px]" />
-              {(showReplies ? replies.length : localReplyCount) > 0 && (
-                <span className="tabular-nums">{showReplies ? replies.length : localReplyCount}</span>
-              )}
-            </button>
-            <button onClick={handleLikeClick}
-              style={{ transition: 'transform 0.25s cubic-bezier(0.34,1.56,0.64,1)', transform: likeAnim ? 'scale(1.4)' : 'scale(1)' }}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-[#7C5DBD]/[0.08] hover:text-[#9B7BD7] ${isLiked ? 'text-[#7C5DBD]' : 'text-zinc-600'}`}>
-              <Heart className={`w-[14px] h-[14px] ${isLiked ? 'fill-[#7C5DBD]' : ''}`} />
-              {post.likes > 0 && <span className="tabular-nums">{post.likes}</span>}
-            </button>
-
-            {/* Emoji reaction trigger */}
-            <div className="relative" ref={emojiRef}>
-              <button onClick={() => setShowEmojiPicker(s => !s)}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-zinc-600 hover:text-zinc-300 hover:bg-white/[0.04] transition-colors">
-                <span className="text-sm leading-none">😊</span>
+              {Object.entries(reactions).filter(([, users]) => users.length > 0).map(([emoji, users]) => (
+                <button key={emoji} onClick={() => handleReact(emoji)}
+                  className={`flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs transition-all ${users.includes(currentUserId) ? 'bg-[#7C5DBD]/15 text-[#9B7BD7]' : 'bg-white/[0.04] text-zinc-400 hover:bg-white/[0.07]'}`}>
+                  <span className="text-sm leading-none">{emoji}</span>
+                  <span className="tabular-nums">{users.length}</span>
+                </button>
+              ))}
+              {/* Comment button — mobile only */}
+              <button onClick={toggleReplies}
+                className={`sm:hidden flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs transition-colors ${showReplies ? '' : 'text-zinc-600 hover:text-zinc-300'}`}
+                style={showReplies ? { color: 'var(--reel-accent-hex)' } : {}}>
+                <MessageCircle className="w-[13px] h-[13px]" />
+                {localReplyCount > 0 && <span className="tabular-nums">{localReplyCount}</span>}
               </button>
-              {showEmojiPicker && (
-                <div className="absolute bottom-full left-0 mb-1 flex items-center gap-1 bg-[#1a1a1e] border border-[#2a2a2e] rounded-xl px-2 py-1.5 shadow-xl z-20">
-                  {REACTION_EMOJIS.map(e => (
-                    <button key={e} onClick={() => handleReact(e)}
-                      className={`text-base hover:scale-125 transition-transform px-0.5 rounded ${reactions[e]?.includes(currentUserId) ? 'opacity-100' : 'opacity-70 hover:opacity-100'}`}>
-                      {e}
+              <button onClick={() => setShowRepostInput(s => !s)}
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs transition-colors ml-auto ${showRepostInput ? 'text-emerald-400' : 'text-zinc-600 hover:text-emerald-400 hover:bg-emerald-400/5'}`}>
+                <Repeat2 className="w-[13px] h-[13px]" />
+              </button>
+            </div>
+            {showRepostInput && (
+              <div className="flex gap-2 mt-1">
+                <input
+                  type="text" placeholder="Add a comment… (optional)"
+                  value={repostComment}
+                  onChange={e => setRepostComment(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleSubmitRepost(); if (e.key === 'Escape') { setShowRepostInput(false); setRepostComment(''); } }}
+                  maxLength={500}
+                  className="flex-1 bg-white/[0.05] rounded-full px-3.5 py-1.5 text-white text-xs placeholder:text-zinc-600 focus:outline-none focus:bg-white/[0.08] transition-colors"
+                  autoFocus
+                />
+                <button onClick={handleSubmitRepost} disabled={submittingRepost}
+                  className="p-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white rounded-full transition-colors shrink-0">
+                  {submittingRepost ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Repeat2 className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── RIGHT: Comments panel — desktop only ─────────── */}
+        <div className="hidden sm:flex flex-col rounded-xl bg-black/20 overflow-hidden min-h-[180px]">
+
+          {/* Comments list — scrollable only when needed */}
+          <div className="overflow-y-auto px-3 pt-3 pb-2 space-y-3 max-h-[260px]">
+            {loadingReplies ? (
+              <div className="flex items-center gap-2 text-zinc-600 text-xs">
+                <Loader2 className="w-3 h-3 animate-spin" /> Loading…
+              </div>
+            ) : replies.length === 0 ? (
+              <p className="text-zinc-700 text-xs italic">No comments yet.</p>
+            ) : (
+              replies.slice(0, 8).map(r => {
+                const rxn         = getReplyState(r);
+                const isLikedR    = rxn.liked_by.includes(currentUserId);
+                const isDislikedR = rxn.disliked_by.includes(currentUserId);
+                return (
+                  <div key={r.reply_id} className="flex items-start gap-2">
+                    <UserAvatar username={r.username} avatarUrl={r.avatarUrl} size={22} onClick={() => onOpenProfile(r.user_id)} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <button onClick={() => onOpenProfile(r.user_id)}
+                          className="text-white text-xs font-semibold hover:text-[#9B7BD7] transition-colors leading-none">
+                          @{r.username}
+                        </button>
+                        {r.user_id === ADMIN_UID && <AdminBadge />}
+                        <span className="text-zinc-700 text-[10px]">{timeAgo(r.created_at)}</span>
+                        {isAdmin && (
+                          <button
+                            onClick={async () => {
+                              const ok = await adminDeleteReply(post.post_id, r.reply_id);
+                              if (ok.success) setReplies(prev => prev.filter(x => x.reply_id !== r.reply_id));
+                            }}
+                            className="ml-auto text-zinc-700 hover:text-red-500 transition-colors"
+                            title="Delete reply (admin)">
+                            <Trash2 className="w-2.5 h-2.5" />
+                          </button>
+                        )}
+                      </div>
+                      <p className="text-zinc-400 text-xs leading-snug mt-0.5">{renderMessage(r.message, onOpenProfile)}</p>
+                      <div className="flex items-center gap-0.5 mt-1 -ml-1">
+                        <button onClick={() => handleReplyLike(r)}
+                          className={`flex items-center gap-1 px-1.5 py-0.5 rounded-lg text-[10px] transition-colors ${isLikedR ? 'text-[#7C5DBD]' : 'text-zinc-600 hover:text-zinc-300'}`}>
+                          <ThumbsUp className={`w-2.5 h-2.5 ${isLikedR ? 'fill-[#7C5DBD]' : ''}`} />
+                          {rxn.likes > 0 && <span className="tabular-nums">{rxn.likes}</span>}
+                        </button>
+                        <button onClick={() => handleReplyDislike(r)}
+                          className={`flex items-center gap-1 px-1.5 py-0.5 rounded-lg text-[10px] transition-colors ${isDislikedR ? 'text-red-400' : 'text-zinc-600 hover:text-zinc-300'}`}>
+                          <ThumbsDown className={`w-2.5 h-2.5 ${isDislikedR ? 'fill-red-400' : ''}`} />
+                          {rxn.dislikes > 0 && <span className="tabular-nums">{rxn.dislikes}</span>}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+            {replies.length > 8 && (
+              <p className="text-zinc-700 text-[10px] text-center pb-1">+{replies.length - 8} more</p>
+            )}
+          </div>
+
+          {/* Reply input */}
+          <div className="px-3 pb-3 pt-2">
+            <div className="relative flex gap-2">
+              {mentionQuery !== null && mentionResults.length > 0 && (
+                <div className="absolute bottom-full left-0 right-10 mb-1 bg-[#1a1a1e] border border-white/[0.08] rounded-xl shadow-xl z-20 overflow-hidden">
+                  {mentionResults.map(u => (
+                    <button key={u.user_id} onMouseDown={e => { e.preventDefault(); selectMention(u.username); }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-white hover:bg-[#7C5DBD]/20 transition-colors text-left">
+                      <span className="text-[#9B7BD7] font-semibold">@{u.username}</span>
                     </button>
                   ))}
                 </div>
               )}
-            </div>
-
-            {/* Reaction pills */}
-            {Object.entries(reactions).filter(([, users]) => users.length > 0).map(([emoji, users]) => (
-              <button key={emoji} onClick={() => handleReact(emoji)}
-                className={`flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs border transition-all ${users.includes(currentUserId) ? 'bg-[#7C5DBD]/15 border-[#7C5DBD]/30 text-[#9B7BD7]' : 'bg-white/[0.03] border-white/[0.07] text-zinc-400 hover:border-white/20'}`}>
-                <span className="text-sm leading-none">{emoji}</span>
-                <span className="tabular-nums">{users.length}</span>
+              <input ref={replyInputRef} type="text" placeholder="Add a comment…"
+                value={replyText}
+                onChange={handleReplyChange}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && mentionQuery === null) handleSubmitReply(); }}
+                className="flex-1 bg-white/[0.05] rounded-full px-3.5 py-1.5 text-white text-xs placeholder:text-zinc-600 focus:outline-none focus:bg-white/[0.08] transition-colors" />
+              <button onClick={handleSubmitReply} disabled={submittingReply || !replyText.trim()}
+                className="p-1.5 bg-[#7C5DBD] hover:bg-[#6B4DAD] disabled:opacity-40 text-white rounded-full transition-colors shrink-0">
+                {submittingReply ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
               </button>
-            ))}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Replies */}
-      {showReplies && (
-        <div className="px-4 pb-3 pl-[62px] space-y-3 ">
-          <div className="pt-3">
-            {loadingReplies ? (
-              <div className="flex items-center gap-2 text-zinc-600 text-xs"><Loader2 className="w-3 h-3 animate-spin" /> Loading…</div>
-            ) : replies.length === 0 ? (
-              <p className="text-zinc-700 text-xs">No replies yet.</p>
-            ) : (
-              <div className="space-y-2.5">
-                {replies.map(r => (
-                  <div key={r.reply_id} className="flex items-start gap-2">
-                    <UserAvatar username={r.username} avatarUrl={r.avatarUrl} size={26} onClick={() => onOpenProfile(r.user_id)} />
-                    <div className="flex-1 bg-[#141416] rounded-2xl px-3 py-2">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <button onClick={() => onOpenProfile(r.user_id)} className="text-white text-xs font-semibold hover:text-[#9B7BD7] transition-colors">@{r.username}</button>
-                        <span className="text-zinc-700 text-xs">{timeAgo(r.created_at)}</span>
-                      </div>
-                      <p className="text-zinc-400 text-sm leading-snug">{r.message}</p>
-                    </div>
-                  </div>
-                ))}
+      {/* Mobile-only inline replies — toggle button lives in the actions row above */}
+      <div className="sm:hidden">
+        {showReplies && (
+          <div className="mt-2 space-y-3 border-t border-white/[0.05] pt-3">
+            {loadingReplies && (
+              <div className="flex items-center gap-2 text-zinc-600 text-xs ml-1">
+                <Loader2 className="w-3 h-3 animate-spin" /> Loading…
               </div>
             )}
-            <div className="flex gap-2 mt-3">
-              <input type="text" placeholder="Reply…" value={replyText}
-                onChange={e => setReplyText(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSubmitReply()}
-                className="flex-1 bg-[#141416] rounded-full px-4 py-1.5 text-white text-sm placeholder:text-zinc-700 focus:border-[#7C5DBD]/40 focus:outline-none" />
+            {replies.slice(0, 6).map(r => (
+              <div key={r.reply_id} className="flex items-start gap-2">
+                <UserAvatar username={r.username} avatarUrl={r.avatarUrl} size={22} onClick={() => onOpenProfile(r.user_id)} />
+                <div className="flex-1 min-w-0">
+                  <span className="text-white text-xs font-semibold">{r.username}</span>
+                  <span className="text-zinc-700 text-[10px] ml-1.5">{timeAgo(r.created_at)}</span>
+                  <p className="text-zinc-400 text-xs leading-snug mt-0.5">{renderMessage(r.message, onOpenProfile)}</p>
+                </div>
+              </div>
+            ))}
+            {replies.length > 6 && (
+              <p className="text-zinc-700 text-[10px] ml-1">+{replies.length - 6} more</p>
+            )}
+            <div className="relative flex gap-2 pt-1">
+              {mentionQuery !== null && mentionResults.length > 0 && (
+                <div className="absolute bottom-full left-0 right-10 mb-1 bg-[#1a1a1e] border border-white/[0.08] rounded-xl shadow-xl z-20 overflow-hidden">
+                  {mentionResults.map(u => (
+                    <button key={u.user_id} onMouseDown={e => { e.preventDefault(); selectMention(u.username); }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-white hover:bg-[#7C5DBD]/20 transition-colors text-left">
+                      <span className="text-[#9B7BD7] font-semibold">@{u.username}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <input ref={replyInputRef} type="text" placeholder="Add a reply…"
+                value={replyText}
+                onChange={handleReplyChange}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && mentionQuery === null) handleSubmitReply(); }}
+                className="flex-1 bg-white/[0.05] rounded-full px-3.5 py-1.5 text-white text-xs placeholder:text-zinc-600 focus:outline-none focus:bg-white/[0.08] transition-colors" />
               <button onClick={handleSubmitReply} disabled={submittingReply || !replyText.trim()}
-                className="p-2 bg-[#7C5DBD] hover:bg-[#6B4DAD] disabled:opacity-40 text-white rounded-full transition-colors">
-                {submittingReply ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                className="p-1.5 bg-[#7C5DBD] hover:bg-[#6B4DAD] disabled:opacity-40 text-white rounded-full transition-colors shrink-0">
+                {submittingReply ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
               </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
+
+      {openMovieId && <MovieDetailModal movieId={openMovieId} onClose={() => setOpenMovieId(null)} />}
     </article>
   );
 }
@@ -1175,7 +1584,7 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
               className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-semibold transition-colors relative capitalize ${innerTab === t ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'}`}>
               {t === 'group' ? <Clapperboard className="w-4 h-4" /> : <MessageCircle className="w-4 h-4" />}
               {t === 'group' ? 'Group' : 'Chat'}
-              {innerTab === t && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-10 h-[2px] bg-[#7C5DBD] rounded-full" />}
+              {innerTab === t && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-10 h-[2px] rounded-full" style={{ background: 'var(--reel-accent-hex)' }} />}
             </button>
           ))}
         </div>
@@ -1322,7 +1731,8 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
                     )}
                     <div className={`max-w-[75%] flex flex-col gap-0.5 ${isMine ? 'items-end' : 'items-start'}`}>
                       {!isMine && <span className="text-[10px] text-zinc-600 px-1">@{msg.sender_username}</span>}
-                      <div className={`px-3.5 py-2.5 rounded-2xl text-sm leading-snug ${isMine ? 'bg-[#7C5DBD] text-white rounded-br-sm' : 'bg-[#1a1a1e] text-zinc-200 rounded-bl-sm'}`}>
+                      <div className={`px-3.5 py-2.5 rounded-2xl text-sm leading-snug ${isMine ? 'text-white rounded-br-sm' : 'bg-[#1a1a1e] text-zinc-200 rounded-bl-sm'}`}
+                        style={isMine ? { background: 'var(--reel-accent-hex)' } : {}}>
                         {msg.text}
                       </div>
                       {msg.sent_at && <span className="text-[9px] text-zinc-700 px-1">{timeAgo(msg.sent_at)}</span>}
@@ -1336,9 +1746,12 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
               <input ref={chatInputRef} value={chatDraft} onChange={e => setChatDraft(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleChatSend(); } }}
                 placeholder="Message the group…"
-                className="flex-1 bg-[#141416] border border-[#2a2a2e] rounded-full px-4 py-2 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-[#7C5DBD]/40" />
+                className="flex-1 bg-[#141416] border border-[#2a2a2e] rounded-full px-4 py-2 text-sm text-white placeholder:text-zinc-600 focus:outline-none"
+                onFocus={e => { e.currentTarget.style.borderColor = 'color-mix(in srgb, var(--reel-accent-hex) 40%, transparent)'; }}
+                onBlur={e => { e.currentTarget.style.borderColor = ''; }} />
               <button onClick={handleChatSend} disabled={!chatDraft.trim() || chatSending}
-                className="w-9 h-9 flex items-center justify-center rounded-full bg-[#7C5DBD] hover:bg-[#9B7BD7] disabled:opacity-40 transition-colors shrink-0">
+                className="w-9 h-9 flex items-center justify-center rounded-full disabled:opacity-40 transition-all hover:brightness-110 shrink-0"
+                style={{ background: 'var(--reel-accent-hex)' }}>
                 <Send className="w-4 h-4 text-white" />
               </button>
             </div>
@@ -1350,7 +1763,7 @@ function GroupDetail({ group: initial, currentUserId, currentUsername, onBack, o
 }
 
 // ── Left Sidebar ───────────────────────────────────────────────
-type SidebarView = 'feed' | 'recent';
+type SidebarView = 'feed' | 'recent' | 'groups' | 'friends';
 
 function LeftSidebar({ view, onViewChange, groups, groupsLoading, activeGroupId, onGroupSelect, onCreateGroup, currentUserId }: {
   view: SidebarView;
@@ -1387,10 +1800,10 @@ function LeftSidebar({ view, onViewChange, groups, groupsLoading, activeGroupId,
   ];
 
   return (
-    <aside className="w-[220px] shrink-0 flex flex-col overflow-y-auto overflow-x-hidden no-scrollbar">
+    <aside className="hidden md:flex w-[220px] shrink-0 flex-col overflow-y-auto overflow-x-hidden no-scrollbar">
       {/* Nav section */}
       <div className="px-3 pt-5 pb-3">
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600 px-2 mb-2">Navigation</p>
+        <p className="text-xs font-semibold text-zinc-500 px-2 mb-2">Navigation</p>
         <nav className="space-y-0.5">
           {navItems.map(item => (
             <button key={item.id} onClick={() => onViewChange(item.id)}
@@ -1412,7 +1825,7 @@ function LeftSidebar({ view, onViewChange, groups, groupsLoading, activeGroupId,
       {/* Movie Groups */}
       <div className="px-3 pt-4 pb-5 flex-1">
         <div className="flex items-center justify-between px-2 mb-2.5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600">Movie Groups</p>
+          <p className="text-xs font-semibold text-zinc-500">Movie Groups</p>
           <button onClick={() => setShowCreateForm(v => !v)}
             className="w-5 h-5 rounded-md bg-[#2a2a2e] hover:bg-[#7C5DBD]/30 text-zinc-500 hover:text-[#9B7BD7] flex items-center justify-center transition-colors"
             title="New group">
@@ -1640,18 +2053,18 @@ function RightSidebar({ currentUserId, currentUsername, onOpenProfile }: {
   };
 
   if (loading) return (
-    <aside className="w-[270px] shrink-0 overflow-y-auto px-4 py-5 space-y-4 no-scrollbar">
+    <aside className="hidden lg:flex w-[270px] shrink-0 flex-col overflow-y-auto px-4 py-5 space-y-4 no-scrollbar">
       {[...Array(3)].map((_, i) => <div key={i} className="h-20 bg-[#141416] rounded-xl animate-pulse" />)}
     </aside>
   );
 
   return (
-    <aside className="w-[270px] shrink-0 overflow-y-auto no-scrollbar">
+    <aside className="hidden lg:flex w-[270px] shrink-0 flex-col overflow-y-auto no-scrollbar">
 
       {/* Friend Requests */}
       {requests.length > 0 && (
         <section className="px-4 pt-5 pb-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600 mb-3 flex items-center gap-2">
+          <p className="text-xs font-semibold text-zinc-500 mb-3 flex items-center gap-2">
             Requests
             <span className="bg-[#7C5DBD] text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">{requests.length}</span>
           </p>
@@ -1680,7 +2093,7 @@ function RightSidebar({ currentUserId, currentUsername, onOpenProfile }: {
       {/* Friends */}
       <section className="px-4 pt-5 pb-4">
         <div className="flex items-center justify-between mb-3">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600">
+          <p className="text-xs font-semibold text-zinc-500">
             Friends {friends.length > 0 && <span className="text-zinc-700 normal-case tracking-normal font-normal">({friends.length})</span>}
           </p>
           {friends.length > 6 && (
@@ -1712,10 +2125,20 @@ function RightSidebar({ currentUserId, currentUsername, onOpenProfile }: {
 
       <div className="mx-4 border-t border-[#1a1a1e]" />
 
+      {/* Friend Rankings */}
+      <section className="px-4 pt-4 pb-4">
+        <p className="text-xs font-semibold text-zinc-500 mb-3 flex items-center gap-1.5">
+          <span>🏆</span> Friend Rankings
+        </p>
+        <FriendRankingsPanel userId={currentUserId} />
+      </section>
+
+      <div className="mx-4 border-t border-[#1a1a1e]" />
+
       {/* Suggested Adds */}
       {suggested.length > 0 && (
         <section className="px-4 pt-4 pb-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600 mb-3">Suggested</p>
+          <p className="text-xs font-semibold text-zinc-500 mb-3">Suggested</p>
           <div className="space-y-2.5">
             {suggested.map(u => (
               <div key={u.user_id} className="flex items-center gap-2.5">
@@ -1743,7 +2166,7 @@ function RightSidebar({ currentUserId, currentUsername, onOpenProfile }: {
 
       {/* Trending Films */}
       <section className="px-4 pt-4 pb-6">
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600 mb-3 flex items-center gap-1.5">
+        <p className="text-xs font-semibold text-zinc-500 mb-3 flex items-center gap-1.5">
           <TrendingUp className="w-3 h-3" />Trending This Week
         </p>
         {trending.length === 0 ? (
@@ -1769,9 +2192,264 @@ function RightSidebar({ currentUserId, currentUsername, onOpenProfile }: {
   );
 }
 
+// ── Mobile Groups Panel ────────────────────────────────────────
+function MobileGroupsPanel({ groups, groupsLoading, onGroupSelect, onCreateGroup, currentUserId }: {
+  groups: MovieGroup[]; groupsLoading: boolean;
+  onGroupSelect: (g: MovieGroup) => void; onCreateGroup: () => void; currentUserId: string;
+}) {
+  const [showCreate, setShowCreate] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [creating, setCreating] = useState(false);
+  const currentUser = getUser();
+
+  const handleCreate = async () => {
+    if (!newName.trim() || !currentUser) return;
+    setCreating(true);
+    const r = await createGroup(newName.trim(), '', currentUser.user_id, currentUser.username);
+    if (r.success) { setNewName(''); setShowCreate(false); onCreateGroup(); }
+    setCreating(false);
+  };
+
+  return (
+    <div className="px-4 py-4">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-white font-semibold text-[15px] flex items-center gap-2">
+          <Users className="w-4 h-4 text-zinc-500" /> Groups
+        </h2>
+        <button onClick={() => setShowCreate(s => !s)}
+          className="text-xs text-[#9B7BD7] hover:text-[#7C5DBD] transition-colors flex items-center gap-1">
+          <Plus className="w-3.5 h-3.5" /> New Group
+        </button>
+      </div>
+      {showCreate && (
+        <div className="mb-4 p-3 bg-white/[0.03] rounded-xl space-y-2">
+          <input value={newName} onChange={e => setNewName(e.target.value)}
+            placeholder="Group name…"
+            className="w-full bg-[#141416] border border-white/[0.08] rounded-lg px-3 py-2 text-white text-sm placeholder:text-zinc-600 focus:outline-none focus:border-[#7C5DBD]/40" />
+          <button onClick={handleCreate} disabled={creating || !newName.trim()}
+            className="w-full py-2 bg-[#7C5DBD] hover:bg-[#6B4DAD] disabled:opacity-40 text-white text-sm font-semibold rounded-lg transition-colors">
+            {creating ? 'Creating…' : 'Create'}
+          </button>
+        </div>
+      )}
+      {groupsLoading ? (
+        <div className="space-y-2">{[...Array(3)].map((_, i) => <div key={i} className="h-14 bg-[#141416] rounded-xl animate-pulse" />)}</div>
+      ) : groups.length === 0 ? (
+        <p className="text-zinc-600 text-sm text-center py-12">No groups yet.</p>
+      ) : (
+        <div className="space-y-2">
+          {groups.map(g => (
+            <button key={g.group_id} onClick={() => onGroupSelect(g)}
+              className="w-full flex items-center gap-3 p-3 bg-white/[0.03] rounded-xl hover:bg-white/[0.06] transition-colors text-left">
+              <div className="w-10 h-10 rounded-xl bg-[#7C5DBD]/15 flex items-center justify-center shrink-0">
+                <Users className="w-5 h-5 text-[#9B7BD7]" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-white text-sm font-semibold truncate">{g.name}</p>
+                <p className="text-zinc-500 text-xs">{g.members?.length ?? 0} members</p>
+              </div>
+              <ArrowLeft className="w-4 h-4 text-zinc-600 rotate-180 shrink-0" />
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Mobile Friends Panel ───────────────────────────────────────
+function MobileFriendsPanel({ currentUserId, currentUsername, onOpenProfile }: {
+  currentUserId: string; currentUsername: string; onOpenProfile: (uid: string) => void;
+}) {
+  const [friends, setFriends] = useState<Friend[]>([]);
+  const [requests, setRequests] = useState<FriendRequest[]>([]);
+  const [suggested, setSuggested] = useState<{ user_id: string; username: string; displayName: string; avatarUrl?: string }[]>([]);
+  const [avatars, setAvatars] = useState<Record<string, string>>({});
+  const [sentTo, setSentTo] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(true);
+  const [peopleQuery, setPeopleQuery] = useState('');
+  const [peopleResults, setPeopleResults] = useState<{ user_id: string; username: string; displayName: string }[]>([]);
+  const [searching, setSearching] = useState(false);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    if (peopleQuery.trim().length < 2) { setPeopleResults([]); return; }
+    setSearching(true);
+    searchTimerRef.current = setTimeout(async () => {
+      try {
+        const results = await searchUsers(peopleQuery.trim(), currentUserId);
+        const friendSet = new Set(friends.map(f => f.friend_id));
+        setPeopleResults(results.filter(u => !friendSet.has(u.user_id)).slice(0, 8));
+      } catch { setPeopleResults([]); }
+      finally { setSearching(false); }
+    }, 350);
+    return () => { if (searchTimerRef.current) clearTimeout(searchTimerRef.current); };
+  }, [peopleQuery, currentUserId, friends]);
+
+  const load = useCallback(async () => {
+    if (!currentUserId) return;
+    const [f, r] = await Promise.all([getFriends(currentUserId), getFriendRequests(currentUserId)]);
+    const ids = [...new Set([...f.map(x => x.friend_id), ...r.map(x => x.from_user_id)])];
+    const profiles = await Promise.all(ids.map(id => getUserPublicProfile(id)));
+    const av: Record<string, string> = {};
+    ids.forEach((id, i) => { const url = profiles[i]?.avatarUrl; if (url) av[id] = url; });
+    setFriends(f); setRequests(r); setAvatars(av);
+    try {
+      const letters = 'abcdefghijklmnopqrstuvwxyz';
+      const seed = letters[Math.floor(Math.random() * letters.length)];
+      const users = await searchUsers(seed, currentUserId);
+      const friendSet = new Set(f.map(fr => fr.friend_id));
+      const filtered = users.filter(u => !friendSet.has(u.user_id)).slice(0, 4);
+      const sp = await Promise.all(filtered.map(u => getUserPublicProfile(u.user_id)));
+      setSuggested(filtered.map((u, i) => ({ ...u, avatarUrl: sp[i]?.avatarUrl })));
+    } catch { /* non-critical */ }
+    setLoading(false);
+  }, [currentUserId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleAccept = async (req: FriendRequest) => {
+    await acceptFriendRequest(currentUserId, currentUsername, req.from_user_id, req.from_username);
+    load();
+  };
+  const handleReject = async (req: FriendRequest) => {
+    await rejectFriendRequest(currentUserId, req.from_user_id, req.from_username);
+    load();
+  };
+  const handleFollow = async (userId: string) => {
+    await sendFriendRequest(userId, currentUserId, currentUsername);
+    setSentTo(prev => new Set(prev).add(userId));
+    setSuggested(prev => prev.filter(u => u.user_id !== userId));
+  };
+
+  if (loading) return (
+    <div className="px-4 py-4 space-y-3">
+      {[...Array(4)].map((_, i) => <div key={i} className="h-14 bg-[#141416] rounded-xl animate-pulse" />)}
+    </div>
+  );
+
+  return (
+    <div className="px-4 py-4 space-y-6">
+      {/* Search for people */}
+      <section>
+        <div
+          className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl"
+          style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}
+        >
+          <Search className="w-4 h-4 text-zinc-500 shrink-0" />
+          <input
+            type="text"
+            value={peopleQuery}
+            onChange={e => setPeopleQuery(e.target.value)}
+            placeholder="Find people by username…"
+            className="flex-1 bg-transparent text-white text-sm outline-none placeholder-zinc-600"
+          />
+          {searching && <Loader2 className="w-3.5 h-3.5 text-zinc-500 animate-spin shrink-0" />}
+          {peopleQuery.length > 0 && !searching && (
+            <button onClick={() => { setPeopleQuery(''); setPeopleResults([]); }}>
+              <X className="w-3.5 h-3.5 text-zinc-500" />
+            </button>
+          )}
+        </div>
+        {peopleResults.length > 0 && (
+          <div className="mt-2 space-y-1.5">
+            {peopleResults.map(u => (
+              <div key={u.user_id} className="flex items-center gap-2.5 p-2.5 bg-white/[0.03] rounded-xl">
+                <UserAvatar username={u.username} size={34} onClick={() => onOpenProfile(u.user_id)} />
+                <div className="flex-1 min-w-0">
+                  <button onClick={() => onOpenProfile(u.user_id)} className="text-white text-xs font-semibold hover:text-[#9B7BD7] transition-colors truncate block">{u.displayName || u.username}</button>
+                  <span className="text-zinc-500 text-[11px]">@{u.username}</span>
+                </div>
+                <button
+                  onClick={async () => {
+                    await sendFriendRequest(u.user_id, currentUserId, currentUsername);
+                    setSentTo(prev => new Set(prev).add(u.user_id));
+                  }}
+                  disabled={sentTo.has(u.user_id)}
+                  className="shrink-0 px-2.5 py-1 text-[11px] font-semibold rounded-full bg-[#7C5DBD]/15 text-[#9B7BD7] hover:bg-[#7C5DBD]/25 disabled:opacity-40 transition-colors"
+                >
+                  {sentTo.has(u.user_id) ? 'Sent' : 'Add'}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        {peopleQuery.trim().length >= 2 && !searching && peopleResults.length === 0 && (
+          <p className="text-zinc-600 text-xs text-center mt-3">No users found for "{peopleQuery}"</p>
+        )}
+      </section>
+
+      {requests.length > 0 && (
+        <section>
+          <p className="text-xs font-semibold text-zinc-500 mb-3 flex items-center gap-2">
+            Requests <span className="bg-[#7C5DBD] text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">{requests.length}</span>
+          </p>
+          <div className="space-y-2.5">
+            {requests.map(req => (
+              <div key={req.from_user_id} className="flex items-center gap-2.5 p-2.5 bg-white/[0.03] rounded-xl">
+                <UserAvatar username={req.from_username} avatarUrl={avatars[req.from_user_id]} size={34} onClick={() => onOpenProfile(req.from_user_id)} />
+                <div className="flex-1 min-w-0">
+                  <button onClick={() => onOpenProfile(req.from_user_id)} className="text-white text-xs font-semibold hover:text-[#9B7BD7] transition-colors truncate block">@{req.from_username}</button>
+                </div>
+                <div className="flex gap-1 shrink-0">
+                  <button onClick={() => handleAccept(req)} className="p-1.5 bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 rounded-lg">
+                    <Check className="w-3.5 h-3.5" />
+                  </button>
+                  <button onClick={() => handleReject(req)} className="p-1.5 bg-red-500/10 border border-red-500/20 text-red-500 rounded-lg">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+      <section>
+        <p className="text-xs font-semibold text-zinc-500 mb-3">Friends · {friends.length}</p>
+        {friends.length === 0 ? (
+          <p className="text-zinc-600 text-sm text-center py-6">No friends yet.</p>
+        ) : (
+          <div className="space-y-2.5">
+            {friends.map(f => (
+              <div key={f.friend_id} className="flex items-center gap-2.5 p-2.5 bg-white/[0.03] rounded-xl">
+                <UserAvatar username={f.friend_username} avatarUrl={avatars[f.friend_id]} size={36} onClick={() => onOpenProfile(f.friend_id)} />
+                <div className="flex-1 min-w-0">
+                  <button onClick={() => onOpenProfile(f.friend_id)} className="text-white text-sm font-semibold hover:text-[#9B7BD7] transition-colors truncate block leading-none">@{f.friend_username}</button>
+                  <span className="text-zinc-600 text-xs">Friends since {new Date(f.since).toLocaleDateString()}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+      {suggested.length > 0 && (
+        <section>
+          <p className="text-xs font-semibold text-zinc-500 mb-3">Suggested</p>
+          <div className="space-y-2.5">
+            {suggested.map(u => (
+              <div key={u.user_id} className="flex items-center gap-2.5 p-2.5 bg-white/[0.03] rounded-xl">
+                <UserAvatar username={u.username} avatarUrl={u.avatarUrl} size={34} onClick={() => onOpenProfile(u.user_id)} />
+                <div className="flex-1 min-w-0">
+                  <button onClick={() => onOpenProfile(u.user_id)} className="text-white text-xs font-semibold hover:text-[#9B7BD7] transition-colors truncate block">{u.displayName || u.username}</button>
+                  <span className="text-zinc-500 text-[11px]">@{u.username}</span>
+                </div>
+                <button onClick={() => handleFollow(u.user_id)} disabled={sentTo.has(u.user_id)}
+                  className="shrink-0 px-2.5 py-1 text-[11px] font-semibold rounded-full bg-[#7C5DBD]/15 text-[#9B7BD7] hover:bg-[#7C5DBD]/25 disabled:opacity-40 transition-colors">
+                  {sentTo.has(u.user_id) ? 'Sent' : 'Follow'}
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
+
 // ── Main SocialTab ─────────────────────────────────────────────
 export function SocialTab() {
-  const [sidebarView, setSidebarView] = useState<SidebarView>('feed');
+  const [sidebarView, setSidebarView] = useState<'feed' | 'recent' | 'groups' | 'friends'>('feed');
   const [feedMode, setFeedMode] = useState<'all' | 'friends'>('all');
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1779,6 +2457,9 @@ export function SocialTab() {
   const [friendsLoaded, setFriendsLoaded] = useState(false);
   const [profileUserId, setProfileUserId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [pullProgress, setPullProgress] = useState(0);
+  const mainRef = useRef<HTMLDivElement>(null);
+  const touchStartY = useRef(-1);
   const [groups, setGroups] = useState<MovieGroup[]>([]);
   const [groupsLoading, setGroupsLoading] = useState(true);
   const [activeGroup, setActiveGroup] = useState<MovieGroup | null>(null);
@@ -1857,9 +2538,15 @@ export function SocialTab() {
     }
   };
 
+  const isAdmin = currentUserId === ADMIN_UID;
+
   const handleDelete = async (post_id: string) => {
     if (!currentUserId) return;
-    const result = await deletePost(post_id, currentUserId);
+    const targetPost = posts.find((p: FeedPost) => p.post_id === post_id);
+    const isOwnPost  = targetPost?.user_id === currentUserId;
+    const result = isAdmin && !isOwnPost
+      ? await adminDeletePost(post_id)
+      : await deletePost(post_id, currentUserId);
     if (result.success) {
       _feedCache.delete(post_id);
       setPosts(prev => prev.filter(p => p.post_id !== post_id));
@@ -1897,16 +2584,52 @@ export function SocialTab() {
     setActiveGroup(full ?? g);
   };
 
+  // Pull-to-refresh: non-passive touchmove so we can preventDefault during pull
+  useEffect(() => {
+    const el = mainRef.current;
+    if (!el) return;
+    const onTouchStart = (e: TouchEvent) => {
+      if (el.scrollTop > 0) { touchStartY.current = -1; return; }
+      touchStartY.current = e.touches[0].clientY;
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      if (touchStartY.current < 0) return;
+      const dy = e.touches[0].clientY - touchStartY.current;
+      if (dy > 0 && el.scrollTop === 0) {
+        setPullProgress(Math.min(dy / 90, 1));
+        e.preventDefault();
+      }
+    };
+    const onTouchEnd = () => {
+      if (pullProgress >= 1) handleRefresh();
+      touchStartY.current = -1;
+      setPullProgress(0);
+    };
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
+    el.addEventListener('touchend', onTouchEnd);
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove', onTouchMove);
+      el.removeEventListener('touchend', onTouchEnd);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pullProgress]);
+
   const handleGroupBack = () => {
     setActiveGroup(null);
     loadGroups();
   };
 
+  const mobileNavItems: { id: SidebarView; label: string; icon: React.ReactNode }[] = [
+    { id: 'feed', label: 'Feed', icon: <MessageCircle className="w-5 h-5" /> },
+    { id: 'recent', label: 'Recent', icon: <Clock className="w-5 h-5" /> },
+    { id: 'groups', label: 'Groups', icon: <Users className="w-5 h-5" /> },
+    { id: 'friends', label: 'Friends', icon: <UserPlus className="w-5 h-5" /> },
+  ];
+
   return (
-    <div
-      className="text-white -mx-6 -mt-8 pt-6 flex overflow-hidden"
-      style={{ height: 'calc(100vh - 52px)' }}
-    >
+    <div className="text-white -mx-6 -mt-8 pt-6 flex overflow-hidden h-dvh md:h-[calc(100dvh-62px)]">
       <style>{`
         @keyframes feedCardIn {
           from { opacity: 0; transform: translateY(8px); }
@@ -1916,7 +2639,7 @@ export function SocialTab() {
 
       {profileUserId && <UserProfileModal userId={profileUserId} onClose={() => setProfileUserId(null)} />}
 
-      {/* Left Sidebar */}
+      {/* Left Sidebar — desktop only */}
       <LeftSidebar
         view={sidebarView}
         onViewChange={(v) => { setSidebarView(v); setActiveGroup(null); }}
@@ -1929,7 +2652,7 @@ export function SocialTab() {
       />
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto  no-scrollbar min-w-0">
+      <main ref={mainRef} className="flex-1 overflow-y-auto no-scrollbar min-w-0 pb-16 md:pb-0">
         {activeGroup ? (
           <GroupDetail
             group={activeGroup}
@@ -1940,6 +2663,22 @@ export function SocialTab() {
               const updated = await getGroup(activeGroup.group_id);
               if (updated) setActiveGroup(updated);
             }}
+          />
+        ) : sidebarView === 'groups' ? (
+          /* Mobile-only groups panel */
+          <MobileGroupsPanel
+            groups={groups}
+            groupsLoading={groupsLoading}
+            onGroupSelect={handleGroupSelect}
+            onCreateGroup={loadGroups}
+            currentUserId={currentUserId}
+          />
+        ) : sidebarView === 'friends' ? (
+          /* Mobile-only friends panel */
+          <MobileFriendsPanel
+            currentUserId={currentUserId}
+            currentUsername={currentUsername}
+            onOpenProfile={setProfileUserId}
           />
         ) : sidebarView === 'recent' ? (
           <>
@@ -1956,32 +2695,56 @@ export function SocialTab() {
         ) : (
           <>
             {/* Feed tab bar */}
-            <div className="sticky top-0 z-10 bg-[#0A0A0A]/95 backdrop-blur-sm">
-              <div className="flex items-center">
+            <div className="sticky top-0 z-10 backdrop-blur-2xl border-b" style={{ background: 'rgba(10,10,10,0.55)', borderBottomColor: 'rgba(255,255,255,0.055)' }}>
+              <div className="relative flex items-center">
                 <button onClick={() => setFeedMode('all')}
-                  className={`flex-1 py-3.5 text-sm font-semibold relative transition-colors ${feedMode === 'all' ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'}`}>
+                  className="flex-1 py-3.5 text-sm font-semibold relative"
+                  style={{ color: feedMode === 'all' ? '#fff' : '#a1a1aa', transition: 'color 180ms cubic-bezier(0.23, 1, 0.32, 1)' }}>
                   For You
-                  {feedMode === 'all' && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-[2px] bg-[#7C5DBD] rounded-full" />}
                 </button>
                 <button onClick={() => setFeedMode('friends')}
-                  className={`flex-1 py-3.5 text-sm font-semibold relative transition-colors ${feedMode === 'friends' ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'}`}>
+                  className="flex-1 py-3.5 text-sm font-semibold relative"
+                  style={{ color: feedMode === 'friends' ? '#fff' : '#a1a1aa', transition: 'color 180ms cubic-bezier(0.23, 1, 0.32, 1)' }}>
                   Friends
-                  {feedMode === 'friends' && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-[2px] bg-[#7C5DBD] rounded-full" />}
                 </button>
                 <button onClick={handleRefresh} disabled={refreshing} title="Refresh"
-                  className="px-4 py-3.5 text-zinc-600 hover:text-zinc-300 transition-colors disabled:opacity-40">
+                  className="px-4 py-3.5 text-zinc-600 hover:text-zinc-300 active:scale-[0.97] transition-colors disabled:opacity-40">
                   <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
                 </button>
+                {/* Sliding underline — always rendered, animates position */}
+                <span
+                  className="absolute bottom-0 h-[2px] w-10 rounded-full pointer-events-none"
+                  style={{
+                    background: 'var(--reel-accent-hex)',
+                    left: feedMode === 'all' ? 'calc(25% - 20px)' : 'calc(75% - 20px - 28px)',
+                    transition: 'left 220ms cubic-bezier(0.23, 1, 0.32, 1)',
+                  }}
+                />
               </div>
             </div>
 
+            {/* Pull-to-refresh indicator — opacity + transform only (GPU) */}
+            {(pullProgress > 0 || refreshing) && (
+              <div className="sm:hidden flex items-center justify-center" style={{ height: 44 }}>
+                <RefreshCw
+                  className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`}
+                  style={{
+                    color: pullProgress >= 1 || refreshing ? 'var(--reel-accent-hex)' : '#52525b',
+                    opacity: Math.max(pullProgress * 1.4, refreshing ? 1 : 0),
+                    transform: !refreshing ? `rotate(${pullProgress * 270}deg)` : undefined,
+                    transition: 'color 200ms cubic-bezier(0.23, 1, 0.32, 1), opacity 120ms',
+                  }}
+                />
+              </div>
+            )}
+
             {/* Compose */}
-            <div className="px-8">
+            <div className="px-4 sm:px-6 md:px-8 border-b border-white/[0.05] sm:border-0">
               <ComposeBox currentUser={currentUser ? { ...currentUser, avatarUrl: currentUserAvatarUrl } : null} onPostCreated={handlePostCreated} />
             </div>
 
             {/* Posts */}
-            <div className="px-8">
+            <div className="sm:px-6 md:px-8">
               {loading
                 ? Array.from({ length: 5 }).map((_, i) => <ActivitySkeleton key={i} />)
                 : displayedPosts.length === 0
@@ -2000,8 +2763,10 @@ export function SocialTab() {
                         animationDelay: `${Math.min(idx * 40, 250)}ms`,
                       }}>
                       <ActivityCard post={post} currentUserId={currentUserId}
-                        currentUsername={currentUsername}
+                        currentUsername={currentUsername} isAdmin={isAdmin}
+                        isFirst={idx < 2}
                         onLike={handleLike} onDelete={handleDelete}
+                        onRepost={handlePostCreated}
                         onOpenProfile={setProfileUserId} />
                     </div>
                   ))
@@ -2011,12 +2776,35 @@ export function SocialTab() {
         )}
       </main>
 
-      {/* Right Sidebar */}
+      {/* Right Sidebar — desktop only */}
       <RightSidebar
         currentUserId={currentUserId}
         currentUsername={currentUsername}
         onOpenProfile={setProfileUserId}
       />
+
+      {/* Mobile bottom tab bar */}
+      <nav
+        className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0A0A0A]/95 backdrop-blur-md border-t border-white/[0.06] flex items-stretch"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      >
+        {mobileNavItems.map(item => (
+          <button
+            key={item.id}
+            onClick={() => { setSidebarView(item.id); setActiveGroup(null); }}
+            aria-label={item.label}
+            className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 transition-colors ${
+              sidebarView === item.id && !activeGroup
+                ? ''
+                : 'text-zinc-600 hover:text-zinc-400'
+            }`}
+            style={sidebarView === item.id && !activeGroup ? { color: 'var(--reel-accent-hex)' } : {}}
+          >
+            {item.icon}
+            <span className="text-[10px] font-medium">{item.label}</span>
+          </button>
+        ))}
+      </nav>
     </div>
   );
 }

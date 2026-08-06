@@ -3,7 +3,7 @@ import peacockLogo from '../../assets/Peacock.png';
 import { BASE_URL, getFriends, getUserPublicProfile, saveSocialSettings } from '../services/api';
 import type { Friend } from '../services/api';
 import { UserProfileModal } from './UserProfileModal';
-import { useTheme } from './ThemeContext';
+import { useTheme, THEMES } from './ThemeContext';
 import {
   Camera,
   Edit2,
@@ -12,8 +12,6 @@ import {
   Mail,
   Film,
   Star,
-  Moon,
-  Sun,
   Palette,
   Users,
   Eye,
@@ -83,7 +81,7 @@ function ProfileHeader({
 
   return (
     <div className="relative">
-      <div className="px-8 pt-12 pb-8">
+      <div className="px-4 sm:px-8 pt-12 pb-8">
         <h1 className="text-2xl tracking-tight text-white relative inline-block" style={{ fontFamily: "SanFran, system-ui, sans-serif", fontWeight: 100 }}>
           Profile
           <div className="absolute -bottom-2 left-0 right-0 h-[2px] bg-gradient-to-r from-red-600 via-red-500 to-transparent shadow-[0_0_15px_rgba(220,38,38,0.4)]"></div>
@@ -101,7 +99,7 @@ function ProfileHeader({
         {/* Banner colour swatches — visible only in edit mode */}
         {isEditing && (
           <div className="absolute bottom-3 right-4 flex items-center gap-1.5 bg-black/50 backdrop-blur-sm rounded-full px-3 py-1.5">
-            <span className="text-zinc-400 text-[10px] mr-1 uppercase tracking-wider">Banner</span>
+            <span className="text-zinc-500 text-xs mr-1">Banner</span>
             {BANNER_PRESETS.map(p => (
               <button
                 key={p.id}
@@ -119,7 +117,7 @@ function ProfileHeader({
       </div>
 
       {/* Avatar + name row — sits below the banner, avatar overlaps upward */}
-      <div className="px-8 pb-6">
+      <div className="px-4 sm:px-8 pb-6">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6" style={{ marginTop: '-40px' }}>
           <div className="flex flex-col md:flex-row items-start md:items-end gap-6">
 
@@ -207,8 +205,7 @@ function ProfileInfoSection({
     <div className="bg-zinc-900/50 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-zinc-800/50">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <div className="w-1 h-6 bg-red-600 rounded-full"></div>
-          <h2 className="text-white uppercase tracking-wider">Basic Information</h2>
+          <h2 className="text-white font-semibold text-sm">Basic Information</h2>
         </div>
         <User size={20} className="text-zinc-600" />
       </div>
@@ -324,8 +321,7 @@ function MoviePersonalizationSection({
     <div className="bg-zinc-900/50 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-zinc-800/50">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <div className="w-1 h-6 bg-red-600 rounded-full"></div>
-          <h2 className="text-white uppercase tracking-wider">Streaming Services</h2>
+          <h2 className="text-white font-semibold text-sm">Streaming Services</h2>
         </div>
         <Film size={20} className="text-zinc-600" />
       </div>
@@ -354,15 +350,15 @@ function MoviePersonalizationSection({
                   borderColor: isSelected ? 'white' : 'dimgray',
                 }}
               >
-                <div className="w-14 h-14 flex items-center justify-center bg-white rounded-md p-1">
+                <div className="w-10 h-10 sm:w-14 sm:h-14 flex items-center justify-center bg-white rounded-md p-1">
                   <img
                     src={platform.logo}
                     alt={platform.name}
-                    className="w-12 h-12 object-contain brightness-75 group-hover:brightness-100 transition-all"
+                    className="w-9 h-9 sm:w-12 sm:h-12 object-contain brightness-75 group-hover:brightness-100 transition-all"
                   />
                 </div>
 
-                <span className="text-lg text-zinc-400 group-hover:text-white transition-all text-center leading-tight">
+                <span className="text-[9px] sm:text-xs text-zinc-400 group-hover:text-white transition-all text-center leading-tight">
                   {platform.name}
                 </span>
               </button>
@@ -392,58 +388,47 @@ function MoviePersonalizationSection({
 // ─── AppearanceSection ───────────────────────────────────────
 
 function AppearanceSection() {
-  const { theme, setTheme } = useTheme();
+  const { themeId, setThemeId } = useTheme();
 
   return (
     <div className="bg-zinc-900/50 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-zinc-800/50">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <div className="w-1 h-6 bg-red-600 rounded-full"></div>
-          <h2 className="text-white uppercase tracking-wider">Appearance</h2>
+          <h2 className="text-white font-semibold text-sm">Appearance</h2>
         </div>
         <Palette size={20} className="text-zinc-600" />
       </div>
 
-      <label className="block text-zinc-400 mb-3">Style</label>
+      <label className="block text-zinc-400 mb-3">Theme</label>
 
-      <div className="space-y-3">
-        {/* Dark */}
-        <button
-          onClick={() => setTheme('dark')}
-          className={`w-full p-14 border-2 rounded-xl flex flex-col items-center text-center gap-1 transition-all ${theme === 'dark'
-              ? 'bg-red-600 border-red-600'
-              : 'bg-zinc-950/50 hover:bg-zinc-900 border-zinc-800 hover:border-red-600'
-            }`}
-        >
-          <div className="flex items-center gap-3">
-            <Moon size={22} className={theme === 'dark' ? 'text-white' : 'text-zinc-400'} />
-            <span className={`font-semibold text-3xl ${theme === 'dark' ? 'text-white' : 'text-zinc-300'}`}>
-              Dark
-            </span>
-          </div>
-          <p className={`text-sm ${theme === 'dark' ? 'text-red-100' : 'text-zinc-500'}`}>
-            Dark, cinematic, and premium. Deep blacks, glowing reds, smooth gradients, and a sleek movie theater vibe.
-          </p>
-        </button>
-
-        {/* Light */}
-        <button
-          onClick={() => setTheme('light')}
-          className={`w-full p-14 border-2 rounded-xl flex flex-col items-center text-center gap-1 transition-all ${theme === 'light'
-              ? 'bg-red-600 border-red-600'
-              : 'bg-zinc-950/50 hover:bg-zinc-900 border-zinc-800 hover:border-red-600'
-            }`}
-        >
-          <div className="flex items-center gap-3">
-            <Sun size={22} className={theme === 'light' ? 'text-white' : 'text-zinc-400'} />
-            <span className={`font-semibold text-3xl ${theme === 'light' ? 'text-white' : 'text-zinc-300'}`}>
-              Light
-            </span>
-          </div>
-          <p className={`text-sm ${theme === 'light' ? 'text-red-100' : 'text-zinc-500'}`}>
-            A bright and airy theme with a modern look and feel. Slick tabs that maintain that theatre-like feel.
-          </p>
-        </button>
+      <div className="grid grid-cols-2 gap-3">
+        {THEMES.map(t => {
+          const isActive = themeId === t.id;
+          return (
+            <button
+              key={t.id}
+              onClick={() => setThemeId(t.id)}
+              className={`p-4 border-2 rounded-xl flex flex-col items-start gap-1 transition-all text-left ${
+                isActive
+                  ? 'border-red-600 bg-red-600/10'
+                  : 'border-zinc-800 bg-zinc-950/50 hover:border-zinc-600'
+              }`}
+            >
+              <div className="flex items-center justify-between w-full">
+                <span className={`font-semibold text-sm ${isActive ? 'text-white' : 'text-zinc-300'}`}>
+                  {t.name}
+                </span>
+                <span
+                  className="w-3 h-3 rounded-full shrink-0 border border-white/10"
+                  style={{ background: t.accent }}
+                />
+              </div>
+              <p className={`text-xs leading-snug ${isActive ? 'text-red-200' : 'text-zinc-500'}`}>
+                {t.tagline}
+              </p>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -499,8 +484,7 @@ function SocialSection({
     <div className="bg-zinc-900/50 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-zinc-800/50">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <div className="w-1 h-6 bg-red-600 rounded-full"></div>
-          <h2 className="text-white uppercase tracking-wider">Social</h2>
+          <h2 className="text-white font-semibold text-sm">Social</h2>
         </div>
         <Users size={20} className="text-zinc-600" />
       </div>
@@ -637,8 +621,7 @@ function AccountDetailsSection({
     <div className="bg-zinc-900/50 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-zinc-800/50">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <div className="w-1 h-6 bg-red-600 rounded-full"></div>
-          <h2 className="text-white uppercase tracking-wider">Account Details</h2>
+          <h2 className="text-white font-semibold text-sm">Account Details</h2>
         </div>
         <Settings size={20} className="text-zinc-600" />
       </div>
@@ -879,6 +862,7 @@ export function ProfileTab() {
       setIsEditingProfile(false);
     } catch (error) {
       console.error('Failed to save profile:', error);
+      alert('Failed to save profile. Please try again.');
     }
   }
 
@@ -1004,7 +988,7 @@ export function ProfileTab() {
           onBannerChange={handleBannerChange}
         />
 
-        <div className="px-8 pb-16 space-y-6">
+        <div className="px-4 sm:px-8 pb-16 space-y-6">
           <ProfileInfoSection
             profile={profile}
             draftProfile={draftProfile}

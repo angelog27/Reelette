@@ -25,7 +25,7 @@ const SEGMENT_LABELS = [
 ];
 
 export function getWheelColor(genre: string): string {
-  return GENRE_COLORS[genre] ?? "#7C5DBD";
+  return GENRE_COLORS[genre] ?? "var(--reel-accent-hex)";
 }
 
 function hexToRgb(hex: string): [number, number, number] {

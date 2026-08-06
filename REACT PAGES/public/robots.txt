@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Allow: /play
+Allow: /quiz
+Disallow: /home/
+
+Sitemap: https://www.reelette-movie.com/sitemap.xml

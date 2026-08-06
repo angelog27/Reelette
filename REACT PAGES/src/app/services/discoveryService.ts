@@ -5,7 +5,7 @@ import {
 } from 'firebase/firestore';
 import type { Movie } from './api';
 
-const CACHE_TTL_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
+const CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
 const PAGE_SIZE    = 20;
 const MAX_PAGES    = 5;
 
@@ -77,27 +77,32 @@ export async function getServiceCategoryMovies(
   if (cached) return cached;
 
   // Layer 2+3: Firestore (only if cache miss)
-  const moviesRef  = collection(db, 'services', serviceId, 'categories', categoryId, 'movies');
-  const allMovies: Movie[] = [];
-  let cursor: QueryDocumentSnapshot<DocumentData> | undefined;
+  try {
+    const moviesRef  = collection(db, 'services', serviceId, 'categories', categoryId, 'movies');
+    const allMovies: Movie[] = [];
+    let cursor: QueryDocumentSnapshot<DocumentData> | undefined;
 
-  for (let page = 0; page < MAX_PAGES; page++) {
-    const q = cursor
-      ? query(moviesRef, orderBy('popularity', 'desc'), limit(PAGE_SIZE), startAfter(cursor))
-      : query(moviesRef, orderBy('popularity', 'desc'), limit(PAGE_SIZE));
+    for (let page = 0; page < MAX_PAGES; page++) {
+      const q = cursor
+        ? query(moviesRef, orderBy('popularity', 'desc'), limit(PAGE_SIZE), startAfter(cursor))
+        : query(moviesRef, orderBy('popularity', 'desc'), limit(PAGE_SIZE));
 
-    const snap = await getDocs(q);
-    if (snap.empty) break;
+      const snap = await getDocs(q);
+      if (snap.empty) break;
 
-    const pageMovies = snap.docs.map(docToMovie);
-    allMovies.push(...pageMovies);
+      const pageMovies = snap.docs.map(docToMovie);
+      allMovies.push(...pageMovies);
 
-    cursor = snap.docs[snap.docs.length - 1] as QueryDocumentSnapshot<DocumentData>;
-    if (pageMovies.length < PAGE_SIZE) break;
+      cursor = snap.docs[snap.docs.length - 1] as QueryDocumentSnapshot<DocumentData>;
+      if (pageMovies.length < PAGE_SIZE) break;
+    }
+
+    // Layer 1: write the full result
+    if (allMovies.length > 0) lsWrite(serviceId, categoryId, allMovies);
+
+    return allMovies;
+  } catch {
+    // Firestore unavailable or permission error — return empty so TMDB fallback kicks in
+    return [];
   }
-
-  // Layer 1: write the full result
-  if (allMovies.length > 0) lsWrite(serviceId, categoryId, allMovies);
-
-  return allMovies;
 }

@@ -1,17 +1,16 @@
 import { Suspense, useState, useEffect, useRef, useCallback } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
-  Bell, Heart, MessageCircle, Film, Users, UserPlus, SlidersHorizontal,
-  X, Star, ChevronDown, User, LogOut, Home, Search, Settings,
+  Bell, Heart, MessageCircle, Film, Users, UserPlus,
+  X, Star, User, LogOut, Home, Search, Settings,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   BASE_URL, getNotifications, markNotificationRead, markAllNotificationsRead,
   getUser, clearUser, clearServices, timeAgo,
-  searchMovies, discoverMovies, getServices, SERVICE_DISPLAY,
+  searchMovies,
   type AppNotification, type Movie,
 } from '../services/api';
-import { GENRES } from '../constants/genres';
 import { MovieDetailModal } from './MovieDetailModal';
 import { DiscoverProvider } from '../contexts/DiscoverContext';
 import type { QuerySnapshot, DocumentData } from 'firebase/firestore';
@@ -49,29 +48,13 @@ function notifIcon(type: AppNotification['type']) {
     case 'friend_accept':  return <UserPlus className="w-4 h-4 text-blue-400" />;
     case 'post_like':      return <Heart className="w-4 h-4 text-red-400" />;
     case 'post_reply':     return <MessageCircle className="w-4 h-4 text-green-400" />;
-    case 'friend_watched': return <Film className="w-4 h-4 text-purple-400" />;
+    case 'friend_watched': return <Film className="w-4 h-4" style={{ color: 'var(--reel-accent-hex)' }} />;
     case 'group_invite':   return <Users className="w-4 h-4 text-yellow-400" />;
     case 'group_message':  return <MessageCircle className="w-4 h-4 text-yellow-400" />;
     default: return <Bell className="w-4 h-4 text-gray-400" />;
   }
 }
 
-const RATING_OPTIONS = [
-  { label: 'Any', value: 0 },
-  { label: '6+', value: 6 },
-  { label: '7+', value: 7 },
-  { label: '8+', value: 8 },
-  { label: '9+', value: 9 },
-];
-
-const YEAR_OPTIONS = [
-  { label: 'Any', value: '' },
-  { label: '2020s', from: '2020', to: '' },
-  { label: '2010s', from: '2010', to: '2019' },
-  { label: '2000s', from: '2000', to: '2009' },
-  { label: '1990s', from: '1990', to: '1999' },
-  { label: 'Before 1990', from: '', to: '1989' },
-];
 
 export function HomePage() {
   const navigate = useNavigate();
@@ -93,19 +76,10 @@ export function HomePage() {
   const searchInputRef                    = useRef<HTMLInputElement>(null);
   const debounceRef                       = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // ── Filter state ────────────────────────────────────────────────
-  const [filterOpen, setFilterOpen]           = useState(false);
-  const [filterGenre, setFilterGenre]         = useState('');
-  const [filterRating, setFilterRating]       = useState(0);
-  const [filterYearIdx, setFilterYearIdx]     = useState(0);
-  const [filterMyServices, setFilterMyServices] = useState(false);
-  const filterRef                             = useRef<HTMLDivElement>(null);
   const [searchVisible, setSearchVisible]     = useState(false);
   const [navHidden, setNavHidden]             = useState(false);
   const lastScrollY                           = useRef(0);
   const scrollStopTimer                       = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const hasActiveFilter = filterGenre !== '' || filterRating > 0 || filterYearIdx > 0 || filterMyServices;
 
   // ── Modal for search results ────────────────────────────────────
   const [modalMovieId, setModalMovieId] = useState<string | null>(null);
@@ -128,25 +102,11 @@ export function HomePage() {
     const handler = (e: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
         setSearchOpen(false);
-        setFilterOpen(false);
       }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
-
-  // Close filter dropdown on outside click (if not part of search group)
-  useEffect(() => {
-    if (!filterOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (filterRef.current && !filterRef.current.contains(e.target as Node) &&
-          searchRef.current && !searchRef.current.contains(e.target as Node)) {
-        setFilterOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [filterOpen]);
 
   // Close notif panel on outside click
   useEffect(() => {
@@ -215,48 +175,109 @@ export function HomePage() {
     navigate('/login');
   }
 
-  // Real-time notifications via Firestore onSnapshot; fallback to 60s polling
+  // ── Notification cache helpers ───────────────────────────────────
+  const notifCacheKey  = `rl_notifs:${currentUserId}`;
+  const notifSinceKey  = `rl_notifs_since:${currentUserId}`;
+
+  const loadNotifCache = (): AppNotification[] => {
+    try { return JSON.parse(localStorage.getItem(notifCacheKey) || '[]'); } catch { return []; }
+  };
+
+  const saveNotifCache = (notifs: AppNotification[]) => {
+    try {
+      const trimmed = notifs.slice(0, 50);
+      localStorage.setItem(notifCacheKey, JSON.stringify(trimmed));
+      if (trimmed.length > 0 && trimmed[0].created_at) {
+        localStorage.setItem(notifSinceKey, trimmed[0].created_at as string);
+      }
+    } catch {}
+  };
+
+  const mergeNotifs = (base: AppNotification[], incoming: AppNotification[]): AppNotification[] => {
+    const map = new Map(base.map(n => [n.notification_id, n]));
+    for (const n of incoming) map.set(n.notification_id, n);
+    return [...map.values()].sort((a, b) =>
+      String(b.created_at).localeCompare(String(a.created_at))
+    );
+  };
+
+  // Real-time notifications: load cache instantly, then subscribe only to NEW docs
   useEffect(() => {
     if (!currentUserId) return;
     let unsubscribe: (() => void) | null = null;
     let intervalId: ReturnType<typeof setInterval> | null = null;
 
-    const applyNotifs = (notifs: AppNotification[]) => {
-      const newUnread = notifs.filter(n => !n.read).length;
+    // 1. Populate state from localStorage immediately — zero reads
+    const cached = loadNotifCache();
+    if (cached.length > 0) {
+      prevUnreadRef.current = cached.filter(n => !n.read).length;
+      setNotifications(cached);
+    }
+
+    const applyIncoming = (incoming: AppNotification[]) => {
+      if (incoming.length === 0) return;
+      const merged = mergeNotifs(loadNotifCache(), incoming);
+      const newUnread = merged.filter(n => !n.read).length;
       if (prevUnreadRef.current > 0 && newUnread > prevUnreadRef.current) {
-        const newest = notifs.find(n => !n.read);
+        const newest = incoming.find(n => !n.read);
         if (newest) toast(notifMessage(newest), { duration: 4000 });
       }
       prevUnreadRef.current = newUnread;
-      setNotifications(notifs);
+      setNotifications(merged);
+      saveNotifCache(merged);
     };
 
     (async () => {
-      const [{ signInFirebase }, { db }, { collection, query, orderBy, limit, onSnapshot }] =
+      const [{ signInFirebase }, { db }, firestoreModule] =
         await Promise.all([
           import('../lib/firebase'),
           import('../lib/firebase'),
           import('firebase/firestore'),
         ]);
+      const { collection, query, orderBy, limit, onSnapshot, where, Timestamp } = firestoreModule;
 
       const authed = await signInFirebase();
       if (authed) {
-        const q = query(
-          collection(db, 'users', currentUserId, 'notifications'),
-          orderBy('created_at', 'desc'),
-          limit(30),
-        );
+        // 2. Build query — if we have cached data, only fetch docs newer than the newest cached one
+        const since = localStorage.getItem(notifSinceKey);
+        let q;
+        if (since && cached.length > 0) {
+          try {
+            const sinceDate = new Date(since);
+            if (!isNaN(sinceDate.getTime())) {
+              q = query(
+                collection(db, 'users', currentUserId, 'notifications'),
+                orderBy('created_at', 'desc'),
+                where('created_at', '>', Timestamp.fromDate(sinceDate)),
+              );
+            }
+          } catch { /* fall through to full query */ }
+        }
+        if (!q) {
+          q = query(
+            collection(db, 'users', currentUserId, 'notifications'),
+            orderBy('created_at', 'desc'),
+            limit(30),
+          );
+        }
+
         unsubscribe = onSnapshot(q, (snapshot: QuerySnapshot<DocumentData>) => {
-          const notifs: AppNotification[] = snapshot.docs.map(doc => ({
-            notification_id: doc.id,
-            ...doc.data(),
-          } as AppNotification));
-          applyNotifs(notifs);
+          const incoming: AppNotification[] = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+              notification_id: doc.id,
+              ...data,
+              // Normalize Firestore Timestamp → ISO string for consistent serialization
+              created_at: data.created_at?.toDate?.()?.toISOString?.() ?? data.created_at ?? new Date().toISOString(),
+            } as AppNotification;
+          });
+          applyIncoming(incoming);
         }, () => {});
       } else {
+        // Fallback: REST polling, still merges with cache
         const poll = async () => {
           const notifs = await getNotifications(currentUserId);
-          applyNotifs(notifs);
+          applyIncoming(notifs);
         };
         poll();
         intervalId = setInterval(poll, 60_000);
@@ -267,54 +288,39 @@ export function HomePage() {
       unsubscribe?.();
       if (intervalId !== null) clearInterval(intervalId);
     };
-  }, [currentUserId]);
+  }, [currentUserId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Re-read the localStorage cache whenever the Settings notifications tab
+  // writes new data (e.g. on load or mark-read), keeping the bell in sync.
+  useEffect(() => {
+    if (!currentUserId) return;
+    const onExternalUpdate = () => {
+      try {
+        const fresh: AppNotification[] = JSON.parse(localStorage.getItem(notifCacheKey) || '[]');
+        setNotifications(fresh);
+        prevUnreadRef.current = fresh.filter(n => !n.read).length;
+      } catch {}
+    };
+    window.addEventListener('reelette-notifs-updated', onExternalUpdate);
+    return () => window.removeEventListener('reelette-notifs-updated', onExternalUpdate);
+  }, [currentUserId, notifCacheKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Debounced search ────────────────────────────────────────────
   const runSearch = useCallback(async (query: string) => {
-    const year = YEAR_OPTIONS[filterYearIdx];
-    const services = getServices();
-    const userServiceKeys = filterMyServices
-      ? Object.fromEntries(Object.entries(services).filter(([, v]) => v))
-      : undefined;
-
-    if (!query.trim() && !filterGenre && !filterRating && !filterYearIdx && !filterMyServices) {
+    if (!query.trim()) {
       setSearchResults([]);
       setSearchOpen(false);
       return;
     }
-
     setSearchLoading(true);
     setSearchOpen(true);
     try {
-      let results: Movie[];
-      if (query.trim()) {
-        results = await searchMovies(query.trim());
-        if (filterGenre) results = results.filter(m => m.genres.includes(filterGenre));
-        if (filterRating) results = results.filter(m => m.rating >= filterRating);
-        if (filterMyServices && userServiceKeys) {
-          const names = Object.entries(userServiceKeys)
-            .filter(([, v]) => v)
-            .map(([k]) => SERVICE_DISPLAY[k])
-            .filter(Boolean);
-          if (names.length) results = results.filter(m => names.includes(m.streamingService));
-        }
-      } else {
-        results = await discoverMovies({
-          genre_id: filterGenre
-            ? (GENRES.find(g => g.label === filterGenre)?.value ?? '')
-            : undefined,
-          min_rating: filterRating || undefined,
-          year_from: year?.from || undefined,
-          year_to: year?.to || undefined,
-          services_filter: userServiceKeys,
-          sort_by: 'popularity',
-        });
-      }
+      const results = await searchMovies(query.trim());
       setSearchResults(results.slice(0, 10));
     } finally {
       setSearchLoading(false);
     }
-  }, [filterGenre, filterRating, filterYearIdx, filterMyServices]);
+  }, []);
 
   const handleSearchChange = (val: string) => {
     setNavSearch(val);
@@ -330,13 +336,6 @@ export function HomePage() {
     }
   };
 
-  useEffect(() => {
-    if (navSearch.trim() || hasActiveFilter) {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(() => runSearch(navSearch), 1000);
-    }
-  }, [filterGenre, filterRating, filterYearIdx, filterMyServices]); // eslint-disable-line react-hooks/exhaustive-deps
-
   const clearSearch = () => {
     setNavSearch('');
     setSearchResults([]);
@@ -349,30 +348,43 @@ export function HomePage() {
   const handleMarkAllRead = async () => {
     if (!currentUserId) return;
     await markAllNotificationsRead(currentUserId);
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    setNotifications(prev => {
+      const updated = prev.map(n => ({ ...n, read: true }));
+      saveNotifCache(updated);
+      return updated;
+    });
     prevUnreadRef.current = 0;
   };
 
   const handleMarkOneRead = async (notif: AppNotification) => {
     if (notif.read || !currentUserId) return;
     await markNotificationRead(currentUserId, notif.notification_id);
-    setNotifications(prev =>
-      prev.map(n => n.notification_id === notif.notification_id ? { ...n, read: true } : n)
-    );
+    setNotifications(prev => {
+      const updated = prev.map(n => n.notification_id === notif.notification_id ? { ...n, read: true } : n);
+      saveNotifCache(updated);
+      return updated;
+    });
   };
 
   return (
     <div className="min-h-[100dvh] bg-[#0A0A0A] text-white flex flex-col">
 
       {/* ── Top nav bar ──────────────────────────────────────────── */}
-      <header className={`sticky top-0 z-50 flex items-center px-5 h-[62px] bg-[#0A0A0A]/95 backdrop-blur-sm transition-transform duration-300 ease-in-out ${navHidden ? '-translate-y-full' : 'translate-y-0'}`}>
+      <header
+        className={`hidden md:flex sticky top-0 z-50 items-center px-4 sm:px-5 h-[62px] backdrop-blur-2xl border-b transition-transform duration-300 ease-in-out ${navHidden ? '-translate-y-full' : 'translate-y-0'}`}
+        style={{
+          background: 'rgba(10,10,10,0.75)',
+          borderBottomColor: 'rgba(255,255,255,0.055)',
+          boxShadow: '0 1px 0 rgba(255,255,255,0.03), inset 0 1px 0 rgba(255,255,255,0.03)',
+        }}
+      >
 
         {/* ── Left: avatar + wordmark ── */}
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           <div className="relative shrink-0" ref={avatarMenuRef}>
             <button
               onClick={() => setAvatarMenuOpen(o => !o)}
-              className="w-9 h-9 rounded-full overflow-hidden border border-white/10 hover:border-white/30 transition-all duration-150 active:scale-95"
+              className="w-9 h-9 rounded-full overflow-hidden border border-white/10 hover:border-white/30 transition duration-150 active:scale-[0.97]"
               title="Profile"
             >
               {navAvatarUrl ? (
@@ -418,8 +430,8 @@ export function HomePage() {
           </span>
         </div>
 
-        {/* ── Center: tabs (absolutely centered) ── */}
-        <nav className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1">
+        {/* ── Center: tabs (absolutely centered) — desktop only ── */}
+        <nav className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-1">
           {tabs.map(tab => (
             <NavLink key={tab.id} to={tab.path}>
               {({ isActive }) => (
@@ -429,7 +441,7 @@ export function HomePage() {
                     {tab.icon && <tab.icon className="w-[22px] h-[22px] shrink-0" />}
                     <span style={{ fontSize: 15 }}>{tab.label}</span>
                   </div>
-                  {isActive && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#7C5DBD]" />}
+                  {isActive && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full" style={{ background: 'var(--reel-accent-hex)' }} />}
                 </div>
               )}
             </NavLink>
@@ -446,11 +458,11 @@ export function HomePage() {
             {searchVisible && (
               <label style={{
                 position: 'relative', display: 'block', borderRadius: '10px',
-                border: '2px solid #5e5757', padding: '6px 44px 6px 12px',
-                boxShadow: '8px 8px 30px #7C5DBD, -8px -8px 30px rgba(255,255,255,0.2)',
+                border: '1px solid rgba(255,255,255,0.15)', padding: '6px 44px 6px 12px',
+                background: 'rgba(255,255,255,0.04)',
                 cursor: 'text',
               }}>
-                <span style={{
+                <span className="hidden md:inline" style={{
                   position: 'absolute', top: '50%', right: '8px', transform: 'translateY(-50%)',
                   color: '#c5c5c5', backgroundColor: '#5e5757', padding: '3px 5px',
                   borderRadius: '6px', fontSize: '11px', lineHeight: 1,
@@ -462,10 +474,10 @@ export function HomePage() {
                   value={navSearch}
                   onChange={e => handleSearchChange(e.target.value)}
                   onKeyDown={handleSearchKeyDown}
-                  onFocus={() => { if (navSearch.trim() || hasActiveFilter) setSearchOpen(true); }}
+                  onFocus={() => { if (navSearch.trim()) setSearchOpen(true); }}
                   placeholder="Search movies, shows..."
                   autoFocus
-                  style={{ backgroundColor: 'transparent', border: 'none', outline: 'none', fontSize: '13px', color: 'rgb(190,195,200)', width: 200 }}
+                  style={{ backgroundColor: 'transparent', border: 'none', outline: 'none', fontSize: '13px', color: 'rgb(190,195,200)', width: 'min(200px, calc(100vw - 190px))' }}
                 />
                 {navSearch && (
                   <button onClick={clearSearch} className="absolute right-10 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors">
@@ -475,170 +487,18 @@ export function HomePage() {
               </label>
             )}
             <button
-              onClick={() => { setSearchVisible(v => !v); if (!searchVisible) setTimeout(() => searchInputRef.current?.focus(), 50); }}
-              className="flex items-center justify-center w-[38px] h-[38px] rounded-full border transition-all active:scale-95"
-              style={searchVisible ? { background: 'rgba(124,93,189,0.2)', borderColor: '#7C5DBD' } : { background: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.1)' }}
+              onClick={() => {
+                // On mobile go straight to the dedicated Search tab
+                if (window.innerWidth < 768) { setSearchOpen(false); navigate('/home/search'); return; }
+                setSearchVisible(v => !v);
+                if (!searchVisible) setTimeout(() => searchInputRef.current?.focus(), 50);
+              }}
+              className="flex items-center justify-center w-9 h-9 rounded-full border transition active:scale-[0.97]"
+              style={searchVisible ? { background: 'color-mix(in srgb, var(--reel-accent-hex) 20%, transparent)', borderColor: 'var(--reel-accent-hex)' } : { background: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.1)' }}
               title="Search (⌘K)"
             >
               <Search className="w-4 h-4 text-white" />
             </button>
-          </div>
-
-          {/* Filter button */}
-          <div className="relative" ref={filterRef}>
-            <button
-              onClick={() => setFilterOpen(o => !o)}
-              title="Filter results"
-              className="flex items-center justify-center w-[38px] h-[38px] rounded-full border transition-all active:scale-95"
-              style={hasActiveFilter
-                ? { background: 'var(--reel-accent-hex)', borderColor: 'var(--reel-accent-hex)' }
-                : { background: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.1)' }
-              }
-            >
-              <SlidersHorizontal className="w-4 h-4 text-white" />
-            </button>
-
-              {filterOpen && (
-                <div className="absolute right-0 top-[42px] w-72 bg-[#141414] border border-[#2A2A2A] rounded-2xl shadow-2xl z-[110] p-4 flex flex-col gap-4 panel-enter">
-                  <div>
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Genre</p>
-                    <div className="relative">
-                      <select
-                        value={filterGenre}
-                        onChange={e => setFilterGenre(e.target.value)}
-                        className="w-full appearance-none bg-white/[0.07] border border-white/[0.12] text-white text-sm rounded-lg px-3 py-2 pr-8 focus:outline-none focus:border-white/30"
-                      >
-                        <option value="">Any Genre</option>
-                        {GENRES.map(g => (
-                          <option key={g.value} value={g.label}>{g.label}</option>
-                        ))}
-                      </select>
-                      <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 pointer-events-none" />
-                    </div>
-                  </div>
-
-                  <div>
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Min Rating</p>
-                    <div className="flex gap-2 flex-wrap">
-                      {RATING_OPTIONS.map(r => (
-                        <button
-                          key={r.value}
-                          onClick={() => setFilterRating(r.value)}
-                          className="px-3 py-1 rounded-full text-xs font-medium border transition-colors"
-                          style={filterRating === r.value
-                            ? { background: 'var(--reel-accent-hex)', borderColor: 'var(--reel-accent-hex)', color: '#fff' }
-                            : { background: 'rgba(255,255,255,0.07)', borderColor: 'rgba(255,255,255,0.12)', color: '#9ca3af' }
-                          }
-                        >
-                          {r.value > 0 && <Star className="inline w-2.5 h-2.5 fill-yellow-400 text-yellow-400 mr-0.5 -mt-0.5" />}
-                          {r.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Year</p>
-                    <div className="flex flex-wrap gap-2">
-                      {YEAR_OPTIONS.map((y, i) => (
-                        <button
-                          key={i}
-                          onClick={() => setFilterYearIdx(i)}
-                          className="px-3 py-1 rounded-full text-xs font-medium border transition-colors"
-                          style={filterYearIdx === i
-                            ? { background: 'var(--reel-accent-hex)', borderColor: 'var(--reel-accent-hex)', color: '#fff' }
-                            : { background: 'rgba(255,255,255,0.07)', borderColor: 'rgba(255,255,255,0.12)', color: '#9ca3af' }
-                          }
-                        >
-                          {y.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <label className="flex items-center gap-3 cursor-pointer">
-                    <div
-                      onClick={() => setFilterMyServices(v => !v)}
-                      className="w-9 h-5 rounded-full relative transition-colors duration-200 shrink-0"
-                      style={{ background: filterMyServices ? 'var(--reel-accent-hex)' : 'rgba(255,255,255,0.15)' }}
-                    >
-                      <div
-                        className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200"
-                        style={{ transform: filterMyServices ? 'translateX(18px)' : 'translateX(2px)' }}
-                      />
-                    </div>
-                    <span className="text-sm text-gray-300">My streaming services only</span>
-                  </label>
-
-                  {hasActiveFilter && (
-                    <button
-                      onClick={() => {
-                        setFilterGenre('');
-                        setFilterRating(0);
-                        setFilterYearIdx(0);
-                        setFilterMyServices(false);
-                      }}
-                      className="text-xs hover:opacity-80 transition-opacity font-medium text-left"
-                      style={{ color: 'var(--reel-accent)' }}
-                    >
-                      Clear all filters
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Search results dropdown */}
-            {searchOpen && (navSearch.trim() || hasActiveFilter) && (
-              <div className="absolute right-0 top-[42px] w-[340px] max-h-[480px] flex flex-col bg-[#141414] border border-[#2A2A2A] rounded-2xl shadow-2xl z-[100] overflow-hidden panel-enter">
-                <div className="px-4 py-2.5 border-b border-[#2A2A2A] shrink-0 flex items-center justify-between">
-                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                    {navSearch.trim() ? `Results for "${navSearch}"` : 'Filtered Results'}
-                  </span>
-                  {hasActiveFilter && (
-                    <span className="text-[10px] font-medium" style={{ color: 'var(--reel-accent)' }}>Filters active</span>
-                  )}
-                </div>
-                <div className="overflow-y-auto flex-1">
-                  {searchLoading ? (
-                    <div className="flex items-center justify-center py-10 text-gray-500 text-sm">Searching…</div>
-                  ) : searchResults.length === 0 ? (
-                    <div className="flex items-center justify-center py-10 text-gray-500 text-sm">No results found</div>
-                  ) : (
-                    searchResults.map(movie => (
-                      <button
-                        key={movie.id}
-                        onClick={() => { setModalMovieId(movie.id); setSearchOpen(false); }}
-                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[#1C1C1C] transition-colors border-b border-[#2A2A2A] last:border-0 text-left"
-                      >
-                        {movie.poster ? (
-                          <img src={movie.poster} alt={movie.title} className="w-10 h-14 rounded object-cover shrink-0" loading="lazy" />
-                        ) : (
-                          <div className="w-10 h-14 rounded bg-[#2A2A2A] shrink-0 flex items-center justify-center">
-                            <Film className="w-4 h-4 text-gray-600" />
-                          </div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm text-white font-medium line-clamp-1">{movie.title}</p>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            {movie.year > 0 && <span className="text-xs text-gray-500">{movie.year}</span>}
-                            {movie.rating > 0 && (
-                              <span className="flex items-center gap-0.5 text-xs text-gray-500">
-                                <Star className="w-2.5 h-2.5 fill-yellow-500 text-yellow-500" />
-                                {movie.rating.toFixed(1)}
-                              </span>
-                            )}
-                          </div>
-                          {movie.streamingService && (
-                            <span className="text-[10px] text-gray-600 mt-0.5 block line-clamp-1">{movie.streamingService}</span>
-                          )}
-                        </div>
-                      </button>
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Bell */}
@@ -656,7 +516,7 @@ export function HomePage() {
             </button>
 
             {notifOpen && (
-              <div className="absolute right-0 top-11 w-80 max-h-[480px] flex flex-col bg-[#141414] border border-[#2A2A2A] rounded-2xl shadow-2xl z-[100] overflow-hidden panel-enter">
+              <div className="absolute right-0 top-11 w-80 max-w-[calc(100vw-1rem)] max-h-[60vh] flex flex-col bg-[#141414] border border-[#2A2A2A] rounded-2xl shadow-2xl z-[100] overflow-hidden panel-enter">
                 <div className="flex items-center justify-between px-4 py-3 border-b border-[#2A2A2A] shrink-0">
                   <span className="text-sm font-semibold text-white">Notifications</span>
                   {unreadCount > 0 && (
@@ -700,10 +560,61 @@ export function HomePage() {
             )}
           </div>
 
+          {/* Search results dropdown */}
+            {searchOpen && navSearch.trim() && (
+              <div className="absolute right-0 top-[42px] w-[340px] max-w-[calc(100vw-1rem)] max-h-[480px] flex flex-col bg-[#141414] border border-[#2A2A2A] rounded-2xl shadow-2xl z-[100] overflow-hidden panel-enter">
+                <div className="px-4 py-2.5 border-b border-[#2A2A2A] shrink-0">
+                  <span className="text-xs text-gray-400">
+                    Results for "{navSearch}"
+                  </span>
+                </div>
+                <div className="overflow-y-auto flex-1">
+                  {searchLoading ? (
+                    <div className="flex items-center justify-center py-10 text-gray-500 text-sm">Searching…</div>
+                  ) : searchResults.length === 0 ? (
+                    <div className="flex items-center justify-center py-10 text-gray-500 text-sm">No results found</div>
+                  ) : (
+                    searchResults.map(movie => (
+                      <button
+                        key={movie.id}
+                        onClick={() => { setModalMovieId(movie.id); setSearchOpen(false); }}
+                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[#1C1C1C] transition-colors border-b border-[#2A2A2A] last:border-0 text-left"
+                      >
+                        {movie.poster ? (
+                          <img src={movie.poster} alt={movie.title} className="w-10 h-14 rounded object-cover shrink-0" loading="lazy" />
+                        ) : (
+                          <div className="w-10 h-14 rounded bg-[#2A2A2A] shrink-0 flex items-center justify-center">
+                            <Film className="w-4 h-4 text-gray-600" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-white font-medium line-clamp-1">{movie.title}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            {movie.year > 0 && <span className="text-xs text-gray-500">{movie.year}</span>}
+                            {movie.rating > 0 && (
+                              <span className="flex items-center gap-0.5 text-xs text-gray-500">
+                                <Star className="w-2.5 h-2.5 fill-yellow-500 text-yellow-500" />
+                                {movie.rating.toFixed(1)}
+                              </span>
+                            )}
+                          </div>
+                          {movie.streamingService && (
+                            <span className="text-[10px] text-gray-600 mt-0.5 block line-clamp-1">{movie.streamingService}</span>
+                          )}
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+
       </header>
 
-      {/* Page content */}
-      <main className="flex-1 px-6 py-0">
+      {/* Page content — extra bottom padding on mobile so bottom nav doesn't cover content */}
+      <main className="flex-1 px-3 md:px-6 py-0 pb-[calc(4rem+env(safe-area-inset-bottom,0px))] md:pb-0 [overflow-x:clip]">
         <DiscoverProvider>
           <Suspense fallback={
             <div className="flex items-center justify-center py-24 text-gray-500">Loading…</div>
@@ -712,6 +623,50 @@ export function HomePage() {
           </Suspense>
         </DiscoverProvider>
       </main>
+
+      {/* ── Mobile bottom nav bar — hidden on md+ ── */}
+      <nav
+        className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0A0A0A]/97 backdrop-blur-md border-t border-white/[0.06]"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      >
+        <div className="flex items-stretch justify-around">
+          {tabs.map(tab => (
+            <NavLink key={tab.id} to={tab.path} className="flex-1">
+              {({ isActive }) => (
+                <div className="flex flex-col items-center justify-center py-2 gap-1 min-h-[56px]">
+                  {tab.id === 'profile' ? (
+                    navAvatarUrl ? (
+                      <img
+                        src={navAvatarUrl}
+                        alt="Profile"
+                        className={`w-[22px] h-[22px] rounded-full overflow-hidden border object-cover transition-colors duration-150 ${isActive ? 'border-white/50' : 'border-white/20'}`}
+                      />
+                    ) : (
+                      <div className={`w-[22px] h-[22px] rounded-full overflow-hidden border border-white/20 bg-[#2A2A2A] flex items-center justify-center text-[9px] font-semibold transition-colors duration-150 ${isActive ? '' : 'text-zinc-400'}`}
+                        style={isActive ? { color: 'var(--reel-accent-hex)' } : {}}>
+                        {currentUser?.username?.slice(0, 2).toUpperCase() ?? '?'}
+                      </div>
+                    )
+                  ) : (
+                    tab.icon && (
+                      <tab.icon
+                        className={`w-[22px] h-[22px] transition-colors duration-150 ${isActive ? '' : 'text-zinc-500'}`}
+                        style={isActive ? { color: 'var(--reel-accent-hex)' } : {}}
+                      />
+                    )
+                  )}
+                  <span
+                    className="text-[10px] font-medium leading-none transition-colors duration-150"
+                    style={isActive ? { color: 'var(--reel-accent-hex)' } : { color: 'rgba(255,255,255,0.35)' }}
+                  >
+                    {tab.label}
+                  </span>
+                </div>
+              )}
+            </NavLink>
+          ))}
+        </div>
+      </nav>
 
       {modalMovieId && (
         <MovieDetailModal movieId={modalMovieId} onClose={() => setModalMovieId(null)} />

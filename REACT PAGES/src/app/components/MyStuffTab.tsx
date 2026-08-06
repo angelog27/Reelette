@@ -1,13 +1,15 @@
-﻿import { useState, useEffect, useRef } from 'react';
-import { Star, Bookmark, BarChart2, ArrowUpDown, Check } from 'lucide-react';
-import { getWatchedMovies, getWatchLater, getMovieDetails, getMovieProvider, getUser, getRouletteHistory } from '../services/api';
+﻿import React, { useState, useEffect, useRef } from 'react';
+import { Star, Bookmark, BarChart2, ArrowUpDown, Check, Trophy } from 'lucide-react';
+import { getWatchedMovies, getWatchLater, getMovieDetails, getShowDetails, getMovieProvider, getUser, getRouletteHistory } from '../services/api';
 import type { WatchedMovie, RouletteSpin } from '../services/api';
 import { MovieDetailModal } from './MovieDetailModal';
 import { PROVIDER_LOGOS } from '../constants/providers';
 import { StatsTab } from './StatsTab';
+import { RankingsView } from './RankingsView';
 
-type Tab      = 'watched' | 'watchlater' | 'stats';
-type SortMode = 'rating-desc' | 'rating-asc' | 'franchise' | 'year-desc' | 'year-asc' | 'az';
+type Tab         = 'watched' | 'watchlater' | 'stats' | 'rankings';
+type SortMode    = 'rating-desc' | 'rating-asc' | 'franchise' | 'year-desc' | 'year-asc' | 'az';
+type MediaFilter = 'all' | 'movie' | 'show';
 
 interface WatchLaterMovie {
   movie_id: string;
@@ -15,6 +17,7 @@ interface WatchLaterMovie {
   year: string;
   poster: string | null;
   streamingService: string;
+  media_type: 'movie' | 'show';
 }
 
 const SORT_OPTIONS: { value: SortMode; label: string; watchedOnly?: boolean }[] = [
@@ -71,8 +74,11 @@ export function MyStuffTab() {
   const [recentSpins, setRecentSpins]         = useState<RouletteSpin[]>([]);
   const [loading, setLoading]                 = useState(true);
   const [page, setPage]                       = useState(1);
-  const [selectedMovieId, setSelectedMovieId] = useState<string | null>(null);
-  const [sortMode, setSortMode]               = useState<SortMode>('rating-desc');
+  const [selectedMovieId, setSelectedMovieId]   = useState<string | null>(null);
+  const [selectedItemType, setSelectedItemType] = useState<'movie' | 'show'>('movie');
+  const [selectedItemTitle, setSelectedItemTitle] = useState<string | undefined>(undefined);
+  const [mediaFilter, setMediaFilter]           = useState<MediaFilter>('all');
+  const [sortMode, setSortMode]                 = useState<SortMode>('rating-desc');
   const [sortOpen, setSortOpen]               = useState(false);
   const sortRef                               = useRef<HTMLDivElement>(null);
 
@@ -95,8 +101,20 @@ export function MyStuffTab() {
     Promise.all([
       getWatchedMovies(user.user_id, 500),
       getRouletteHistory(user.user_id, 20),
-    ]).then(([m, spins]) => {
-      setMovies(m);
+    ]).then(async ([m, spins]) => {
+      // For old entries missing media_type, detect by checking if the movie endpoint
+      // returns an error or a title mismatch (same logic as MovieDetailModal's knownTitle).
+      const resolved = await Promise.all(m.map(async (entry) => {
+        if (entry.media_type) return entry;
+        try {
+          const d = await getMovieDetails(entry.movie_id) as any;
+          const isError = !d || d.success === false || d.error || !d.title;
+          const titleMismatch = d?.title && d.title.toLowerCase() !== entry.title.toLowerCase();
+          if (isError || titleMismatch) return { ...entry, media_type: 'show' as const };
+        } catch {}
+        return { ...entry, media_type: 'movie' as const };
+      }));
+      setMovies(resolved);
       setRecentSpins(spins);
       setPage(1);
       setLoading(false);
@@ -112,13 +130,21 @@ export function MyStuffTab() {
         ids.map((id) => {
           const strId = String(id);
           if (cache.has(strId)) return Promise.resolve(cache.get(strId)!);
-          return Promise.all([getMovieDetails(strId), getMovieProvider(strId)]).then(([d, svc]) => {
+          return Promise.all([getMovieDetails(strId), getMovieProvider(strId)]).then(async ([d, svc]) => {
+            let details = d as any;
+            let mediaType: 'movie' | 'show' = 'movie';
+            if (!details?.title && (details?.name || details?.first_air_date)) {
+              details = await getShowDetails(strId).catch(() => d) as any;
+              mediaType = 'show';
+            }
             const entry: WatchLaterMovie = {
               movie_id: strId,
-              title:    (d as any)?.title ?? 'Unknown',
-              year:     (d as any)?.release_date ? String((d as any).release_date).slice(0, 4) : '',
-              poster:   (d as any)?.poster_path ? `https://image.tmdb.org/t/p/w500${(d as any).poster_path}` : null,
+              title:    details?.title ?? details?.name ?? 'Unknown',
+              year:     details?.release_date ? String(details.release_date).slice(0, 4)
+                        : details?.first_air_date ? String(details.first_air_date).slice(0, 4) : '',
+              poster:   details?.poster_path ? `https://image.tmdb.org/t/p/w500${details.poster_path}` : null,
               streamingService: svc,
+              media_type: mediaType,
             };
             cache.set(strId, entry);
             return entry;
@@ -141,10 +167,14 @@ export function MyStuffTab() {
     if (tab === 'watchlater' && (sortMode === 'rating-desc' || sortMode === 'rating-asc')) {
       setSortMode('year-desc');
     }
+    if (tab !== 'watched') setMediaFilter('all');
     setActiveTab(tab);
   };
 
-  const sortedMovies     = sortWatched(movies, sortMode);
+  const filteredMovies   = movies.filter(m =>
+    mediaFilter === 'all' ? true : mediaFilter === 'show' ? m.media_type === 'show' : m.media_type !== 'show'
+  );
+  const sortedMovies     = sortWatched(filteredMovies, sortMode);
   const totalPages       = Math.max(1, Math.ceil(sortedMovies.length / PAGE_SIZE));
   const pagedMovies      = sortedMovies.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const sortedWatchLater = sortWatchLater(watchLater, sortMode);
@@ -164,82 +194,79 @@ export function MyStuffTab() {
   }
 
   return (
-    <div className="-mx-6 -mt-8">
-
-      {/* ── Subtle cinema header ── */}
-      <div className="full-bleed relative overflow-hidden" style={{ marginBottom: 0 }}>
-        {/* Film strip — top only (subtle: just one strip) */}
-
-        {/* Subtle glow from nav — softer than Roulette/Social */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ background: 'radial-gradient(ellipse 55% 70% at 50% 0%, rgba(124,93,189,0.14) 0%, transparent 70%)' }}
-        />
-
-        {/* Faint side curtains */}
-        <div className="absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-black/50 to-transparent pointer-events-none" />
-        <div className="absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-black/50 to-transparent pointer-events-none" />
-
-        {/* Content */}
-        <div className="relative z-10 flex flex-col items-center justify-center text-center px-6" style={{ paddingTop: 42, paddingBottom: 32 }}>
-          {/* Badge */}
-          <div className="flex items-center gap-2 mb-3"></div>
-
-          <h1
-            style={{
-              fontFamily: "SanFran, system-ui, sans-serif",
-              fontWeight: 100,
-              fontSize: 'clamp(1.6rem, 3vw, 2.4rem)',
-              color: '#fff',
-              lineHeight: 1.15,
-            }}
-          >
-            My Stuff
-          </h1>
-
-          <div className="flex items-center gap-3 mt-3">
-          </div>
-        </div>
-      </div>
+    <div className="-mx-3 sm:-mx-6 -mt-8">
 
       {/* ── Controls row: tabs + sort ── */}
-      <div className="px-6 pt-6 pb-4 flex items-center justify-between gap-4 flex-wrap">
+      <div className="px-3 sm:px-6 pt-10 pb-4 flex items-center gap-4 flex-wrap">
 
-        {/* Tab pills */}
-        <div className="flex gap-1 bg-[#111] border border-[#1e1e1e] rounded-full p-1 w-fit">
-          <button
-            onClick={() => handleTabChange('watched')}
-            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              activeTab === 'watched' ? 'bg-[#7C5DBD] text-white' : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            <Star className="w-3.5 h-3.5" /> Watched
-          </button>
-          <button
-            onClick={() => handleTabChange('watchlater')}
-            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              activeTab === 'watchlater' ? 'bg-[#7C5DBD] text-white' : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            <Bookmark className="w-3.5 h-3.5" /> Watch Later
-          </button>
-          <button
-            onClick={() => handleTabChange('stats')}
-            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              activeTab === 'stats' ? 'text-white' : 'text-gray-400 hover:text-white'
-            }`}
-            style={activeTab === 'stats' ? { backgroundColor: '#f97316' } : {}}
-          >
-            <BarChart2 className="w-3.5 h-3.5" /> Stats
-          </button>
-        </div>
+        {/* Tab pills — sliding indicator (GPU-accelerated translateX) */}
+        {(() => {
+          const TAB_ORDER: Tab[] = ['watched', 'watchlater', 'stats', 'rankings'];
+          const tabIdx = TAB_ORDER.indexOf(activeTab);
+          const indicatorColor = 'var(--reel-accent-hex)';
+          return (
+            <div className="relative flex rounded-full p-1" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(16px)' }}>
+              <div style={{
+                position: 'absolute', top: 4, bottom: 4, left: 4,
+                width: 'calc((100% - 8px) / 4)',
+                background: indicatorColor,
+                borderRadius: 9999,
+                transform: `translateX(${tabIdx * 100}%)`,
+                transition: 'transform 220ms cubic-bezier(0.23, 1, 0.32, 1), background-color 150ms cubic-bezier(0.23, 1, 0.32, 1)',
+                pointerEvents: 'none',
+              }} />
+              {([
+                { id: 'watched',   Icon: Star,     label: 'Watched'      },
+                { id: 'watchlater', Icon: Bookmark, label: 'Watch Later'  },
+                { id: 'stats',     Icon: BarChart2, label: 'Stats'        },
+                { id: 'rankings',  Icon: Trophy,    label: 'Rankings'     },
+              ] as { id: Tab; Icon: React.ElementType; label: string }[]).map(t => (
+                <button key={t.id}
+                  onClick={() => handleTabChange(t.id)}
+                  className="relative z-10 flex-1 flex items-center justify-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-sm font-medium active:scale-[0.97]"
+                  style={{ color: activeTab === t.id ? '#fff' : '#9ca3af', transition: 'color 150ms cubic-bezier(0.23, 1, 0.32, 1)' }}>
+                  <t.Icon className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">{t.label}</span>
+                </button>
+              ))}
+            </div>
+          );
+        })()}
 
-        {/* Sort button — hidden on Stats tab */}
-        {activeTab !== 'stats' && (
-          <div className="relative" ref={sortRef}>
+        {/* Media filter — only on Watched tab, sliding indicator */}
+        {activeTab === 'watched' && (() => {
+          const FILTERS: MediaFilter[] = ['all', 'movie', 'show'];
+          const filterIdx = FILTERS.indexOf(mediaFilter);
+          return (
+            <div className="relative flex rounded-full p-1 overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(16px)' }}>
+              <div style={{
+                position: 'absolute', top: 4, bottom: 4, left: 4,
+                width: 'calc((100% - 8px) / 3)',
+                background: 'var(--reel-accent-hex)',
+                borderRadius: 9999,
+                transform: `translateX(calc(${filterIdx} * 100%))`,
+                transition: 'transform 220ms cubic-bezier(0.23, 1, 0.32, 1)',
+                pointerEvents: 'none',
+              }} />
+              {FILTERS.map(f => (
+                <button key={f}
+                  onClick={() => { setMediaFilter(f); setPage(1); }}
+                  className="relative z-10 flex-1 px-3 py-1.5 rounded-full text-xs font-medium active:scale-[0.97]"
+                  style={{ color: mediaFilter === f ? '#fff' : '#9ca3af', transition: 'color 150ms cubic-bezier(0.23, 1, 0.32, 1)' }}>
+                  {f === 'all' ? 'All' : f === 'movie' ? 'Movies' : 'Shows'}
+                </button>
+              ))}
+            </div>
+          );
+        })()}
+
+        {/* Sort button — hidden on Stats and Rankings tabs, pushed to the far right */}
+        {activeTab !== 'stats' && activeTab !== 'rankings' && (
+          <div className="relative ml-auto" ref={sortRef}>
             <button
               onClick={() => setSortOpen(v => !v)}
-              className="flex items-center gap-2 text-sm border rounded-full px-3.5 py-2 transition-colors bg-[#111] border-[#1e1e1e] text-gray-400 hover:text-white hover:border-[#333]"
+              className="flex items-center gap-2 text-sm rounded-full px-3.5 py-2 transition-colors text-zinc-400 hover:text-white"
+              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(16px)' }}
             >
               <ArrowUpDown className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">{currentSortLabel}</span>
@@ -247,13 +274,10 @@ export function MyStuffTab() {
             </button>
 
             {sortOpen && (
-              <div className="absolute right-0 top-full mt-2 w-52 bg-[#111] border border-[#1e1e1e] rounded-2xl shadow-2xl z-50 py-1.5 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="absolute right-0 top-full mt-2 w-52 rounded-2xl shadow-2xl z-50 py-1.5 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150" style={{ background: 'rgba(18,18,22,0.92)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(24px)' }}>
                 {/* Tiny "SORT BY" header inside dropdown */}
-                <p
-                  className="text-[9px] font-bold tracking-[0.2em] text-gray-600 uppercase px-4 pt-2 pb-1.5"
-                  style={{ fontFamily: "'Courier New', monospace" }}
-                >
-                  Sort By
+                <p className="text-[10px] font-medium text-gray-600 px-4 pt-2 pb-1.5">
+                  Sort by
                 </p>
                 {visibleSorts.map(opt => (
                   <button
@@ -274,11 +298,17 @@ export function MyStuffTab() {
       </div>
 
       {/* ── Content ── */}
-      <div className="px-6 pb-12">
-        {loading ? (
+      <div className="px-3 sm:px-6 pb-12">
+        {activeTab === 'rankings' ? (
+          <RankingsView userId={user.user_id} />
+        ) : loading ? (
           <div className="text-gray-500 text-center py-16">Loading…</div>
         ) : activeTab === 'stats' ? (
-          <StatsTab movies={movies} recentSpins={recentSpins} onMovieClick={setSelectedMovieId} />
+          <StatsTab
+            movies={movies}
+            recentSpins={recentSpins}
+            onMovieClick={(id, t) => { setSelectedMovieId(id); setSelectedItemType(t ?? 'movie'); }}
+          />
         ) : activeTab === 'watched' ? (
           sortedMovies.length === 0 ? (
             <div className="text-gray-500 text-center py-16">
@@ -286,11 +316,11 @@ export function MyStuffTab() {
             </div>
           ) : (
             <>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-6">
               {pagedMovies.map(m => (
                 <button
                   key={m.movie_id}
-                  onClick={() => setSelectedMovieId(m.movie_id)}
+                  onClick={() => { setSelectedMovieId(m.movie_id); setSelectedItemType(m.media_type === 'show' ? 'show' : 'movie'); setSelectedItemTitle(m.title); }}
                   className="text-left group focus:outline-none"
                 >
                   <div className="relative rounded-xl overflow-hidden bg-[#111] border border-[#1e1e1e] group-hover:border-[#7C5DBD]/50 transition-colors">
@@ -341,7 +371,7 @@ export function MyStuffTab() {
                     onClick={() => setPage(p)}
                     className="px-3 py-1.5 rounded-lg text-sm border transition-colors"
                     style={p === page
-                      ? { background: '#7C5DBD', borderColor: '#7C5DBD', color: '#fff' }
+                      ? { background: 'var(--reel-accent-hex)', borderColor: 'var(--reel-accent-hex)', color: '#fff' }
                       : { background: '#111', borderColor: '#2A2A2A', color: '#9ca3af' }}
                   >
                     {p}
@@ -364,11 +394,11 @@ export function MyStuffTab() {
               No movies saved yet. Hit the bookmark icon on any movie to save it!
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-6">
               {sortedWatchLater.map(m => (
                 <button
                   key={m.movie_id}
-                  onClick={() => setSelectedMovieId(m.movie_id)}
+                  onClick={() => { setSelectedMovieId(m.movie_id); setSelectedItemType(m.media_type ?? 'movie'); setSelectedItemTitle(m.title); }}
                   className="text-left group focus:outline-none"
                 >
                   <div className="relative rounded-xl overflow-hidden bg-[#111] border border-[#1e1e1e] group-hover:border-[#7C5DBD]/50 transition-colors">
@@ -404,9 +434,12 @@ export function MyStuffTab() {
         )}
       </div>
 
+
       {selectedMovieId && (
         <MovieDetailModal
           movieId={selectedMovieId}
+          type={selectedItemType}
+          knownTitle={selectedItemTitle}
           onClose={() => {
             setSelectedMovieId(null);
             if (activeTab === 'watched') loadWatched();

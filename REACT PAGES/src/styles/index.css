@@ -3,17 +3,48 @@
 @import './theme.css';
 
 html, body {
-    overscroll-behavior-x: none;
-    overscroll-behavior-y: none;
+  overscroll-behavior-x: none;
+  overscroll-behavior-y: none;
 }
 html {
-    overflow-x: hidden;
+  overflow-x: hidden;
 }
 
-/* Breaks out of the px-6 content padding only — does not bleed into the sidebar */
+/* ── iOS / mobile touch optimizations ───────────────────── */
+
+/* Remove 300ms tap delay and the grey flash on tap */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button, a, [role="button"], input, select, textarea {
+  touch-action: manipulation;
+}
+
+/* Prevent text size adjustment when rotating on iOS */
+body {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Safe-area bottom padding utility — used by bottom nav and modals */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Breaks out of the content padding — responsive for mobile (px-3) vs desktop (px-6) */
 .full-bleed {
-  width: calc(100% + 3rem);
-  margin-left: -1.5rem;
+  width: calc(100% + 1.5rem);
+  margin-left: -0.75rem;
+}
+@media (min-width: 768px) {
+  .full-bleed {
+    width: calc(100% + 3rem);
+    margin-left: -1.5rem;
+  }
 }
 
 /* Hide scrollbar for horizontal movie rows */
@@ -28,6 +59,41 @@ html {
 
 .no-scrollbar::-webkit-scrollbar {
   display: none;
+}
+
+@keyframes landscape-progress {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+/* ── Emil Kowalski–style micro-interaction system ───────────── */
+
+/* Panel / dropdown entrance — 200ms strong ease-out */
+@keyframes panel-enter-kf {
+  from { opacity: 0; transform: scale(0.97) translateY(-5px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0);    }
+}
+.panel-enter {
+  animation: panel-enter-kf 200ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+/* Row / card entrance — fade up, used for content rows appearing on load */
+@keyframes reel-enter-kf {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+.reel-enter {
+  animation: reel-enter-kf 340ms cubic-bezier(0.23, 1, 0.32, 1) var(--reel-delay, 0ms) both;
+}
+
+/* Subtle press feedback — scale(0.97) on :active, only transform animated */
+@media (prefers-reduced-motion: no-preference) {
+  .interactive-card {
+    transition: transform 140ms cubic-bezier(0.23, 1, 0.32, 1);
+  }
+  .interactive-card:active {
+    transform: scale(0.97);
+  }
 }
 
 .film-grain::after {
