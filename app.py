@@ -1336,8 +1336,6 @@ def update_profile(user_id):
     result = update_user_profile(user_id, data)
     return jsonify(result)
 
-<<<<<<< HEAD
-=======
 # ── Quiz Routes ──────────────────────────────────────────────────
 
 @app.route('/api/user/<uid>/profile', methods=['GET'])
@@ -1369,7 +1367,6 @@ def complete_quiz():
 
 _MAX_AVATAR_BYTES = 512 * 1024  # 512 KB
 
->>>>>>> 231e0b9e4bd550312398d372ccf897e318d08aec
 @app.route('/api/user/<user_id>/avatar', methods=['PUT'])
 @require_auth
 def update_avatar_route(user_id):
