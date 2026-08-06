@@ -87,6 +87,7 @@ export function AuthModal({ isOpen, onClose, initialView = 'login' }: Props) {
   const [regUsername, setRegUsername] = useState('');
   const [regError, setRegError] = useState('');
   const [regLoading, setRegLoading] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   // Forgot password
   const [forgotEmail, setForgotEmail] = useState('');
@@ -119,9 +120,9 @@ export function AuthModal({ isOpen, onClose, initialView = 'login' }: Props) {
     return () => { document.body.style.overflow = ''; };
   }, [isOpen]);
 
-  const goQuiz = () => {
+  const goHome = () => {
     onClose();
-    navigate('/quiz');
+    navigate('/home/roulette');
   };
 
   const afterLogin = async (userId: string, username: string, userEmail: string) => {
@@ -163,6 +164,10 @@ export function AuthModal({ isOpen, onClose, initialView = 'login' }: Props) {
   const handleRegister = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     setRegError('');
+    if (!agreedToTerms) {
+      setRegError('Please agree to the Terms of Service and Privacy Policy to continue.');
+      return;
+    }
     setRegLoading(true);
     try {
       const result = await register(regEmail, regPassword, regUsername);
@@ -403,8 +408,36 @@ export function AuthModal({ isOpen, onClose, initialView = 'login' }: Props) {
                           required
                         />
                       </div>
+                      <label className="flex items-start gap-2.5 text-sm text-white/40 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={agreedToTerms}
+                          onChange={(e) => setAgreedToTerms(e.target.checked)}
+                          className="mt-0.5 h-4 w-4 rounded border-white/20 bg-[#0d0d0d] text-[#D4A843] accent-[#D4A843] focus:ring-[#D4A843] focus:ring-offset-0"
+                        />
+                        <span>
+                          I agree to the{' '}
+                          <a
+                            href="/terms"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[#D4A843] hover:text-white transition-colors"
+                          >
+                            Terms of Service
+                          </a>{' '}
+                          and{' '}
+                          <a
+                            href="/privacy"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[#D4A843] hover:text-white transition-colors"
+                          >
+                            Privacy Policy
+                          </a>
+                        </span>
+                      </label>
                       {regError && <p className="text-red-400 text-sm text-center">{regError}</p>}
-                      <Button type="submit" disabled={regLoading} className={SUBMIT_CLASS} style={{background: "#D4A843"}}>
+                      <Button type="submit" disabled={regLoading || !agreedToTerms} className={SUBMIT_CLASS} style={{background: "#D4A843"}}>
                         {regLoading ? 'Creating account...' : 'Create Account'}
                       </Button>
                     </form>
@@ -471,7 +504,7 @@ export function AuthModal({ isOpen, onClose, initialView = 'login' }: Props) {
                     </p>
                     <div className="flex gap-3">
                       <button
-                        onClick={goQuiz}
+                        onClick={goHome}
                         className="flex-1 bg-white/5 hover:bg-white/10 active:scale-[0.98] border border-white/10 text-[#080808] px-6 py-3 rounded-xl transition-all duration-150 font-semibold text-sm" style={{background: "#D4A843"}}
                       >
                         No, take me in
@@ -491,8 +524,8 @@ export function AuthModal({ isOpen, onClose, initialView = 'login' }: Props) {
                   <StreamingSetup
                     userId={pendingUserId}
                     initialServices={existingServices}
-                    onDone={goQuiz}
-                    onSkip={goQuiz}
+                    onDone={goHome}
+                    onSkip={goHome}
                   />
                 )}
               </div>

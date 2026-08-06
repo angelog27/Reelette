@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { AuthModal } from './AuthModal';
 import logoFull from '../../assets/Full_Reelette_upscaled.png';
 
@@ -705,6 +705,8 @@ export function LandingPage() {
               <button onClick={openLogin}                   className="text-xs text-white/25 hover:text-white/60 transition-colors">Sign In</button>
               <button onClick={openRegister}                className="text-xs text-white/25 hover:text-white/60 transition-colors">Sign Up</button>
               <button onClick={() => navigate('/play')}     className="text-xs text-white/25 hover:text-white/60 transition-colors">Try Free</button>
+              <Link to="/terms"   className="text-xs text-white/25 hover:text-white/60 transition-colors">Terms</Link>
+              <Link to="/privacy" className="text-xs text-white/25 hover:text-white/60 transition-colors">Privacy</Link>
             </div>
           </div>
         </footer>

@@ -1,19 +1,13 @@
 import React, { lazy, Suspense, useState, useCallback } from 'react';
 import { createBrowserRouter, Navigate, Link } from 'react-router-dom';
 import { HomePage } from './components/HomePage';
-<<<<<<< HEAD
-import { LoginPage } from './components/LoginPage';
-import Landing from '../pages/Landing';
-import Terms from '../pages/legal/Terms';
-import Privacy from '../pages/legal/Privacy';
-=======
 import { LandingPage } from './components/LandingPage';
 import { AuthModal } from './components/AuthModal';
 import { GuestServicePicker } from './components/GuestServicePicker';
-import QuizGate from './components/QuizGate';
 import { getUser } from './services/api';
 import logoFull from '../assets/Full_Reelette_upscaled.png';
->>>>>>> 231e0b9e4bd550312398d372ccf897e318d08aec
+import Terms from '../pages/legal/Terms';
+import Privacy from '../pages/legal/Privacy';
 
 // Tab components are code-split: their JS is only downloaded when the user
 // navigates to that tab for the first time, keeping the initial bundle small.
