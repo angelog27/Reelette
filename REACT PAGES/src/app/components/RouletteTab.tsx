@@ -166,7 +166,7 @@ export function RouletteTab() {
   const [recentSpins, setRecentSpins] = useState<RouletteSpin[]>([]);
   const [spinsLoaded, setSpinsLoaded] = useState(false);
 
-  const [heroBackdrop, setHeroBackdrop] = useState<string | null>(null);
+  const [todaysPick, setTodaysPick]     = useState<Movie | null>(null);
   const resultsRef                      = useRef<HTMLDivElement>(null);
 
   const navigate     = useNavigate();
@@ -202,18 +202,29 @@ export function RouletteTab() {
     return () => document.removeEventListener("mousedown", h);
   }, []);
 
-  // Cinematic hero backdrop — reuse a trending movie's landscape backdrop.
-  // Non-blocking and cached by the API layer; degrades to a dark background.
+  // "Today's Pick" — a popular movie currently streaming on the user's
+  // services (falls back to trending). Provides the hero backdrop + badge.
+  // Non-blocking and cached by the API layer; degrades to a themed background.
   useEffect(() => {
     let cancelled = false;
-    getTrendingMovies("week")
-      .then(list => {
-        const withBackdrop = list.find(m => m.backdrop);
-        if (!cancelled && withBackdrop?.backdrop) setHeroBackdrop(withBackdrop.backdrop);
-      })
-      .catch(() => {});
+    const servicesFilter = hasServices
+      ? Object.fromEntries(
+          Object.entries(userServices).filter(([, on]) => on).map(([k]) => [k, true]),
+        )
+      : undefined;
+    (async () => {
+      let pool = await discoverMovies({ services_filter: servicesFilter, vote_count_gte: 300 })
+        .catch(() => [] as Movie[]);
+      if (!pool.length) pool = await getTrendingMovies("week").catch(() => [] as Movie[]);
+      const withBackdrop = pool.filter(m => m.backdrop);
+      const src = withBackdrop.length ? withBackdrop : pool;
+      if (cancelled || !src.length) return;
+      // Rotate deterministically per day so it feels curated ("today's pick").
+      const dayIndex = Math.floor(Date.now() / 86_400_000);
+      setTodaysPick(src[dayIndex % src.length]);
+    })();
     return () => { cancelled = true; };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const refreshSpins = () => {
     if (!user) return;
@@ -369,7 +380,28 @@ export function RouletteTab() {
           already full width (e.g. the guest /play layout) so it never causes
           horizontal overflow. */}
       <div style={{ marginLeft: 'calc(50% - 50vw)', marginRight: 'calc(50% - 50vw)' }}>
-        <RouletteHero backdropUrl={heroBackdrop}>
+        <RouletteHero
+          backdropUrl={todaysPick?.backdrop ?? null}
+          badge={todaysPick && (
+            <button
+              onClick={() => openMovie(todaysPick.id)}
+              className="group flex items-center gap-3 rounded-xl px-3 py-2 transition-transform duration-200 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+              style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.14)', backdropFilter: 'blur(10px)' }}
+            >
+              {todaysPick.poster && (
+                <img src={todaysPick.poster} alt="" className="h-14 w-[38px] rounded-md object-cover" />
+              )}
+              <div className="text-left">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em]" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                  Today's Pick
+                </p>
+                <p className="max-w-[190px] truncate text-[13px] font-semibold" style={{ color: '#fff' }}>
+                  {todaysPick.title}
+                </p>
+              </div>
+            </button>
+          )}
+        >
           <div className="max-w-3xl">
             <h1
               style={{
@@ -518,9 +550,10 @@ export function RouletteTab() {
               <button
                 onClick={spin}
                 disabled={spinning}
-                className="group inline-flex items-center gap-3 rounded-full pl-6 pr-8 py-4 text-white transition-[filter,transform] duration-200 hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                className="group inline-flex items-center gap-3 rounded-full pl-6 pr-8 py-4 transition-[filter,transform] duration-200 hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
                 style={{
                   background: 'var(--reel-red)',
+                  color: '#fff',
                   boxShadow: '0 10px 34px rgba(229,55,44,0.38)',
                   fontFamily: "SanFran, system-ui, sans-serif",
                 }}
@@ -540,8 +573,8 @@ export function RouletteTab() {
                   <button
                     onClick={() => setSmartOpen(o => !o)}
                     aria-expanded={smartOpen}
-                    className="inline-flex items-center gap-2.5 px-6 py-4 text-white transition-[filter,transform] duration-200 hover:brightness-110 active:scale-[0.98] focus:outline-none"
-                    style={{ background: '#0a0a0a', borderRadius: 9999, fontFamily: "SanFran, system-ui, sans-serif" }}
+                    className="inline-flex items-center gap-2.5 px-6 py-4 transition-[filter,transform] duration-200 hover:brightness-110 active:scale-[0.98] focus:outline-none"
+                    style={{ background: '#0a0a0a', color: '#fff', borderRadius: 9999, fontFamily: "SanFran, system-ui, sans-serif" }}
                   >
                     <GroqIcon size={16} />
                     <span className="text-[15px] font-semibold">Smart Watch</span>
@@ -797,59 +830,63 @@ export function RouletteTab() {
               )}
             </div>
 
-            <div className="no-scrollbar -mx-2 flex gap-4 overflow-x-auto px-2 py-7">
-              {enabledServices.map(({ key, meta, logo }) => {
-                const isFiltered = selectedProviders.includes(key);
-                const dimmed = selectedProviders.length > 0 && !isFiltered;
-                return (
-                  <button
-                    key={key}
-                    onClick={() => toggleProvider(key)}
-                    aria-pressed={isFiltered}
-                    className="group relative flex h-[132px] w-[184px] shrink-0 flex-col items-center justify-center gap-3 rounded-2xl transition-[transform,border-color,opacity] duration-200 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-                    style={{
-                      background: '#0E0E0E',
-                      border: isFiltered ? '1px solid var(--reel-red)' : '1px solid rgba(255,255,255,0.08)',
-                      opacity: dimmed ? 0.4 : 1,
-                    }}
-                  >
-                    {/* Brand-colored glow */}
-                    <span
-                      aria-hidden="true"
-                      className={`pointer-events-none absolute inset-0 rounded-2xl transition-opacity duration-200 ${isFiltered ? 'opacity-100' : 'opacity-55 group-hover:opacity-90'}`}
-                      style={{ boxShadow: `0 0 22px ${meta.color}70, 0 0 8px ${meta.color}55` }}
-                    />
-                    <img src={logo} alt="" className="relative h-14 w-14 rounded-xl object-cover" />
-                    <span
-                      className="relative text-[13px] font-medium"
-                      style={{ color: isFiltered ? '#fff' : '#d1d5db' }}
+            <div className="no-scrollbar -mx-2 overflow-x-auto px-2 py-7">
+              {/* w-max + mx-auto keeps the rail centered when it fits and
+                  scrollable when it overflows on smaller screens. */}
+              <div className="mx-auto flex w-max gap-4">
+                {enabledServices.map(({ key, meta, logo }) => {
+                  const isFiltered = selectedProviders.includes(key);
+                  const dimmed = selectedProviders.length > 0 && !isFiltered;
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => toggleProvider(key)}
+                      aria-pressed={isFiltered}
+                      className="group relative flex h-[132px] w-[184px] shrink-0 flex-col items-center justify-center gap-3 rounded-2xl transition-[transform,border-color,opacity] duration-200 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                      style={{
+                        background: 'var(--reel-card)',
+                        border: isFiltered ? '1px solid var(--reel-red)' : '1px solid var(--reel-border)',
+                        opacity: dimmed ? 0.4 : 1,
+                      }}
                     >
-                      {meta.label}
-                    </span>
-                    {isFiltered && (
+                      {/* Brand-colored glow — always on for your enabled services */}
                       <span
-                        className="absolute right-2.5 top-2.5 flex h-4 w-4 items-center justify-center rounded-full"
-                        style={{ background: 'var(--reel-red)' }}
+                        aria-hidden="true"
+                        className={`pointer-events-none absolute inset-0 rounded-2xl transition-opacity duration-200 ${isFiltered ? 'opacity-100' : 'opacity-80 group-hover:opacity-100'}`}
+                        style={{ boxShadow: `0 0 26px ${meta.color}80, 0 0 10px ${meta.color}66` }}
+                      />
+                      <img src={logo} alt="" className="relative h-14 w-14 rounded-xl object-cover" />
+                      <span
+                        className="relative text-[13px] font-medium"
+                        style={{ color: isFiltered ? 'var(--reel-t1)' : 'var(--reel-t2)' }}
                       >
-                        <Check className="h-2.5 w-2.5 text-white" strokeWidth={3} />
+                        {meta.label}
                       </span>
-                    )}
-                  </button>
-                );
-              })}
+                      {isFiltered && (
+                        <span
+                          className="absolute right-2.5 top-2.5 flex h-4 w-4 items-center justify-center rounded-full"
+                          style={{ background: 'var(--reel-red)' }}
+                        >
+                          <Check className="h-2.5 w-2.5 text-white" strokeWidth={3} />
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
 
-              {/* Edit / add services */}
-              <button
-                onClick={handleEditServices}
-                aria-label="Edit your streaming services"
-                className="group flex h-[132px] w-[184px] shrink-0 flex-col items-center justify-center gap-2.5 rounded-2xl transition-transform duration-200 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-                style={{ background: 'transparent', border: '1px dashed rgba(255,255,255,0.14)' }}
-              >
-                <Plus className="h-6 w-6 text-zinc-500 transition-colors group-hover:text-white" />
-                <span className="text-[13px] font-medium text-zinc-500 transition-colors group-hover:text-zinc-300">
-                  Edit
-                </span>
-              </button>
+                {/* Edit / add services */}
+                <button
+                  onClick={handleEditServices}
+                  aria-label="Edit your streaming services"
+                  className="group flex h-[132px] w-[184px] shrink-0 flex-col items-center justify-center gap-2.5 rounded-2xl transition-transform duration-200 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                  style={{ background: 'transparent', border: '1px dashed var(--reel-border)' }}
+                >
+                  <Plus className="h-6 w-6 text-zinc-500 transition-colors group-hover:text-white" />
+                  <span className="text-[13px] font-medium text-zinc-500 transition-colors group-hover:text-zinc-300">
+                    Edit
+                  </span>
+                </button>
+              </div>
             </div>
           </section>
         )}
