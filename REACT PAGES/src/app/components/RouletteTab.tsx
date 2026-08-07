@@ -157,6 +157,7 @@ export function RouletteTab() {
   const [smartResult, setSmartResult]               = useState<{ movie: Movie; reason: string } | null>(null);
   const [smartError, setSmartError]                 = useState("");
   const [smartSpinResting, setSmartSpinResting]     = useState(false);
+  const [smartOpen, setSmartOpen]                   = useState(false);
   const smartResultRef                              = useRef<HTMLDivElement>(null);
 
   const [friendSpins, setFriendSpins] = useState<
@@ -512,8 +513,8 @@ export function RouletteTab() {
               </div>
             </div>
 
-            {/* Primary CTA */}
-            <div className="mt-7">
+            {/* Primary actions */}
+            <div className="mt-7 flex flex-wrap items-center gap-4">
               <button
                 onClick={spin}
                 disabled={spinning}
@@ -529,7 +530,139 @@ export function RouletteTab() {
                   {spinning ? 'Finding something…' : 'Find something to watch'}
                 </span>
               </button>
+
+              {/* Smart Watch — rainbow-glow toggle */}
+              {user && (
+                <div
+                  className={`rainbow-glow${smartSpinAvailable && !smartSpinResting ? '' : ' rainbow-glow--dim'}`}
+                  style={{ borderRadius: 9999 }}
+                >
+                  <button
+                    onClick={() => setSmartOpen(o => !o)}
+                    aria-expanded={smartOpen}
+                    className="inline-flex items-center gap-2.5 px-6 py-4 text-white transition-[filter,transform] duration-200 hover:brightness-110 active:scale-[0.98] focus:outline-none"
+                    style={{ background: '#0a0a0a', borderRadius: 9999, fontFamily: "SanFran, system-ui, sans-serif" }}
+                  >
+                    <GroqIcon size={16} />
+                    <span className="text-[15px] font-semibold">Smart Watch</span>
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${smartOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                </div>
+              )}
             </div>
+
+            {/* Smart Watch — dropdown panel */}
+            {user && smartOpen && (
+              <div className="mt-4 w-full max-w-xl panel-enter">
+                <div
+                  className="rounded-2xl p-5 space-y-3"
+                  style={{ background: 'rgba(10,10,10,0.92)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(10px)', boxShadow: '0 24px 60px rgba(0,0,0,0.55)' }}
+                >
+                  <div className="flex items-center gap-2">
+                    <GroqIcon size={14} />
+                    <p className="text-sm font-semibold text-white">Smart Watch</p>
+                    <span className="text-[10px] ml-auto text-gray-500">
+                      {smartSpinAvailable ? "1 use remaining today" : `Resets in ${hoursUntilReset}h`}
+                    </span>
+                  </div>
+
+                  <textarea
+                    value={smartPreferences}
+                    onChange={e => setSmartPreferences(e.target.value)}
+                    maxLength={300}
+                    disabled={smartSpinLoading}
+                    placeholder="Describe what you want to watch tonight…"
+                    rows={3}
+                    className="w-full text-xs rounded-xl px-3 py-2.5 resize-none focus:outline-none placeholder-[#2d2d2d] transition-colors disabled:opacity-40"
+                    style={{
+                      background: 'rgba(0,0,0,0.6)',
+                      border: '1px solid rgba(255,255,255,0.07)',
+                      color: '#fff',
+                      fontFamily: "SanFran, system-ui, sans-serif",
+                    }}
+                  />
+
+                  <button
+                    onClick={smartSpinAvailable ? handleSmartSpin : spin}
+                    disabled={smartSpinLoading || smartSpinResting}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={
+                      smartSpinAvailable && !smartSpinResting
+                        ? {
+                            background: 'rgba(255,107,53,0.08)',
+                            border: '1px solid rgba(255,107,53,0.25)',
+                            color: '#FF6B35',
+                          }
+                        : {
+                            background: 'rgba(255,255,255,0.03)',
+                            border: '1px solid rgba(255,255,255,0.07)',
+                            color: '#4b5563',
+                          }
+                    }
+                  >
+                    <GroqIcon size={13} />
+                    {smartSpinLoading
+                      ? "Finding your perfect pick…"
+                      : smartSpinResting
+                      ? "Smart Watch is resting…"
+                      : smartSpinAvailable
+                      ? "Smart Watch"
+                      : "Find Movie"}
+                  </button>
+
+                  {smartError && (
+                    <p className="text-yellow-500 text-xs text-center">{smartError}</p>
+                  )}
+
+                  {smartResult && (
+                    <div
+                      ref={smartResultRef}
+                      className="rounded-xl overflow-hidden cursor-pointer animate-in fade-in duration-300"
+                      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
+                      onClick={() => {
+                        setSelectedMovieId(smartResult.movie.id);
+                        setSelectedMovieType('movie');
+                      }}
+                    >
+                      <div className="flex gap-4 p-4">
+                        {smartResult.movie.poster ? (
+                          <img
+                            src={smartResult.movie.poster}
+                            alt={smartResult.movie.title}
+                            className="w-16 h-24 rounded-lg object-cover shrink-0"
+                            style={{ border: '1px solid rgba(255,255,255,0.08)' }}
+                          />
+                        ) : (
+                          <div className="w-16 h-24 rounded-lg bg-[#1a1a1a] flex items-center justify-center shrink-0">
+                            <Film className="w-5 h-5 text-gray-700" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
+                          <p className="text-white font-bold text-sm leading-snug line-clamp-2">
+                            {smartResult.movie.title}
+                          </p>
+                          <div className="flex items-center gap-2 text-xs">
+                            {smartResult.movie.year > 0 && (
+                              <span className="text-gray-500">{smartResult.movie.year}</span>
+                            )}
+                            {smartResult.movie.rating > 0 && (
+                              <span className="text-yellow-400 font-semibold">★ {smartResult.movie.rating.toFixed(1)}</span>
+                            )}
+                          </div>
+                          <p className="text-gray-500 text-[11px] italic leading-relaxed line-clamp-3">
+                            {smartResult.reason}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-end gap-1 px-4 pb-3">
+                        <GroqIcon size={10} />
+                        <span className="text-[10px] text-gray-700">Powered by Groq</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </RouletteHero>
       </div>
@@ -664,7 +797,7 @@ export function RouletteTab() {
               )}
             </div>
 
-            <div className="no-scrollbar -mx-1 flex gap-3 overflow-x-auto px-1 pb-1">
+            <div className="no-scrollbar -mx-2 flex gap-4 overflow-x-auto px-2 py-7">
               {enabledServices.map(({ key, meta, logo }) => {
                 const isFiltered = selectedProviders.includes(key);
                 const dimmed = selectedProviders.length > 0 && !isFiltered;
@@ -673,23 +806,29 @@ export function RouletteTab() {
                     key={key}
                     onClick={() => toggleProvider(key)}
                     aria-pressed={isFiltered}
-                    className="group relative flex h-[104px] w-[150px] shrink-0 flex-col items-center justify-center gap-2.5 rounded-xl transition-[transform,border-color,opacity] duration-200 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                    className="group relative flex h-[132px] w-[184px] shrink-0 flex-col items-center justify-center gap-3 rounded-2xl transition-[transform,border-color,opacity] duration-200 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
                     style={{
                       background: '#0E0E0E',
                       border: isFiltered ? '1px solid var(--reel-red)' : '1px solid rgba(255,255,255,0.08)',
                       opacity: dimmed ? 0.4 : 1,
                     }}
                   >
-                    <img src={logo} alt="" className="h-10 w-10 rounded-lg object-cover" />
+                    {/* Brand-colored glow */}
                     <span
-                      className="text-[12px] font-medium"
-                      style={{ color: isFiltered ? '#fff' : '#9ca3af' }}
+                      aria-hidden="true"
+                      className={`pointer-events-none absolute inset-0 rounded-2xl transition-opacity duration-200 ${isFiltered ? 'opacity-100' : 'opacity-55 group-hover:opacity-90'}`}
+                      style={{ boxShadow: `0 0 22px ${meta.color}70, 0 0 8px ${meta.color}55` }}
+                    />
+                    <img src={logo} alt="" className="relative h-14 w-14 rounded-xl object-cover" />
+                    <span
+                      className="relative text-[13px] font-medium"
+                      style={{ color: isFiltered ? '#fff' : '#d1d5db' }}
                     >
                       {meta.label}
                     </span>
                     {isFiltered && (
                       <span
-                        className="absolute right-2 top-2 flex h-4 w-4 items-center justify-center rounded-full"
+                        className="absolute right-2.5 top-2.5 flex h-4 w-4 items-center justify-center rounded-full"
                         style={{ background: 'var(--reel-red)' }}
                       >
                         <Check className="h-2.5 w-2.5 text-white" strokeWidth={3} />
@@ -703,126 +842,14 @@ export function RouletteTab() {
               <button
                 onClick={handleEditServices}
                 aria-label="Edit your streaming services"
-                className="group flex h-[104px] w-[150px] shrink-0 flex-col items-center justify-center gap-2 rounded-xl transition-transform duration-200 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                className="group flex h-[132px] w-[184px] shrink-0 flex-col items-center justify-center gap-2.5 rounded-2xl transition-transform duration-200 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
                 style={{ background: 'transparent', border: '1px dashed rgba(255,255,255,0.14)' }}
               >
-                <Plus className="h-5 w-5 text-zinc-500 transition-colors group-hover:text-white" />
-                <span className="text-[12px] font-medium text-zinc-500 transition-colors group-hover:text-zinc-300">
+                <Plus className="h-6 w-6 text-zinc-500 transition-colors group-hover:text-white" />
+                <span className="text-[13px] font-medium text-zinc-500 transition-colors group-hover:text-zinc-300">
                   Edit
                 </span>
               </button>
-            </div>
-          </section>
-        )}
-
-        {/* Smart Watch */}
-        {user && (
-          <section className="mt-14 max-w-2xl">
-            <div className={`rainbow-glow${smartSpinAvailable && !smartSpinResting ? '' : ' rainbow-glow--dim'}`}>
-              <div className="rounded-2xl p-5 space-y-3 relative" style={{ background: '#0a0a0a' }}>
-                <div className="flex items-center gap-2">
-                  <GroqIcon size={14} />
-                  <p className="text-sm font-semibold text-white">Smart Watch</p>
-                  <span className="text-[10px] ml-auto text-gray-500">
-                    {smartSpinAvailable ? "1 use remaining today" : `Resets in ${hoursUntilReset}h`}
-                  </span>
-                </div>
-
-                <textarea
-                  value={smartPreferences}
-                  onChange={e => setSmartPreferences(e.target.value)}
-                  maxLength={300}
-                  disabled={smartSpinLoading}
-                  placeholder="Describe what you want to watch tonight…"
-                  rows={3}
-                  className="w-full text-xs rounded-xl px-3 py-2.5 resize-none focus:outline-none placeholder-[#2d2d2d] transition-colors disabled:opacity-40"
-                  style={{
-                    background: 'rgba(0,0,0,0.6)',
-                    border: '1px solid rgba(255,255,255,0.07)',
-                    color: '#fff',
-                    fontFamily: "SanFran, system-ui, sans-serif",
-                  }}
-                />
-
-                <button
-                  onClick={smartSpinAvailable ? handleSmartSpin : spin}
-                  disabled={smartSpinLoading || smartSpinResting}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={
-                    smartSpinAvailable && !smartSpinResting
-                      ? {
-                          background: 'rgba(255,107,53,0.08)',
-                          border: '1px solid rgba(255,107,53,0.25)',
-                          color: '#FF6B35',
-                        }
-                      : {
-                          background: 'rgba(255,255,255,0.03)',
-                          border: '1px solid rgba(255,255,255,0.07)',
-                          color: '#4b5563',
-                        }
-                  }
-                >
-                  <GroqIcon size={13} />
-                  {smartSpinLoading
-                    ? "Finding your perfect pick…"
-                    : smartSpinResting
-                    ? "Smart Watch is resting…"
-                    : smartSpinAvailable
-                    ? "Smart Watch"
-                    : "Find Movie"}
-                </button>
-
-                {smartError && (
-                  <p className="text-yellow-500 text-xs text-center">{smartError}</p>
-                )}
-
-                {smartResult && (
-                  <div
-                    ref={smartResultRef}
-                    className="rounded-xl overflow-hidden cursor-pointer animate-in fade-in duration-300"
-                    style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
-                    onClick={() => {
-                      setSelectedMovieId(smartResult.movie.id);
-                      setSelectedMovieType('movie');
-                    }}
-                  >
-                    <div className="flex gap-4 p-4">
-                      {smartResult.movie.poster ? (
-                        <img
-                          src={smartResult.movie.poster}
-                          alt={smartResult.movie.title}
-                          className="w-16 h-24 rounded-lg object-cover shrink-0"
-                          style={{ border: '1px solid rgba(255,255,255,0.08)' }}
-                        />
-                      ) : (
-                        <div className="w-16 h-24 rounded-lg bg-[#1a1a1a] flex items-center justify-center shrink-0">
-                          <Film className="w-5 h-5 text-gray-700" />
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
-                        <p className="text-white font-bold text-sm leading-snug line-clamp-2">
-                          {smartResult.movie.title}
-                        </p>
-                        <div className="flex items-center gap-2 text-xs">
-                          {smartResult.movie.year > 0 && (
-                            <span className="text-gray-500">{smartResult.movie.year}</span>
-                          )}
-                          {smartResult.movie.rating > 0 && (
-                            <span className="text-yellow-400 font-semibold">★ {smartResult.movie.rating.toFixed(1)}</span>
-                          )}
-                        </div>
-                        <p className="text-gray-500 text-[11px] italic leading-relaxed line-clamp-3">
-                          {smartResult.reason}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-end gap-1 px-4 pb-3">
-                      <GroqIcon size={10} />
-                      <span className="text-[10px] text-gray-700">Powered by Groq</span>
-                    </div>
-                  </div>
-                )}
-              </div>
             </div>
           </section>
         )}
