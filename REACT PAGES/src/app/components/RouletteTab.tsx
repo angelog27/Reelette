@@ -816,21 +816,28 @@ export function RouletteTab() {
         </div>
 
         {/* Your services — compact horizontal rail */}
-        {hasServices && enabledServices.length > 0 && (
-          <section className="mt-14">
-            <div className="mb-4 flex items-baseline justify-between">
-              <h2 className="text-white" style={sectionHeading}>Your services</h2>
+        {(enabledServices.length > 0 || user) && (
+          <section className="mt-8">
+            <div className="mb-3 flex items-baseline justify-between gap-4">
+              <div>
+                <h2 className="text-white" style={sectionHeading}>Your services</h2>
+                <p className="mt-1 text-[13px] text-zinc-500">
+                  {enabledServices.length > 0
+                    ? 'Click a service to filter your spin — click again to clear.'
+                    : 'Enable the services you subscribe to for tailored picks.'}
+                </p>
+              </div>
               {selectedProviders.length > 0 && (
                 <button
                   onClick={() => setSelectedProviders([])}
-                  className="text-[13px] text-zinc-500 transition-colors hover:text-white"
+                  className="shrink-0 text-[13px] text-zinc-500 transition-colors hover:text-white"
                 >
                   Clear filter
                 </button>
               )}
             </div>
 
-            <div className="no-scrollbar -mx-2 overflow-x-auto px-2 py-7">
+            <div className="no-scrollbar -mx-2 overflow-x-auto px-2 py-5">
               {/* w-max + mx-auto keeps the rail centered when it fits and
                   scrollable when it overflows on smaller screens. */}
               <div className="mx-auto flex w-max gap-4">
@@ -842,10 +849,11 @@ export function RouletteTab() {
                       key={key}
                       onClick={() => toggleProvider(key)}
                       aria-pressed={isFiltered}
-                      className="group relative flex h-[132px] w-[184px] shrink-0 flex-col items-center justify-center gap-3 rounded-2xl transition-[transform,border-color,opacity] duration-200 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                      aria-label={`${meta.label}${isFiltered ? ', selected' : ''}`}
+                      title={meta.label}
+                      className="group relative h-[120px] w-[172px] shrink-0 rounded-2xl transition-[transform,border-color,opacity] duration-200 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
                       style={{
-                        background: 'var(--reel-card)',
-                        border: isFiltered ? '1px solid var(--reel-red)' : '1px solid var(--reel-border)',
+                        border: isFiltered ? '2px solid var(--reel-red)' : '1px solid var(--reel-border)',
                         opacity: dimmed ? 0.4 : 1,
                       }}
                     >
@@ -853,37 +861,36 @@ export function RouletteTab() {
                       <span
                         aria-hidden="true"
                         className={`pointer-events-none absolute inset-0 rounded-2xl transition-opacity duration-200 ${isFiltered ? 'opacity-100' : 'opacity-80 group-hover:opacity-100'}`}
-                        style={{ boxShadow: `0 0 26px ${meta.color}80, 0 0 10px ${meta.color}66` }}
+                        style={{ boxShadow: `0 0 24px ${meta.color}85, 0 0 9px ${meta.color}66` }}
                       />
-                      <img src={logo} alt="" className="relative h-14 w-14 rounded-xl object-cover" />
-                      <span
-                        className="relative text-[13px] font-medium"
-                        style={{ color: isFiltered ? 'var(--reel-t1)' : 'var(--reel-t2)' }}
-                      >
-                        {meta.label}
-                      </span>
+                      {/* Full brand logo fills the tile */}
+                      <img
+                        src={logo}
+                        alt=""
+                        className="absolute inset-0 h-full w-full rounded-2xl object-cover"
+                      />
                       {isFiltered && (
                         <span
-                          className="absolute right-2.5 top-2.5 flex h-4 w-4 items-center justify-center rounded-full"
+                          className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full ring-2 ring-black/40"
                           style={{ background: 'var(--reel-red)' }}
                         >
-                          <Check className="h-2.5 w-2.5 text-white" strokeWidth={3} />
+                          <Check className="h-3 w-3 text-white" strokeWidth={3} />
                         </span>
                       )}
                     </button>
                   );
                 })}
 
-                {/* Edit / add services */}
+                {/* Edit / enable services */}
                 <button
                   onClick={handleEditServices}
-                  aria-label="Edit your streaming services"
-                  className="group flex h-[132px] w-[184px] shrink-0 flex-col items-center justify-center gap-2.5 rounded-2xl transition-transform duration-200 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                  aria-label={enabledServices.length > 0 ? 'Edit your streaming services' : 'Enable your streaming services'}
+                  className="group flex h-[120px] w-[172px] shrink-0 flex-col items-center justify-center gap-2 rounded-2xl transition-transform duration-200 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
                   style={{ background: 'transparent', border: '1px dashed var(--reel-border)' }}
                 >
                   <Plus className="h-6 w-6 text-zinc-500 transition-colors group-hover:text-white" />
                   <span className="text-[13px] font-medium text-zinc-500 transition-colors group-hover:text-zinc-300">
-                    Edit
+                    {enabledServices.length > 0 ? 'Edit' : 'Enable'}
                   </span>
                 </button>
               </div>
@@ -892,7 +899,7 @@ export function RouletteTab() {
         )}
 
         {/* Recently Spun */}
-        <div className="mt-16">
+        <div className="mt-9">
           <PosterRail
             title="Recently Spun"
             items={recentItems}
@@ -905,7 +912,7 @@ export function RouletteTab() {
 
         {/* Friends' Spins */}
         {friendItems.length > 0 && (
-          <div className="mt-14">
+          <div className="mt-9">
             <PosterRail
               title="Friends' Spins"
               variant="friend"
