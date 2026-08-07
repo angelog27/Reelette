@@ -70,7 +70,7 @@ function PublicRouletteWrapper() {
       </nav>
 
       {/* Service picker + Roulette */}
-      <div className="pt-16">
+      <div className="pt-16 [overflow-x:clip]">
         <GuestServicePicker onServicesChange={handleServicesChange} />
         <Suspense fallback={<div className="flex items-center justify-center py-32 text-white/30 text-sm">Loading...</div>}>
           <RouletteTab key={rouletteKey} />

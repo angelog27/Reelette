@@ -13,6 +13,7 @@ import {
 } from '../services/api';
 import { MovieDetailModal } from './MovieDetailModal';
 import { DiscoverProvider } from '../contexts/DiscoverContext';
+import reelLogo from '../../assets/Reelette_LOGO_upscaled.png';
 import type { QuerySnapshot, DocumentData } from 'firebase/firestore';
 
 
@@ -379,69 +380,30 @@ export function HomePage() {
         }}
       >
 
-        {/* ── Left: avatar + wordmark ── */}
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="relative shrink-0" ref={avatarMenuRef}>
-            <button
-              onClick={() => setAvatarMenuOpen(o => !o)}
-              className="w-9 h-9 rounded-full overflow-hidden border border-white/10 hover:border-white/30 transition duration-150 active:scale-[0.97]"
-              title="Profile"
-            >
-              {navAvatarUrl ? (
-                <img src={navAvatarUrl} alt="Profile" className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full bg-[#2A2A2A] flex items-center justify-center text-[11px] font-semibold text-white/60">
-                  {currentUser?.username?.slice(0, 2).toUpperCase() ?? '?'}
-                </div>
-              )}
-            </button>
-
-            {avatarMenuOpen && (
-              <div className="absolute left-0 top-11 w-52 bg-[#141414] border border-[#2A2A2A] rounded-2xl shadow-2xl z-[110] overflow-hidden panel-enter">
-                <div className="px-4 py-3 border-b border-[#2A2A2A]">
-                  <p className="text-white text-sm font-semibold truncate">
-                    {(currentUser as { displayName?: string; username?: string })?.displayName || currentUser?.username || 'User'}
-                  </p>
-                  {currentUser?.username && (
-                    <p className="text-zinc-500 text-xs">@{currentUser.username}</p>
-                  )}
-                </div>
-                <NavLink to="/home/profile" onClick={() => setAvatarMenuOpen(false)}>
-                  <div className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-white/[0.04] transition-colors cursor-pointer">
-                    <User className="w-4 h-4 text-zinc-400" />
-                    <span className="text-sm text-zinc-300">Profile & settings</span>
-                  </div>
-                </NavLink>
-                <div className="border-t border-[#2A2A2A]" />
-                <button
-                  onClick={handleNavLogout}
-                  className="w-full flex items-center gap-2.5 px-4 py-2.5 hover:bg-white/[0.04] transition-colors text-left"
-                >
-                  <LogOut className="w-4 h-4 text-zinc-400" />
-                  <span className="text-sm text-zinc-300">Log out</span>
-                </button>
-              </div>
-            )}
-          </div>
-
+        {/* ── Left: logo + wordmark ── */}
+        <NavLink to="/home/roulette" className="flex items-center gap-2.5 shrink-0 select-none">
+          <img src={reelLogo} alt="Reelette" className="h-7 w-7 object-contain" />
           <span style={{ fontFamily: 'SanFran, system-ui, sans-serif', fontWeight: 100, fontSize: 17, letterSpacing: '0.04em' }}
-            className="text-white select-none">
+            className="text-white">
             Reelette
           </span>
-        </div>
+        </NavLink>
 
         {/* ── Center: tabs (absolutely centered) — desktop only ── */}
         <nav className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-1">
-          {tabs.map(tab => (
+          {tabs.filter(t => t.id !== 'profile').map(tab => (
             <NavLink key={tab.id} to={tab.path}>
               {({ isActive }) => (
-                <div className="relative flex flex-col items-center gap-1 px-4 py-2 cursor-pointer select-none transition-all duration-150 whitespace-nowrap group"
+                <div className="relative flex items-center px-4 py-2 cursor-pointer select-none whitespace-nowrap group"
                   style={{ fontFamily: 'SanFran, system-ui, sans-serif', fontWeight: 100 }}>
                   <div className={`flex items-center gap-2 transition-colors duration-150 ${isActive ? 'text-white' : 'text-zinc-500 group-hover:text-zinc-200'}`}>
-                    {tab.icon && <tab.icon className="w-[22px] h-[22px] shrink-0" />}
+                    {tab.icon && <tab.icon className="w-[18px] h-[18px] shrink-0" />}
                     <span style={{ fontSize: 15 }}>{tab.label}</span>
                   </div>
-                  {isActive && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full" style={{ background: 'var(--reel-accent-hex)' }} />}
+                  <span
+                    className="absolute -bottom-[3px] left-1/2 -translate-x-1/2 h-[2px] rounded-full transition-all duration-200 ease-out"
+                    style={{ background: 'var(--reel-red)', width: isActive ? '20px' : '0px', opacity: isActive ? 1 : 0 }}
+                  />
                 </div>
               )}
             </NavLink>
@@ -606,6 +568,51 @@ export function HomePage() {
                     ))
                   )}
                 </div>
+              </div>
+            )}
+          </div>
+
+          {/* ── Right: avatar + dropdown ── */}
+          <div className="relative shrink-0 ml-2" ref={avatarMenuRef}>
+            <button
+              onClick={() => setAvatarMenuOpen(o => !o)}
+              className="w-9 h-9 rounded-full overflow-hidden border border-white/10 hover:border-white/30 transition duration-150 active:scale-[0.97]"
+              title="Profile"
+              aria-label="Profile menu"
+            >
+              {navAvatarUrl ? (
+                <img src={navAvatarUrl} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-[#2A2A2A] flex items-center justify-center text-[11px] font-semibold text-white/60">
+                  {currentUser?.username?.slice(0, 2).toUpperCase() ?? '?'}
+                </div>
+              )}
+            </button>
+
+            {avatarMenuOpen && (
+              <div className="absolute right-0 top-11 w-52 bg-[#141414] border border-[#2A2A2A] rounded-2xl shadow-2xl z-[110] overflow-hidden panel-enter">
+                <div className="px-4 py-3 border-b border-[#2A2A2A]">
+                  <p className="text-white text-sm font-semibold truncate">
+                    {(currentUser as { displayName?: string; username?: string })?.displayName || currentUser?.username || 'User'}
+                  </p>
+                  {currentUser?.username && (
+                    <p className="text-zinc-500 text-xs">@{currentUser.username}</p>
+                  )}
+                </div>
+                <NavLink to="/home/profile" onClick={() => setAvatarMenuOpen(false)}>
+                  <div className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-white/[0.04] transition-colors cursor-pointer">
+                    <User className="w-4 h-4 text-zinc-400" />
+                    <span className="text-sm text-zinc-300">Profile & settings</span>
+                  </div>
+                </NavLink>
+                <div className="border-t border-[#2A2A2A]" />
+                <button
+                  onClick={handleNavLogout}
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 hover:bg-white/[0.04] transition-colors text-left"
+                >
+                  <LogOut className="w-4 h-4 text-zinc-400" />
+                  <span className="text-sm text-zinc-300">Log out</span>
+                </button>
               </div>
             )}
           </div>

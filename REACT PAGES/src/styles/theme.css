@@ -206,9 +206,16 @@ html.dark {
   --reel-accent-lo:   oklch(0.27 0.05 76);
   --reel-accent-hex:  #D4A843;
   --reel-accent-text: #080808;
+  /* Reelette brand red — powers the primary Roulette CTA, the nav active
+     indicator and small cinematic highlights. Kept separate from the gold
+     --reel-accent so the rest of the app's theming stays unchanged. */
+  --reel-red:         #E5372C;
+  --reel-red-bright:  #F0463A;
 }
 
 html.light {
+  --reel-red:         #E5372C;
+  --reel-red-bright:  #F0463A;
   --reel-bg:          #F4F4F6;
   --reel-surface:     #EAEAED;
   --reel-card:        #FFFFFF;
