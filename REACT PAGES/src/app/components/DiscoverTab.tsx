@@ -768,13 +768,6 @@ function PersonalizedHero({ slots, backdropOverrides = {}, onOpenModal, onToggle
       <div className="absolute inset-0" style={{ zIndex: 2, background: 'linear-gradient(to right, rgba(0,0,0,0.94) 0%, rgba(0,0,0,0.70) 38%, rgba(0,0,0,0.25) 62%, rgba(0,0,0,0.05) 100%)' }} />
       <div className="absolute inset-0" style={{ zIndex: 2, background: 'linear-gradient(to top, rgb(10,10,10) 0%, rgba(10,10,10,0.75) 18%, rgba(10,10,10,0.15) 42%, transparent 62%)' }} />
       <div className="absolute inset-0" style={{ zIndex: 2, background: 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, transparent 18%)' }} />
-      {/* Theme-accent tint — subtle colour bleed at the hero bottom tied to active theme */}
-      <div className="absolute inset-x-0 bottom-0 pointer-events-none" style={{
-        zIndex: 2, height: '32%',
-        background: 'var(--reel-accent-hex)', opacity: 0.11,
-        maskImage: 'linear-gradient(to top, black 0%, transparent 100%)',
-        WebkitMaskImage: 'linear-gradient(to top, black 0%, transparent 100%)',
-      }} />
 
       {/* Mobile hero overlay — rating badge + icon-only action buttons */}
       <div className="md:hidden absolute inset-x-0 bottom-0 flex items-end justify-between px-4 pb-5" style={{ zIndex: 3 }}>

@@ -359,6 +359,12 @@ export function RouletteTab() {
     setSelectedMovieType('movie');
   };
 
+  // Use the full-resolution TMDB backdrop for the hero so it stays crisp on
+  // large / wide screens (the list API returns a smaller size).
+  const heroBackdrop = todaysPick?.backdrop
+    ? todaysPick.backdrop.replace(/\/t\/p\/w\d+\//, '/t/p/original/')
+    : null;
+
   const handleEditServices = () => {
     if (user) navigate('/home/profile');
     else window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -381,7 +387,7 @@ export function RouletteTab() {
           horizontal overflow. */}
       <div style={{ marginLeft: 'calc(50% - 50vw)', marginRight: 'calc(50% - 50vw)' }}>
         <RouletteHero
-          backdropUrl={todaysPick?.backdrop ?? null}
+          backdropUrl={heroBackdrop}
           badge={todaysPick && (
             <button
               onClick={() => openMovie(todaysPick.id)}
@@ -414,7 +420,20 @@ export function RouletteTab() {
                 textWrap: "balance",
               }}
             >
-              What are we<br />watching tonight?
+              What are we
+              <span
+                style={{
+                  display: "block",
+                  fontFamily: "'Great Vibes', 'Snell Roundhand', cursive",
+                  fontWeight: 400,
+                  fontSize: "1.22em",
+                  lineHeight: 1.05,
+                  letterSpacing: "0.01em",
+                  marginTop: "0.06em",
+                }}
+              >
+                watching tonight?
+              </span>
             </h1>
 
             <p

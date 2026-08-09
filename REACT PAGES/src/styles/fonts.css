@@ -1,3 +1,7 @@
+/* Theatrical script used for the Roulette hero flourish. Falls back to a
+   system cursive if it can't load. Must precede other rules per CSS spec. */
+@import url('https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap');
+
 @font-face {
   font-family: 'SanFran';
   src: url('../assets/SanFran.OTF') format('opentype');

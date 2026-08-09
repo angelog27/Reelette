@@ -191,7 +191,7 @@
    light → clean, neutral light theme
 ──────────────────────────────────────────────────────────────*/
 html.dark {
-  --reel-bg:          #080808;
+  --reel-bg:          #0A0A0A;
   --reel-surface:     #111111;
   --reel-card:        #161616;
   --reel-raised:      #1e1e1e;
@@ -472,6 +472,14 @@ html[data-theme="forest"] body::before {
   z-index: 0;
   background: radial-gradient(ellipse at 70% 100%, rgba(52,211,153,0.07) 0%, transparent 55%);
 }
+
+/* ─────────────────────────────────────────────────────────────
+   Themes paused — keep the app background a single, consistent black.
+   Neutralises every theme's decorative body::before overlay (grid, rain,
+   stars, glow, colour tints) so nothing tints the background differently
+   between themes. Placed after all theme rules so it wins.
+──────────────────────────────────────────────────────────────*/
+html[data-theme] body::before { display: none !important; }
 
 /* ─────────────────────────────────────────────────────────────
    Accent override — replaces every hardcoded #7C5DBD / #9B7BD7
