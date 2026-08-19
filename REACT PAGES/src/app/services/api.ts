@@ -801,6 +801,58 @@ export async function updateWatchedMovie(user_id: string, movie_id: string, rati
   return res.json();
 }
 
+
+// ── Movie community: consensus rating + movie-specific posts ─────
+
+export interface MovieReview {
+  user_id: string;
+  username: string;
+  displayName?: string;
+  avatarUrl?: string;
+  rating: number;
+  comment: string;
+  watched_at?: string;
+}
+
+export interface MovieRatingSummary {
+  /** Consensus score — average of every user's watched rating (0–10). */
+  average: number;
+  /** How many users have rated this title. */
+  count: number;
+  /** Written reviews (ratings that included a comment), newest first. */
+  reviews: MovieReview[];
+}
+
+/** Consensus rating + written reviews across every user who rated this title. */
+export function getMovieRatingSummary(movie_id: string): Promise<MovieRatingSummary> {
+  return fromCachePersisted(`rating_summary:${movie_id}`, 3 * 60 * 1000, 10 * 60 * 1000, async () => {
+    try {
+      const res = await apiFetch(`${BASE_URL}/movies/${movie_id}/rating-summary`);
+      if (!res.ok) return { average: 0, count: 0, reviews: [] };
+      const data = await res.json();
+      return { average: data.average ?? 0, count: data.count ?? 0, reviews: data.reviews ?? [] };
+    } catch { return { average: 0, count: 0, reviews: [] }; }
+  });
+}
+
+/** Community posts written about a specific movie/show, newest first. */
+export function getMoviePosts(movie_id: string): Promise<FeedPost[]> {
+  return fromCachePersisted(`movie_posts:${movie_id}`, 2 * 60 * 1000, 10 * 60 * 1000, async () => {
+    try {
+      const res = await apiFetch(`${BASE_URL}/movies/${movie_id}/posts`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.posts ?? [];
+    } catch { return []; }
+  });
+}
+
+/** Drop cached community data so the next read hits the network. */
+export function bustMovieCommunityCache(movie_id: string) {
+  bustCache(`rating_summary:${movie_id}`);
+  bustCache(`movie_posts:${movie_id}`);
+}
+
 export function getWatchLater(user_id: string): Promise<string[]> {
   return fromCachePersisted(`watchlist:${user_id}`, TTL.WATCHLIST, 30 * 60 * 1000, async () => {
     try {

@@ -34,6 +34,7 @@ from firebase_helper import (
     update_streaming_services, get_user_streaming_services,
     add_to_watchlist, get_watchlist, remove_from_watchlist,
     add_watched_movie, get_watched_movies, get_watched_movie, update_watched_rating,
+    get_movie_rating_summary, get_movie_posts,
     create_post, create_repost, get_feed, like_post, add_reply, get_replies, delete_post, toggle_reply_like, toggle_reply_dislike, send_password_reset_email,
     update_user_profile, get_user_movie_preferences, update_movie_preferences, search_users,
     send_friend_request, get_friend_requests, accept_friend_request, reject_friend_request,
@@ -1136,6 +1137,7 @@ def add_user_watched(user_id):
     result = add_watched_movie(user_id, movie, user_rating, comment)
     if result.get('success'):
         _cache.pop(f'watched:{user_id}', None)
+        _cache.pop(f'rating_summary:{movie.get("movie_id")}', None)
         def _notify_friends(_uid=user_id, _movie=movie, _rating=user_rating):
             actor_username = get_username(_uid)
             if not actor_username:
@@ -1169,7 +1171,30 @@ def update_user_watched_rating(user_id, movie_id):
     result = update_watched_rating(user_id, movie_id, new_rating, comment)
     if result.get('success'):
         _cache.pop(f'watched:{user_id}', None)
+        _cache.pop(f'rating_summary:{movie_id}', None)
     return jsonify(result)
+
+# ── Movie community: consensus rating + movie-specific posts ─────
+
+@app.route('/api/movies/<movie_id>/rating-summary', methods=['GET'])
+def movie_rating_summary(movie_id):
+    cache_key = f'rating_summary:{movie_id}'
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return jsonify(cached)
+    summary = serialize_timestamps(get_movie_rating_summary(movie_id))
+    _cache_set(cache_key, summary, 180)
+    return jsonify(summary)
+
+@app.route('/api/movies/<movie_id>/posts', methods=['GET'])
+def movie_community_posts(movie_id):
+    cache_key = f'movie_posts:{movie_id}'
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return jsonify({'posts': cached})
+    posts = serialize_timestamps(get_movie_posts(movie_id))
+    _cache_set(cache_key, posts, 120)
+    return jsonify({'posts': posts})
 
 # ── Social Feed Routes ───────────────────────────────────────────
 
@@ -1210,6 +1235,8 @@ def create_feed_post():
     if result.get('success'):
         for key in [k for k in _cache if k.startswith('feed:')]:
             _cache.pop(key, None)
+        if movie_id:
+            _cache.pop(f'movie_posts:{movie_id}', None)
         def _notify_tagged(_uname=username, _msg=message, _pid=result['post_id'], _title=movie_title, _uid=user_id):
             mentions = set(re.findall(r'@(\w+)', _msg))
             for handle in mentions:

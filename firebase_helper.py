@@ -464,6 +464,89 @@ def update_watched_rating(user_id, movie_id, new_rating, comment=None):
         return {'success': False, 'message': str(e)}
 
 
+def _ts_key(value):
+    """Sort key for Firestore timestamps that avoids naive/aware comparison
+    errors — falls back to an empty string when missing."""
+    try:
+        return value.isoformat()
+    except Exception:
+        return ''
+
+
+def get_movie_rating_summary(movie_id, reviews_limit=24):
+    """Aggregate every user's watched rating for a movie into a single
+    consensus score, plus the written reviews (ratings that include a
+    comment). Uses a collection-group query across all users'
+    watched_movies subcollections. Degrades to an empty summary if the
+    query fails (e.g. the collection-group index is still building)."""
+    mid = str(movie_id)
+    try:
+        docs = list(db.collection_group('watched_movies').where('movie_id', '==', mid).stream())
+    except Exception as e:
+        print(f"rating summary query failed for {movie_id}: {e}")
+        return {'average': 0, 'count': 0, 'reviews': []}
+
+    total = 0.0
+    count = 0
+    review_docs = []
+    for doc in docs:
+        d = doc.to_dict()
+        rating = d.get('user_rating')
+        if not isinstance(rating, (int, float)) or isinstance(rating, bool) or rating <= 0:
+            continue
+        total += rating
+        count += 1
+        comment = (d.get('comment') or '').strip()
+        if comment:
+            uid = ''
+            try:
+                uid = doc.reference.parent.parent.id
+            except Exception:
+                uid = ''
+            review_docs.append({
+                'user_id':    uid,
+                'rating':     rating,
+                'comment':    comment,
+                'watched_at': d.get('watched_at'),
+            })
+
+    review_docs.sort(key=lambda r: _ts_key(r.get('watched_at')), reverse=True)
+    review_docs = review_docs[:reviews_limit]
+
+    # Resolve reviewer username + avatar with light single-field reads.
+    for r in review_docs:
+        uid = r.get('user_id')
+        ud = {}
+        if uid:
+            try:
+                udoc = db.collection('users').document(uid).get(
+                    field_paths=['username', 'displayName', 'avatarUrl'])
+                ud = udoc.to_dict() if udoc.exists else {}
+            except Exception:
+                ud = {}
+        r['username']    = ud.get('username', '')
+        r['displayName'] = ud.get('displayName', ud.get('username', ''))
+        r['avatarUrl']   = ud.get('avatarUrl')
+
+    average = round(total / count, 1) if count else 0
+    return {'average': average, 'count': count, 'reviews': review_docs}
+
+
+def get_movie_posts(movie_id, limit=40):
+    """All community posts about a specific movie, newest first. Uses a
+    single-field equality query (auto-indexed) and sorts in Python to avoid
+    needing a composite index."""
+    mid = str(movie_id)
+    try:
+        docs = list(db.collection('posts').where('movie_id', '==', mid).stream())
+        posts = [doc.to_dict() for doc in docs]
+        posts.sort(key=lambda p: _ts_key(p.get('created_at')), reverse=True)
+        return posts[:limit]
+    except Exception as e:
+        print(f"Error getting movie posts: {e}")
+        return []
+
+
 # ── Social Feed ───────────────────────────────────────────────
 
 # creates a new post in the global feed with the movie info and user's message

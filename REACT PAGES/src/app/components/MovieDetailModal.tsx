@@ -3,10 +3,11 @@ import { X, Bookmark, BookmarkCheck, Star, Play, ChevronDown, ChevronUp, Chevron
 import {
   getMovieDetails, getShowDetails, getWatchedMovie, addWatchedMovie, updateWatchedMovie,
   getUser, getWatchLater, watchMovieLater, removeFromWatchLater,
-  getFriends, getMovieLogo, getFeed, timeAgo, searchMovies, getUserPublicProfile,
-  getPersonMovies,
+  getFriends, getMovieLogo, timeAgo, searchMovies, getUserPublicProfile,
+  getPersonMovies, getMovieRatingSummary, getMoviePosts, createPost,
+  bustMovieCommunityCache, bustFeedCache,
 } from '../services/api';
-import type { WatchedMovie, FeedPost, Movie } from '../services/api';
+import type { WatchedMovie, FeedPost, Movie, MovieRatingSummary } from '../services/api';
 
 interface FriendReview {
   username: string;
@@ -57,7 +58,10 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
   const [showSeasonRatings, setShowSeasonRatings] = useState(false);
   const [trailerOpen, setTrailerOpen]           = useState(false);
   const [logoUrl, setLogoUrl]                   = useState<string | null>(null);
-  const [socialPosts, setSocialPosts]           = useState<FeedPost[]>([]);
+  const [moviePosts, setMoviePosts]             = useState<FeedPost[]>([]);
+  const [ratingSummary, setRatingSummary]       = useState<MovieRatingSummary | null>(null);
+  const [postInput, setPostInput]               = useState('');
+  const [postingBusy, setPostingBusy]           = useState(false);
   const [collectionMovies, setCollectionMovies] = useState<any[]>([]);
   const [avatarMap, setAvatarMap]               = useState<Record<string, string>>({});
   const [activeInfoTab, setActiveInfoTab]       = useState<InfoTab>('watch');
@@ -122,7 +126,9 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
     setOverviewExpanded(false);
     setTrailerOpen(false);
     setLogoUrl(null);
-    setSocialPosts([]);
+    setMoviePosts([]);
+    setRatingSummary(null);
+    setPostInput('');
     setCollectionMovies([]);
     setAvatarMap({});
     setActiveInfoTab('watch');
@@ -171,11 +177,13 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
     const logoType = type === 'show' ? 'show' : 'movie';
     getMovieLogo(movieId, logoType).then(url => setLogoUrl(url));
 
-    // Social posts + resolve missing avatarUrls
-    getFeed(80).then(posts => {
-      const filtered = posts.filter(p => p.movie_id === movieId);
-      setSocialPosts(filtered);
-      const needsAvatar = [...new Set(filtered.filter(p => !p.avatarUrl).map(p => p.user_id))];
+    // Consensus rating + written reviews across all users
+    getMovieRatingSummary(movieId).then(setRatingSummary).catch(() => {});
+
+    // Community posts about this movie + resolve missing avatarUrls
+    getMoviePosts(movieId).then(posts => {
+      setMoviePosts(posts);
+      const needsAvatar = [...new Set(posts.filter(p => !p.avatarUrl).map(p => p.user_id))];
       if (needsAvatar.length > 0) {
         Promise.all(needsAvatar.map(uid =>
           getUserPublicProfile(uid).then(prof => ({ uid, url: prof?.avatarUrl ?? null })).catch(() => ({ uid, url: null }))
@@ -266,6 +274,53 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
       setShowWatchForm(false);
       setSaveSuccess(true);
       onWatchedChange?.();
+      // Your rating feeds the consensus — refresh it.
+      bustMovieCommunityCache(movieId);
+      getMovieRatingSummary(movieId).then(setRatingSummary).catch(() => {});
+    }
+  }
+
+  async function handleCreatePost() {
+    if (!user || !movie) return;
+    const message = postInput.trim();
+    if (!message || postingBusy) return;
+    setPostingBusy(true);
+    const isShowEntry = type === 'show' || movie.media_type === 'tv';
+    const title = isShowEntry ? (movie.name ?? movie.title) : (movie.title ?? movie.name);
+    const posterUrl = movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : '';
+    try {
+      const res = await createPost({
+        user_id: user.user_id,
+        username: user.username,
+        message,
+        movie_title: title ?? '',
+        movie_id: movieId,
+        movie_poster: posterUrl,
+        rating: watchEntry?.user_rating ?? 0,
+      });
+      if (res?.success) {
+        const optimistic: FeedPost = {
+          post_id: res.post_id ?? `tmp-${Date.now()}`,
+          user_id: user.user_id,
+          username: user.username,
+          avatarUrl: (user as { avatarUrl?: string }).avatarUrl,
+          message,
+          movie_title: title ?? '',
+          movie_id: movieId,
+          movie_poster: posterUrl,
+          rating: watchEntry?.user_rating ?? 0,
+          likes: 0,
+          liked_by: [],
+          created_at: new Date().toISOString(),
+          reply_count: 0,
+        };
+        setMoviePosts(prev => [optimistic, ...prev]);
+        setPostInput('');
+        bustMovieCommunityCache(movieId);
+        bustFeedCache();
+      }
+    } finally {
+      setPostingBusy(false);
     }
   }
 
@@ -443,10 +498,31 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
 
   const primaryProvider = providers[0] ?? null;
 
-  const allCommunityItems = [
-    ...socialPosts.map(p => ({ kind: 'social' as const, post: p })),
-    ...friendReviews.map(r => ({ kind: 'friend' as const, review: r })),
-  ];
+  // Personal reviews — every user's rating that included a written comment.
+  // Prefer the cross-user consensus reviews; fall back to friend reviews when
+  // the summary is empty (e.g. index still building).
+  type ReviewCard = { user_id: string; name: string; handle: string; avatarUrl?: string; rating: number; message: string };
+  const summaryReviews: ReviewCard[] = (ratingSummary?.reviews ?? []).map(r => ({
+    user_id: r.user_id, name: r.displayName || r.username || 'User', handle: r.username, avatarUrl: r.avatarUrl, rating: r.rating, message: r.comment,
+  }));
+  const reviewsList: ReviewCard[] = (() => {
+    const base = summaryReviews.length > 0
+      ? [...summaryReviews]
+      : friendReviews.map(r => ({ user_id: '', name: r.username, handle: r.username, avatarUrl: r.avatarUrl, rating: r.rating, message: r.message }));
+    // Make sure the current user's own review shows even if the summary lags.
+    if (user && watchEntry && (watchEntry.user_rating ?? 0) > 0 && (watchEntry.comment ?? '').trim()
+        && !base.some(x => x.user_id && x.user_id === user.user_id)) {
+      base.unshift({
+        user_id: user.user_id,
+        name: (user as { displayName?: string; username: string }).displayName || user.username,
+        handle: user.username,
+        avatarUrl: (user as { avatarUrl?: string }).avatarUrl,
+        rating: watchEntry.user_rating ?? 0,
+        message: watchEntry.comment ?? '',
+      });
+    }
+    return base;
+  })();
 
   const tabIdx = INFO_TABS.indexOf(activeInfoTab);
 
@@ -770,81 +846,152 @@ export function MovieDetailModal({ movieId, type = 'movie', knownTitle, onClose,
           </div>
         )}
 
-        {/* ── Community (social posts + friend reviews) — before tabs */}
-        {allCommunityItems.length > 0 && (
-          <div>
-            <SectionLabel>Community</SectionLabel>
-            <div className="space-y-3">
-              {allCommunityItems.slice(0, 10).map((item, i) => {
-                if (item.kind === 'social') {
-                  const p = item.post;
-                  return (
-                    <div key={`s-${p.post_id}`}
-                      className="flex items-start gap-3 p-3.5 rounded-2xl"
-                      style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                      <img
-                        src={p.avatarUrl ?? avatarMap[p.user_id] ?? dicebear(p.username)}
-                        alt={p.username}
-                        className="w-8 h-8 rounded-full shrink-0 bg-zinc-800 object-cover"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <span className="text-white text-xs font-semibold">{(p as any).displayName || p.username}</span>
-                          <span className="text-zinc-600 text-[10px]">@{p.username} · {timeAgo(p.created_at)}</span>
-                          {p.rating > 0 && (
-                            <span className="flex items-center gap-0.5 text-[10px] text-yellow-400 font-semibold ml-auto">
-                              <Star className="w-2.5 h-2.5 fill-yellow-400" />
-                              {p.rating}/10
-                            </span>
-                          )}
-                        </div>
-                        {p.message && (
-                          <p className="text-zinc-300 text-xs leading-relaxed line-clamp-4">{p.message}</p>
+        {/* ── Community: consensus rating · reviews · posts — before tabs */}
+        <div className="space-y-8">
+
+          {/* Consensus user rating */}
+          {ratingSummary && ratingSummary.count > 0 && (
+            <div className="flex items-center gap-4 p-4 rounded-2xl"
+              style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <div className="flex flex-col items-center justify-center px-1">
+                <div className="flex items-baseline gap-0.5">
+                  <span className="text-white font-bold" style={{ fontSize: 30, fontFamily: 'SanFran, system-ui, sans-serif', lineHeight: 1 }}>
+                    {ratingSummary.average.toFixed(1)}
+                  </span>
+                  <span className="text-zinc-500 text-sm">/10</span>
+                </div>
+                <span className="text-zinc-500 text-[10px] mt-1">
+                  {ratingSummary.count} rating{ratingSummary.count === 1 ? '' : 's'}
+                </span>
+              </div>
+              <div className="h-10 w-px shrink-0" style={{ background: 'rgba(255,255,255,0.08)' }} />
+              <div className="flex-1 min-w-0">
+                <p className="text-white text-sm font-semibold">Reelette user rating</p>
+                <p className="text-zinc-500 text-xs mt-0.5">Combined from everyone who marked this as watched.</p>
+              </div>
+              {user && (
+                <button
+                  onClick={() => { setActiveInfoTab('watch'); setShowWatchForm(true); scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                  className="shrink-0 text-xs font-medium px-3.5 py-2 rounded-full transition-colors hover:bg-white/[0.1]"
+                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff' }}
+                >
+                  {watchEntry ? 'Update review' : 'Write a review'}
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Personal reviews */}
+          {reviewsList.length > 0 && (
+            <div>
+              <SectionLabel>Reviews</SectionLabel>
+              <div className="space-y-3">
+                {reviewsList.slice(0, 8).map((r, i) => (
+                  <div key={`rv-${r.user_id || r.handle}-${i}`}
+                    className="flex items-start gap-3 p-3.5 rounded-2xl"
+                    style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                    <img
+                      src={r.avatarUrl ?? avatarMap[r.user_id] ?? dicebear(r.handle || r.name)}
+                      alt={r.name}
+                      className="w-8 h-8 rounded-full shrink-0 bg-zinc-800 object-cover"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <span className="text-white text-xs font-semibold">{r.name}</span>
+                        {r.handle && <span className="text-zinc-600 text-[10px]">@{r.handle}</span>}
+                        {user && r.user_id === user.user_id && (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(255,255,255,0.1)', color: '#fff' }}>You</span>
                         )}
-                        <div className="flex items-center gap-3 mt-2">
-                          <span className="flex items-center gap-1 text-[10px] text-zinc-600">
-                            <Heart className="w-3 h-3" /> {p.likes ?? 0}
-                          </span>
-                          {p.reply_count != null && p.reply_count > 0 && (
-                            <span className="flex items-center gap-1 text-[10px] text-zinc-600">
-                              <MessageCircle className="w-3 h-3" /> {p.reply_count}
-                            </span>
-                          )}
-                        </div>
+                        <span className="flex items-center gap-0.5 text-[10px] text-yellow-400 font-semibold ml-auto">
+                          <Star className="w-2.5 h-2.5 fill-yellow-400" />
+                          {r.rating}/10
+                        </span>
                       </div>
+                      {r.message && (
+                        <p className="text-zinc-300 text-xs leading-relaxed line-clamp-4 italic">"{r.message}"</p>
+                      )}
                     </div>
-                  );
-                } else {
-                  const r = item.review;
-                  return (
-                    <div key={`f-${i}`}
-                      className="flex items-start gap-3 p-3.5 rounded-2xl"
-                      style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                      <img
-                        src={r.avatarUrl ?? dicebear(r.username)}
-                        alt={r.username}
-                        className="w-8 h-8 rounded-full shrink-0 bg-zinc-800 object-cover"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <span className="text-white text-xs font-semibold">{r.username}</span>
-                          <span className="text-zinc-500 text-[10px]">friend · rated</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Community posts */}
+          <div>
+            <SectionLabel>Community posts</SectionLabel>
+
+            {user && (
+              <div className="mb-3 rounded-2xl p-3"
+                style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <textarea
+                  value={postInput}
+                  onChange={(e) => setPostInput(e.target.value)}
+                  maxLength={2000}
+                  rows={2}
+                  placeholder={`Share your thoughts on ${displayTitle}…`}
+                  className="w-full bg-transparent text-white text-xs leading-relaxed resize-none focus:outline-none placeholder-zinc-600"
+                />
+                <div className="flex items-center justify-between mt-2">
+                  <span className="text-[10px] text-zinc-600">Your post appears on the Social feed.</span>
+                  <button
+                    onClick={handleCreatePost}
+                    disabled={postingBusy || !postInput.trim()}
+                    className="text-xs font-semibold px-4 py-1.5 rounded-full transition-[filter] duration-200 hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ background: 'var(--reel-red)', color: '#fff' }}
+                  >
+                    {postingBusy ? 'Posting…' : 'Post'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {moviePosts.length > 0 ? (
+              <div className="space-y-3">
+                {moviePosts.slice(0, 10).map(p => (
+                  <div key={`p-${p.post_id}`}
+                    className="flex items-start gap-3 p-3.5 rounded-2xl"
+                    style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                    <img
+                      src={p.avatarUrl ?? avatarMap[p.user_id] ?? dicebear(p.username)}
+                      alt={p.username}
+                      className="w-8 h-8 rounded-full shrink-0 bg-zinc-800 object-cover"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <span className="text-white text-xs font-semibold">{(p as { displayName?: string }).displayName || p.username}</span>
+                        <span className="text-zinc-600 text-[10px]">@{p.username} · {timeAgo(p.created_at)}</span>
+                        {p.rating > 0 && (
                           <span className="flex items-center gap-0.5 text-[10px] text-yellow-400 font-semibold ml-auto">
                             <Star className="w-2.5 h-2.5 fill-yellow-400" />
-                            {r.rating}/10
+                            {p.rating}/10
                           </span>
-                        </div>
-                        {r.message && (
-                          <p className="text-zinc-300 text-xs leading-relaxed line-clamp-3 italic">"{r.message}"</p>
+                        )}
+                      </div>
+                      {p.message && (
+                        <p className="text-zinc-300 text-xs leading-relaxed line-clamp-4">{p.message}</p>
+                      )}
+                      <div className="flex items-center gap-3 mt-2">
+                        <span className="flex items-center gap-1 text-[10px] text-zinc-600">
+                          <Heart className="w-3 h-3" /> {p.likes ?? 0}
+                        </span>
+                        {p.reply_count != null && p.reply_count > 0 && (
+                          <span className="flex items-center gap-1 text-[10px] text-zinc-600">
+                            <MessageCircle className="w-3 h-3" /> {p.reply_count}
+                          </span>
                         )}
                       </div>
                     </div>
-                  );
-                }
-              })}
-            </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-zinc-600 text-xs">
+                {user ? 'Be the first to post about this.' : 'No community posts yet.'}
+              </p>
+            )}
           </div>
-        )}
+        </div>
 
         {/* ── Sub-tabs: Watch / Cast / Extras ─────────────────── */}
         <div>
